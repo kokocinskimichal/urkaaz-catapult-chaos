@@ -8,8 +8,9 @@ Urkaaaz is a mobile Android game. The active repository is:
 ~/workspace/urkaaaz
 ```
 
-Do not modify the legacy checkout in `~/workspace/orc-catapult` for Urkaaaz
-tasks. The GitHub repository for this project is
+In project conversations, **legacy** always means the separate checkout
+`~/workspace/orc-catapult`. Do not modify that checkout for Urkaaaz tasks. The
+GitHub repository for this project is
 `kokocinskimichal/urkaaz-catapult-chaos`.
 
 ## Repository structure
@@ -38,6 +39,7 @@ MainActivity
 
 Available screens:
 
+- `StartScreen` — legacy-style start menu;
 - `DashboardScreen` — placeholder;
 - `CampaignScreen` — placeholder;
 - `LoadoutScreen` — placeholder;

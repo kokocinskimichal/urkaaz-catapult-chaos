@@ -15,6 +15,7 @@ import com.urkaaaz.screens.loadout.LoadoutScreen
 import com.urkaaaz.screens.match.MatchScreen
 import com.urkaaaz.screens.result.ResultScreen
 import com.urkaaaz.screens.shop.ShopScreen
+import com.urkaaaz.screens.start.StartScreen
 
 class MainActivity : ComponentActivity() {
     private lateinit var screenHost: ScreenHost
@@ -39,7 +40,7 @@ class MainActivity : ComponentActivity() {
             }
         })
         setContentView(screenHost)
-        navigator.start(AppScreen.Match(levelId = "DEMO_LEVEL"))
+        navigator.start(AppScreen.Start)
     }
 
     override fun onResume() {
@@ -56,6 +57,11 @@ class MainActivity : ComponentActivity() {
 
     private fun showScreen(screen: AppScreen) {
         val content = when (screen) {
+            AppScreen.Start -> StartScreen(
+                context = this,
+                onPlay = { navigator.navigate(AppScreen.Dashboard) },
+                onTestMode = { navigator.navigate(AppScreen.Match(levelId = "DEMO_LEVEL")) },
+            )
             AppScreen.Dashboard -> DashboardScreen(this)
             AppScreen.Campaign -> CampaignScreen(this)
             AppScreen.Loadout -> LoadoutScreen(this)

@@ -1,6 +1,7 @@
 package com.urkaaaz.navigation
 
 sealed interface AppScreen {
+    data object Start : AppScreen
     data object Dashboard : AppScreen
     data object Campaign : AppScreen
     data object Loadout : AppScreen

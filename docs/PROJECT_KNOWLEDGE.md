@@ -3,9 +3,10 @@
 ## Current state
 
 The project is a modular Android game with a deterministic local match
-simulation. The current demo opens directly into `MatchScreen` with
-`DEMO_LEVEL`. Dashboard, campaign, loadout, shop and result screens exist as
-placeholders so they can be implemented incrementally.
+simulation. The application opens into `StartScreen`, which reproduces the legacy start
+menu. Its Play button opens `DashboardScreen`; the test mode button opens
+`MatchScreen` with `DEMO_LEVEL`. Dashboard, campaign, loadout, shop and result
+screens exist as placeholders so they can be implemented incrementally.
 
 The current match HUD displays:
 
@@ -43,6 +44,7 @@ must go through commands and domain/application boundaries.
 | `android-app/.../navigation/AppScreen.kt` | Screen identity contract |
 | `android-app/.../navigation/AppNavigator.kt` | Navigation and back stack |
 | `android-app/.../navigation/ScreenHost.kt` | Active screen container |
+| `android-app/.../screens/start/StartScreen.kt` | Legacy-style start menu |
 | `android-app/.../screens/match/MatchScreen.kt` | Match screen boundary |
 | `android-app/.../ui/MatchScreenController.kt` | Match composition and lifecycle |
 | `android-app/.../ui/MatchHudView.kt` | Timer, wind and pause HUD |
