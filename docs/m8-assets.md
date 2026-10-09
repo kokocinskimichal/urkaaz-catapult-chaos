@@ -23,8 +23,8 @@ Dodano również assety używane przez pierwszy renderer:
 ```text
 terrain_soil_fill_00.png
 terrain_grass_cap.png
-fortress_left.png
-fortress_right.png
+fortress_chapter_01_left.png
+fortress_chapter_01_right.png
 catapult_left.png
 catapult_right.png
 ```

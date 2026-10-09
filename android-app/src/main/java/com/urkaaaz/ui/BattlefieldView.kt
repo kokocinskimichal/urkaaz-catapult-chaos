@@ -88,8 +88,10 @@ class BattlefieldView(context: Context) : View(context) {
             fallbackColor = Color.rgb(77, 98, 76),
         ),
     )
-    private val blueFortress = BitmapFactory.decodeResource(resources, R.drawable.fortress_left)
-    private val redFortress = BitmapFactory.decodeResource(resources, R.drawable.fortress_right)
+    private val greenFrontierBlueFortress =
+        BitmapFactory.decodeResource(resources, R.drawable.fortress_chapter_01_left)
+    private val greenFrontierRedFortress =
+        BitmapFactory.decodeResource(resources, R.drawable.fortress_chapter_01_right)
     private val blueCatapult = BitmapFactory.decodeResource(resources, R.drawable.catapult_left)
     private val redCatapult = BitmapFactory.decodeResource(resources, R.drawable.catapult_right)
     private val backgroundPaint = Paint(Paint.ANTI_ALIAS_FLAG)
@@ -240,6 +242,8 @@ class BattlefieldView(context: Context) : View(context) {
         drawTiledTexture(canvas, theme.soil, groundTop, height.toFloat(), 128f)
         drawTiledTexture(canvas, theme.cap, groundTop - 20f, groundTop + 6f, 150f)
         drawThemeDecorations(canvas, theme, groundTop)
+        val blueFortress = greenFrontierBlueFortress
+        val redFortress = greenFrontierRedFortress
         drawTexture(canvas, blueFortress, width * 0.06f, groundTop - 175f, 175f)
         drawTexture(canvas, redFortress, width * 0.80f, groundTop - 175f, 175f)
         drawTexture(canvas, blueCatapult, width * 0.20f, groundTop - 105f, 105f)

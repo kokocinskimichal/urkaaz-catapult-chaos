@@ -482,8 +482,6 @@ app/src/main/res/drawable-nodpi/fortress_chapter_04_left.png,fortresses,image,pn
 app/src/main/res/drawable-nodpi/fortress_chapter_04_right.png,fortresses,image,png,1024x768,yes,nodpi,runtime_candidate,copy_or_process
 app/src/main/res/drawable-nodpi/fortress_chapter_05_left.png,fortresses,image,png,1024x768,yes,nodpi,runtime_candidate,copy_or_process
 app/src/main/res/drawable-nodpi/fortress_chapter_05_right.png,fortresses,image,png,1024x768,yes,nodpi,runtime_candidate,copy_or_process
-app/src/main/res/drawable-nodpi/fortress_left.png,fortresses,image,png,1774x887,yes,nodpi,runtime_candidate,copy_or_process
-app/src/main/res/drawable-nodpi/fortress_right.png,fortresses,image,png,1774x887,yes,nodpi,runtime_candidate,copy_or_process
 app/src/main/res/drawable-nodpi/goblin_raging_boar_attack_00.png,units,image,png,512x512,yes,nodpi,runtime_candidate,copy_or_process
 app/src/main/res/drawable-nodpi/goblin_raging_boar_attack_01.png,units,image,png,512x512,yes,nodpi,runtime_candidate,copy_or_process
 app/src/main/res/drawable-nodpi/goblin_raging_boar_attack_02.png,units,image,png,512x512,yes,nodpi,runtime_candidate,copy_or_process

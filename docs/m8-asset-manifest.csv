@@ -3,7 +3,7 @@ app/src/main/res/drawable-nodpi/rock_flight_*.png,android-app/src/main/res/drawa
 app/src/main/res/drawable-nodpi/rock_impact_*.png,android-app/src/main/res/drawable-nodpi/rock_impact_*.png,projectiles,32,android-app asset catalog,copied
 app/src/main/res/drawable-nodpi/terrain_soil_fill_00.png,android-app/src/main/res/drawable-nodpi/terrain_soil_fill_00.png,terrain,1,BattlefieldView,copied
 app/src/main/res/drawable-nodpi/terrain_grass_cap.png,android-app/src/main/res/drawable-nodpi/terrain_grass_cap.png,terrain,1,BattlefieldView,copied
-app/src/main/res/drawable-nodpi/fortress_left.png,android-app/src/main/res/drawable-nodpi/fortress_left.png,fortresses,1,BattlefieldView,copied
-app/src/main/res/drawable-nodpi/fortress_right.png,android-app/src/main/res/drawable-nodpi/fortress_right.png,fortresses,1,BattlefieldView,copied
+app/src/main/res/drawable-nodpi/fortress_chapter_01_left.png,android-app/src/main/res/drawable-nodpi/fortress_chapter_01_left.png,fortresses,1,BattlefieldView,copied
+app/src/main/res/drawable-nodpi/fortress_chapter_01_right.png,android-app/src/main/res/drawable-nodpi/fortress_chapter_01_right.png,fortresses,1,BattlefieldView,copied
 app/src/main/res/drawable-nodpi/catapult_left.png,android-app/src/main/res/drawable-nodpi/catapult_left.png,catapults,1,BattlefieldView,copied
 app/src/main/res/drawable-nodpi/catapult_right.png,android-app/src/main/res/drawable-nodpi/catapult_right.png,catapults,1,BattlefieldView,copied
