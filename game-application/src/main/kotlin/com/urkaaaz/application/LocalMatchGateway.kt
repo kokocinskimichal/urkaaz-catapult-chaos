@@ -22,5 +22,5 @@ class LocalMatchGateway(
         playerId: com.urkaaaz.contracts.PlayerId,
     ): MatchSnapshot = session.restart(matchId, playerId)
 
-    fun events(): List<MatchEvent> = session.events()
+    fun consumeEvents(): List<MatchEvent> = session.consumeEvents()
 }

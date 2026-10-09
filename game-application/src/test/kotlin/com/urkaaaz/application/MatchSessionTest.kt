@@ -8,6 +8,7 @@ import com.urkaaaz.contracts.PlayerId
 import com.urkaaaz.contracts.EntityId
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertTrue
 
 class MatchSessionTest {
     @Test
@@ -49,5 +50,23 @@ class MatchSessionTest {
 
         assertEquals("SIEGE_BOMB", snapshot.projectiles.single().ammunitionType)
         assertEquals(5.5f, snapshot.reloadRemainingSeconds[com.urkaaaz.contracts.Team.BLUE])
+    }
+
+    @Test
+    fun eventsAreConsumedExactlyOnce() {
+        val session = MatchSession()
+        session.dispatch(
+            MatchCommand.Start(
+                commandId = CommandId("start-events"),
+                matchId = MatchId("match-events"),
+                playerId = PlayerId("player-events"),
+            ),
+        )
+
+        val firstRead = session.consumeEvents()
+        val secondRead = session.consumeEvents()
+
+        assertTrue(firstRead.isNotEmpty())
+        assertTrue(secondRead.isEmpty())
     }
 }

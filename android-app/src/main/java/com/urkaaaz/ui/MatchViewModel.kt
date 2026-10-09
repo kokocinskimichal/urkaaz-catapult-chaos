@@ -94,14 +94,14 @@ class MatchViewModel(
                 ),
             )
         }
-        var presentationEvents = gateway.events()
+        var presentationEvents = gateway.consumeEvents()
         if (action == MatchUiAction.AdvanceSimulation &&
             snapshot.status == com.urkaaaz.contracts.MatchStatus.RUNNING
         ) {
             aiAgent.decide(snapshot).forEach { command ->
                 snapshot = gateway.dispatch(command)
             }
-            presentationEvents += gateway.events()
+            presentationEvents += gateway.consumeEvents()
         }
         return RenderStateMapper.map(snapshot, presentationEvents).also { renderState = it }
     }

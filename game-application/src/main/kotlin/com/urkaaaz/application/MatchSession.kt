@@ -83,7 +83,8 @@ class MatchSession(
             ),
         )
 
-    fun events(): List<com.urkaaaz.contracts.MatchEvent> = latestEvents
+    fun consumeEvents(): List<com.urkaaaz.contracts.MatchEvent> =
+        latestEvents.also { latestEvents = emptyList() }
 
     private fun start(command: MatchCommand.Start): MatchSnapshot {
         simulation = DeterministicMatchSimulation(

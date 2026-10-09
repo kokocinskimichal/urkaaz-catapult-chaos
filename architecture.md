@@ -519,6 +519,215 @@ do silnika.
 
 ---
 
+## 34. Zasady Clean Code
+
+Poniższe zasady obowiązują dla nowego kodu oraz dla każdego pliku, który jest
+zmieniany podczas refaktoryzacji.
+
+### 10.1. Czytelność i nazewnictwo
+
+- Nazwy opisują intencję, a nie sposób implementacji.
+- Klasy, interfejsy i obiekty mają rzeczownikowe nazwy, a funkcje czasownikowe.
+- Nie używamy niejasnych skrótów, nazw typu `data`, `manager`, `helper`,
+  `misc` ani numerowanych wariantów.
+- Nazwy drużyn, faz, typów amunicji i biomów używają typów domenowych
+  (`Team`, `MatchPhase`, `AmmunitionType`, `TerrainBiome`), nie luźnych stringów.
+- Stałe gameplayowe i layoutowe mają nazwę wskazującą jednostkę lub znaczenie.
+- Komentarz wyjaśnia tylko nieoczywistą decyzję; nie opisuje składni kodu.
+
+### 10.2. Funkcje i klasy
+
+- Jedna funkcja ma jedną odpowiedzialność i jeden poziom abstrakcji.
+- Funkcja nie powinna wymagać czytania całego pliku, aby zrozumieć jej efekt.
+- Unikamy długich list parametrów; powiązane wartości grupujemy w jawny typ
+  konfiguracyjny lub kontekst.
+- Klasa ma jednego właściciela odpowiedzialności i nie łączy domeny, UI,
+  persystencji oraz platformy.
+- Preferujemy małe, testowalne komponenty zamiast monolitycznych widoków,
+  serwisów i fasad.
+- Nie dodajemy abstrakcji bez konkretnego konsumenta lub uzasadnionej granicy.
+
+### 10.3. Przepływ danych i błędy
+
+- Dane przepływają jawnie przez parametry i wyniki; unikamy ukrytego mutable
+  state oraz globalnych singletonów.
+- Nie używamy cichych fallbacków, które maskują błąd konfiguracji lub danych.
+- Nie połykamy wyjątków przez puste `catch`, szerokie `runCatching` ani
+  success-shaped fallback.
+- Błędy komend są reprezentowane przez jawny wynik aplikacyjny lub event
+  odrzucenia, jeśli należą do normalnego przepływu gry.
+- `require` i `check` służą do naruszeń kontraktu programistycznego, a nie do
+  ukrywania błędów wejścia użytkownika.
+- Każda zmiana stanu gameplayu ma jednoznacznego właściciela i jest testowalna.
+
+### 10.4. Duplikacja, stałe i format
+
+- Nie kopiujemy reguł między Androidem, AI, kampanią i symulacją.
+- Wspólne reguły trafiają do najniższej warstwy, która jest ich właścicielem.
+- Nie powielamy identyfikatorów, pozycji, kolorów, wymiarów świata ani progów
+  w wielu klasach.
+- Formatowanie, importy i kolejność deklaracji są zgodne z istniejącym stylem.
+- Zmieniamy tylko zakres potrzebny do zadania; nie łączymy niepowiązanego
+  refaktoru z poprawką gameplayu.
+
+### 10.5. Testowalność
+
+- Logika domeny, symulacji, kampanii i mapowania snapshotów nie zależy od
+  Androida, `Context`, `View`, zegara systemowego ani losowości globalnej.
+- Każda nowa reguła gameplayowa otrzymuje test pozytywny i test graniczny lub
+  negatywny.
+- Testy sprawdzają zachowanie i kontrakt, a nie prywatną implementację.
+- Deterministyczne systemy przyjmują jawny seed, czas lub krok symulacji.
+
+---
+
+## 35. Zasady Clean Architecture
+
+### 11.1. Kierunek zależności
+
+Zależności mogą płynąć wyłącznie do wewnątrz:
+
+```text
+Android/UI
+  → application
+    → contracts
+    → campaign / ai
+      → simulation
+        → domain
+```
+
+- `game-domain` nie zna Androida, aplikacji, kampanii ani AI.
+- `game-simulation` nie zna Androida, UI, assetów ani `Context`.
+- `game-contracts` zawiera stabilne wejścia i wyjścia między warstwami; nie
+  importuje implementacji niższej warstwy.
+- `game-application` orkiestruje sesję i komendy, ale nie renderuje i nie
+  implementuje szczegółów Androida.
+- `android-app` może zależeć od kontraktów i publicznych granic aplikacji, ale
+  nie może mutować domeny bezpośrednio.
+
+### 11.2. Granice stanu
+
+- `Match`/symulacja są jedynym właścicielem stanu gameplayu.
+- `MatchSnapshot` jest niemutowalnym odczytem, nie magazynem do zapisu.
+- `MatchViewModel` przechowuje wyłącznie stan prezentacyjny i stan ekranu.
+- Kamera, animacje, trail pocisku i gest celowania są lokalnym stanem UI.
+- Asset catalog nie zawiera reguł gry, a renderer nie wykonuje komend.
+- Persystencja progresji nie zapisuje bezpośrednio runtime state meczu.
+
+### 11.3. Komendy i eventy
+
+- Każde źródło akcji — dotyk, HUD, AI, tutorial i replay — korzysta z tego
+  samego kontraktu `MatchCommand`.
+- Każda komenda przechodzi przez tę samą walidację własności gracza, meczu,
+  drużyny, fazy, zasobów i cooldownów.
+- `playerId`, `matchId`, `Team` i przypisanie encji są danymi kontraktowymi;
+  nie wolno wyprowadzać ich z konwencji tekstowej ID.
+- Event opisuje fakt, który zaszedł. UI może go wyświetlić lub animować, ale
+  nie może na jego podstawie samodzielnie zmieniać snapshotu.
+- Eventy są konsumowane zgodnie z jawnym kontraktem i nie mogą powodować
+  wielokrotnego odtwarzania efektu.
+
+### 11.4. Kampania i konfiguracja
+
+- `CampaignLevelDefinition` jest źródłem konfiguracji poziomu, a nie tylko
+  mapowania biomu.
+- Do meczu muszą trafić wszystkie zatwierdzone parametry poziomu: biome,
+  rozmiar, wiatr, zasoby, amunicja, jednostki, trudność, zdrowie, skala,
+  tutorial i reguły zwycięstwa.
+- Renderowanie biomu może interpretować theme i assety, ale nie może zmieniać
+  fizyki, kolizji ani zasad bez jawnego modelu domenowego.
+- Fallback jest dozwolony wyłącznie jako świadomie opisany kontrakt danych;
+  brak wymaganej konfiguracji powinien być wykrywalnym błędem.
+
+### 11.5. Android i rendering
+
+- `Activity` odpowiada za lifecycle i składanie ekranu.
+- `ViewModel` tłumaczy akcje UI na komendy i mapuje snapshoty na stan UI.
+- `BattlefieldView` obsługuje input, lokalny stan widoku i deleguje renderowanie.
+- Renderery są rozdzielone według warstw: terrain, fortress/catapult,
+  projectile/effects, aim oraz HUD.
+- Renderer przyjmuje dane prezentacyjne i nie wywołuje gatewaya, symulacji ani
+  domeny.
+- `RenderStateMapper` nie zawiera arbitralnej wiedzy o identyfikatorach encji,
+  pozycji trafień ani domyślnym stanie gameplayu.
+
+---
+
+## 36. Obowiązkowa kontrola przed commitem
+
+Przed każdym commitem autora zmian należy wykonać poniższą kontrolę. Dotyczy
+ona całego zmienionego diffu, nie tylko nowych linii.
+
+### 12.1. Review architektoniczny
+
+- [ ] Zmieniony kod respektuje kierunek zależności modułów.
+- [ ] Żaden kod domeny/symulacji nie importuje Androida ani UI.
+- [ ] Stan gameplayu ma jednego właściciela.
+- [ ] Komendy przechodzą przez wspólną granicę i nie omijają walidacji.
+- [ ] Nie dodano logiki gameplayu do `Activity`, `View` ani renderera.
+- [ ] Nie dodano stringowego rozpoznawania drużyn, encji lub faz, jeśli istnieje
+      odpowiedni typ domenowy.
+- [ ] Nie dodano cichego fallbacku, połkniętego wyjątku ani niejawnego defaultu.
+- [ ] Kampania przekazuje kompletną konfigurację wymaganą przez zmianę.
+
+### 12.2. Review Clean Code
+
+- [ ] Nazwy opisują intencję i nie ukrywają jednostek ani znaczenia.
+- [ ] Funkcje i klasy mają pojedynczą odpowiedzialność.
+- [ ] Nie ma niepotrzebnej duplikacji ani równoległego kontraktu.
+- [ ] Zmienione stałe mają jednego właściciela.
+- [ ] Publiczne API ma jasno określone błędy i cykl życia.
+- [ ] Zmieniony kod jest wystarczająco mały, aby można go było niezależnie
+      przetestować.
+
+### 12.3. Walidacja techniczna
+
+- [ ] Dodano lub zaktualizowano testy dla nowej reguły i przypadków granicznych.
+- [ ] Przeszły testy właściwych modułów.
+- [ ] Przeszedł debug build aplikacji.
+- [ ] `git diff --check` nie zgłasza błędów.
+- [ ] Nie ma przypadkowych plików build, assetów, sekretów ani zmian poza zakresem.
+- [ ] Dokumentacja architektury i kontraktów została zaktualizowana, jeśli
+      zmiana wpływa na granice lub zachowanie systemu.
+
+### 12.4. Minimalny zestaw poleceń
+
+Domyślny gate przed commitem:
+
+```bash
+./gradlew test assembleDebug --quiet
+git diff --check
+git status --short
+```
+
+Jeżeli zmiana dotyczy tylko jednego modułu, można najpierw uruchomić testy
+modułu, ale przed commitem nadal należy wykonać pełny gate albo jawnie opisać
+powód odstępstwa. Commit nie powinien być tworzony, gdy którykolwiek test,
+build lub kontrola diffu nie przechodzi.
+
+---
+
+## 37. Format review przed commitem
+
+Przed utworzeniem commita należy krótko sprawdzić i odnotować:
+
+```text
+Architecture gate:
+- dependency direction: PASS / FAIL
+- single state owner: PASS / FAIL
+- command and event boundaries: PASS / FAIL
+- clean code review: PASS / FAIL
+- tests: PASS / FAIL
+- debug build: PASS / FAIL
+- diff check: PASS / FAIL
+```
+
+Jeżeli kontrola kończy się statusem `FAIL`, najpierw należy poprawić kod albo
+jawnie zatrzymać commit i zgłosić blokadę. Sam fakt, że projekt się kompiluje,
+nie oznacza spełnienia zasad Clean Code ani Clean Architecture.
+
+---
+
 ## 10. Kontrakty komponentów
 
 Minimalne kontrakty powinny wyglądać koncepcyjnie tak:

@@ -1,0 +1,251 @@
+package com.urkaaaz.ui
+
+import android.graphics.Bitmap
+import android.graphics.Canvas
+import android.graphics.Color
+import android.graphics.LinearGradient
+import android.graphics.Paint
+import android.graphics.RectF
+import android.graphics.Shader
+import android.graphics.Typeface
+
+class BattlefieldRenderer(
+    private val assets: BattlefieldAssetCatalog,
+    private val drawThemeDecorations: (Canvas, BattlefieldTheme, Float) -> Unit,
+    private val drawTiledTexture: (Canvas, Bitmap?, Float, Float, Float, Int) -> Unit,
+    private val drawTexture: (Canvas, Bitmap?, Float, Float, Float) -> Unit,
+    private val drawTextureAtBaseline: (Canvas, Bitmap?, Float, Float, Float) -> Unit,
+    private val drawReloadIndicator: (Canvas, Float, Float, Float, Boolean) -> Unit,
+    private val drawTrajectoryPreview: (Canvas) -> Unit,
+    private val drawProjectileTrails: (Canvas) -> Unit,
+    private val drawAimGesture: (Canvas, Float) -> Unit,
+) {
+    private val backgroundPaint = Paint(Paint.ANTI_ALIAS_FLAG)
+    private val bluePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        color = Color.rgb(55, 105, 190)
+    }
+    private val redPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        color = Color.rgb(190, 65, 55)
+    }
+
+    fun render(
+        canvas: Canvas,
+        state: RenderState,
+        camera: CameraTransform,
+        activeImpact: ImpactRenderState?,
+        animationFrame: Int,
+        impactFrame: Int,
+        isAiming: Boolean,
+        viewportWidth: Float,
+        viewportHeight: Float,
+    ) {
+        canvas.save()
+        canvas.scale(camera.scale, camera.scale)
+        canvas.translate(
+            camera.offsetX / camera.scale,
+            camera.offsetY / camera.scale,
+        )
+
+        val theme = assets.themeFor(state.terrainBiome)
+        drawBackground(canvas, theme, viewportWidth, viewportHeight)
+        val groundTop = viewportHeight * 0.76f
+        drawTiledTexture(canvas, theme.soil, groundTop, viewportHeight, 128f, theme.fallbackColor)
+        drawTiledTexture(canvas, theme.cap, groundTop - 20f, groundTop + 6f, 150f, theme.fallbackColor)
+        drawThemeDecorations(canvas, theme, groundTop)
+
+        val blueFortressCenterX = worldToViewX(160f, viewportWidth)
+        val redFortressCenterX = worldToViewX(WORLD_WIDTH - 160f, viewportWidth)
+        val fortressBaseline = groundTop + 4f
+        drawTextureAtBaseline(
+            canvas,
+            assets.blueFortress,
+            blueFortressCenterX,
+            fortressBaseline,
+            FORTRESS_RENDER_WIDTH,
+        )
+        drawTextureAtBaseline(
+            canvas,
+            assets.redFortress,
+            redFortressCenterX,
+            fortressBaseline,
+            FORTRESS_RENDER_WIDTH,
+        )
+
+        val blueCatapultCenterX = worldToViewX(state.blueCatapultX, viewportWidth)
+        val redCatapultCenterX = worldToViewX(state.redCatapultX, viewportWidth)
+        val catapultBaseline =
+            fortressBaseline - FORTRESS_RENDER_HEIGHT * CATAPULT_PLATFORM_HEIGHT_RATIO
+        drawTextureAtBaseline(
+            canvas,
+            assets.blueCatapult,
+            blueCatapultCenterX,
+            catapultBaseline,
+            CATAPULT_RENDER_WIDTH,
+        )
+        drawTextureAtBaseline(
+            canvas,
+            assets.redCatapult,
+            redCatapultCenterX,
+            catapultBaseline,
+            CATAPULT_RENDER_WIDTH,
+        )
+        drawReloadIndicator(
+            canvas,
+            blueCatapultCenterX,
+            catapultBaseline - RELOAD_INDICATOR_OFFSET,
+            state.playerReloadRemainingSeconds,
+            state.playerProjectileActive,
+        )
+        drawReloadIndicator(
+            canvas,
+            redCatapultCenterX,
+            catapultBaseline - RELOAD_INDICATOR_OFFSET,
+            state.enemyReloadRemainingSeconds,
+            state.projectiles.any { it.teamLabel == "RED" },
+        )
+
+        drawTrajectoryPreview(canvas)
+        drawProjectileTrails(canvas)
+        state.projectiles.forEach { projectile ->
+            val projectileX = worldToViewX(projectile.x, viewportWidth)
+                .coerceIn(0f, viewportWidth)
+            val projectileY = worldToViewY(projectile.y, viewportHeight)
+                .coerceIn(0f, groundTop)
+            val frames = assets.animationFor(projectile.ammunitionType).flightFrames
+            val frame = frames.getOrNull(animationFrame % frames.size.coerceAtLeast(1))
+            drawTexture(canvas, frame, projectileX - 30f, projectileY - 30f, 60f)
+        }
+        activeImpact?.let { impact ->
+            val frames = assets.animationFor(impact.ammunitionType).impactFrames
+            val frame = frames.getOrNull(impactFrame % frames.size.coerceAtLeast(1))
+            val impactX = worldToViewX(impact.x, viewportWidth).coerceIn(0f, viewportWidth)
+            val impactY = worldToViewY(impact.y, viewportHeight).coerceIn(0f, groundTop)
+            drawTexture(canvas, frame, impactX - 54f, impactY - 54f, 108f)
+        }
+
+        drawHealthBar(
+            canvas,
+            blueFortressCenterX - FORTRESS_RENDER_WIDTH / 2f,
+            fortressBaseline - FORTRESS_RENDER_HEIGHT - 18f,
+            state.blueFortressHealth,
+            state.blueFortressMaxHealth,
+            bluePaint,
+        )
+        drawHealthBar(
+            canvas,
+            redFortressCenterX - FORTRESS_RENDER_WIDTH / 2f,
+            fortressBaseline - FORTRESS_RENDER_HEIGHT - 18f,
+            state.redFortressHealth,
+            state.redFortressMaxHealth,
+            redPaint,
+        )
+        drawFortressLabels(canvas, blueFortressCenterX, redFortressCenterX, fortressBaseline)
+        drawOutcome(canvas, state.outcomeLabel, viewportWidth, viewportHeight)
+        if (isAiming) drawAimGesture(canvas, groundTop)
+        canvas.restore()
+    }
+
+    private fun drawBackground(
+        canvas: Canvas,
+        theme: BattlefieldTheme,
+        viewportWidth: Float,
+        viewportHeight: Float,
+    ) {
+        if (theme.background != null) {
+            canvas.drawBitmap(
+                theme.background,
+                null,
+                RectF(0f, 0f, viewportWidth, viewportHeight),
+                backgroundPaint,
+            )
+        } else {
+            backgroundPaint.shader = LinearGradient(
+                0f,
+                0f,
+                0f,
+                viewportHeight,
+                Color.rgb(123, 177, 211),
+                Color.rgb(242, 211, 154),
+                Shader.TileMode.CLAMP,
+            )
+            canvas.drawRect(0f, 0f, viewportWidth, viewportHeight, backgroundPaint)
+            backgroundPaint.shader = null
+        }
+    }
+
+    private fun drawHealthBar(
+        canvas: Canvas,
+        left: Float,
+        top: Float,
+        health: Int,
+        maxHealth: Int,
+        color: Paint,
+    ) {
+        val background = Paint(Paint.ANTI_ALIAS_FLAG).apply { this.color = Color.DKGRAY }
+        canvas.drawRect(left, top, left + FORTRESS_RENDER_WIDTH, top + 16f, background)
+        val ratio = if (maxHealth > 0) {
+            (health.toFloat() / maxHealth).coerceIn(0f, 1f)
+        } else {
+            0f
+        }
+        canvas.drawRect(left, top, left + FORTRESS_RENDER_WIDTH * ratio, top + 16f, color)
+    }
+
+    private fun drawFortressLabels(
+        canvas: Canvas,
+        blueCenterX: Float,
+        redCenterX: Float,
+        baseline: Float,
+    ) {
+        val paint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+            color = Color.WHITE
+            textSize = 18f
+            typeface = Typeface.DEFAULT_BOLD
+            setShadowLayer(4f, 1f, 1f, Color.BLACK)
+        }
+        val labelY = baseline - FORTRESS_RENDER_HEIGHT - 25f
+        canvas.drawText("YOU", blueCenterX - FORTRESS_RENDER_WIDTH / 2f, labelY, paint)
+        canvas.drawText("ENEMY", redCenterX - FORTRESS_RENDER_WIDTH / 2f, labelY, paint)
+    }
+
+    private fun drawOutcome(
+        canvas: Canvas,
+        outcome: String?,
+        viewportWidth: Float,
+        viewportHeight: Float,
+    ) {
+        outcome ?: return
+        val overlay = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+            color = Color.argb(190, 20, 24, 28)
+        }
+        canvas.drawRect(0f, 0f, viewportWidth, viewportHeight, overlay)
+        val resultPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+            color = Color.WHITE
+            textSize = 42f
+            textAlign = Paint.Align.CENTER
+            typeface = Typeface.DEFAULT_BOLD
+        }
+        val result = when (outcome) {
+            "BLUE_WIN" -> "VICTORY"
+            "RED_WIN" -> "DEFEAT"
+            else -> "DRAW"
+        }
+        canvas.drawText(result, viewportWidth / 2f, viewportHeight / 2f, resultPaint)
+    }
+
+    private fun worldToViewX(worldX: Float, viewportWidth: Float): Float =
+        worldX / WORLD_WIDTH * viewportWidth
+
+    private fun worldToViewY(worldY: Float, viewportHeight: Float): Float =
+        worldY / WORLD_HEIGHT * viewportHeight
+
+    companion object {
+        private const val WORLD_WIDTH = 1_600f
+        private const val WORLD_HEIGHT = 900f
+        private const val FORTRESS_RENDER_WIDTH = 280f
+        private const val FORTRESS_RENDER_HEIGHT = 210f
+        private const val CATAPULT_RENDER_WIDTH = 95f
+        private const val RELOAD_INDICATOR_OFFSET = 72f
+        private const val CATAPULT_PLATFORM_HEIGHT_RATIO = 0.40f
+    }
+}
