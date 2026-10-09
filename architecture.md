@@ -1652,6 +1652,52 @@ Architektura będzie gotowa do dalszej implementacji, gdy:
 - testy domeny nie wymagają Androida;
 - przyszłe wydzielenie `domain` i `simulation` nie wymaga zmian w regułach gry.
 
-Na tym etapie nie należy jeszcze oznaczać żadnego podpunktu jako
-zaimplementowanego. Ten dokument opisuje docelowy projekt architektury, a nie
-wykonane zmiany.
+Poniższa granica ekranu meczu jest już wdrożona częściowo i stanowi pierwszy
+etap migracji z `MainActivity` do architektury ekranów.
+
+## 34. Wdrożona granica ekranu meczu
+
+Aktualny ekran meczu jest podzielony na:
+
+| Komponent | Odpowiedzialność |
+|---|---|
+| `MainActivity` | lifecycle Androida, fullscreen i podpięcie ekranu |
+| `MatchScreenController` | składanie ekranu, pętla odświeżania i przekazywanie akcji |
+| `MatchHudView` | timer, wiatr, `Pause` i prezentacja HUD-u meczu |
+| `AmmunitionPanelView` | wybór amunicji i prezentacja jej dostępności |
+| `BattlefieldView` | gesty, kamera i przekazanie akcji celowania |
+| `MatchViewModel` | stan prezentacyjny i tłumaczenie akcji UI na komendy |
+
+`MainActivity` nie buduje już widoków meczu, nie posiada stanu amunicji ani
+timera i nie steruje bezpośrednio `BattlefieldView`. Kolejne ekrany powinny
+być dodawane według tego samego wzorca: osobny screen/controller, osobny
+`UiState`/`UiAction` oraz pojedynczy punkt wejścia w `MainActivity`.
+
+## 35. Szkielet nawigacji i ekranów
+
+W aplikacji istnieje wspólny szkielet ekranów:
+
+```text
+MainActivity
+ ├── AppNavigator
+ └── ScreenHost
+      └── aktywny ScreenContent
+```
+
+`AppScreen` jest jedynym kontraktem identyfikującym ekran. `AppNavigator`
+zarządza bieżącym ekranem i stosem Back, a `ScreenHost` podmienia aktywny
+`ScreenContent`. Ekrany nie powinny dodawać widoków bezpośrednio do
+`MainActivity`.
+
+Aktualne ekrany:
+
+- `DashboardScreen` — placeholder;
+- `CampaignScreen` — placeholder;
+- `LoadoutScreen` — placeholder;
+- `ShopScreen` — placeholder;
+- `MatchScreen` — działający ekran meczu;
+- `ResultScreen` — placeholder.
+
+Placeholdery korzystają ze wspólnego `PlaceholderScreenView`, ale każdy ekran
+ma własny pakiet i może zostać rozwinięty bez zmiany kontraktu nawigacji.
+Ekran meczu zachowuje własny `MatchScreenController`, HUD i panel amunicji.
