@@ -66,7 +66,15 @@ class MainActivity : Activity() {
             render(viewModel.dispatch(MatchUiAction.Aim(aimAngle, aimPower)))
             render(viewModel.dispatch(MatchUiAction.FireRock))
         }
-        battlefieldView.onAimCancelled = { render(viewModel.renderState) }
+        battlefieldView.onAimCancelled = { previousAim ->
+            if (previousAim != null) {
+                aimAngle = previousAim.angleDegrees
+                aimPower = previousAim.power
+                render(viewModel.dispatch(MatchUiAction.Aim(aimAngle, aimPower)))
+            } else {
+                render(viewModel.renderState)
+            }
+        }
 
         pauseButton = Button(this).apply {
             text = "II"

@@ -4,6 +4,7 @@ import android.content.Context
 import android.graphics.Canvas
 import android.graphics.Color
 import android.graphics.Paint
+import android.graphics.RectF
 import android.graphics.BitmapFactory
 import android.graphics.LinearGradient
 import android.graphics.Shader
@@ -19,7 +20,7 @@ import com.urkaaaz.android.R
 class BattlefieldView(context: Context) : View(context) {
     var onAimChanged: ((SlingshotAim) -> Unit)? = null
     var onAimReleased: ((SlingshotAim) -> Unit)? = null
-    var onAimCancelled: (() -> Unit)? = null
+    var onAimCancelled: ((SlingshotAim?) -> Unit)? = null
     private val flightFrames = loadAnimationFrames("rock_flight")
     private val impactFrames = loadAnimationFrames("rock_impact")
     private val animations = mapOf(
@@ -148,8 +149,10 @@ class BattlefieldView(context: Context) : View(context) {
     private var animationFrame = 0
     private var impactFrame = 0
     private var activeImpact: ImpactRenderState? = null
+    private val projectileTrails = mutableMapOf<String, MutableList<Pair<Float, Float>>>()
     private var draggingAim = false
     private var dragAim: SlingshotAim? = null
+    private var aimBeforeDrag: SlingshotAim? = null
     private var dragX = 0f
     private var dragY = 0f
     private var mapScale = 1f
@@ -195,6 +198,7 @@ class BattlefieldView(context: Context) : View(context) {
     )
 
     fun render(newState: RenderState) {
+        updateProjectileTrails(newState)
         updateCameraTracking(newState)
         state = newState
         animationFrame = if (newState.projectiles.isEmpty()) {
@@ -244,10 +248,34 @@ class BattlefieldView(context: Context) : View(context) {
         drawThemeDecorations(canvas, theme, groundTop)
         val blueFortress = greenFrontierBlueFortress
         val redFortress = greenFrontierRedFortress
-        drawTexture(canvas, blueFortress, width * 0.06f, groundTop - 175f, 175f)
-        drawTexture(canvas, redFortress, width * 0.80f, groundTop - 175f, 175f)
-        drawTexture(canvas, blueCatapult, width * 0.20f, groundTop - 105f, 105f)
-        drawTexture(canvas, redCatapult, width * 0.70f, groundTop - 105f, 105f)
+        val blueFortressCenterX = worldToViewX(160f)
+        val redFortressCenterX = worldToViewX(WORLD_WIDTH - 160f)
+        val fortressBaseline = groundTop + 4f
+        drawTextureAtBaseline(canvas, blueFortress, blueFortressCenterX, fortressBaseline, FORTRESS_RENDER_WIDTH)
+        drawTextureAtBaseline(canvas, redFortress, redFortressCenterX, fortressBaseline, FORTRESS_RENDER_WIDTH)
+        val blueCatapultCenterX = worldToViewX(state.blueCatapultX)
+        val redCatapultCenterX = worldToViewX(state.redCatapultX)
+        val catapultPlatformBaseline = fortressBaseline - FORTRESS_RENDER_HEIGHT * CATAPULT_PLATFORM_HEIGHT_RATIO
+        val blueCatapultBaseline = catapultPlatformBaseline
+        val redCatapultBaseline = catapultPlatformBaseline
+        drawTextureAtBaseline(canvas, blueCatapult, blueCatapultCenterX, blueCatapultBaseline, CATAPULT_RENDER_WIDTH)
+        drawTextureAtBaseline(canvas, redCatapult, redCatapultCenterX, redCatapultBaseline, CATAPULT_RENDER_WIDTH)
+        drawReloadIndicator(
+            canvas = canvas,
+            centerX = blueCatapultCenterX,
+            centerY = blueCatapultBaseline - RELOAD_INDICATOR_OFFSET,
+            remainingSeconds = state.playerReloadRemainingSeconds,
+            projectileActive = state.playerProjectileActive,
+        )
+        drawReloadIndicator(
+            canvas = canvas,
+            centerX = redCatapultCenterX,
+            centerY = redCatapultBaseline - RELOAD_INDICATOR_OFFSET,
+            remainingSeconds = state.enemyReloadRemainingSeconds,
+            projectileActive = state.projectiles.any { it.teamLabel == "RED" },
+        )
+        drawTrajectoryPreview(canvas)
+        drawProjectileTrails(canvas)
         state.projectiles.forEach { projectile ->
             val projectileX = (projectile.x / 1_600f * width).coerceIn(0f, width.toFloat())
             val projectileY = (projectile.y / 900f * height).coerceIn(0f, groundTop)
@@ -264,18 +292,18 @@ class BattlefieldView(context: Context) : View(context) {
         }
         drawHealthBar(
             canvas,
-            width * 0.06f,
-            groundTop - 198f,
-            175f,
+            blueFortressCenterX - FORTRESS_RENDER_WIDTH / 2f,
+            fortressBaseline - FORTRESS_RENDER_HEIGHT - 18f,
+            FORTRESS_RENDER_WIDTH,
             state.blueFortressHealth,
             state.blueFortressMaxHealth,
             bluePaint,
         )
         drawHealthBar(
             canvas,
-            width * 0.80f,
-            groundTop - 198f,
-            175f,
+            redFortressCenterX - FORTRESS_RENDER_WIDTH / 2f,
+            fortressBaseline - FORTRESS_RENDER_HEIGHT - 18f,
+            FORTRESS_RENDER_WIDTH,
             state.redFortressHealth,
             state.redFortressMaxHealth,
             redPaint,
@@ -286,8 +314,18 @@ class BattlefieldView(context: Context) : View(context) {
             typeface = Typeface.DEFAULT_BOLD
             setShadowLayer(4f, 1f, 1f, Color.BLACK)
         }
-        canvas.drawText("YOU", width * 0.06f, groundTop - 205f, labelPaint)
-        canvas.drawText("ENEMY", width * 0.80f, groundTop - 205f, labelPaint)
+        canvas.drawText(
+            "YOU",
+            blueFortressCenterX - FORTRESS_RENDER_WIDTH / 2f,
+            fortressBaseline - FORTRESS_RENDER_HEIGHT - 25f,
+            labelPaint,
+        )
+        canvas.drawText(
+            "ENEMY",
+            redFortressCenterX - FORTRESS_RENDER_WIDTH / 2f,
+            fortressBaseline - FORTRESS_RENDER_HEIGHT - 25f,
+            labelPaint,
+        )
         state.outcomeLabel?.let { outcome ->
             val overlay = Paint(Paint.ANTI_ALIAS_FLAG).apply {
                 color = Color.argb(190, 20, 24, 28)
@@ -360,8 +398,7 @@ class BattlefieldView(context: Context) : View(context) {
             state.playerReloadRemainingSeconds <= 0f
 
     private fun handleAimTouch(event: MotionEvent): Boolean {
-        val originX = width * 0.25f
-        val originY = height * 0.76f - 82f
+        val (originX, originY) = playerAimOrigin()
         val mapX = (event.x - mapOffsetX) / mapScale
         val mapY = (event.y - mapOffsetY) / mapScale
         when (event.actionMasked) {
@@ -373,6 +410,13 @@ class BattlefieldView(context: Context) : View(context) {
                 }
                 if (!canStartAiming()) return true
                 draggingAim = true
+                aimBeforeDrag = SlingshotAim(
+                    angleDegrees = state.playerAngleDegrees,
+                    power = state.playerPower,
+                    pullDistance = 0f,
+                    directionValid = false,
+                    shouldFire = false,
+                )
                 dragX = mapX
                 dragY = mapY
                 dragAim = SlingshotAimCalculator.calculate(originX, originY, dragX, dragY)
@@ -394,7 +438,12 @@ class BattlefieldView(context: Context) : View(context) {
                 val aim = requireNotNull(dragAim)
                 draggingAim = false
                 dragAim = null
-                if (aim.shouldFire) onAimReleased?.invoke(aim) else onAimCancelled?.invoke()
+                if (aim.shouldFire) {
+                    onAimReleased?.invoke(aim)
+                } else {
+                    onAimCancelled?.invoke(aimBeforeDrag)
+                }
+                aimBeforeDrag = null
                 invalidate()
                 return true
             }
@@ -422,17 +471,28 @@ class BattlefieldView(context: Context) : View(context) {
         if (!draggingAim && dragAim == null) return
         draggingAim = false
         dragAim = null
-        onAimCancelled?.invoke()
+        onAimCancelled?.invoke(aimBeforeDrag)
+        aimBeforeDrag = null
     }
 
     private fun drawAimGesture(canvas: Canvas, groundTop: Float) {
-        val originX = width * 0.25f
-        val originY = groundTop - 82f
+        val (originX, originY) = playerAimOrigin()
+        val limitPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+            color = Color.argb(110, 255, 255, 255)
+            style = Paint.Style.STROKE
+            strokeWidth = 2.5f
+        }
+        canvas.drawCircle(
+            originX,
+            originY,
+            VISUAL_MAX_PULL_DISTANCE,
+            limitPaint,
+        )
         val dx = dragX - originX
         val dy = dragY - originY
         val distance = hypot(dx, dy)
-        val scale = if (distance > SlingshotAimCalculator.MAX_PULL_DISTANCE) {
-            SlingshotAimCalculator.MAX_PULL_DISTANCE / distance
+        val scale = if (distance > VISUAL_MAX_PULL_DISTANCE) {
+            VISUAL_MAX_PULL_DISTANCE / distance
         } else {
             1f
         }
@@ -441,7 +501,7 @@ class BattlefieldView(context: Context) : View(context) {
         val paint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
             color = if (dragAim?.directionValid == true) Color.rgb(255, 224, 110) else Color.RED
             style = Paint.Style.STROKE
-            strokeWidth = 8f
+            strokeWidth = 6f
             strokeCap = Paint.Cap.ROUND
         }
         canvas.drawLine(originX, originY, pullX, pullY, paint)
@@ -463,6 +523,138 @@ class BattlefieldView(context: Context) : View(context) {
         canvas.drawRect(left, top, left + width * ratio, top + 16f, color)
     }
 
+    private fun drawReloadIndicator(
+        canvas: Canvas,
+        centerX: Float,
+        centerY: Float,
+        remainingSeconds: Float,
+        projectileActive: Boolean,
+    ) {
+        val radius = RELOAD_INDICATOR_RADIUS
+        val ready = remainingSeconds <= 0f && !projectileActive
+        val backgroundPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+            color = Color.argb(205, 25, 22, 18)
+            style = Paint.Style.FILL
+        }
+        canvas.drawCircle(centerX, centerY, radius + 5f, backgroundPaint)
+
+        val ringPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+            color = if (ready) Color.rgb(95, 220, 105) else Color.rgb(235, 65, 55)
+            style = Paint.Style.STROKE
+            strokeWidth = 7f
+            strokeCap = Paint.Cap.ROUND
+        }
+        val sweep = if (ready) {
+            360f
+        } else {
+            val progress = if (remainingSeconds > 0f) {
+                1f - (remainingSeconds / RELOAD_INDICATOR_DURATION).coerceIn(0f, 1f)
+            } else {
+                0f
+            }
+            360f * progress
+        }
+        canvas.drawArc(
+            RectF(centerX - radius, centerY - radius, centerX + radius, centerY + radius),
+            -90f,
+            sweep,
+            false,
+            ringPaint,
+        )
+
+        val textPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+            color = Color.WHITE
+            textAlign = Paint.Align.CENTER
+            textSize = 17f
+            typeface = Typeface.DEFAULT_BOLD
+        }
+        canvas.drawText(
+            if (ready) "OK" else kotlin.math.ceil(remainingSeconds).toInt().coerceAtLeast(1).toString(),
+            centerX,
+            centerY + 7f,
+            textPaint,
+        )
+    }
+
+    private fun drawTrajectoryPreview(canvas: Canvas) {
+        val aim = dragAim ?: return
+        if (!aim.directionValid || state.playerProjectileActive) return
+
+        val originX = state.blueCatapultX
+        val originY = state.blueCatapultY - MUZZLE_OFFSET
+        val angleRadians = Math.toRadians(aim.angleDegrees.toDouble())
+        val speed = aim.power * PROJECTILE_SPEED_SCALE
+        val velocityX = kotlin.math.cos(angleRadians).toFloat() * speed
+        val velocityY = -kotlin.math.sin(angleRadians).toFloat() * speed
+        val lastIndex = (TRAJECTORY_PREVIEW_POINTS - 1).toFloat()
+        val previewPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+            style = Paint.Style.FILL
+        }
+
+        for (index in 0 until TRAJECTORY_PREVIEW_POINTS) {
+            val time = index * TRAJECTORY_PREVIEW_STEP_SECONDS
+            val x = originX + velocityX * time + 0.5f * WIND_ACCELERATION_X * time * time
+            val y = originY + velocityY * time + 0.5f * GRAVITY_ACCELERATION_Y * time * time
+            if (x !in 0f..WORLD_WIDTH || y !in 0f..WORLD_HEIGHT) break
+            val fraction = index / lastIndex
+            previewPaint.color = Color.argb(
+                (255f - 75f * fraction).toInt(),
+                255,
+                244,
+                190,
+            )
+            canvas.drawCircle(
+                worldToViewX(x),
+                worldToViewY(y),
+                10f - 7f * fraction,
+                previewPaint,
+            )
+        }
+    }
+
+    private fun drawProjectileTrails(canvas: Canvas) {
+        val trailPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+            style = Paint.Style.STROKE
+            strokeWidth = 5f
+            strokeCap = Paint.Cap.ROUND
+        }
+        projectileTrails.values.forEach { trail ->
+            for (index in 1 until trail.size) {
+                val alphaFraction = index / trail.size.toFloat()
+                trailPaint.color = Color.argb(
+                    (180f * alphaFraction).toInt(),
+                    255,
+                    255,
+                    255,
+                )
+                val (x0, y0) = trail[index - 1]
+                val (x1, y1) = trail[index]
+                canvas.drawLine(
+                    worldToViewX(x0),
+                    worldToViewY(y0),
+                    worldToViewX(x1),
+                    worldToViewY(y1),
+                    trailPaint,
+                )
+            }
+        }
+    }
+
+    private fun updateProjectileTrails(newState: RenderState) {
+        val activeTeams = newState.projectiles.map { it.teamLabel }.toSet()
+        projectileTrails.keys.retainAll(activeTeams)
+        newState.projectiles.forEach { projectile ->
+            val trail = projectileTrails.getOrPut(projectile.teamLabel) { mutableListOf() }
+            val position = projectile.x to projectile.y
+            if (trail.lastOrNull() != position) {
+                trail += position
+            }
+            while (trail.size > PROJECTILE_TRAIL_POINTS) {
+                trail.removeAt(0)
+            }
+        }
+    }
+
     private fun drawTexture(canvas: Canvas, bitmap: android.graphics.Bitmap?, left: Float, top: Float, size: Float) {
         if (bitmap == null) return
         val aspectRatio = bitmap.width.toFloat() / bitmap.height.coerceAtLeast(1)
@@ -473,6 +665,43 @@ class BattlefieldView(context: Context) : View(context) {
             android.graphics.RectF(left, top, left + size, top + targetHeight),
             null,
         )
+    }
+
+    private fun drawTextureAtBaseline(
+        canvas: Canvas,
+        bitmap: android.graphics.Bitmap?,
+        centerX: Float,
+        baselineY: Float,
+        width: Float,
+    ) {
+        if (bitmap == null) return
+        val aspectRatio = bitmap.width.toFloat() / bitmap.height.coerceAtLeast(1)
+        val height = width / aspectRatio
+        canvas.drawBitmap(
+            bitmap,
+            null,
+            RectF(
+                centerX - width / 2f,
+                baselineY - height,
+                centerX + width / 2f,
+                baselineY,
+            ),
+            null,
+        )
+    }
+
+    private fun worldToViewX(worldX: Float): Float = worldX / WORLD_WIDTH * width
+
+    private fun worldToViewY(worldY: Float): Float = worldY / WORLD_HEIGHT * height
+
+    private fun catapultBaseline(worldY: Float, groundTop: Float): Float =
+        minOf(groundTop + 6f, worldToViewY(worldY) + 10f)
+
+    private fun playerAimOrigin(): Pair<Float, Float> {
+        val groundTop = height * 0.76f
+        val fortressBaseline = groundTop + 4f
+        val baseline = fortressBaseline - FORTRESS_RENDER_HEIGHT * CATAPULT_PLATFORM_HEIGHT_RATIO
+        return worldToViewX(state.blueCatapultX) to (baseline - AIM_ORIGIN_OFFSET)
     }
 
     private fun loadAnimationFrames(prefix: String): List<android.graphics.Bitmap> =
@@ -628,6 +857,22 @@ class BattlefieldView(context: Context) : View(context) {
         private const val CAMERA_RETURN_LERP = 0.18f
         private const val CAMERA_RETURN_EPSILON = 1f
         private const val PAN_START_DISTANCE = 12f
+        private const val VISUAL_MAX_PULL_DISTANCE = 190f
+        private const val RELOAD_INDICATOR_RADIUS = 30f
+        private const val RELOAD_INDICATOR_DURATION = 5.5f
+        private const val FORTRESS_RENDER_WIDTH = 280f
+        private const val FORTRESS_RENDER_HEIGHT = 210f
+        private const val CATAPULT_RENDER_WIDTH = 95f
+        private const val RELOAD_INDICATOR_OFFSET = 72f
+        private const val AIM_ORIGIN_OFFSET = 62f
+        private const val CATAPULT_PLATFORM_HEIGHT_RATIO = 0.40f
+        private const val MUZZLE_OFFSET = 34f
+        private const val PROJECTILE_SPEED_SCALE = 8f
+        private const val GRAVITY_ACCELERATION_Y = 420f
+        private const val WIND_ACCELERATION_X = 0f
+        private const val TRAJECTORY_PREVIEW_POINTS = 50
+        private const val TRAJECTORY_PREVIEW_STEP_SECONDS = 1f / 30f
+        private const val PROJECTILE_TRAIL_POINTS = 60
         private const val WORLD_WIDTH = 1_600f
         private const val WORLD_HEIGHT = 900f
     }
