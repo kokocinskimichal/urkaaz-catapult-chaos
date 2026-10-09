@@ -40,7 +40,7 @@ MainActivity
 Available screens:
 
 - `StartScreen` — legacy-style start menu;
-- `DashboardScreen` — placeholder;
+- `DashboardScreen` — legacy-style dashboard, wired to navigation;
 - `CampaignScreen` — placeholder;
 - `LoadoutScreen` — placeholder;
 - `ShopScreen` — placeholder;

@@ -62,7 +62,12 @@ class MainActivity : ComponentActivity() {
                 onPlay = { navigator.navigate(AppScreen.Dashboard) },
                 onTestMode = { navigator.navigate(AppScreen.Match(levelId = "DEMO_LEVEL")) },
             )
-            AppScreen.Dashboard -> DashboardScreen(this)
+            AppScreen.Dashboard -> DashboardScreen(
+                context = this,
+                onBack = { navigator.back() },
+                onCampaign = { navigator.navigate(AppScreen.Campaign) },
+                onShop = { navigator.navigate(AppScreen.Shop) },
+            )
             AppScreen.Campaign -> CampaignScreen(this)
             AppScreen.Loadout -> LoadoutScreen(this)
             AppScreen.Shop -> ShopScreen(this)
