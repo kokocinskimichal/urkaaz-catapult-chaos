@@ -3,4 +3,7 @@
     <string name="app_title">URKAAAZ! Catapult Chaos</string>
     <string name="open_dashboard">Open dashboard</string>
     <string name="test_mode">TEST MODE</string>
+    <string name="campaign_level">LEVEL %1$d</string>
+    <string name="campaign_level_locked">LEVEL %1$d 🔒</string>
+    <string name="campaign_chapter_header">CHAPTER %1$d • %2$s</string>
 </resources>

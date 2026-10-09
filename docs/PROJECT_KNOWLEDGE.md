@@ -4,9 +4,21 @@
 
 The project is a modular Android game with a deterministic local match
 simulation. The application opens into `StartScreen`, which reproduces the legacy start
-menu. Its Play button opens the legacy-style `DashboardScreen`; the test mode
-button opens `MatchScreen` with `DEMO_LEVEL`. Campaign, loadout, shop and
-result screens remain placeholders so they can be implemented incrementally.
+menu. Its Play button opens the legacy-style `DashboardScreen`; the dashboard
+Campaign button opens the legacy-style `CampaignScreen`; the test mode button
+opens `MatchScreen` with `DEMO_LEVEL`. Loadout, shop and result screens remain
+placeholders so they can be implemented incrementally.
+
+The campaign screen intentionally reuses the legacy visual style only. Its
+level count and level selection are driven by the new
+`CampaignLevelDefinition` contract. Selecting level `n` navigates with a typed
+`campaignLevel = n`, and `MatchViewModel` constructs the new match using that
+campaign definition rather than copying legacy campaign behavior.
+
+For emulator testing, `CampaignUiState` currently initializes
+`highestUnlockedLevel` to `CampaignLevelDefinition.MAX_LEVELS`, so all 100
+campaign entries are selectable. This is a temporary test configuration; it
+does not represent persistent campaign progression.
 
 The current match HUD displays:
 
@@ -46,6 +58,7 @@ must go through commands and domain/application boundaries.
 | `android-app/.../navigation/ScreenHost.kt` | Active screen container |
 | `android-app/.../screens/start/StartScreen.kt` | Legacy-style start menu |
 | `android-app/.../screens/dashboard/DashboardScreen.kt` | Legacy-style dashboard |
+| `android-app/.../screens/campaign/CampaignScreen.kt` | Legacy-style campaign level selector |
 | `android-app/.../screens/match/MatchScreen.kt` | Match screen boundary |
 | `android-app/.../ui/MatchScreenController.kt` | Match composition and lifecycle |
 | `android-app/.../ui/MatchHudView.kt` | Timer, wind and pause HUD |
@@ -74,6 +87,9 @@ must go through commands and domain/application boundaries.
 ## Known incomplete areas
 
 - Dashboard, campaign, loadout, shop and result screens are placeholders.
+- Campaign level entries are currently all unlocked for emulator testing; a
+  persistent progression repository and production unlock rules are still
+  pending.
 - Navigation is implemented as a lightweight single-activity screen host; it
   can later be replaced by Android Navigation or Compose without changing the
   game modules.

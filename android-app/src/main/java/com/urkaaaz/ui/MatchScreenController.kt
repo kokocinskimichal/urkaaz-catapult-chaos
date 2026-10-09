@@ -10,8 +10,9 @@ import android.widget.LinearLayout
 
 class MatchScreenController(
     private val activity: Activity,
+    campaignLevel: Int,
 ) {
-    private val viewModel = MatchViewModel()
+    private val viewModel = MatchViewModel(campaignLevel = campaignLevel)
     private val gameHandler = Handler(Looper.getMainLooper())
     private lateinit var battlefieldView: BattlefieldView
     private lateinit var hudView: MatchHudView

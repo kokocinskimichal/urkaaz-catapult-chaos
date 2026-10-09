@@ -41,7 +41,7 @@ Available screens:
 
 - `StartScreen` — legacy-style start menu;
 - `DashboardScreen` — legacy-style dashboard, wired to navigation;
-- `CampaignScreen` — placeholder;
+- `CampaignScreen` — legacy-style campaign level selector, wired to navigation;
 - `LoadoutScreen` — placeholder;
 - `ShopScreen` — placeholder;
 - `MatchScreen` — working match screen;
@@ -54,6 +54,11 @@ The working match screen is split into:
 - `AmmunitionPanelView` — ammunition selection and availability;
 - `BattlefieldView` — touch input, camera and battlefield rendering;
 - `MatchViewModel` — UI actions and presentation state.
+
+Campaign presentation may reuse the legacy visual language, but campaign level
+selection must use `game-campaign` contracts. Do not copy legacy campaign
+progression or engine behavior into Android UI. A selected level is passed as a
+typed campaign level into `MatchScreen` and then `MatchViewModel`.
 
 Do not add new screen controls directly to `MainActivity`. Add a screen-owned
 view/controller and connect it through `AppScreen` and `AppNavigator`.

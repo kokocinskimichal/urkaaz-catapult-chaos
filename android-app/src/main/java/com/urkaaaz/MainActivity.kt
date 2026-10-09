@@ -60,7 +60,11 @@ class MainActivity : ComponentActivity() {
             AppScreen.Start -> StartScreen(
                 context = this,
                 onPlay = { navigator.navigate(AppScreen.Dashboard) },
-                onTestMode = { navigator.navigate(AppScreen.Match(levelId = "DEMO_LEVEL")) },
+                onTestMode = {
+                    navigator.navigate(
+                        AppScreen.Match(levelId = "DEMO_LEVEL", campaignLevel = 1),
+                    )
+                },
             )
             AppScreen.Dashboard -> DashboardScreen(
                 context = this,
@@ -68,10 +72,21 @@ class MainActivity : ComponentActivity() {
                 onCampaign = { navigator.navigate(AppScreen.Campaign) },
                 onShop = { navigator.navigate(AppScreen.Shop) },
             )
-            AppScreen.Campaign -> CampaignScreen(this)
+            AppScreen.Campaign -> CampaignScreen(
+                context = this,
+                onBack = { navigator.back() },
+                onLevelSelected = { level ->
+                    navigator.navigate(
+                        AppScreen.Match(
+                            levelId = "LEVEL_$level",
+                            campaignLevel = level,
+                        ),
+                    )
+                },
+            )
             AppScreen.Loadout -> LoadoutScreen(this)
             AppScreen.Shop -> ShopScreen(this)
-            is AppScreen.Match -> MatchScreen(this)
+            is AppScreen.Match -> MatchScreen(this, screen.campaignLevel)
             is AppScreen.Result -> ResultScreen(this)
         }
         screenHost.show(content)

@@ -5,8 +5,11 @@ import android.view.View
 import com.urkaaaz.navigation.ScreenContent
 import com.urkaaaz.ui.MatchScreenController
 
-class MatchScreen(activity: Activity) : ScreenContent {
-    private val controller = MatchScreenController(activity)
+class MatchScreen(
+    activity: Activity,
+    campaignLevel: Int,
+) : ScreenContent {
+    private val controller = MatchScreenController(activity, campaignLevel)
 
     override val view: View = controller.createView()
 
