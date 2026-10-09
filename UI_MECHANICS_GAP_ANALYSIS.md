@@ -25,28 +25,28 @@ Porównanie aktualnego UI projektu `urkaaz` z mechanikami obecnymi w `orc-catapu
 | 20 | HUD bitwy | Komunikat o aktywowanym zaklęciu | Brak | `MainActivity.kt:2860-2890` | P1 |
 | 21 | Jednostki | Paski HP jednostek i wizualne stany `ARMING` / `DEAD` | Brak jednostek i ich HUD-u | `GameView.kt:1431-1737` | P1 |
 | 22 | Kamera | Kadrowanie poziomu przy starcie na fortecę gracza | Kamera jest statyczna | `GameView.kt:840-888` | P1 |
-| 22 | Kamera | Ustawianie widoku na cel tutorialu | Brak | `GameView.kt:709-731` | P1 |
-| 23 | Katapulta | Okrągły wskaźnik reloadu `READY` / sekundy | Jest tylko tekstowy reload w HUD | `GameView.kt:2621-2700` | P1 |
-| 24 | Katapulta | Pasek HP katapulty i tekst `HP x/100` | Brak | `GameView.kt:2621-2700` | P1 |
-| 25 | Lifecycle | Obsługa Back/Escape i powrót między ekranami | Brak ekranowej nawigacji | `MainActivity.kt:677-702` | P1 |
-| 26 | Sklep | Sklep zaklęć i specjalnej amunicji | Brak | `MainActivity.kt:723-984` | P1 |
-| 27 | Sklep | Szczegóły przedmiotu, cena, stan posiadania i zakup | Brak | `MainActivity.kt:762-975` | P1 |
-| 28 | Tutorial | Tryb ćwiczeń wymagający oddania kilku strzałów | Brak | `MainActivity.kt:1917-1938` | P1 |
-| 29 | Wizualizacja | Tarcze fortec, lodowe pułapki i Runic Bastion z HP | Brak | `GameView.kt:1362-1430`, `GameView.kt:1773-1840` | P1 |
-| 30 | Wizualizacja | Animacje idle i śmierci jednostek | Brak | `GameView.kt:1431-1737` | P1 |
-| 31 | Wynik poziomu | Panel zwycięstwa/przegranej z animowanym pojawieniem | Jest prosty overlay tekstowy | `MainActivity.kt:2910-2960` | P1 |
-| 32 | Złoto | Nagrody za poziomy i saldo gracza | Brak | `MainActivity.kt:2910-2960`, `refreshDashboard()` | P1 |
-| 33 | Życia | Liczba żyć, utrata życia po porażce i czas do kolejnego życia | Brak | `MainActivity.kt:1024-1085`, `refreshDashboard()` | P1 |
-| 34 | Awatar | Wybór i zapis awatara gracza | Brak | `MainActivity.kt:985-1017` | P2 |
-| 35 | Debug | Panel debugowy, przełącznik hitboxów i wybór jednostek AI | Brak | `MainActivity.kt:1388-1490` | P2 |
-| 36 | Dostępność | Dynamiczne `contentDescription` dla zasobów, jednostek i zaklęć | Częściowo tylko amunicja | `MainActivity.kt:2960-3110` | P2 |
-| 37 | Feedback | Dźwięk śmierci Defendera | Brak | `MainActivity.kt:350-365`, `announceDefenderDeaths()` | P2 |
-| 38 | Feedback | Wibracja przy nowym trafieniu | Brak | `MainActivity.kt:2808-2810`, `vibrateForNewImpact()` | P2 |
-| 39 | Lifecycle | Zachowanie trybu chapter-shot po odtworzeniu Activity | Brak | `MainActivity.kt:672-676` | P2 |
-| 40 | Lifecycle | Wymuszenie orientacji landscape i wybór języka | Brak | `MainActivity.kt:338-350` | P2 |
-| 41 | Reset progresji | Dialog resetowania żyć i całego postępu | Brak | `MainActivity.kt:1024-1058` | P2 |
-| 42 | Snapshot | Tryb czystego screenshotu z ukrytym HUD-em | Brak | `MainActivity.kt:1492-1508`, `hideChapterShotHud()` | P2 |
-| 43 | Wizualizacja | Pęknięcia uszkodzonej katapulty | Brak | `GameView.kt:2541-2620` | P2 |
+| 25 | Kamera | Ustawianie widoku na cel tutorialu | Brak | `GameView.kt:709-731` | P1 |
+| 26 | Katapulta | Okrągły wskaźnik reloadu `READY` / sekundy | Jest tylko tekstowy reload w HUD | `GameView.kt:2621-2700` | P1 |
+| 27 | Katapulta | Pasek HP katapulty i tekst `HP x/100` | Brak | `GameView.kt:2621-2700` | P1 |
+| 28 | Lifecycle | Obsługa Back/Escape i powrót między ekranami | Brak ekranowej nawigacji | `MainActivity.kt:677-702` | P1 |
+| 29 | Sklep | Sklep zaklęć i specjalnej amunicji | Brak | `MainActivity.kt:723-984` | P1 |
+| 30 | Sklep | Szczegóły przedmiotu, cena, stan posiadania i zakup | Brak | `MainActivity.kt:762-975` | P1 |
+| 31 | Tutorial | Tryb ćwiczeń wymagający oddania kilku strzałów | Brak | `MainActivity.kt:1917-1938` | P1 |
+| 32 | Wizualizacja | Tarcze fortec, lodowe pułapki i Runic Bastion z HP | Brak | `GameView.kt:1362-1430`, `GameView.kt:1773-1840` | P1 |
+| 33 | Wizualizacja | Animacje idle i śmierci jednostek | Brak | `GameView.kt:1431-1737` | P1 |
+| 34 | Wynik poziomu | Panel zwycięstwa/przegranej z animowanym pojawieniem | Jest prosty overlay tekstowy | `MainActivity.kt:2910-2960` | P1 |
+| 35 | Złoto | Nagrody za poziomy i saldo gracza | Brak | `MainActivity.kt:2910-2960`, `refreshDashboard()` | P1 |
+| 36 | Życia | Liczba żyć, utrata życia po porażce i czas do kolejnego życia | Brak | `MainActivity.kt:1024-1085`, `refreshDashboard()` | P1 |
+| 37 | Awatar | Wybór i zapis awatara gracza | Brak | `MainActivity.kt:985-1017` | P2 |
+| 38 | Debug | Panel debugowy, przełącznik hitboxów i wybór jednostek AI | Brak | `MainActivity.kt:1388-1490` | P2 |
+| 39 | Dostępność | Dynamiczne `contentDescription` dla zasobów, jednostek i zaklęć | Częściowo tylko amunicja | `MainActivity.kt:2960-3110` | P2 |
+| 40 | Feedback | Dźwięk śmierci Defendera | Brak | `MainActivity.kt:350-365`, `announceDefenderDeaths()` | P2 |
+| 41 | Feedback | Wibracja przy nowym trafieniu | Brak | `MainActivity.kt:2808-2810`, `vibrateForNewImpact()` | P2 |
+| 42 | Lifecycle | Zachowanie trybu chapter-shot po odtworzeniu Activity | Brak | `MainActivity.kt:672-676` | P2 |
+| 43 | Lifecycle | Wymuszenie orientacji landscape i wybór języka | Brak | `MainActivity.kt:338-350` | P2 |
+| 44 | Reset progresji | Dialog resetowania żyć i całego postępu | Brak | `MainActivity.kt:1024-1058` | P2 |
+| 45 | Snapshot | Tryb czystego screenshotu z ukrytym HUD-em | Brak | `MainActivity.kt:1492-1508`, `hideChapterShotHud()` | P2 |
+| 46 | Wizualizacja | Pęknięcia uszkodzonej katapulty | Brak | `GameView.kt:2541-2620` | P2 |
 
 ## Obecne już w `urkaaz`
 
