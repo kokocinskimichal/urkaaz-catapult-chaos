@@ -45,6 +45,7 @@ class DeterministicMatchSimulation(
     private var phase = MatchPhase.CREATED
     private var activeTeam = Team.BLUE
     private var simulationTimeMilliseconds = 0L
+    private var remainingMatchTimeMilliseconds = config.matchDurationMilliseconds
     private var sequence = 0L
     private var terrain = TerrainState(config.bounds.height * 0.78f)
     private var projectiles = emptyList<Projectile>()
@@ -138,6 +139,8 @@ class DeterministicMatchSimulation(
                 .coerceAtLeast(0f)
         }
         simulationTimeMilliseconds += deltaMilliseconds
+        remainingMatchTimeMilliseconds =
+            (remainingMatchTimeMilliseconds - deltaMilliseconds).coerceAtLeast(0L)
         val resolved = mutableListOf<Projectile>()
         projectiles.forEach { projectile ->
             val advanced = projectile.advance(
@@ -209,6 +212,7 @@ class DeterministicMatchSimulation(
         },
         reloadRemainingSeconds = reloadRemainingSeconds.toMap(),
         activeProjectileTeams = projectiles.map { it.firedBy }.toSet(),
+        remainingMilliseconds = remainingMatchTimeMilliseconds,
     )
 
     fun drainEvents(): List<MatchEvent> = pendingEvents.toList().also { pendingEvents.clear() }

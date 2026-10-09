@@ -55,6 +55,8 @@ class BattlefieldView(context: Context) : View(context) {
         enemyReloadRemainingSeconds = 0f,
         playerProjectileActive = false,
         playerAmmunition = emptyMap(),
+        matchTimeRemainingMilliseconds = 300_000L,
+        windDirection = 0f,
     )
     private var animationFrame = 0
     private var impactFrame = 0
@@ -158,8 +160,9 @@ class BattlefieldView(context: Context) : View(context) {
             }
             MotionEvent.ACTION_UP,
             MotionEvent.ACTION_CANCEL -> {
+                val wasPanning = camera.isPanning
                 camera.endPan()
-                return true
+                return wasPanning
             }
             else -> return false
         }
@@ -407,10 +410,10 @@ class BattlefieldView(context: Context) : View(context) {
     }
 
     private fun updateProjectileTrails(newState: RenderState) {
-        val activeTeams = newState.projectiles.map { it.teamLabel }.toSet()
-        projectileTrails.keys.retainAll(activeTeams)
+        val activeProjectiles = newState.projectiles.map { it.projectileId }.toSet()
+        projectileTrails.keys.retainAll(activeProjectiles)
         newState.projectiles.forEach { projectile ->
-            val trail = projectileTrails.getOrPut(projectile.teamLabel) { mutableListOf() }
+            val trail = projectileTrails.getOrPut(projectile.projectileId) { mutableListOf() }
             val position = projectile.x to projectile.y
             if (trail.lastOrNull() != position) {
                 trail += position

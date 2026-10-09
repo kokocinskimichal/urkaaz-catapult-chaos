@@ -19,6 +19,9 @@ class BattlefieldCameraController(
     var wasFollowingProjectile: Boolean = false
         private set
 
+    val isPanning: Boolean
+        get() = panningMap
+
     private var trackedTeamLabel: String? = null
     private var lastFramedTeamLabel: String? = null
     private var lastPhaseLabel: String? = null

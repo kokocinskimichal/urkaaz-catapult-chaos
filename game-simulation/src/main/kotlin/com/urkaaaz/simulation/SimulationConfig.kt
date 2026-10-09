@@ -12,6 +12,7 @@ data class SimulationConfig(
     val unitCollisionRadius: Float = 18f,
     val defaultCatapultHeightRatio: Float = 0.72f,
     val startingLimitedAmmunition: Int = 3,
+    val matchDurationMilliseconds: Long = 300_000L,
 ) {
     init {
         require(gravityAccelerationY >= 0f) { "gravity must not be negative" }
@@ -20,6 +21,9 @@ data class SimulationConfig(
         }
         require(startingLimitedAmmunition >= 0) {
             "starting limited ammunition must not be negative"
+        }
+        require(matchDurationMilliseconds > 0) {
+            "match duration must be positive"
         }
     }
 }

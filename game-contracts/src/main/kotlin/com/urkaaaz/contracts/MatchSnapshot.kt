@@ -17,6 +17,7 @@ data class MatchSnapshot(
     val outcome: MatchOutcome? = null,
     val reloadRemainingSeconds: Map<Team, Float> = emptyMap(),
     val activeProjectileTeams: Set<Team> = emptySet(),
+    val remainingMilliseconds: Long = 300_000L,
 ) {
     init {
         require(status != MatchStatus.FINISHED || outcome != null) {

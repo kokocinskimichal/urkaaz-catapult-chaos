@@ -29,9 +29,12 @@ data class RenderState(
     val enemyReloadRemainingSeconds: Float,
     val playerProjectileActive: Boolean,
     val playerAmmunition: Map<String, Int>,
+    val matchTimeRemainingMilliseconds: Long,
+    val windDirection: Float,
 )
 
 data class ProjectileRenderState(
+    val projectileId: String,
     val teamLabel: String,
     val x: Float,
     val y: Float,
@@ -54,7 +57,13 @@ object RenderStateMapper {
         terrainRevision = snapshot.terrain.revision,
         terrainBiome = snapshot.terrain.biome,
         projectiles = snapshot.projectiles.map {
-            ProjectileRenderState(it.firedBy.name, it.x, it.y, it.ammunitionType)
+            ProjectileRenderState(
+                projectileId = it.entityId.value,
+                teamLabel = it.firedBy.name,
+                x = it.x,
+                y = it.y,
+                ammunitionType = it.ammunitionType,
+            )
         },
         blueCatapultX = snapshot.catapults.firstOrNull { it.team.name == "BLUE" }?.x ?: 120f,
         blueCatapultY = snapshot.catapults.firstOrNull { it.team.name == "BLUE" }?.y ?: 648f,
@@ -98,5 +107,7 @@ object RenderStateMapper {
         playerAmmunition = snapshot.resourcesByTeam[
             com.urkaaaz.contracts.Team.BLUE
         ]?.ammunition ?: snapshot.resources.ammunition,
+        matchTimeRemainingMilliseconds = snapshot.remainingMilliseconds,
+        windDirection = snapshot.wind.direction,
     )
 }
