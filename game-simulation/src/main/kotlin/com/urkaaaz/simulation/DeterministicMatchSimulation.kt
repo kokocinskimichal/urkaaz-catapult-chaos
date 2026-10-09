@@ -182,6 +182,7 @@ class DeterministicMatchSimulation(
         projectiles = projectiles.map {
             ProjectileSnapshot(
                 entityId = it.id,
+                firedBy = it.firedBy,
                 ammunitionType = it.ammunition.name,
                 x = it.position.x,
                 y = it.position.y,

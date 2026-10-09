@@ -11,6 +11,10 @@ data class RenderState(
     val projectileCount: Int,
     val terrainRevision: Long,
     val projectiles: List<ProjectileRenderState>,
+    val blueCatapultX: Float,
+    val blueCatapultY: Float,
+    val redCatapultX: Float,
+    val redCatapultY: Float,
     val playerAngleDegrees: Float,
     val playerPower: Float,
     val blueFortressHealth: Int,
@@ -27,6 +31,7 @@ data class RenderState(
 )
 
 data class ProjectileRenderState(
+    val teamLabel: String,
     val x: Float,
     val y: Float,
     val ammunitionType: String,
@@ -47,8 +52,12 @@ object RenderStateMapper {
         projectileCount = snapshot.projectiles.size,
         terrainRevision = snapshot.terrain.revision,
         projectiles = snapshot.projectiles.map {
-            ProjectileRenderState(it.x, it.y, it.ammunitionType)
+            ProjectileRenderState(it.firedBy.name, it.x, it.y, it.ammunitionType)
         },
+        blueCatapultX = snapshot.catapults.firstOrNull { it.team.name == "BLUE" }?.x ?: 120f,
+        blueCatapultY = snapshot.catapults.firstOrNull { it.team.name == "BLUE" }?.y ?: 648f,
+        redCatapultX = snapshot.catapults.firstOrNull { it.team.name == "RED" }?.x ?: 1480f,
+        redCatapultY = snapshot.catapults.firstOrNull { it.team.name == "RED" }?.y ?: 648f,
         playerAngleDegrees = snapshot.catapults.firstOrNull { it.entityId.value == "blue-catapult" }
             ?.directionDegrees ?: 45f,
         playerPower = snapshot.catapults.firstOrNull { it.entityId.value == "blue-catapult" }

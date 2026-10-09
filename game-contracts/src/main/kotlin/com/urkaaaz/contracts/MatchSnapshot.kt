@@ -52,6 +52,7 @@ data class UnitSnapshot(
 
 data class ProjectileSnapshot(
     val entityId: EntityId,
+    val firedBy: Team,
     val ammunitionType: String,
     val x: Float,
     val y: Float,

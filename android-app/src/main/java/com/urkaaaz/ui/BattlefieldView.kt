@@ -10,6 +10,8 @@ import android.graphics.Shader
 import android.graphics.Typeface
 import android.view.View
 import android.view.MotionEvent
+import android.view.ScaleGestureDetector
+import kotlin.math.abs
 import kotlin.math.hypot
 import com.urkaaaz.android.R
 
@@ -51,6 +53,10 @@ class BattlefieldView(context: Context) : View(context) {
         projectileCount = 0,
         terrainRevision = 0,
         projectiles = emptyList(),
+        blueCatapultX = 120f,
+        blueCatapultY = 648f,
+        redCatapultX = 1480f,
+        redCatapultY = 648f,
         playerAngleDegrees = 45f,
         playerPower = 50f,
         blueFortressHealth = 0,
@@ -75,12 +81,43 @@ class BattlefieldView(context: Context) : View(context) {
     private var mapScale = 1f
     private var mapOffsetX = 0f
     private var mapOffsetY = 0f
+    private var trackedTeamLabel: String? = null
+    private var lastFramedTeamLabel: String? = null
+    private var lastPhaseLabel: String? = null
+    private var postImpactHoldSeconds = 0f
+    private var cameraReturnActive = false
+    private var wasFollowingProjectile = false
     private var pinchActive = false
-    private var pinchLastDistance = 0f
-    private var pinchLastFocusX = 0f
-    private var pinchLastFocusY = 0f
+    private var panningMap = false
+    private var panLastX = 0f
+    private var panLastY = 0f
+    private val scaleDetector = ScaleGestureDetector(
+        context,
+        object : ScaleGestureDetector.SimpleOnScaleGestureListener() {
+            override fun onScaleBegin(detector: ScaleGestureDetector): Boolean {
+                pinchActive = true
+                panningMap = false
+                cancelAiming()
+                return true
+            }
+
+            override fun onScale(detector: ScaleGestureDetector): Boolean {
+                applyZoom(
+                    scaleFactor = detector.scaleFactor,
+                    focusX = detector.focusX,
+                    focusY = detector.focusY,
+                )
+                return true
+            }
+
+            override fun onScaleEnd(detector: ScaleGestureDetector) {
+                pinchActive = false
+            }
+        },
+    )
 
     fun render(newState: RenderState) {
+        updateCameraTracking(newState)
         state = newState
         animationFrame = if (newState.projectiles.isEmpty()) {
             0
@@ -100,8 +137,8 @@ class BattlefieldView(context: Context) : View(context) {
     override fun onDraw(canvas: Canvas) {
         super.onDraw(canvas)
         canvas.save()
-        canvas.translate(mapOffsetX, mapOffsetY)
         canvas.scale(mapScale, mapScale)
+        canvas.translate(mapOffsetX / mapScale, mapOffsetY / mapScale)
         backgroundPaint.shader = LinearGradient(
             0f,
             0f,
@@ -186,62 +223,44 @@ class BattlefieldView(context: Context) : View(context) {
     }
 
     override fun onTouchEvent(event: MotionEvent): Boolean {
-        if (event.pointerCount > 1) {
-            var focusX = 0f
-            var focusY = 0f
-            repeat(event.pointerCount) {
-                focusX += event.getX(it)
-                focusY += event.getY(it)
+        if (handlePinchTouch(event)) return true
+        if (handleMapPanTouch(event)) return true
+        if (!canStartAiming()) return false
+        return handleAimTouch(event)
+    }
+
+    private fun handlePinchTouch(event: MotionEvent): Boolean {
+        val wasPinchActive = pinchActive
+        scaleDetector.onTouchEvent(event)
+        return wasPinchActive || pinchActive || event.pointerCount > 1
+    }
+
+    private fun handleMapPanTouch(event: MotionEvent): Boolean {
+        if (!panningMap) return false
+        when (event.actionMasked) {
+            MotionEvent.ACTION_MOVE -> {
+                translateMap(
+                    deltaX = event.x - panLastX,
+                    deltaY = event.y - panLastY,
+                )
+                panLastX = event.x
+                panLastY = event.y
             }
-            val currentFocusX = focusX / event.pointerCount
-            val currentFocusY = focusY / event.pointerCount
-            val currentDistance = pointerDistance(event)
-            when (event.actionMasked) {
-                MotionEvent.ACTION_POINTER_DOWN -> {
-                    pinchActive = true
-                    pinchLastDistance = currentDistance
-                    pinchLastFocusX = currentFocusX
-                    pinchLastFocusY = currentFocusY
-                    if (draggingAim) {
-                        draggingAim = false
-                        dragAim = null
-                        onAimCancelled?.invoke()
-                    }
-                    invalidate()
-                    return true
-                }
-                MotionEvent.ACTION_MOVE -> {
-                    if (pinchActive && pinchLastDistance > 0f && currentDistance > 0f) {
-                        applyZoom(
-                            scaleFactor = currentDistance / pinchLastDistance,
-                            focusX = currentFocusX,
-                            focusY = currentFocusY,
-                        )
-                        pinchLastDistance = currentDistance
-                        pinchLastFocusX = currentFocusX
-                        pinchLastFocusY = currentFocusY
-                    }
-                    return true
-                }
-                else -> Unit
+            MotionEvent.ACTION_UP,
+            MotionEvent.ACTION_CANCEL -> {
+                panningMap = false
             }
+            else -> return false
         }
-        if (pinchActive) {
-            if (event.actionMasked == MotionEvent.ACTION_POINTER_UP ||
-                event.actionMasked == MotionEvent.ACTION_UP ||
-                event.actionMasked == MotionEvent.ACTION_CANCEL
-            ) {
-                pinchActive = false
-                pinchLastDistance = 0f
-            }
-            return true
-        }
-        if (state.outcomeLabel != null ||
-            state.playerProjectileActive ||
-            state.playerReloadRemainingSeconds > 0f
-        ) {
-            return false
-        }
+        return true
+    }
+
+    private fun canStartAiming(): Boolean =
+        state.outcomeLabel == null &&
+            !state.playerProjectileActive &&
+            state.playerReloadRemainingSeconds <= 0f
+
+    private fun handleAimTouch(event: MotionEvent): Boolean {
         val originX = width * 0.25f
         val originY = height * 0.76f - 82f
         val mapX = (event.x - mapOffsetX) / mapScale
@@ -249,8 +268,8 @@ class BattlefieldView(context: Context) : View(context) {
         when (event.actionMasked) {
             MotionEvent.ACTION_DOWN -> {
                 if (hypot(mapX - originX, mapY - originY) > 120f) {
-                    draggingAim = false
-                    dragAim = null
+                    cancelAiming()
+                    startMapPan(event)
                     return true
                 }
                 draggingAim = true
@@ -280,14 +299,26 @@ class BattlefieldView(context: Context) : View(context) {
                 return true
             }
             MotionEvent.ACTION_CANCEL -> {
-                draggingAim = false
-                dragAim = null
-                onAimCancelled?.invoke()
+                cancelAiming()
                 invalidate()
                 return true
             }
         }
         return true
+    }
+
+    private fun startMapPan(event: MotionEvent) {
+        if (mapScale <= 1f || wasFollowingProjectile || postImpactHoldSeconds > 0f) return
+        panningMap = true
+        panLastX = event.x
+        panLastY = event.y
+    }
+
+    private fun cancelAiming() {
+        if (!draggingAim && dragAim == null) return
+        draggingAim = false
+        dragAim = null
+        onAimCancelled?.invoke()
     }
 
     private fun drawAimGesture(canvas: Canvas, groundTop: Float) {
@@ -399,14 +430,6 @@ class BattlefieldView(context: Context) : View(context) {
         }
     }
 
-    private fun pointerDistance(event: MotionEvent): Float {
-        if (event.pointerCount < 2) return 0f
-        return hypot(
-            event.getX(1) - event.getX(0),
-            event.getY(1) - event.getY(0),
-        )
-    }
-
     private fun applyZoom(scaleFactor: Float, focusX: Float, focusY: Float) {
         if (!scaleFactor.isFinite() || scaleFactor <= 0f) return
         val oldScale = mapScale
@@ -416,11 +439,106 @@ class BattlefieldView(context: Context) : View(context) {
         mapScale = newScale
         mapOffsetX = focusX - contentX * newScale
         mapOffsetY = focusY - contentY * newScale
+        clampMapOffset()
         invalidate()
+    }
+
+    private fun translateMap(deltaX: Float, deltaY: Float) {
+        if (mapScale <= 1f || wasFollowingProjectile || postImpactHoldSeconds > 0f) return
+        mapOffsetX += deltaX
+        mapOffsetY += deltaY
+        clampMapOffset()
+        invalidate()
+    }
+
+    private fun clampMapOffset() {
+        val minOffsetX = width * (1f - mapScale)
+        val minOffsetY = height * (1f - mapScale)
+        mapOffsetX = mapOffsetX.coerceIn(minOf(minOffsetX, 0f), maxOf(minOffsetX, 0f))
+        mapOffsetY = mapOffsetY.coerceIn(minOf(minOffsetY, 0f), maxOf(minOffsetY, 0f))
+    }
+
+    private fun updateCameraTracking(newState: RenderState) {
+        val trackedProjectile = newState.projectiles.firstOrNull { it.teamLabel == "BLUE" }
+
+        if (trackedProjectile != null) {
+            if (!wasFollowingProjectile) {
+                mapScale = maxOf(mapScale, AUTO_TRACK_SCALE)
+            }
+            wasFollowingProjectile = true
+            cameraReturnActive = false
+            trackedTeamLabel = trackedProjectile.teamLabel
+            centerMapOnWorld(trackedProjectile.x, trackedProjectile.y)
+        } else {
+            if (wasFollowingProjectile) {
+                wasFollowingProjectile = false
+                postImpactHoldSeconds = POST_IMPACT_HOLD_SECONDS
+            } else if (postImpactHoldSeconds > 0f) {
+                postImpactHoldSeconds = (postImpactHoldSeconds - RENDER_STEP_SECONDS).coerceAtLeast(0f)
+                if (postImpactHoldSeconds == 0f) {
+                    cameraReturnActive = true
+                }
+            } else if (cameraReturnActive) {
+                val targetTeam = trackedTeamLabel ?: "BLUE"
+                if (animateCameraToTeam(newState, targetTeam)) {
+                    cameraReturnActive = false
+                    lastFramedTeamLabel = targetTeam
+                }
+            } else {
+                val phaseChanged = lastPhaseLabel != null && lastPhaseLabel != newState.phaseLabel
+                val targetTeam = newState.activeTeamLabel.takeUnless { it == "NONE" }
+                    ?: trackedTeamLabel
+                    ?: "BLUE"
+                if (phaseChanged || trackedTeamLabel == null || lastFramedTeamLabel != targetTeam) {
+                    centerMapOnTeam(newState, targetTeam)
+                    lastFramedTeamLabel = targetTeam
+                }
+            }
+        }
+
+        lastPhaseLabel = newState.phaseLabel
+        clampMapOffset()
+    }
+
+    private fun centerMapOnTeam(newState: RenderState, teamLabel: String) {
+        val (x, y) = if (teamLabel == "RED") {
+            newState.redCatapultX to newState.redCatapultY
+        } else {
+            newState.blueCatapultX to newState.blueCatapultY
+        }
+        centerMapOnWorld(x, y)
+    }
+
+    private fun animateCameraToTeam(newState: RenderState, teamLabel: String): Boolean {
+        val (x, y) = if (teamLabel == "RED") {
+            newState.redCatapultX to newState.redCatapultY
+        } else {
+            newState.blueCatapultX to newState.blueCatapultY
+        }
+        val targetX = width / 2f - (x / WORLD_WIDTH * width) * mapScale
+        val targetY = height / 2f - (y / WORLD_HEIGHT * height) * mapScale
+        mapOffsetX += (targetX - mapOffsetX) * CAMERA_RETURN_LERP
+        mapOffsetY += (targetY - mapOffsetY) * CAMERA_RETURN_LERP
+        return abs(targetX - mapOffsetX) < CAMERA_RETURN_EPSILON &&
+            abs(targetY - mapOffsetY) < CAMERA_RETURN_EPSILON
+    }
+
+    private fun centerMapOnWorld(worldX: Float, worldY: Float) {
+        val sceneX = worldX / WORLD_WIDTH * width
+        val sceneY = worldY / WORLD_HEIGHT * height
+        mapOffsetX = width / 2f - sceneX * mapScale
+        mapOffsetY = height / 2f - sceneY * mapScale
     }
 
     companion object {
         private const val MIN_MAP_SCALE = 0.75f
         private const val MAX_MAP_SCALE = 2.5f
+        private const val AUTO_TRACK_SCALE = 1.25f
+        private const val POST_IMPACT_HOLD_SECONDS = 0.4f
+        private const val RENDER_STEP_SECONDS = 0.033f
+        private const val CAMERA_RETURN_LERP = 0.18f
+        private const val CAMERA_RETURN_EPSILON = 1f
+        private const val WORLD_WIDTH = 1_600f
+        private const val WORLD_HEIGHT = 900f
     }
 }
