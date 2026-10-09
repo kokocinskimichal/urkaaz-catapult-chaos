@@ -101,4 +101,5 @@ The command `wypchnij` means: stage all changes, run the validation gate, create
 a commit with the required Copilot co-author trailer, and push `develop`.
 
 The same workflow is available as the project slash command `/push`, defined in
-`.github/skills/push/SKILL.md`.
+`.github/skills/push/SKILL.md`. Before committing, `/push` updates the relevant
+knowledge Markdown files with durable facts about the changes being delivered.

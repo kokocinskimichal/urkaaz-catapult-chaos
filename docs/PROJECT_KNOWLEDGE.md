@@ -91,3 +91,10 @@ git diff --check
 ```
 
 The repository's intended development branch is `develop`.
+
+## Push workflow
+
+The project slash command `/push` is defined in
+`.github/skills/push/SKILL.md`. Before a commit, it updates relevant knowledge
+Markdown files with durable facts about the changes, then runs the validation
+gate and pushes `develop` using the configured project GitHub account.
