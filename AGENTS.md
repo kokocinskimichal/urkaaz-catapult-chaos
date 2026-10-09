@@ -13,6 +13,10 @@ In project conversations, **legacy** always means the separate checkout
 GitHub repository for this project is
 `kokocinskimichal/urkaaz-catapult-chaos`.
 
+Terminology: when the user says **mecz**, they mean the gameplay session itself
+and its runtime simulation. Use **match screen** for the Android presentation
+layer and **campaign level** for the selected level definition.
+
 ## Repository structure
 
 | Module | Responsibility |

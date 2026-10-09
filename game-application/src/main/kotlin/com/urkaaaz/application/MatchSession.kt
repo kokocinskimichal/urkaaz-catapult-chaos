@@ -6,11 +6,13 @@ import com.urkaaaz.contracts.MatchStatus
 import com.urkaaaz.domain.AmmunitionType
 import com.urkaaaz.domain.WorldBounds
 import com.urkaaaz.contracts.Team
+import com.urkaaaz.contracts.WindSnapshot
 import com.urkaaaz.simulation.DeterministicMatchSimulation
 import com.urkaaaz.simulation.SimulationConfig
 
 class MatchSession(
     private val terrainBiome: String = "GREEN_FRONTIER",
+    private val initialWind: WindSnapshot = WindSnapshot(),
 ) {
     private var simulation: DeterministicMatchSimulation? = null
     private val selectedAmmunition = mutableMapOf(
@@ -92,6 +94,7 @@ class MatchSession(
             config = SimulationConfig(
                 bounds = WorldBounds(width = 1_600f, height = 900f),
                 terrainBiome = terrainBiome,
+                windAccelerationX = initialWind.direction * initialWind.strength,
             ),
         )
         latestEvents = requireNotNull(simulation).start()

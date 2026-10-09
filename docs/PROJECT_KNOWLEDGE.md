@@ -9,6 +9,10 @@ Campaign button opens the legacy-style `CampaignScreen`; the test mode button
 opens `MatchScreen` with `DEMO_LEVEL`. Loadout, shop and result screens remain
 placeholders so they can be implemented incrementally.
 
+Terminology convention: **mecz** means the gameplay session and runtime
+simulation only. The Android UI is called the **match screen**, while the
+selected campaign data is a **campaign level**.
+
 The campaign screen intentionally reuses the legacy visual style only. Its
 level count and level selection are driven by the new
 `CampaignLevelDefinition` contract. Selecting level `n` navigates with a typed
@@ -26,6 +30,22 @@ The current match HUD displays:
 - wind direction and strength;
 - pause/resume control;
 - ammunition selection at the bottom of the battlefield.
+
+Campaign wind is now passed from `CampaignLevelDefinition.initialWind` through
+`MatchViewModel`, `LocalMatchGateway` and `MatchSession` into
+`SimulationConfig.windAccelerationX` and
+`SimulationConfig.windAccelerationScale`. The Android match uses a calibrated
+physical scale of `260`, preserving a strong but controllable projectile
+deflection while allowing extreme opposing wind to stop a projectile before
+the opposing fortress. The snapshot continues to expose normalized strength
+values for the HUD. Campaign definitions currently use deterministic
+alternating directions and four low-to-medium strength bands for testable
+level variation.
+
+Wind is dynamic during gameplay: after an initial 8-second period it changes
+through a deterministic 3-second transition, then schedules the next change
+after 18–24 seconds. `game-simulation/WindSystem` owns this state so the
+Android layer only renders the current snapshot.
 
 The HUD is rendered as an overlay on the battlefield rather than as a separate
 black strip above the map.
@@ -93,8 +113,6 @@ must go through commands and domain/application boundaries.
 - Navigation is implemented as a lightweight single-activity screen host; it
   can later be replaced by Android Navigation or Compose without changing the
   game modules.
-- Wind gust and warning behavior from the legacy game is not yet represented in
-  the new simulation contract.
 - No network, login, matchmaking or server architecture is in scope.
 
 ## Commands

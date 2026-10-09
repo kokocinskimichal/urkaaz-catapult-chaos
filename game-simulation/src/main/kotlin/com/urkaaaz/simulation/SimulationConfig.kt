@@ -8,6 +8,7 @@ data class SimulationConfig(
     val terrainBiome: String = "GREEN_FRONTIER",
     val gravityAccelerationY: Float = 420f,
     val windAccelerationX: Float = 0f,
+    val windAccelerationScale: Float = 260f,
     val fortressCollisionRadius: Float = 46f,
     val unitCollisionRadius: Float = 18f,
     val defaultCatapultHeightRatio: Float = 0.72f,
@@ -16,6 +17,9 @@ data class SimulationConfig(
 ) {
     init {
         require(gravityAccelerationY >= 0f) { "gravity must not be negative" }
+        require(windAccelerationScale > 0f) {
+            "wind acceleration scale must be positive"
+        }
         require(defaultCatapultHeightRatio in 0f..1f) {
             "default catapult height ratio must be between 0 and 1"
         }

@@ -6,6 +6,7 @@ import com.urkaaaz.contracts.MatchId
 import com.urkaaaz.contracts.MatchStatus
 import com.urkaaaz.contracts.PlayerId
 import com.urkaaaz.contracts.EntityId
+import com.urkaaaz.contracts.WindSnapshot
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
@@ -22,6 +23,28 @@ class MatchSessionTest {
         )
 
         assertEquals(MatchStatus.RUNNING, snapshot.status)
+    }
+
+    @Test
+    fun initialWindIsAppliedToTheSimulationAndSnapshot() {
+        val session = MatchSession(
+            initialWind = WindSnapshot(direction = -1f, strength = 0.5f),
+        )
+        val matchId = MatchId("match-wind")
+        val playerId = PlayerId("player-wind")
+
+        session.dispatch(MatchCommand.Start(CommandId("start-wind"), matchId, playerId))
+        val snapshot = session.dispatch(
+            MatchCommand.AdvanceSimulation(
+                CommandId("advance-wind"),
+                matchId,
+                playerId,
+                33,
+            ),
+        )
+
+        assertEquals(-1f, snapshot.wind.direction)
+        assertEquals(0.5f, snapshot.wind.strength)
     }
 
     @Test

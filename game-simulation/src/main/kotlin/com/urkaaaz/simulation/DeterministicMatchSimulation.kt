@@ -53,6 +53,10 @@ class DeterministicMatchSimulation(
     private var currentRedFortress = redFortress
     private var currentBlueCatapult = blueCatapult
     private var currentRedCatapult = redCatapult
+    private val wind = WindSystem(
+        initialAccelerationX = config.windAccelerationX,
+        accelerationScale = config.windAccelerationScale,
+    )
     private val resources = mutableMapOf(
         Team.BLUE to initialWallet(),
         Team.RED to initialWallet(),
@@ -134,6 +138,7 @@ class DeterministicMatchSimulation(
         require(deltaMilliseconds >= 0) { "deltaMilliseconds must not be negative" }
         check(status == MatchStatus.RUNNING) { "match is not running" }
         val deltaSeconds = deltaMilliseconds / 1_000f
+        wind.update(deltaSeconds)
         reloadRemainingSeconds.keys.forEach { team ->
             reloadRemainingSeconds[team] = (reloadRemainingSeconds.getValue(team) - deltaSeconds)
                 .coerceAtLeast(0f)
@@ -145,7 +150,7 @@ class DeterministicMatchSimulation(
         projectiles.forEach { projectile ->
             val advanced = projectile.advance(
                 deltaSeconds = deltaSeconds,
-                windAccelerationX = config.windAccelerationX,
+                windAccelerationX = wind.accelerationX(),
                 gravityAccelerationY = config.gravityAccelerationY,
             )
             val target = targetHitBy(advanced)
@@ -197,7 +202,7 @@ class DeterministicMatchSimulation(
             revision = terrain.revision,
             biome = config.terrainBiome,
         ),
-        wind = WindSnapshot(direction = if (config.windAccelerationX < 0f) -1f else 1f, strength = kotlin.math.abs(config.windAccelerationX)),
+        wind = wind.snapshot(),
         outcome = outcome(),
         resourcesByTeam = resources.mapValues { (_, wallet) ->
             ResourceSnapshot(

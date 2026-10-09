@@ -3,11 +3,13 @@ package com.urkaaaz.application
 import com.urkaaaz.contracts.MatchCommand
 import com.urkaaaz.contracts.MatchEvent
 import com.urkaaaz.contracts.MatchSnapshot
+import com.urkaaaz.contracts.WindSnapshot
 
 /** Local in-memory application boundary for the Android host. */
 class LocalMatchGateway(
     terrainBiome: String = "GREEN_FRONTIER",
-    private val session: MatchSession = MatchSession(terrainBiome),
+    initialWind: WindSnapshot = WindSnapshot(),
+    private val session: MatchSession = MatchSession(terrainBiome, initialWind),
 ) {
     fun dispatch(command: MatchCommand): MatchSnapshot = session.dispatch(command)
 

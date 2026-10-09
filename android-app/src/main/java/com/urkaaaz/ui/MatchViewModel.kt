@@ -22,6 +22,7 @@ class MatchViewModel(
     campaignLevel: Int = 1,
     private val gateway: LocalMatchGateway = LocalMatchGateway(
         CampaignLevelDefinition.forLevel(campaignLevel).terrain.biome.name,
+        CampaignLevelDefinition.forLevel(campaignLevel).initialWind,
     ),
     private val matchId: MatchId = MatchId("local-match"),
     private val playerId: PlayerId = PlayerId("local-player"),

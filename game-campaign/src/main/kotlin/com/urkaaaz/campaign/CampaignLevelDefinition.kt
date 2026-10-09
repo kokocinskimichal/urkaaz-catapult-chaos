@@ -178,6 +178,10 @@ data class CampaignLevelDefinition(
                     if (safeLevel >= 21) add(SpellType.RUNIC_BASTION)
                 },
                 startingAmmunition = if (safeLevel <= 10) 8 + (safeLevel - 1) * 2 else 30,
+                initialWind = WindSnapshot(
+                    direction = if (safeLevel % 2 == 0) -1f else 1f,
+                    strength = 0.25f + ((safeLevel - 1) % 4) * 0.15f,
+                ),
                 tutorial = TutorialParameters(
                     enabled = safeLevel == 1,
                     stepKeys = if (safeLevel == 1) {
