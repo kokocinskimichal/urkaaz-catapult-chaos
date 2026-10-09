@@ -34,8 +34,23 @@ class BattlefieldCameraController(
     private var panLastY = 0f
     private var panStartX = 0f
     private var panStartY = 0f
+    private var initialLevelFramingApplied = false
+    private var snapshotMode = false
 
     fun update(state: RenderState, viewportWidth: Float, viewportHeight: Float) {
+        if (snapshotMode) {
+            transform = CameraTransform(1f, 0f, 0f)
+            return
+        }
+        if (!initialLevelFramingApplied && state.statusLabel == "RUNNING") {
+            positionAtLevelStart(viewportWidth, viewportHeight)
+            initialLevelFramingApplied = true
+            lastPhaseLabel = state.phaseLabel
+            lastFramedTeamLabel = "BLUE"
+            clampOffset(viewportWidth, viewportHeight)
+            return
+        }
+
         val trackedProjectile = state.projectiles.firstOrNull { it.teamLabel == "BLUE" }
         if (trackedProjectile != null) {
             manualPanActive = false
@@ -79,6 +94,13 @@ class BattlefieldCameraController(
         }
         lastPhaseLabel = state.phaseLabel
         clampOffset(viewportWidth, viewportHeight)
+    }
+
+    fun setSnapshotMode(enabled: Boolean) {
+        snapshotMode = enabled
+        if (!enabled) {
+            initialLevelFramingApplied = false
+        }
     }
 
     fun applyZoom(
@@ -162,6 +184,36 @@ class BattlefieldCameraController(
         centerOnWorld(x, y, viewportWidth, viewportHeight)
     }
 
+    /**
+     * Opens a match on the player's fortress, matching the legacy level-start framing.
+     *
+     * The presentation world is a 1600x900 normalization of the legacy 7200x4800
+     * gameplay viewport. A 1.5 scale therefore shows approximately the same two-thirds
+     * battlefield width as the legacy default zoom.
+     */
+    private fun positionAtLevelStart(viewportWidth: Float, viewportHeight: Float) {
+        if (viewportWidth <= 0f || viewportHeight <= 0f) return
+
+        val scale = LEGACY_START_SCALE.coerceIn(MIN_MAP_SCALE, MAX_MAP_SCALE)
+        val fortressLeft = BLUE_FORTRESS_CENTER_X - FORTRESS_WIDTH / 2f
+        val fortressFoundationY = GROUND_Y
+        val leftMargin = LEGACY_LEFT_MARGIN / LEGACY_VIEWPORT_WIDTH * WORLD_WIDTH
+        val bottomMargin = LEGACY_BOTTOM_MARGIN / LEGACY_VIEWPORT_HEIGHT * WORLD_HEIGHT
+
+        transform = CameraTransform(
+            scale = scale,
+            offsetX = (
+                leftMargin / WORLD_WIDTH * viewportWidth * scale -
+                    fortressLeft / WORLD_WIDTH * viewportWidth * scale
+                ),
+            offsetY = (
+                viewportHeight -
+                    bottomMargin / WORLD_HEIGHT * viewportHeight * scale -
+                    fortressFoundationY / WORLD_HEIGHT * viewportHeight * scale
+                ).coerceAtMost(0f),
+        )
+    }
+
     private fun animateToTeam(
         state: RenderState,
         teamLabel: String,
@@ -207,6 +259,16 @@ class BattlefieldCameraController(
     }
 
     companion object {
+        private const val WORLD_WIDTH = 1_600f
+        private const val WORLD_HEIGHT = 900f
+        private const val BLUE_FORTRESS_CENTER_X = 160f
+        private const val FORTRESS_WIDTH = 280f
+        private const val GROUND_Y = 684f
+        private const val LEGACY_START_SCALE = 1.5f
+        private const val LEGACY_VIEWPORT_WIDTH = 4_800f
+        private const val LEGACY_VIEWPORT_HEIGHT = 2_400f
+        private const val LEGACY_LEFT_MARGIN = 72f
+        private const val LEGACY_BOTTOM_MARGIN = 96f
         private const val MIN_MAP_SCALE = 1f
         private const val MAX_MAP_SCALE = 2.5f
         private const val AUTO_TRACK_SCALE = 1.25f

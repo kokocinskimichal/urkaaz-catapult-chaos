@@ -72,6 +72,9 @@ class CampaignScreen(
             gravity = Gravity.BOTTOM
         })
 
+    }
+
+    init {
         render(viewModel.state)
     }
 

@@ -294,11 +294,11 @@ class DeterministicMatchSimulation(
     }
 
     private fun applyDamageAt(position: WorldPosition, radius: Float, damage: Int) {
-        if (position.distanceTo(currentBlueFortress.center) <= radius) {
+        if (currentBlueFortress.intersects(position, radius)) {
             currentBlueFortress = currentBlueFortress.withDamage(damage)
             emitDamage(currentBlueFortress.id, damage)
         }
-        if (position.distanceTo(currentRedFortress.center) <= radius) {
+        if (currentRedFortress.intersects(position, radius)) {
             currentRedFortress = currentRedFortress.withDamage(damage)
             emitDamage(currentRedFortress.id, damage)
         }
@@ -346,7 +346,7 @@ class DeterministicMatchSimulation(
 
     private fun targetHitBy(projectile: Projectile): EntityTarget? {
         val target = if (projectile.firedBy == Team.BLUE) currentRedFortress else currentBlueFortress
-        return if (projectile.position.distanceTo(target.center) <= config.fortressCollisionRadius) {
+        return if (target.intersects(projectile.position, config.fortressCollisionRadius)) {
             EntityTarget(target.id)
         } else {
             null

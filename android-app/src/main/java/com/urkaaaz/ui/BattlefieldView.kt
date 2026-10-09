@@ -13,6 +13,12 @@ import kotlin.math.hypot
 
 /** Minimal renderer that draws only the presentation model, never the engine. */
 class BattlefieldView(context: Context) : View(context) {
+    var debugHitboxesVisible: Boolean = false
+        set(value) {
+            field = value
+            invalidate()
+        }
+
     var onAimChanged: ((SlingshotAim) -> Unit)? = null
     var onAimReleased: ((SlingshotAim) -> Unit)? = null
     var onAimCancelled: ((SlingshotAim?) -> Unit)? = null
@@ -133,6 +139,7 @@ class BattlefieldView(context: Context) : View(context) {
             isAiming = aimController.isDragging,
             viewportWidth = width.toFloat(),
             viewportHeight = height.toFloat(),
+            debugHitboxesVisible = debugHitboxesVisible,
         )
     }
 
@@ -508,6 +515,11 @@ class BattlefieldView(context: Context) : View(context) {
             viewportWidth = width.toFloat(),
             viewportHeight = height.toFloat(),
         )
+        invalidate()
+    }
+
+    fun setSnapshotMode(enabled: Boolean) {
+        camera.setSnapshotMode(enabled)
         invalidate()
     }
 

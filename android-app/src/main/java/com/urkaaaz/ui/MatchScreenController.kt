@@ -1,12 +1,18 @@
 package com.urkaaaz.ui
 
 import android.app.Activity
+import android.app.Dialog
+import android.content.res.ColorStateList
 import android.graphics.Color
+import android.graphics.Typeface
 import android.os.Handler
 import android.os.Looper
 import android.view.Gravity
+import android.view.View
 import android.widget.FrameLayout
 import android.widget.LinearLayout
+import android.widget.CheckBox
+import android.widget.TextView
 
 class MatchScreenController(
     private val activity: Activity,
@@ -17,6 +23,9 @@ class MatchScreenController(
     private lateinit var battlefieldView: BattlefieldView
     private lateinit var hudView: MatchHudView
     private lateinit var ammunitionPanel: AmmunitionPanelView
+    private lateinit var debugButton: TextView
+    private lateinit var snapshotCloseButton: TextView
+    private var snapshotMode = false
 
     private var aimAngle = 45f
     private var aimPower = 50f
@@ -45,6 +54,25 @@ class MatchScreenController(
         ammunitionPanel = AmmunitionPanelView(activity).apply {
             onAmmoSelected = { ammunitionType ->
                 render(viewModel.dispatch(MatchUiAction.SelectAmmo(ammunitionType)))
+            }
+            debugButton = TextView(activity).apply {
+                text = "DEBUG"
+                setTextColor(Color.WHITE)
+                textSize = 11f
+                setTypeface(typeface, Typeface.BOLD)
+                setPadding(dp(8), dp(3), dp(8), dp(3))
+                setBackgroundResource(com.urkaaaz.android.R.drawable.bg_hud_panel)
+                setOnClickListener { showDebugToolsDialog() }
+            }
+            snapshotCloseButton = TextView(activity).apply {
+                text = "CLOSE SNAPSHOT"
+                setTextColor(Color.WHITE)
+                textSize = 12f
+                setTypeface(typeface, Typeface.BOLD)
+                setPadding(dp(14), dp(7), dp(14), dp(7))
+                setBackgroundResource(com.urkaaaz.android.R.drawable.bg_hud_panel)
+                visibility = View.GONE
+                setOnClickListener { setSnapshotMode(false) }
             }
         }
 
@@ -76,15 +104,42 @@ class MatchScreenController(
             setBackgroundColor(Color.TRANSPARENT)
             setPadding(6, 6, 6, 6)
             addView(battlefieldView, LinearLayout.LayoutParams(-1, 0, 1f))
-            addView(ammunitionPanel, LinearLayout.LayoutParams(-1, 82))
         }
         return FrameLayout(activity).apply {
-            setBackgroundColor(Color.rgb(28, 35, 39))
+            setBackgroundColor(Color.TRANSPARENT)
             addView(content, FrameLayout.LayoutParams(-1, -1))
+            addView(
+                ammunitionPanel,
+                FrameLayout.LayoutParams(-1, dp(112)).apply {
+                    gravity = Gravity.BOTTOM
+                },
+            )
             addView(
                 hudView,
                 FrameLayout.LayoutParams(-1, 180).apply {
                     gravity = Gravity.TOP
+                },
+            )
+            addView(
+                debugButton,
+                FrameLayout.LayoutParams(
+                    FrameLayout.LayoutParams.WRAP_CONTENT,
+                    FrameLayout.LayoutParams.WRAP_CONTENT,
+                ).apply {
+                    gravity = Gravity.TOP or Gravity.END
+                    topMargin = dp(180)
+                    rightMargin = dp(12)
+                },
+            )
+            addView(
+                snapshotCloseButton,
+                FrameLayout.LayoutParams(
+                    FrameLayout.LayoutParams.WRAP_CONTENT,
+                    FrameLayout.LayoutParams.WRAP_CONTENT,
+                ).apply {
+                    gravity = Gravity.TOP or Gravity.END
+                    topMargin = dp(12)
+                    rightMargin = dp(12)
                 },
             )
             render(viewModel.dispatch(MatchUiAction.StartMatch))
@@ -104,5 +159,86 @@ class MatchScreenController(
         hudView.render(state)
         ammunitionPanel.render(state)
         battlefieldView.render(state)
+        debugButton.visibility = if (state.statusLabel == "RUNNING" && !snapshotMode) {
+            View.VISIBLE
+        } else {
+            View.GONE
+        }
     }
+
+    private fun showDebugToolsDialog() {
+        val dialog = Dialog(activity)
+        val root = LinearLayout(activity).apply {
+            orientation = LinearLayout.VERTICAL
+            setPadding(dp(24), dp(20), dp(24), dp(20))
+            setBackgroundResource(com.urkaaaz.android.R.drawable.bg_hud_panel)
+        }
+        root.addView(TextView(activity).apply {
+            text = "DEBUG TOOLS"
+            setTextColor(Color.WHITE)
+            textSize = 19f
+            setTypeface(typeface, Typeface.BOLD)
+        })
+        root.addView(CheckBox(activity).apply {
+            text = "Show hitboxes"
+            setTextColor(Color.WHITE)
+            buttonTintList = ColorStateList.valueOf(Color.rgb(243, 210, 138))
+            isChecked = battlefieldView.debugHitboxesVisible
+            setOnCheckedChangeListener { _, checked ->
+                battlefieldView.debugHitboxesVisible = checked
+            }
+        })
+        root.addView(TextView(activity).apply {
+            text = "SNAPSHOT"
+            setTextColor(Color.WHITE)
+            textSize = 14f
+            setTypeface(typeface, Typeface.BOLD)
+            setPadding(dp(12), dp(10), dp(12), dp(10))
+            setBackgroundResource(com.urkaaaz.android.R.drawable.bg_hud_panel)
+            setOnClickListener {
+                dialog.dismiss()
+                setSnapshotMode(true)
+            }
+        }, LinearLayout.LayoutParams(
+            LinearLayout.LayoutParams.MATCH_PARENT,
+            LinearLayout.LayoutParams.WRAP_CONTENT,
+        ).apply {
+            topMargin = dp(8)
+        })
+        root.addView(TextView(activity).apply {
+            text = "CLOSE"
+            setTextColor(Color.WHITE)
+            textSize = 14f
+            setTypeface(typeface, Typeface.BOLD)
+            setPadding(dp(12), dp(10), dp(12), dp(10))
+            setBackgroundResource(com.urkaaaz.android.R.drawable.bg_hud_panel)
+            setOnClickListener { dialog.dismiss() }
+        }, LinearLayout.LayoutParams(
+            LinearLayout.LayoutParams.MATCH_PARENT,
+            LinearLayout.LayoutParams.WRAP_CONTENT,
+        ).apply {
+            topMargin = dp(14)
+        })
+        dialog.setContentView(root)
+        dialog.setOnShowListener {
+            dialog.window?.setLayout(
+                (activity.resources.displayMetrics.widthPixels * 0.45f).toInt(),
+                -2,
+            )
+        }
+        dialog.show()
+    }
+
+    private fun setSnapshotMode(enabled: Boolean) {
+        snapshotMode = enabled
+        battlefieldView.setSnapshotMode(enabled)
+        hudView.visibility = if (enabled) View.GONE else View.VISIBLE
+        ammunitionPanel.visibility = if (enabled) View.GONE else View.VISIBLE
+        debugButton.visibility = if (enabled) View.GONE else View.VISIBLE
+        snapshotCloseButton.visibility = if (enabled) View.VISIBLE else View.GONE
+        battlefieldView.invalidate()
+    }
+
+    private fun dp(value: Int): Int =
+        (value * activity.resources.displayMetrics.density).toInt()
 }

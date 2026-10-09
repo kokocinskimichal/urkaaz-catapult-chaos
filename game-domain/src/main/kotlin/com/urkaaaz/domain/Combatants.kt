@@ -1,6 +1,7 @@
 package com.urkaaaz.domain
 
 import com.urkaaaz.contracts.EntityId
+import com.urkaaaz.contracts.FortressHitboxProfile
 import com.urkaaaz.contracts.Team
 
 /**
@@ -42,6 +43,16 @@ data class Fortress(
         get() = health.isAlive
 
     fun withDamage(amount: Int): Fortress = copy(health = health.damage(amount))
+
+    fun contains(position: WorldPosition): Boolean =
+        FortressHitboxProfile.rectangles.any {
+            it.contains(position.x - center.x, position.y - center.y)
+        }
+
+    fun intersects(position: WorldPosition, radius: Float): Boolean =
+        FortressHitboxProfile.rectangles.any {
+            it.distanceTo(position.x - center.x, position.y - center.y) <= radius
+        }
 }
 
 /**

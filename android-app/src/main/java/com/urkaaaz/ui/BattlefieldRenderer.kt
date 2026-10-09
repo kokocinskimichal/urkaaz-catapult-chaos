@@ -8,6 +8,7 @@ import android.graphics.Paint
 import android.graphics.RectF
 import android.graphics.Shader
 import android.graphics.Typeface
+import com.urkaaaz.contracts.FortressHitboxProfile
 
 class BattlefieldRenderer(
     private val assets: BattlefieldAssetCatalog,
@@ -38,6 +39,7 @@ class BattlefieldRenderer(
         isAiming: Boolean,
         viewportWidth: Float,
         viewportHeight: Float,
+        debugHitboxesVisible: Boolean,
     ) {
         canvas.save()
         canvas.scale(camera.scale, camera.scale)
@@ -140,6 +142,15 @@ class BattlefieldRenderer(
             redPaint,
         )
         drawFortressLabels(canvas, blueFortressCenterX, redFortressCenterX, fortressBaseline)
+        if (debugHitboxesVisible) {
+            drawDebugHitboxes(
+                canvas = canvas,
+                state = state,
+                groundTop = groundTop,
+                viewportWidth = viewportWidth,
+                viewportHeight = viewportHeight,
+            )
+        }
         drawOutcome(canvas, state.outcomeLabel, viewportWidth, viewportHeight)
         if (isAiming) drawAimGesture(canvas, groundTop)
         canvas.restore()
@@ -188,7 +199,52 @@ class BattlefieldRenderer(
         } else {
             0f
         }
+
         canvas.drawRect(left, top, left + FORTRESS_RENDER_WIDTH * ratio, top + 16f, color)
+    }
+
+    private fun drawDebugHitboxes(
+        canvas: Canvas,
+        state: RenderState,
+        groundTop: Float,
+        viewportWidth: Float,
+        viewportHeight: Float,
+    ) {
+        val hitboxPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+            color = Color.argb(210, 255, 80, 80)
+            style = Paint.Style.STROKE
+            strokeWidth = 3f
+        }
+        val labelPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+            color = Color.WHITE
+            textSize = 20f
+            setShadowLayer(4f, 1f, 1f, Color.BLACK)
+        }
+        val fortressTop = groundTop - FORTRESS_RENDER_HEIGHT
+        listOf(
+            "BLUE FORTRESS" to (160f to fortressTop + FORTRESS_RENDER_HEIGHT / 2f),
+            "RED FORTRESS" to (WORLD_WIDTH - 160f to fortressTop + FORTRESS_RENDER_HEIGHT / 2f),
+        ).forEach { (label, center) ->
+            val centerX = worldToViewX(center.first, viewportWidth)
+            val centerY = center.second
+            val centerWorldY = centerY / viewportHeight * WORLD_HEIGHT
+            FortressHitboxProfile.rectangles.forEach { rectangle ->
+                canvas.drawRect(
+                    worldToViewX(center.first + rectangle.left, viewportWidth),
+                    worldToViewY(centerWorldY + rectangle.top, viewportHeight),
+                    worldToViewX(center.first + rectangle.right, viewportWidth),
+                    worldToViewY(centerWorldY + rectangle.bottom, viewportHeight),
+                    hitboxPaint,
+                )
+            }
+            canvas.drawText(label, centerX - 70f, centerY - 100f, labelPaint)
+        }
+
+        state.projectiles.forEach { projectile ->
+            val centerX = worldToViewX(projectile.x, viewportWidth)
+            val centerY = worldToViewY(projectile.y, viewportHeight)
+            canvas.drawCircle(centerX, centerY, PROJECTILE_DEBUG_RADIUS, hitboxPaint)
+        }
     }
 
     private fun drawFortressLabels(
@@ -247,5 +303,6 @@ class BattlefieldRenderer(
         private const val CATAPULT_RENDER_WIDTH = 95f
         private const val RELOAD_INDICATOR_OFFSET = 72f
         private const val CATAPULT_PLATFORM_HEIGHT_RATIO = 0.40f
+        private const val PROJECTILE_DEBUG_RADIUS = 30f
     }
 }

@@ -31,6 +31,12 @@ The current match HUD displays:
 - pause/resume control;
 - ammunition selection at the bottom of the battlefield.
 
+The ammunition control follows the legacy interaction pattern: the bottom
+control shows the currently selected ammunition, and tapping it opens a
+four-column popup grid. Unavailable or depleted ammunition is dimmed and
+disabled; selecting an enabled item updates the selector and sends
+`MatchUiAction.SelectAmmo` through the existing ViewModel boundary.
+
 Campaign wind is now passed from `CampaignLevelDefinition.initialWind` through
 `MatchViewModel`, `LocalMatchGateway` and `MatchSession` into
 `SimulationConfig.windAccelerationX` and
@@ -49,6 +55,19 @@ Android layer only renders the current snapshot.
 
 The HUD is rendered as an overlay on the battlefield rather than as a separate
 black strip above the map.
+
+The match now exposes a legacy-style `DEBUG` control after the match starts.
+Its panel supports `Show hitboxes`, which renders presentation hitbox guides
+for fortress targets and active projectiles, and `SNAPSHOT`, which hides
+the HUD and ammunition controls and shows the complete normalized battlefield.
+Legacy AI-unit toggles are intentionally not copied because the new match
+does not yet expose runtime unit deployment or AI-unit commands.
+
+Catapults are not damage targets. Projectile damage is resolved against the
+opposing fortress collision hitbox; the debug overlay therefore does not draw
+catapult hitboxes. The fortress hitbox is an alpha-derived approximation made
+of six rectangles covering the upper tower, body, lower wings and base. Direct
+hits and area damage use the same rectangle profile.
 
 ## Data flow
 
@@ -86,6 +105,7 @@ must go through commands and domain/application boundaries.
 | `android-app/.../ui/BattlefieldView.kt` | Battlefield interaction and draw entry point |
 | `android-app/.../ui/BattlefieldRenderer.kt` | Battlefield draw orchestration |
 | `android-app/.../ui/BattlefieldCameraController.kt` | Camera, zoom and pan |
+| `android-app/.../ui/MatchScreenController.kt` | Match composition, lifecycle and debug panel |
 | `android-app/.../ui/AimGestureController.kt` | Aiming gesture lifecycle |
 | `android-app/.../ui/RenderStateMapper.kt` | Snapshot-to-render mapping |
 | `game-application/.../MatchSession.kt` | Application match lifecycle |

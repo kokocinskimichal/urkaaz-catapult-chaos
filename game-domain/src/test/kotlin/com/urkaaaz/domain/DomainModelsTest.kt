@@ -67,6 +67,20 @@ class DomainModelsTest {
     }
 
     @Test
+    fun fortressUsesIrregularRectangleHitboxInsteadOfCenterCircle() {
+        val fortress = Fortress(
+            id = EntityId("fortress-1"),
+            team = Team.RED,
+            center = WorldPosition(500f, 400f),
+        )
+
+        assertTrue(fortress.contains(WorldPosition(500f, 320f)))
+        assertTrue(fortress.contains(WorldPosition(410f, 450f)))
+        assertFalse(fortress.contains(WorldPosition(500f, 300f)))
+        assertFalse(fortress.contains(WorldPosition(350f, 400f)))
+    }
+
+    @Test
     fun matchStateHasExplicitLifecycle() {
         val state = MatchState(matchId = MatchId("match-1"))
         val running = state.start(Team.BLUE)
