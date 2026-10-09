@@ -23,6 +23,7 @@ class RenderStateMapperTest {
         assertEquals("PLAYER_TURN", state.phaseLabel)
         assertEquals("BLUE", state.activeTeamLabel)
         assertEquals(0, state.projectileCount)
+        assertEquals("GREEN_FRONTIER", state.terrainBiome)
         assertEquals(0, state.projectiles.size)
         assertEquals(0, state.windStrength.toInt())
         assertEquals(null, state.impact)

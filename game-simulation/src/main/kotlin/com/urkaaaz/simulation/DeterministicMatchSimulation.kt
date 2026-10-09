@@ -190,7 +190,10 @@ class DeterministicMatchSimulation(
                 velocityY = it.velocity.y,
             )
         },
-        terrain = TerrainSnapshot(terrain.revision),
+        terrain = TerrainSnapshot(
+            revision = terrain.revision,
+            biome = config.terrainBiome,
+        ),
         wind = WindSnapshot(direction = if (config.windAccelerationX < 0f) -1f else 1f, strength = kotlin.math.abs(config.windAccelerationX)),
         outcome = outcome(),
         resourcesByTeam = resources.mapValues { (_, wallet) ->

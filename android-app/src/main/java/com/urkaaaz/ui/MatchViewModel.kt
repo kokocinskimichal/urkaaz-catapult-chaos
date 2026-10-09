@@ -1,5 +1,6 @@
 package com.urkaaaz.ui
 
+import com.urkaaaz.campaign.CampaignLevelDefinition
 import com.urkaaaz.application.LocalMatchGateway
 import com.urkaaaz.ai.AiAgent
 import com.urkaaaz.ai.AiConfiguration
@@ -18,7 +19,10 @@ import com.urkaaaz.contracts.PlayerId
  * snapshot data to views.
  */
 class MatchViewModel(
-    private val gateway: LocalMatchGateway = LocalMatchGateway(),
+    campaignLevel: Int = 1,
+    private val gateway: LocalMatchGateway = LocalMatchGateway(
+        CampaignLevelDefinition.forLevel(campaignLevel).terrain.biome.name,
+    ),
     private val matchId: MatchId = MatchId("local-match"),
     private val playerId: PlayerId = PlayerId("local-player"),
 ) {

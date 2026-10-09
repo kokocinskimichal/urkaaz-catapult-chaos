@@ -32,6 +32,62 @@ class BattlefieldView(context: Context) : View(context) {
     )
     private val terrainSoil = BitmapFactory.decodeResource(resources, R.drawable.terrain_soil_fill_00)
     private val grassCap = BitmapFactory.decodeResource(resources, R.drawable.terrain_grass_cap)
+    private data class TerrainTheme(
+        val background: android.graphics.Bitmap?,
+        val soil: android.graphics.Bitmap?,
+        val cap: android.graphics.Bitmap?,
+        val decorations: List<android.graphics.Bitmap?>,
+        val fallbackColor: Int,
+    )
+    private val terrainThemes = mapOf(
+        "GREEN_FRONTIER" to TerrainTheme(
+            background = loadBitmap("background_green_frontier"),
+            soil = terrainSoil,
+            cap = loadBitmap("terrain_green_frontier_cap") ?: grassCap,
+            decorations = listOf(loadBitmap("terrain_tree_00"), loadBitmap("terrain_tree_01")),
+            fallbackColor = Color.rgb(111, 145, 77),
+        ),
+        "FROSTBOUND" to TerrainTheme(
+            background = loadBitmap("background_frostbound_pass"),
+            soil = loadBitmap("terrain_frost_soil_fill_00"),
+            cap = loadBitmap("terrain_frost_snow_cap"),
+            decorations = listOf(
+                loadBitmap("terrain_frost_tree_00"),
+                loadBitmap("terrain_frost_tree_01"),
+                loadBitmap("terrain_frost_rock_00"),
+            ),
+            fallbackColor = Color.rgb(169, 185, 193),
+        ),
+        "COPPERWOOD" to TerrainTheme(
+            background = loadBitmap("background_copperwood"),
+            soil = loadBitmap("terrain_copperwood_soil_fill_00"),
+            cap = loadBitmap("terrain_copperwood_cap"),
+            decorations = listOf(
+                loadBitmap("terrain_copperwood_tree_00"),
+                loadBitmap("terrain_copperwood_tree_01"),
+                loadBitmap("terrain_copperwood_rock_00"),
+            ),
+            fallbackColor = Color.rgb(111, 75, 48),
+        ),
+        "ASHEN_MARCH" to TerrainTheme(
+            background = loadBitmap("background_ashen_march"),
+            soil = loadBitmap("terrain_ashen_march_soil_fill_00"),
+            cap = loadBitmap("terrain_ashen_march_cap"),
+            decorations = listOf(
+                loadBitmap("terrain_ashen_march_tree_00"),
+                loadBitmap("terrain_ashen_march_tree_01"),
+                loadBitmap("terrain_ashen_march_rock_00"),
+            ),
+            fallbackColor = Color.rgb(81, 75, 68),
+        ),
+        "SUNKEN_MARSHES" to TerrainTheme(
+            background = loadBitmap("background_sunken_marshes"),
+            soil = terrainSoil,
+            cap = grassCap,
+            decorations = listOf(loadBitmap("terrain_prop_00"), loadBitmap("terrain_prop_01")),
+            fallbackColor = Color.rgb(77, 98, 76),
+        ),
+    )
     private val blueFortress = BitmapFactory.decodeResource(resources, R.drawable.fortress_left)
     private val redFortress = BitmapFactory.decodeResource(resources, R.drawable.fortress_right)
     private val blueCatapult = BitmapFactory.decodeResource(resources, R.drawable.catapult_left)
@@ -40,8 +96,23 @@ class BattlefieldView(context: Context) : View(context) {
     private val terrainPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         color = Color.rgb(111, 145, 77)
     }
+
+    private fun drawThemeDecorations(canvas: Canvas, theme: TerrainTheme, groundTop: Float) {
+        val positions = floatArrayOf(0.34f, 0.48f, 0.62f)
+        theme.decorations.forEachIndexed { index, bitmap ->
+            if (bitmap != null) {
+                val x = width * positions[index % positions.size]
+                drawTexture(canvas, bitmap, x, groundTop - 94f, 94f)
+            }
+        }
+    }
     private val bluePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         color = Color.rgb(55, 105, 190)
+    }
+
+    private fun loadBitmap(name: String): android.graphics.Bitmap? {
+    val resourceId = resources.getIdentifier(name, "drawable", context.packageName)
+    return resourceId.takeIf { it != 0 }?.let { BitmapFactory.decodeResource(resources, it) }
     }
     private val redPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         color = Color.rgb(190, 65, 55)
@@ -52,6 +123,7 @@ class BattlefieldView(context: Context) : View(context) {
         activeTeamLabel = "NONE",
         projectileCount = 0,
         terrainRevision = 0,
+        terrainBiome = "GREEN_FRONTIER",
         projectiles = emptyList(),
         blueCatapultX = 120f,
         blueCatapultY = 648f,
@@ -89,8 +161,12 @@ class BattlefieldView(context: Context) : View(context) {
     private var wasFollowingProjectile = false
     private var pinchActive = false
     private var panningMap = false
+    private var panDragging = false
+    private var manualPanActive = false
     private var panLastX = 0f
     private var panLastY = 0f
+    private var panStartX = 0f
+    private var panStartY = 0f
     private val scaleDetector = ScaleGestureDetector(
         context,
         object : ScaleGestureDetector.SimpleOnScaleGestureListener() {
@@ -139,19 +215,31 @@ class BattlefieldView(context: Context) : View(context) {
         canvas.save()
         canvas.scale(mapScale, mapScale)
         canvas.translate(mapOffsetX / mapScale, mapOffsetY / mapScale)
-        backgroundPaint.shader = LinearGradient(
-            0f,
-            0f,
-            0f,
-            height.toFloat(),
-            Color.rgb(123, 177, 211),
-            Color.rgb(242, 211, 154),
-            Shader.TileMode.CLAMP,
-        )
-        canvas.drawRect(0f, 0f, width.toFloat(), height.toFloat(), backgroundPaint)
+        val theme = terrainThemes[state.terrainBiome] ?: terrainThemes.getValue("GREEN_FRONTIER")
+        if (theme.background != null) {
+            canvas.drawBitmap(
+                theme.background,
+                null,
+                android.graphics.RectF(0f, 0f, width.toFloat(), height.toFloat()),
+                backgroundPaint,
+            )
+        } else {
+            backgroundPaint.shader = LinearGradient(
+                0f,
+                0f,
+                0f,
+                height.toFloat(),
+                Color.rgb(123, 177, 211),
+                Color.rgb(242, 211, 154),
+                Shader.TileMode.CLAMP,
+            )
+            canvas.drawRect(0f, 0f, width.toFloat(), height.toFloat(), backgroundPaint)
+        }
         val groundTop = height * 0.76f
-        drawTiledTexture(canvas, terrainSoil, groundTop, height.toFloat(), 128f)
-        drawTiledTexture(canvas, grassCap, groundTop - 20f, groundTop + 6f, 150f)
+        terrainPaint.color = theme.fallbackColor
+        drawTiledTexture(canvas, theme.soil, groundTop, height.toFloat(), 128f)
+        drawTiledTexture(canvas, theme.cap, groundTop - 20f, groundTop + 6f, 150f)
+        drawThemeDecorations(canvas, theme, groundTop)
         drawTexture(canvas, blueFortress, width * 0.06f, groundTop - 175f, 175f)
         drawTexture(canvas, redFortress, width * 0.80f, groundTop - 175f, 175f)
         drawTexture(canvas, blueCatapult, width * 0.20f, groundTop - 105f, 105f)
@@ -188,8 +276,6 @@ class BattlefieldView(context: Context) : View(context) {
             state.redFortressMaxHealth,
             redPaint,
         )
-        drawReloadLabel(canvas, width * 0.06f, groundTop - 218f, state.playerReloadRemainingSeconds)
-        drawReloadLabel(canvas, width * 0.80f, groundTop - 218f, state.enemyReloadRemainingSeconds)
         val labelPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
             color = Color.WHITE
             textSize = 18f
@@ -225,7 +311,6 @@ class BattlefieldView(context: Context) : View(context) {
     override fun onTouchEvent(event: MotionEvent): Boolean {
         if (handlePinchTouch(event)) return true
         if (handleMapPanTouch(event)) return true
-        if (!canStartAiming()) return false
         return handleAimTouch(event)
     }
 
@@ -239,6 +324,15 @@ class BattlefieldView(context: Context) : View(context) {
         if (!panningMap) return false
         when (event.actionMasked) {
             MotionEvent.ACTION_MOVE -> {
+                if (!panDragging) {
+                    if (hypot(event.x - panStartX, event.y - panStartY) < PAN_START_DISTANCE) {
+                        return true
+                    }
+                    panDragging = true
+                    panLastX = event.x
+                    panLastY = event.y
+                    return true
+                }
                 translateMap(
                     deltaX = event.x - panLastX,
                     deltaY = event.y - panLastY,
@@ -249,6 +343,7 @@ class BattlefieldView(context: Context) : View(context) {
             MotionEvent.ACTION_UP,
             MotionEvent.ACTION_CANCEL -> {
                 panningMap = false
+                panDragging = false
             }
             else -> return false
         }
@@ -272,6 +367,7 @@ class BattlefieldView(context: Context) : View(context) {
                     startMapPan(event)
                     return true
                 }
+                if (!canStartAiming()) return true
                 draggingAim = true
                 dragX = mapX
                 dragY = mapY
@@ -308,8 +404,12 @@ class BattlefieldView(context: Context) : View(context) {
     }
 
     private fun startMapPan(event: MotionEvent) {
-        if (mapScale <= 1f || wasFollowingProjectile || postImpactHoldSeconds > 0f) return
+        if (wasFollowingProjectile) return
         panningMap = true
+        panDragging = false
+        manualPanActive = true
+        panStartX = event.x
+        panStartY = event.y
         panLastX = event.x
         panLastY = event.y
     }
@@ -342,21 +442,6 @@ class BattlefieldView(context: Context) : View(context) {
         }
         canvas.drawLine(originX, originY, pullX, pullY, paint)
         canvas.drawCircle(pullX, pullY, 28f, paint)
-        val textPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-            color = Color.WHITE
-            textSize = 20f
-            typeface = Typeface.DEFAULT_BOLD
-            setShadowLayer(4f, 1f, 1f, Color.BLACK)
-        }
-        val aim = dragAim
-        if (aim != null) {
-            canvas.drawText(
-                if (aim.directionValid) "${aim.power.toInt()}%  ${aim.angleDegrees.toInt()}°" else "CANCEL",
-                pullX + 36f,
-                pullY - 18f,
-                textPaint,
-            )
-        }
     }
 
     private fun drawHealthBar(
@@ -372,15 +457,6 @@ class BattlefieldView(context: Context) : View(context) {
         canvas.drawRect(left, top, left + width, top + 16f, background)
         val ratio = if (maxHealth > 0) (health.toFloat() / maxHealth).coerceIn(0f, 1f) else 0f
         canvas.drawRect(left, top, left + width * ratio, top + 16f, color)
-    }
-
-    private fun drawReloadLabel(canvas: Canvas, x: Float, y: Float, seconds: Float) {
-        val paint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-            color = if (seconds <= 0f) Color.rgb(42, 126, 65) else Color.rgb(126, 73, 31)
-            textSize = 15f
-            typeface = Typeface.DEFAULT_BOLD
-        }
-        canvas.drawText(if (seconds <= 0f) "READY" else "LOAD %.1fs".format(seconds), x, y, paint)
     }
 
     private fun drawTexture(canvas: Canvas, bitmap: android.graphics.Bitmap?, left: Float, top: Float, size: Float) {
@@ -444,7 +520,7 @@ class BattlefieldView(context: Context) : View(context) {
     }
 
     private fun translateMap(deltaX: Float, deltaY: Float) {
-        if (mapScale <= 1f || wasFollowingProjectile || postImpactHoldSeconds > 0f) return
+        if (wasFollowingProjectile) return
         mapOffsetX += deltaX
         mapOffsetY += deltaY
         clampMapOffset()
@@ -462,6 +538,7 @@ class BattlefieldView(context: Context) : View(context) {
         val trackedProjectile = newState.projectiles.firstOrNull { it.teamLabel == "BLUE" }
 
         if (trackedProjectile != null) {
+            manualPanActive = false
             if (!wasFollowingProjectile) {
                 mapScale = maxOf(mapScale, AUTO_TRACK_SCALE)
             }
@@ -470,6 +547,15 @@ class BattlefieldView(context: Context) : View(context) {
             trackedTeamLabel = trackedProjectile.teamLabel
             centerMapOnWorld(trackedProjectile.x, trackedProjectile.y)
         } else {
+            val phaseChanged = lastPhaseLabel != null && lastPhaseLabel != newState.phaseLabel
+            if (phaseChanged) {
+                manualPanActive = false
+            }
+            if (manualPanActive || panningMap) {
+                lastPhaseLabel = newState.phaseLabel
+                clampMapOffset()
+                return
+            }
             if (wasFollowingProjectile) {
                 wasFollowingProjectile = false
                 postImpactHoldSeconds = POST_IMPACT_HOLD_SECONDS
@@ -485,7 +571,6 @@ class BattlefieldView(context: Context) : View(context) {
                     lastFramedTeamLabel = targetTeam
                 }
             } else {
-                val phaseChanged = lastPhaseLabel != null && lastPhaseLabel != newState.phaseLabel
                 val targetTeam = newState.activeTeamLabel.takeUnless { it == "NONE" }
                     ?: trackedTeamLabel
                     ?: "BLUE"
@@ -531,13 +616,14 @@ class BattlefieldView(context: Context) : View(context) {
     }
 
     companion object {
-        private const val MIN_MAP_SCALE = 0.75f
+        private const val MIN_MAP_SCALE = 1f
         private const val MAX_MAP_SCALE = 2.5f
         private const val AUTO_TRACK_SCALE = 1.25f
         private const val POST_IMPACT_HOLD_SECONDS = 0.4f
         private const val RENDER_STEP_SECONDS = 0.033f
         private const val CAMERA_RETURN_LERP = 0.18f
         private const val CAMERA_RETURN_EPSILON = 1f
+        private const val PAN_START_DISTANCE = 12f
         private const val WORLD_WIDTH = 1_600f
         private const val WORLD_HEIGHT = 900f
     }

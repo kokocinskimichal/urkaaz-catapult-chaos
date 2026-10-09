@@ -14,7 +14,7 @@ import com.urkaaaz.domain.AmmunitionType
 import com.urkaaaz.domain.SpellType
 import com.urkaaaz.domain.UnitType
 
-/** Biome selected by a campaign level; rendering maps it to visual assets later. */
+/** Biome selected by a campaign level; Android rendering maps it to theme assets. */
 enum class TerrainBiome {
     GREEN_FRONTIER,
     FROSTBOUND,

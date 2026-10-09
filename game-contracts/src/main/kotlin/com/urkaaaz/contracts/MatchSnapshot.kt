@@ -62,6 +62,7 @@ data class ProjectileSnapshot(
 
 data class TerrainSnapshot(
     val revision: Long = 0L,
+    val biome: String = "GREEN_FRONTIER",
 )
 
 data class ResourceSnapshot(

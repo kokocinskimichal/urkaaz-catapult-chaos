@@ -24,9 +24,7 @@ class MainActivity : Activity() {
     private val viewModel = MatchViewModel()
     private lateinit var battlefieldView: BattlefieldView
     private lateinit var statusText: TextView
-    private lateinit var aimText: TextView
     private lateinit var pauseButton: Button
-    private lateinit var fireButton: Button
     private lateinit var selectedAmmoText: TextView
     private lateinit var blueHpText: TextView
     private lateinit var redHpText: TextView
@@ -53,7 +51,6 @@ class MainActivity : Activity() {
         super.onCreate(savedInstanceState)
         battlefieldView = BattlefieldView(this)
         statusText = hudText("READY", 12f)
-        aimText = hudText("ANGLE 45°  ·  POWER 50%", 12f)
         selectedAmmoText = hudText("ROCK", 11f)
 
         battlefieldView.onAimChanged = { aim ->
@@ -78,41 +75,22 @@ class MainActivity : Activity() {
             background = buttonBackground(Color.rgb(61, 72, 78))
             setOnClickListener { render(viewModel.dispatch(MatchUiAction.TogglePause)) }
         }
-        fireButton = Button(this).apply {
-            text = "FIRE"
-            setTextColor(Color.WHITE)
-            background = buttonBackground(Color.rgb(164, 65, 43))
-            setOnClickListener {
-                if (viewModel.renderState.outcomeLabel == null) {
-                    render(viewModel.dispatch(MatchUiAction.FireRock))
-                }
-            }
-        }
-        val restartButton = Button(this).apply {
-            text = "RESTART"
-            textSize = 11f
-            setTextColor(Color.WHITE)
-            background = buttonBackground(Color.rgb(49, 89, 130))
-            setOnClickListener { render(viewModel.dispatch(MatchUiAction.StartMatch)) }
-        }
-
         val root = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
             setBackgroundColor(Color.rgb(28, 35, 39))
             setPadding(6, 6, 6, 6)
             addView(topHud(), LinearLayout.LayoutParams(-1, 58))
             addView(battlefieldView, LinearLayout.LayoutParams(-1, 0, 1f))
-            addView(aimText, LinearLayout.LayoutParams(-1, 30))
             addView(ammunitionPanel(), LinearLayout.LayoutParams(-1, 82))
             addView(
                 LinearLayout(this@MainActivity).apply {
                     orientation = LinearLayout.HORIZONTAL
                     gravity = Gravity.CENTER
-                    addView(restartButton, LinearLayout.LayoutParams(0, 48, 1f))
-                    addView(fireButton, LinearLayout.LayoutParams(0, 48, 1f))
                     addView(pauseButton, LinearLayout.LayoutParams(58, 48))
                 },
-                LinearLayout.LayoutParams(-1, 54),
+                LinearLayout.LayoutParams(-1, 54).apply {
+                    gravity = Gravity.CENTER
+                },
             )
         }
         setContentView(root)
@@ -216,16 +194,8 @@ class MainActivity : Activity() {
         redHpText.text = "${state.redFortressHealth} / ${state.redFortressMaxHealth}"
         val selectedCount = state.playerAmmunition[selectedAmmo]
         selectedAmmoText.text = "$selectedAmmo  ·  ${selectedCount ?: "∞"}"
-        aimText.text =
-            "ANGLE ${state.playerAngleDegrees.toInt()}°  ·  POWER ${state.playerPower.toInt()}%  ·  " +
-                "RELOAD %.1fs".format(state.playerReloadRemainingSeconds)
         battlefieldView.render(state)
         pauseButton.text = if (state.statusLabel == "PAUSED") "▶" else "II"
-        fireButton.isEnabled =
-            state.outcomeLabel == null &&
-                !state.playerProjectileActive &&
-                state.playerReloadRemainingSeconds <= 0f
-        fireButton.alpha = if (fireButton.isEnabled) 1f else 0.45f
         ammoButtons.forEach { (type, button) ->
             val count = state.playerAmmunition[type]
             button.isEnabled = count == null || count > 0

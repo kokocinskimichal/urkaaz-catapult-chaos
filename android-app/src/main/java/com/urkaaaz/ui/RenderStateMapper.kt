@@ -10,6 +10,7 @@ data class RenderState(
     val activeTeamLabel: String,
     val projectileCount: Int,
     val terrainRevision: Long,
+    val terrainBiome: String,
     val projectiles: List<ProjectileRenderState>,
     val blueCatapultX: Float,
     val blueCatapultY: Float,
@@ -51,6 +52,7 @@ object RenderStateMapper {
         activeTeamLabel = snapshot.activeTeam?.name ?: "NONE",
         projectileCount = snapshot.projectiles.size,
         terrainRevision = snapshot.terrain.revision,
+        terrainBiome = snapshot.terrain.biome,
         projectiles = snapshot.projectiles.map {
             ProjectileRenderState(it.firedBy.name, it.x, it.y, it.ammunitionType)
         },

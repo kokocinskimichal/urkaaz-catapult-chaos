@@ -6,7 +6,8 @@ import com.urkaaaz.contracts.MatchSnapshot
 
 /** Local in-memory application boundary for the Android host. */
 class LocalMatchGateway(
-    private val session: MatchSession = MatchSession(),
+    terrainBiome: String = "GREEN_FRONTIER",
+    private val session: MatchSession = MatchSession(terrainBiome),
 ) {
     fun dispatch(command: MatchCommand): MatchSnapshot = session.dispatch(command)
 

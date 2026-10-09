@@ -5,6 +5,7 @@ import com.urkaaaz.domain.WorldBounds
 /** Tunable, host-independent constants for the deterministic simulation. */
 data class SimulationConfig(
     val bounds: WorldBounds,
+    val terrainBiome: String = "GREEN_FRONTIER",
     val gravityAccelerationY: Float = 420f,
     val windAccelerationX: Float = 0f,
     val fortressCollisionRadius: Float = 46f,

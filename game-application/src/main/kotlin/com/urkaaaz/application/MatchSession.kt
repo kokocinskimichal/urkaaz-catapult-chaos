@@ -9,7 +9,9 @@ import com.urkaaaz.contracts.Team
 import com.urkaaaz.simulation.DeterministicMatchSimulation
 import com.urkaaaz.simulation.SimulationConfig
 
-class MatchSession {
+class MatchSession(
+    private val terrainBiome: String = "GREEN_FRONTIER",
+) {
     private var simulation: DeterministicMatchSimulation? = null
     private val selectedAmmunition = mutableMapOf(
         Team.BLUE to AmmunitionType.ROCK,
@@ -86,7 +88,10 @@ class MatchSession {
     private fun start(command: MatchCommand.Start): MatchSnapshot {
         simulation = DeterministicMatchSimulation(
             matchId = command.matchId,
-            config = SimulationConfig(WorldBounds(width = 1_600f, height = 900f)),
+            config = SimulationConfig(
+                bounds = WorldBounds(width = 1_600f, height = 900f),
+                terrainBiome = terrainBiome,
+            ),
         )
         latestEvents = requireNotNull(simulation).start()
         paused = false
