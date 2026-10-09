@@ -1,0 +1,426 @@
+package com.urkaaaz.ui
+
+import android.content.Context
+import android.graphics.Canvas
+import android.graphics.Color
+import android.graphics.Paint
+import android.graphics.BitmapFactory
+import android.graphics.LinearGradient
+import android.graphics.Shader
+import android.graphics.Typeface
+import android.view.View
+import android.view.MotionEvent
+import kotlin.math.hypot
+import com.urkaaaz.android.R
+
+/** Minimal renderer that draws only the presentation model, never the engine. */
+class BattlefieldView(context: Context) : View(context) {
+    var onAimChanged: ((SlingshotAim) -> Unit)? = null
+    var onAimReleased: ((SlingshotAim) -> Unit)? = null
+    var onAimCancelled: (() -> Unit)? = null
+    private val flightFrames = loadAnimationFrames("rock_flight")
+    private val impactFrames = loadAnimationFrames("rock_impact")
+    private val animations = mapOf(
+        "ROCK" to (flightFrames to impactFrames),
+        "SIEGE_BOMB" to (loadAnimationFrames("siege_bomb_flight") to loadAnimationFrames("siege_bomb_impact")),
+        "POWDER_BARREL" to (loadAnimationFrames("powder_barrel_flight") to loadAnimationFrames("powder_barrel_impact")),
+        "CLUSTER_BOMB" to (loadAnimationFrames("cluster_bomb_flight") to loadAnimationFrames("cluster_bomb_impact")),
+        "FIRE_RAIN" to (loadAnimationFrames("fire_rain_flight") to loadAnimationFrames("fire_rain_impact")),
+        "PLAGUE_CAULDRON" to (loadAnimationFrames("plague_cauldron_flight") to loadAnimationFrames("plague_cauldron_impact")),
+    )
+    private val terrainSoil = BitmapFactory.decodeResource(resources, R.drawable.terrain_soil_fill_00)
+    private val grassCap = BitmapFactory.decodeResource(resources, R.drawable.terrain_grass_cap)
+    private val blueFortress = BitmapFactory.decodeResource(resources, R.drawable.fortress_left)
+    private val redFortress = BitmapFactory.decodeResource(resources, R.drawable.fortress_right)
+    private val blueCatapult = BitmapFactory.decodeResource(resources, R.drawable.catapult_left)
+    private val redCatapult = BitmapFactory.decodeResource(resources, R.drawable.catapult_right)
+    private val backgroundPaint = Paint(Paint.ANTI_ALIAS_FLAG)
+    private val terrainPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        color = Color.rgb(111, 145, 77)
+    }
+    private val bluePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        color = Color.rgb(55, 105, 190)
+    }
+    private val redPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        color = Color.rgb(190, 65, 55)
+    }
+    private var state = RenderState(
+        statusLabel = "NOT_STARTED",
+        phaseLabel = "CREATED",
+        activeTeamLabel = "NONE",
+        projectileCount = 0,
+        terrainRevision = 0,
+        projectiles = emptyList(),
+        playerAngleDegrees = 45f,
+        playerPower = 50f,
+        blueFortressHealth = 0,
+        blueFortressMaxHealth = 0,
+        redFortressHealth = 0,
+        redFortressMaxHealth = 0,
+        windStrength = 0f,
+        impact = null,
+        outcomeLabel = null,
+        playerReloadRemainingSeconds = 0f,
+        enemyReloadRemainingSeconds = 0f,
+        playerProjectileActive = false,
+        playerAmmunition = emptyMap(),
+    )
+    private var animationFrame = 0
+    private var impactFrame = 0
+    private var activeImpact: ImpactRenderState? = null
+    private var draggingAim = false
+    private var dragAim: SlingshotAim? = null
+    private var dragX = 0f
+    private var dragY = 0f
+    private var mapScale = 1f
+    private var mapOffsetX = 0f
+    private var mapOffsetY = 0f
+    private var pinchActive = false
+    private var pinchLastDistance = 0f
+    private var pinchLastFocusX = 0f
+    private var pinchLastFocusY = 0f
+
+    fun render(newState: RenderState) {
+        state = newState
+        animationFrame = if (newState.projectiles.isEmpty()) {
+            0
+        } else {
+            (animationFrame + 1) % flightFrames.size.coerceAtLeast(1)
+        }
+        if (newState.impact != null && newState.impact != activeImpact) {
+            activeImpact = newState.impact
+            impactFrame = 0
+        } else if (activeImpact != null) {
+            impactFrame += 1
+            if (impactFrame >= impactFrames.size) activeImpact = null
+        }
+        invalidate()
+    }
+
+    override fun onDraw(canvas: Canvas) {
+        super.onDraw(canvas)
+        canvas.save()
+        canvas.translate(mapOffsetX, mapOffsetY)
+        canvas.scale(mapScale, mapScale)
+        backgroundPaint.shader = LinearGradient(
+            0f,
+            0f,
+            0f,
+            height.toFloat(),
+            Color.rgb(123, 177, 211),
+            Color.rgb(242, 211, 154),
+            Shader.TileMode.CLAMP,
+        )
+        canvas.drawRect(0f, 0f, width.toFloat(), height.toFloat(), backgroundPaint)
+        val groundTop = height * 0.76f
+        drawTiledTexture(canvas, terrainSoil, groundTop, height.toFloat(), 128f)
+        drawTiledTexture(canvas, grassCap, groundTop - 20f, groundTop + 6f, 150f)
+        drawTexture(canvas, blueFortress, width * 0.06f, groundTop - 175f, 175f)
+        drawTexture(canvas, redFortress, width * 0.80f, groundTop - 175f, 175f)
+        drawTexture(canvas, blueCatapult, width * 0.20f, groundTop - 105f, 105f)
+        drawTexture(canvas, redCatapult, width * 0.70f, groundTop - 105f, 105f)
+        state.projectiles.forEach { projectile ->
+            val projectileX = (projectile.x / 1_600f * width).coerceIn(0f, width.toFloat())
+            val projectileY = (projectile.y / 900f * height).coerceIn(0f, groundTop)
+            val frames = animations[projectile.ammunitionType]?.first ?: flightFrames
+            val frame = frames.getOrNull(animationFrame % frames.size.coerceAtLeast(1))
+            drawTexture(canvas, frame, projectileX - 30f, projectileY - 30f, 60f)
+        }
+        activeImpact?.let { impact ->
+            val frames = animations[impact.ammunitionType]?.second ?: impactFrames
+            val impactFrameBitmap = frames.getOrNull(impactFrame % frames.size.coerceAtLeast(1))
+            val impactX = (impact.x / 1_600f * width).coerceIn(0f, width.toFloat())
+            val impactY = (impact.y / 900f * height).coerceIn(0f, groundTop)
+            drawTexture(canvas, impactFrameBitmap, impactX - 54f, impactY - 54f, 108f)
+        }
+        drawHealthBar(
+            canvas,
+            width * 0.06f,
+            groundTop - 198f,
+            175f,
+            state.blueFortressHealth,
+            state.blueFortressMaxHealth,
+            bluePaint,
+        )
+        drawHealthBar(
+            canvas,
+            width * 0.80f,
+            groundTop - 198f,
+            175f,
+            state.redFortressHealth,
+            state.redFortressMaxHealth,
+            redPaint,
+        )
+        drawReloadLabel(canvas, width * 0.06f, groundTop - 218f, state.playerReloadRemainingSeconds)
+        drawReloadLabel(canvas, width * 0.80f, groundTop - 218f, state.enemyReloadRemainingSeconds)
+        val labelPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+            color = Color.WHITE
+            textSize = 18f
+            typeface = Typeface.DEFAULT_BOLD
+            setShadowLayer(4f, 1f, 1f, Color.BLACK)
+        }
+        canvas.drawText("YOU", width * 0.06f, groundTop - 205f, labelPaint)
+        canvas.drawText("ENEMY", width * 0.80f, groundTop - 205f, labelPaint)
+        state.outcomeLabel?.let { outcome ->
+            val overlay = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+                color = Color.argb(190, 20, 24, 28)
+            }
+            canvas.drawRect(0f, 0f, width.toFloat(), height.toFloat(), overlay)
+            val resultPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+                color = Color.WHITE
+                textSize = 42f
+                textAlign = Paint.Align.CENTER
+                typeface = Typeface.DEFAULT_BOLD
+            }
+            val result = when (outcome) {
+                "BLUE_WIN" -> "VICTORY"
+                "RED_WIN" -> "DEFEAT"
+                else -> "DRAW"
+            }
+            canvas.drawText(result, width / 2f, height / 2f, resultPaint)
+        }
+        if (draggingAim) {
+            drawAimGesture(canvas, groundTop)
+        }
+        canvas.restore()
+    }
+
+    override fun onTouchEvent(event: MotionEvent): Boolean {
+        if (event.pointerCount > 1) {
+            var focusX = 0f
+            var focusY = 0f
+            repeat(event.pointerCount) {
+                focusX += event.getX(it)
+                focusY += event.getY(it)
+            }
+            val currentFocusX = focusX / event.pointerCount
+            val currentFocusY = focusY / event.pointerCount
+            val currentDistance = pointerDistance(event)
+            when (event.actionMasked) {
+                MotionEvent.ACTION_POINTER_DOWN -> {
+                    pinchActive = true
+                    pinchLastDistance = currentDistance
+                    pinchLastFocusX = currentFocusX
+                    pinchLastFocusY = currentFocusY
+                    if (draggingAim) {
+                        draggingAim = false
+                        dragAim = null
+                        onAimCancelled?.invoke()
+                    }
+                    invalidate()
+                    return true
+                }
+                MotionEvent.ACTION_MOVE -> {
+                    if (pinchActive && pinchLastDistance > 0f && currentDistance > 0f) {
+                        applyZoom(
+                            scaleFactor = currentDistance / pinchLastDistance,
+                            focusX = currentFocusX,
+                            focusY = currentFocusY,
+                        )
+                        pinchLastDistance = currentDistance
+                        pinchLastFocusX = currentFocusX
+                        pinchLastFocusY = currentFocusY
+                    }
+                    return true
+                }
+                else -> Unit
+            }
+        }
+        if (pinchActive) {
+            if (event.actionMasked == MotionEvent.ACTION_POINTER_UP ||
+                event.actionMasked == MotionEvent.ACTION_UP ||
+                event.actionMasked == MotionEvent.ACTION_CANCEL
+            ) {
+                pinchActive = false
+                pinchLastDistance = 0f
+            }
+            return true
+        }
+        if (state.outcomeLabel != null ||
+            state.playerProjectileActive ||
+            state.playerReloadRemainingSeconds > 0f
+        ) {
+            return false
+        }
+        val originX = width * 0.25f
+        val originY = height * 0.76f - 82f
+        val mapX = (event.x - mapOffsetX) / mapScale
+        val mapY = (event.y - mapOffsetY) / mapScale
+        when (event.actionMasked) {
+            MotionEvent.ACTION_DOWN -> {
+                if (hypot(mapX - originX, mapY - originY) > 120f) {
+                    draggingAim = false
+                    dragAim = null
+                    return true
+                }
+                draggingAim = true
+                dragX = mapX
+                dragY = mapY
+                dragAim = SlingshotAimCalculator.calculate(originX, originY, dragX, dragY)
+                onAimChanged?.invoke(requireNotNull(dragAim))
+                invalidate()
+                return true
+            }
+            MotionEvent.ACTION_MOVE -> {
+                if (!draggingAim) return false
+                dragX = mapX
+                dragY = mapY
+                dragAim = SlingshotAimCalculator.calculate(originX, originY, dragX, dragY)
+                onAimChanged?.invoke(requireNotNull(dragAim))
+                invalidate()
+                return true
+            }
+            MotionEvent.ACTION_UP -> {
+                if (!draggingAim) return false
+                val aim = requireNotNull(dragAim)
+                draggingAim = false
+                dragAim = null
+                if (aim.shouldFire) onAimReleased?.invoke(aim) else onAimCancelled?.invoke()
+                invalidate()
+                return true
+            }
+            MotionEvent.ACTION_CANCEL -> {
+                draggingAim = false
+                dragAim = null
+                onAimCancelled?.invoke()
+                invalidate()
+                return true
+            }
+        }
+        return true
+    }
+
+    private fun drawAimGesture(canvas: Canvas, groundTop: Float) {
+        val originX = width * 0.25f
+        val originY = groundTop - 82f
+        val dx = dragX - originX
+        val dy = dragY - originY
+        val distance = hypot(dx, dy)
+        val scale = if (distance > SlingshotAimCalculator.MAX_PULL_DISTANCE) {
+            SlingshotAimCalculator.MAX_PULL_DISTANCE / distance
+        } else {
+            1f
+        }
+        val pullX = originX + dx * scale
+        val pullY = originY + dy * scale
+        val paint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+            color = if (dragAim?.directionValid == true) Color.rgb(255, 224, 110) else Color.RED
+            style = Paint.Style.STROKE
+            strokeWidth = 8f
+            strokeCap = Paint.Cap.ROUND
+        }
+        canvas.drawLine(originX, originY, pullX, pullY, paint)
+        canvas.drawCircle(pullX, pullY, 28f, paint)
+        val textPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+            color = Color.WHITE
+            textSize = 20f
+            typeface = Typeface.DEFAULT_BOLD
+            setShadowLayer(4f, 1f, 1f, Color.BLACK)
+        }
+        val aim = dragAim
+        if (aim != null) {
+            canvas.drawText(
+                if (aim.directionValid) "${aim.power.toInt()}%  ${aim.angleDegrees.toInt()}°" else "CANCEL",
+                pullX + 36f,
+                pullY - 18f,
+                textPaint,
+            )
+        }
+    }
+
+    private fun drawHealthBar(
+        canvas: Canvas,
+        left: Float,
+        top: Float,
+        width: Float,
+        health: Int,
+        maxHealth: Int,
+        color: Paint,
+    ) {
+        val background = Paint(Paint.ANTI_ALIAS_FLAG).apply { this.color = Color.DKGRAY }
+        canvas.drawRect(left, top, left + width, top + 16f, background)
+        val ratio = if (maxHealth > 0) (health.toFloat() / maxHealth).coerceIn(0f, 1f) else 0f
+        canvas.drawRect(left, top, left + width * ratio, top + 16f, color)
+    }
+
+    private fun drawReloadLabel(canvas: Canvas, x: Float, y: Float, seconds: Float) {
+        val paint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+            color = if (seconds <= 0f) Color.rgb(42, 126, 65) else Color.rgb(126, 73, 31)
+            textSize = 15f
+            typeface = Typeface.DEFAULT_BOLD
+        }
+        canvas.drawText(if (seconds <= 0f) "READY" else "LOAD %.1fs".format(seconds), x, y, paint)
+    }
+
+    private fun drawTexture(canvas: Canvas, bitmap: android.graphics.Bitmap?, left: Float, top: Float, size: Float) {
+        if (bitmap == null) return
+        val aspectRatio = bitmap.width.toFloat() / bitmap.height.coerceAtLeast(1)
+        val targetHeight = size / aspectRatio
+        canvas.drawBitmap(
+            bitmap,
+            null,
+            android.graphics.RectF(left, top, left + size, top + targetHeight),
+            null,
+        )
+    }
+
+    private fun loadAnimationFrames(prefix: String): List<android.graphics.Bitmap> =
+        (0..31).mapNotNull { index ->
+            val resourceId = resources.getIdentifier(
+                "${prefix}_%02d".format(index),
+                "drawable",
+                context.packageName,
+            )
+            resourceId.takeIf { it != 0 }?.let { BitmapFactory.decodeResource(resources, it) }
+        }
+
+    private fun drawTiledTexture(
+        canvas: Canvas,
+        bitmap: android.graphics.Bitmap?,
+        top: Float,
+        bottom: Float,
+        tileWidth: Float,
+    ) {
+        if (bitmap == null) {
+            canvas.drawRect(0f, top, width.toFloat(), bottom, terrainPaint)
+            return
+        }
+
+        val tileHeight = tileWidth * bitmap.height / bitmap.width.coerceAtLeast(1)
+        var left = 0f
+        while (left < width) {
+            canvas.drawBitmap(
+                bitmap,
+                null,
+                android.graphics.RectF(left, top, left + tileWidth, top + tileHeight.coerceAtLeast(bottom - top)),
+                null,
+            )
+            left += tileWidth
+        }
+    }
+
+    private fun pointerDistance(event: MotionEvent): Float {
+        if (event.pointerCount < 2) return 0f
+        return hypot(
+            event.getX(1) - event.getX(0),
+            event.getY(1) - event.getY(0),
+        )
+    }
+
+    private fun applyZoom(scaleFactor: Float, focusX: Float, focusY: Float) {
+        if (!scaleFactor.isFinite() || scaleFactor <= 0f) return
+        val oldScale = mapScale
+        val newScale = (oldScale * scaleFactor).coerceIn(MIN_MAP_SCALE, MAX_MAP_SCALE)
+        val contentX = (focusX - mapOffsetX) / oldScale
+        val contentY = (focusY - mapOffsetY) / oldScale
+        mapScale = newScale
+        mapOffsetX = focusX - contentX * newScale
+        mapOffsetY = focusY - contentY * newScale
+        invalidate()
+    }
+
+    companion object {
+        private const val MIN_MAP_SCALE = 0.75f
+        private const val MAX_MAP_SCALE = 2.5f
+    }
+}
