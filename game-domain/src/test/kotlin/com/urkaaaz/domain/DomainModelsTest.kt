@@ -91,4 +91,18 @@ class DomainModelsTest {
         assertEquals(MatchPhase.FINISHED, finished.phase)
         assertTrue(finished.isFinished)
     }
+
+    @Test
+    fun unitFactoryBuildsDedicatedUnitsFromCentralConfiguration() {
+        val sapper = UnitFactory.sapper()
+
+        assertEquals(UnitConfigurations.SAPPER.id, sapper.id)
+        assertEquals(UnitConfigurations.SAPPER.maxHealth, sapper.maxHealth)
+        assertEquals(UnitConfigurations.SAPPER.attackDamage, sapper.attackDamage)
+        assertTrue(sapper is SapperUnit)
+        val tuned = UnitFactory.create(
+            UnitConfigurations.SAPPER.copy(attackDamage = 240),
+        )
+        assertEquals(240, tuned.attackDamage)
+    }
 }

@@ -102,26 +102,26 @@ class DeterministicMatchSimulationTest {
     }
 
     @Test
-    fun supplyRegeneratesByOneEveryThreeSecondsUpToOneHundred() {
+    fun supplyRegeneratesByOneEveryThreeSecondsUpToTwenty() {
         val simulation = DeterministicMatchSimulation(MatchId("supply-match"), config)
         simulation.start()
-        simulation.deployUnit(com.urkaaaz.domain.UnitType.DEFENDER, Team.BLUE)
+        simulation.deployUnit(com.urkaaaz.domain.UnitFactory.defender(), Team.BLUE)
 
-        assertEquals(95, simulation.snapshot().resourcesByTeam[Team.BLUE]?.supply)
+        assertEquals(15, simulation.snapshot().resourcesByTeam[Team.BLUE]?.supply)
         simulation.advance(2_999)
-        assertEquals(95, simulation.snapshot().resourcesByTeam[Team.BLUE]?.supply)
+        assertEquals(15, simulation.snapshot().resourcesByTeam[Team.BLUE]?.supply)
         simulation.advance(1)
-        assertEquals(96, simulation.snapshot().resourcesByTeam[Team.BLUE]?.supply)
+        assertEquals(16, simulation.snapshot().resourcesByTeam[Team.BLUE]?.supply)
     }
 
     @Test
     fun deployingAnotherUnitMovesTheExistingUnitToTheNextGarrisonSlot() {
         val simulation = DeterministicMatchSimulation(MatchId("garrison-match"), config)
         simulation.start()
-        simulation.deployUnit(com.urkaaaz.domain.UnitType.DEFENDER, Team.BLUE)
-        simulation.deployUnit(com.urkaaaz.domain.UnitType.DEFENDER, Team.BLUE)
+        simulation.deployUnit(com.urkaaaz.domain.UnitFactory.defender(), Team.BLUE)
+        simulation.deployUnit(com.urkaaaz.domain.UnitFactory.defender(), Team.BLUE)
         simulation.advance(15_000)
-        simulation.deployUnit(com.urkaaaz.domain.UnitType.DEFENDER, Team.BLUE)
+        simulation.deployUnit(com.urkaaaz.domain.UnitFactory.defender(), Team.BLUE)
 
         val before = simulation.snapshot()
         assertTrue(before.units[0].moving)
@@ -134,6 +134,54 @@ class DeterministicMatchSimulationTest {
         assertTrue(after.units[0].x > before.units[0].x)
         assertTrue(after.units[1].x > before.units[1].x)
         assertTrue(after.units.last().x > before.units.last().x)
+    }
+
+    @Test
+    fun opposingDefendersStopAndDamageEachOtherAfterTheirWavesMeet() {
+        val simulation = DeterministicMatchSimulation(MatchId("unit-combat-match"), config)
+        simulation.start()
+        simulation.deployUnit(com.urkaaaz.domain.UnitFactory.defender(), Team.BLUE)
+        simulation.deployUnit(com.urkaaaz.domain.UnitFactory.defender(), Team.RED)
+        simulation.sendWave(Team.BLUE)
+        simulation.sendWave(Team.RED)
+
+        repeat(120) { simulation.advance(100) }
+
+        val units = simulation.snapshot().units
+        assertEquals(2, units.size)
+        assertTrue(units.all { it.health < 260 })
+    }
+
+    @Test
+    fun alliedUnitsKeepVisibleSpacingWhenAFasterSapperCatchesADefender() {
+        val simulation = DeterministicMatchSimulation(MatchId("allied-spacing-match"), config)
+        simulation.start()
+        simulation.deployUnit(com.urkaaaz.domain.UnitFactory.defender(), Team.BLUE)
+        simulation.deployUnit(com.urkaaaz.domain.UnitFactory.sapper(), Team.BLUE)
+        simulation.sendWave(Team.BLUE)
+
+        repeat(60) { simulation.advance(100) }
+
+        val blueUnits = simulation.snapshot().units.filter { it.team == Team.BLUE }
+        assertEquals(2, blueUnits.size)
+        assertTrue(
+            kotlin.math.abs(blueUnits[0].x - blueUnits[1].x) >= 12f,
+            "blue unit positions: ${blueUnits.map { it.x }}",
+        )
+    }
+
+    @Test
+    fun aSapperDamagesTheEnemyFortressAndReturnsWithAnEmptyBombSlot() {
+        val simulation = DeterministicMatchSimulation(MatchId("sapper-attack-match"), config)
+        simulation.start()
+        simulation.deployUnit(com.urkaaaz.domain.UnitFactory.sapper(), Team.BLUE)
+        simulation.sendWave(Team.BLUE)
+
+        repeat(90) { simulation.advance(100) }
+
+        val redFortress = simulation.snapshot().fortresses.first { it.team == Team.RED }
+        assertTrue(redFortress.health < redFortress.maxHealth)
+        assertTrue(simulation.snapshot().units.single().moving)
     }
 
 }

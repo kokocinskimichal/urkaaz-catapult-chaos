@@ -27,7 +27,9 @@ import com.urkaaaz.domain.WorldBounds
 import com.urkaaaz.domain.WorldPosition
 import com.urkaaaz.domain.ResourceWallet
 import com.urkaaaz.domain.Unit
-import com.urkaaaz.domain.UnitType
+import com.urkaaaz.domain.DemolisherUnit
+import com.urkaaaz.domain.SapperUnit
+import com.urkaaaz.domain.UnitDefinition
 
 /**
  * Deterministic projectile-and-impact simulation.
@@ -142,13 +144,13 @@ class DeterministicMatchSimulation(
         }
     }
 
-    fun deployUnit(type: UnitType, team: Team): MatchEvent.UnitDeployed {
+    fun deployUnit(type: UnitDefinition, team: Team): MatchEvent.UnitDeployed {
         check(status == MatchStatus.RUNNING) { "match is not running" }
         val wallet = resources.getValue(team)
-        check(wallet.canSpendSupply(type.goldCost)) {
-            "insufficient supply for ${type.name}"
+        check(wallet.canSpendSupply(type.supplyCost)) {
+            "insufficient supply for ${type.id}"
         }
-        resources[team] = wallet.spendSupply(type.goldCost)
+        resources[team] = wallet.spendSupply(type.supplyCost)
         val spawnX = if (team == Team.BLUE) 250f else config.bounds.width - 250f
         val direction = if (team == Team.BLUE) 1f else -1f
         val existingTeamUnits = units.filter { it.team == team && team !in movingTeams }
@@ -165,7 +167,7 @@ class DeterministicMatchSimulation(
             }
         }
         val unit = Unit(
-            id = EntityId("${team.name.lowercase()}-${type.name.lowercase()}-${sequence + 1}"),
+            id = EntityId("${team.name.lowercase()}-${type.id.lowercase()}-${sequence + 1}"),
             type = type,
             team = team,
             position = WorldPosition(
@@ -183,7 +185,7 @@ class DeterministicMatchSimulation(
                 matchId,
                 simulationTimeMilliseconds,
                 unit.id,
-                type.name,
+                type.id,
             )
         }
     }
@@ -208,6 +210,8 @@ class DeterministicMatchSimulation(
         remainingMatchTimeMilliseconds =
             (remainingMatchTimeMilliseconds - deltaMilliseconds).coerceAtLeast(0L)
         advanceUnits(deltaSeconds)
+        resolveUnitInteractions(deltaSeconds)
+        finishIfFortressDestroyed()
         val resolved = mutableListOf<Projectile>()
         projectiles.forEach { projectile ->
             val advanced = projectile.advance(
@@ -253,10 +257,11 @@ class DeterministicMatchSimulation(
             com.urkaaaz.contracts.UnitSnapshot(
                 entityId = it.id,
                 team = it.team,
-                unitType = it.type.name,
+                unitType = it.type.id,
                 x = it.position.x,
                 y = it.position.y,
                 health = it.health.current,
+                maxHealth = it.type.maxHealth,
                 moving = it.moving || it.team in movingTeams,
             )
         },
@@ -334,30 +339,324 @@ class DeterministicMatchSimulation(
         if (deltaSeconds <= 0f) return
         units = units.map { unit ->
             val waveMoving = unit.team in movingTeams
-            val targetX = if (waveMoving) {
-                if (unit.team == Team.BLUE) config.bounds.width - 300f else 300f
+            val targetX = if (waveMoving && !unit.returningToGarrison) {
+                fortressAttackX(opposingTeam(unit.team))
+            } else if (unit.returningToGarrison) {
+                fortressAttackX(unit.team)
             } else {
                 unit.garrisonTargetX ?: return@map unit
             }
             val direction = kotlin.math.sign(targetX - unit.position.x)
+            val combatTarget = if (waveMoving) {
+                units
+                    .filter {
+                        it.team != unit.team &&
+                            it.isAlive &&
+                            !it.returningToGarrison &&
+                            (it.position.x - unit.position.x) * direction >= 0f &&
+                            kotlin.math.abs(it.position.x - unit.position.x) <=
+                                UNIT_INTERACTION_RANGE
+                    }
+                    .minByOrNull { kotlin.math.abs(it.position.x - unit.position.x) }
+            } else {
+                null
+            }
+            val combatStopX = combatTarget?.let { target ->
+                when {
+                    unit.type is SapperUnit -> null
+                    target.type is SapperUnit && !unit.type.attacksFromRange -> null
+                    unit.type.attacksFromRange ->
+                        target.position.x - direction * unit.type.attackRange
+                    else ->
+                        target.position.x - direction * config.unitCollisionRadius
+                }
+            }
+            val alliedStopX = if (waveMoving && !unit.returningToGarrison) {
+                units
+                    .filter {
+                        it.team == unit.team &&
+                            it.id != unit.id &&
+                            it.isAlive &&
+                            !it.returningToGarrison &&
+                            (it.position.x - unit.position.x) * direction > 0f
+                    }
+                    .minByOrNull { kotlin.math.abs(it.position.x - unit.position.x) }
+                    ?.let { ally ->
+                        if (direction >= 0f) {
+                            maxOf(unit.position.x, ally.position.x - ALLIED_UNIT_MIN_SEPARATION)
+                        } else {
+                            minOf(unit.position.x, ally.position.x + ALLIED_UNIT_MIN_SEPARATION)
+                        }
+                    }
+            } else {
+                null
+            }
+            val movementTargetX = when {
+                combatStopX == null -> alliedStopX ?: targetX
+                alliedStopX == null -> combatStopX
+                direction >= 0f -> minOf(combatStopX, alliedStopX)
+                else -> maxOf(combatStopX, alliedStopX)
+            }
             val step = unit.type.speed * if (waveMoving) {
                 UNIT_MOVEMENT_SPEED_SCALE
             } else {
                 GARRISON_MOVEMENT_SPEED_SCALE
+            } * if (
+                waveMoving &&
+                unit.type is SapperUnit &&
+                units.any { other ->
+                    other.team != unit.team &&
+                        other.isAlive &&
+                        other.type is SapperUnit &&
+                        kotlin.math.abs(other.position.x - unit.position.x) <=
+                            config.unitCollisionRadius
+                }
+            ) {
+                SAPPER_CONTACT_SPEED_MULTIPLIER
+            } else {
+                1f
             } * deltaSeconds
             val nextX = if (direction >= 0f) {
-                minOf(unit.position.x + step, targetX)
+                minOf(unit.position.x + step, movementTargetX)
             } else {
-                maxOf(unit.position.x - step, targetX)
+                maxOf(unit.position.x - step, movementTargetX)
             }
-            val reachedTarget = nextX == targetX
+            val reachedTarget = nextX == movementTargetX
             unit.copy(
                 position = unit.position.copy(x = nextX),
-                moving = !reachedTarget || waveMoving,
-                garrisonTargetX = if (reachedTarget) null else unit.garrisonTargetX,
+                moving = !reachedTarget ||
+                    (waveMoving && !unit.returningToGarrison && combatStopX == null),
+                garrisonTargetX = if (reachedTarget && !unit.returningToGarrison) {
+                    null
+                } else {
+                    unit.garrisonTargetX
+                },
             )
         }
     }
+
+    private fun resolveUnitInteractions(deltaSeconds: Float) {
+        if (units.isEmpty()) return
+        val updated = units.toMutableList()
+        updated.indices.forEach { index ->
+            val attacker = updated[index]
+            if (!attacker.isAlive || attacker.team !in movingTeams) return@forEach
+            if (attacker.returningToGarrison) {
+                if (kotlin.math.abs(attacker.position.x - fortressAttackX(attacker.team)) <= 1f) {
+                    updated[index] = attacker.copy(
+                        moving = false,
+                        returningToGarrison = false,
+                        sapperHasBomb = true,
+                        attackCooldownRemainingSeconds = 0f,
+                    )
+                }
+                return@forEach
+            }
+            val enemyTeam = opposingTeam(attacker.team)
+            val behavior = attacker.type
+            val enemies = updated.filter {
+                it.team == enemyTeam &&
+                    it.isAlive &&
+                    !it.returningToGarrison &&
+                    kotlin.math.abs(it.position.x - attacker.position.x) <= UNIT_INTERACTION_RANGE
+            }
+            val nearestEnemy = enemies.minWithOrNull(
+                compareBy<Unit>(
+                    {                     if (behavior.attacksFromRange) {
+                        when (it.type) {
+                            is DemolisherUnit -> 0
+                            is SapperUnit -> 1
+                            else -> 2
+                        }
+                    } else {
+                        0
+                    } },
+                    { kotlin.math.abs(it.position.x - attacker.position.x) },
+                ),
+            )
+            val nextAttacker = attacker.copy(
+                attackCooldownRemainingSeconds =
+                    (attacker.attackCooldownRemainingSeconds - deltaSeconds).coerceAtLeast(0f),
+            )
+            if (nearestEnemy != null) {
+                when {
+                    behavior.attacksFromRange -> {
+                        if (kotlin.math.abs(nearestEnemy.position.x - attacker.position.x) <=
+                            behavior.attackRange
+                        ) {
+                            updated[index] = rangedAttack(
+                                updated,
+                                index,
+                                nextAttacker,
+                                nearestEnemy,
+                            )
+                        }
+                    }
+                    behavior.detonatesOnContact -> {
+                        if (contacted(nextAttacker, nearestEnemy)) {
+                            detonateDemolisher(updated, index, nextAttacker)
+                        }
+                    }
+                    behavior is SapperUnit -> {
+                        if (contacted(nextAttacker, nearestEnemy)) {
+                            updated[index] = nextAttacker.copy(
+                                moving = true,
+                            )
+                        }
+                    }
+                    else -> {
+                        if (contacted(nextAttacker, nearestEnemy)) {
+                            updated[index] = meleeAttack(
+                                updated,
+                                index,
+                                nextAttacker,
+                                nearestEnemy,
+                            )
+                        }
+                    }
+                }
+                return@forEach
+            }
+
+            val enemyFortress = fortress(opposingTeam(attacker.team))
+            val fortressDistance =
+                kotlin.math.abs(enemyFortress.center.x - attacker.position.x)
+            if (fortressDistance <= FORTRESS_ATTACK_RANGE) {
+                updated[index] = attackEnemyFortress(
+                    updated,
+                    index,
+                    nextAttacker,
+                    enemyFortress,
+                )
+            } else {
+                updated[index] = nextAttacker
+            }
+        }
+        units = updated.filter { it.isAlive }
+    }
+
+    private fun meleeAttack(
+        current: MutableList<Unit>,
+        attackerIndex: Int,
+        attacker: Unit,
+        target: Unit,
+    ): Unit {
+        if (attacker.attackCooldownRemainingSeconds > 0f) return attacker
+        val damage = target.type.incomingDamage(attacker.type.attackDamage)
+        replaceUnit(current, target.id, target.withDamage(damage))
+        return attacker.copy(
+            attackCooldownRemainingSeconds = attacker.type.attackCooldownSeconds,
+        )
+    }
+
+    private fun rangedAttack(
+        current: MutableList<Unit>,
+        attackerIndex: Int,
+        attacker: Unit,
+        target: Unit,
+    ): Unit {
+        if (attacker.attackCooldownRemainingSeconds > 0f) return attacker
+        replaceUnit(
+            current,
+            target.id,
+            target.withDamage(
+                target.type.incomingDamage(attacker.type.attackDamage),
+            ),
+        )
+        return attacker.copy(
+            attackCooldownRemainingSeconds = attacker.type.attackCooldownSeconds,
+        )
+    }
+
+    private fun attackEnemyFortress(
+        current: MutableList<Unit>,
+        attackerIndex: Int,
+        attacker: Unit,
+        target: Fortress,
+    ): Unit {
+        if (attacker.attackCooldownRemainingSeconds > 0f) return attacker
+        when (val behavior = attacker.type) {
+            is SapperUnit -> {
+                if (!attacker.sapperHasBomb) {
+                    return attacker.copy(returningToGarrison = true)
+                }
+                damageFortress(target, behavior.fortressDamage)
+                return attacker.copy(
+                    sapperHasBomb = false,
+                    returningToGarrison = true,
+                    attackCooldownRemainingSeconds = attacker.type.attackCooldownSeconds,
+                )
+            }
+            is DemolisherUnit -> {
+                detonateDemolisher(current, attackerIndex, attacker)
+                return attacker.copy(health = attacker.health.damage(attacker.health.current))
+            }
+            else -> {
+                damageFortress(target, behavior.fortressDamage)
+                return attacker.copy(
+                    attackCooldownRemainingSeconds = attacker.type.attackCooldownSeconds,
+                )
+            }
+        }
+    }
+
+    private fun detonateDemolisher(
+        current: MutableList<Unit>,
+        attackerIndex: Int,
+        attacker: Unit,
+    ) {
+        current.indices.forEach { index ->
+            val target = current[index]
+            if (target.isAlive &&
+                kotlin.math.abs(target.position.x - attacker.position.x) <= DEMOLISHER_BLAST_RADIUS
+            ) {
+                replaceUnit(current, target.id, target.withDamage(DEMOLISHER_DAMAGE))
+            }
+        }
+        damageFortress(fortress(opposingTeam(attacker.team)), DEMOLISHER_DAMAGE)
+        replaceUnit(current, attacker.id, attacker.withDamage(attacker.health.current))
+    }
+
+    private fun contacted(first: Unit, second: Unit): Boolean =
+        kotlin.math.abs(first.position.x - second.position.x) <= config.unitCollisionRadius
+
+    private fun replaceUnit(current: MutableList<Unit>, id: EntityId, replacement: Unit) {
+        val index = current.indexOfFirst { it.id == id }
+        if (index >= 0) {
+            if (current[index].isAlive && !replacement.isAlive) {
+                emit {
+                    MatchEvent.UnitDefeated(
+                        it,
+                        matchId,
+                        simulationTimeMilliseconds,
+                        replacement.id,
+                    )
+                }
+            }
+            current[index] = replacement
+        }
+    }
+
+    private fun damageFortress(target: Fortress, damage: Int) {
+        if (target.team == Team.BLUE) {
+            currentBlueFortress = currentBlueFortress.withDamage(damage)
+            emitDamage(currentBlueFortress.id, damage)
+        } else {
+            currentRedFortress = currentRedFortress.withDamage(damage)
+            emitDamage(currentRedFortress.id, damage)
+        }
+    }
+
+    private fun fortress(team: Team): Fortress =
+        if (team == Team.BLUE) currentBlueFortress else currentRedFortress
+
+    private fun fortressAttackX(team: Team): Float {
+        val fortress = fortress(team)
+        return fortress.center.x + if (team == Team.BLUE) 60f else -60f
+    }
+
+    private fun opposingTeam(team: Team): Team =
+        if (team == Team.BLUE) Team.RED else Team.BLUE
 
     private fun replenishSupply(deltaSeconds: Float) {
         if (deltaSeconds <= 0f) return
@@ -530,12 +829,18 @@ class DeterministicMatchSimulation(
     private data class EntityTarget(val id: EntityId)
 
     companion object {
-        private const val MAX_SUPPLY = 100
+        private const val MAX_SUPPLY = 20
         private const val SUPPLY_REGEN_INTERVAL_SECONDS = 3f
         private const val UNIT_MOVEMENT_SPEED_SCALE = 0.45f
         private const val GARRISON_MOVEMENT_SPEED_SCALE = 0.22f
         private const val GARRISON_SPACING = 40f
         private const val NEW_UNIT_REAR_OFFSET = 20f
+        private const val UNIT_INTERACTION_RANGE = 260f
+        private const val FORTRESS_ATTACK_RANGE = 82f
+        private const val DEMOLISHER_BLAST_RADIUS = 260f
+        private const val DEMOLISHER_DAMAGE = 300
+        private const val SAPPER_CONTACT_SPEED_MULTIPLIER = 0.65f
+        private const val ALLIED_UNIT_MIN_SEPARATION = 16f
 
         private fun defaultCatapult(team: Team, bounds: WorldBounds, config: SimulationConfig): Catapult =
             Catapult(

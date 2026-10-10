@@ -5,7 +5,7 @@ import com.urkaaaz.contracts.MatchSnapshot
 import com.urkaaaz.contracts.MatchStatus
 import com.urkaaaz.domain.AmmunitionType
 import com.urkaaaz.domain.WorldBounds
-import com.urkaaaz.domain.UnitType
+import com.urkaaaz.domain.UnitFactory
 import com.urkaaaz.contracts.Team
 import com.urkaaaz.contracts.WindSnapshot
 import com.urkaaaz.simulation.DeterministicMatchSimulation
@@ -35,11 +35,7 @@ class MatchSession(
                 requireRunning().snapshot()
             }
             is MatchCommand.DeployUnit -> {
-                val unitType = runCatching {
-                    UnitType.valueOf(command.unitType)
-                }.getOrElse {
-                    throw IllegalArgumentException("unknown unit type: ${command.unitType}")
-                }
+                val unitType = UnitFactory.byId(command.unitType)
                 latestEvents = listOf(
                     requireRunning().deployUnit(unitType, teamForPlayer(command.playerId)),
                 )

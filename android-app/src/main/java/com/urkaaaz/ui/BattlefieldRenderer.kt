@@ -247,6 +247,14 @@ class BattlefieldRenderer(
                     ),
                     spritePaint,
                 )
+                drawUnitHealthBar(
+                    canvas = canvas,
+                    centerX = centerX,
+                    centerY = baselineY - spriteHeight - 14f * worldToViewportScale,
+                    width = UNIT_HEALTH_BAR_WIDTH_WORLD * worldToViewportScale,
+                    health = unit.health,
+                    maxHealth = unit.maxHealth,
+                )
             } else {
                 unitPaint.color = if (unit.teamLabel == "BLUE") {
                     Color.rgb(65, 125, 220)
@@ -254,8 +262,59 @@ class BattlefieldRenderer(
                     Color.rgb(210, 70, 60)
                 }
                 canvas.drawCircle(centerX, baselineY - 30f * worldToViewportScale, 18f, unitPaint)
+                drawUnitHealthBar(
+                    canvas = canvas,
+                    centerX = centerX,
+                    centerY = baselineY - 48f * worldToViewportScale,
+                    width = UNIT_HEALTH_BAR_WIDTH_WORLD * worldToViewportScale,
+                    health = unit.health,
+                    maxHealth = unit.maxHealth,
+                )
             }
         }
+    }
+
+    private fun drawUnitHealthBar(
+        canvas: Canvas,
+        centerX: Float,
+        centerY: Float,
+        width: Float,
+        health: Int,
+        maxHealth: Int,
+    ) {
+        val fraction = if (maxHealth > 0) {
+            (health.toFloat() / maxHealth).coerceIn(0f, 1f)
+        } else {
+            0f
+        }
+        val background = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+            color = Color.argb(220, 25, 20, 16)
+        }
+        canvas.drawRoundRect(
+            RectF(centerX - width / 2f, centerY - 4f, centerX + width / 2f, centerY + 4f),
+            3f,
+            3f,
+            background,
+        )
+        val fill = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+            color = when {
+                fraction <= 0f -> Color.rgb(100, 100, 100)
+                fraction <= 0.3f -> Color.rgb(235, 70, 50)
+                fraction <= 0.6f -> Color.rgb(245, 170, 45)
+                else -> Color.rgb(85, 205, 90)
+            }
+        }
+        canvas.drawRoundRect(
+            RectF(
+                centerX - width / 2f,
+                centerY - 4f,
+                centerX - width / 2f + width * fraction,
+                centerY + 4f,
+            ),
+            3f,
+            3f,
+            fill,
+        )
     }
 
     private fun drawDebugHitboxes(
@@ -353,6 +412,7 @@ class BattlefieldRenderer(
     companion object {
         private const val WORLD_WIDTH = 1_600f
         private const val WORLD_HEIGHT = 900f
+        private const val UNIT_HEALTH_BAR_WIDTH_WORLD = 46.2f
         private const val FORTRESS_RENDER_WIDTH = 280f
         private const val FORTRESS_RENDER_HEIGHT = 210f
         private const val CATAPULT_RENDER_WIDTH = 95f

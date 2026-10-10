@@ -226,6 +226,35 @@ class MatchScreenController(
             topMargin = dp(8)
         })
         root.addView(TextView(activity).apply {
+            text = "ENEMY UNITS"
+            setTextColor(Color.WHITE)
+            textSize = 15f
+            setTypeface(typeface, Typeface.BOLD)
+            setPadding(0, dp(18), 0, dp(4))
+        })
+        val unitChecks = mutableMapOf<String, CheckBox>()
+        DEBUG_UNIT_IDS.sorted().forEach { unitId ->
+            val checkBox = CheckBox(activity).apply {
+                text = debugUnitLabel(unitId)
+                setTextColor(Color.WHITE)
+                buttonTintList = ColorStateList.valueOf(Color.rgb(243, 210, 138))
+                isChecked = unitId in viewModel.aiAllowedUnitIds()
+            }
+            unitChecks[unitId] = checkBox
+            checkBox.setOnCheckedChangeListener { _, checked ->
+                val selected = unitChecks
+                    .filterValues { it.isChecked }
+                    .keys
+                    .toSet()
+                if (!checked && selected.isEmpty()) {
+                    checkBox.isChecked = true
+                    return@setOnCheckedChangeListener
+                }
+                viewModel.setAiAllowedUnitIds(selected)
+            }
+            root.addView(checkBox)
+        }
+        root.addView(TextView(activity).apply {
             text = "CLOSE"
             setTextColor(Color.WHITE)
             textSize = 14f
@@ -261,4 +290,20 @@ class MatchScreenController(
 
     private fun dp(value: Int): Int =
         (value * activity.resources.displayMetrics.density).toInt()
+
+    private fun debugUnitLabel(id: String): String = when (id) {
+        "RAGING_BOAR" -> "Raging Boar"
+        "SLINGMASTER" -> "Slingmaster"
+        else -> id.lowercase().replace('_', ' ').replaceFirstChar { it.uppercase() }
+    }
+
+    private companion object {
+        val DEBUG_UNIT_IDS = setOf(
+            "DEFENDER",
+            "SAPPER",
+            "DEMOLISHER",
+            "RAGING_BOAR",
+            "SLINGMASTER",
+        )
+    }
 }

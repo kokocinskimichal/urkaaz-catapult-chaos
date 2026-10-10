@@ -11,7 +11,7 @@ import com.urkaaaz.contracts.MatchStatus
 import com.urkaaaz.contracts.PlayerId
 import com.urkaaaz.contracts.ResourceSnapshot
 import com.urkaaaz.contracts.Team
-import com.urkaaaz.domain.UnitType
+import com.urkaaaz.domain.UnitFactory
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
@@ -32,6 +32,7 @@ class AiAgentTest {
         ),
         resources = ResourceSnapshot(
             gold = 10,
+            supply = 100,
             ammunition = mapOf("ROCK" to 1, "SIEGE_BOMB" to 1),
         ),
     )
@@ -68,7 +69,7 @@ class AiAgentTest {
                 playerId = PlayerId("ai-player"),
                 team = Team.RED,
                 temperament = AiTemperament.CAUTIOUS,
-                allowedUnitTypes = setOf(UnitType.SAPPER),
+                allowedUnits = setOf(UnitFactory.sapper()),
             ),
         ).chooseDeployment(lowHealth)
 

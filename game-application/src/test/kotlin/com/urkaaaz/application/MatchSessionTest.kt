@@ -111,7 +111,7 @@ class MatchSessionTest {
 
         assertEquals(1, snapshot.units.size)
         assertEquals("DEFENDER", snapshot.units.single().unitType)
-        assertEquals(95, snapshot.resourcesByTeam[com.urkaaaz.contracts.Team.BLUE]?.supply)
+        assertEquals(15, snapshot.resourcesByTeam[com.urkaaaz.contracts.Team.BLUE]?.supply)
         assertTrue(session.consumeEvents().any { it is com.urkaaaz.contracts.MatchEvent.UnitDeployed })
     }
 

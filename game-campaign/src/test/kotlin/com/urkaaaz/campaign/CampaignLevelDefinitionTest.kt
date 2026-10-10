@@ -3,7 +3,7 @@ package com.urkaaaz.campaign
 import com.urkaaaz.contracts.PlayerId
 import com.urkaaaz.domain.AmmunitionType
 import com.urkaaaz.domain.SpellType
-import com.urkaaaz.domain.UnitType
+import com.urkaaaz.domain.UnitFactory
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
@@ -15,8 +15,8 @@ class CampaignLevelDefinitionTest {
         val level = CampaignLevelDefinition.forLevel(1)
 
         assertEquals(TerrainBiome.GREEN_FRONTIER, level.terrain.biome)
-        assertTrue(UnitType.DEFENDER in level.availableUnits)
-        assertFalse(UnitType.SAPPER in level.availableUnits)
+        assertTrue(level.availableUnits.any { it.id == UnitFactory.defender().id })
+        assertFalse(level.availableUnits.any { it.id == UnitFactory.sapper().id })
         assertFalse(AmmunitionType.POWDER_BARREL in level.availableAmmunition)
         assertFalse(SpellType.ICE_TRAP in level.availableSpells)
         assertTrue(level.tutorial.enabled)
@@ -27,7 +27,7 @@ class CampaignLevelDefinitionTest {
         val level = CampaignLevelDefinition.forLevel(41)
 
         assertEquals(TerrainBiome.SUNKEN_MARSHES, level.terrain.biome)
-        assertTrue(UnitType.SLINGMASTER in level.availableUnits)
+        assertTrue(level.availableUnits.any { it.id == UnitFactory.slingmaster().id })
         assertTrue(AmmunitionType.PLAGUE_CAULDRON in level.availableAmmunition)
         assertTrue(SpellType.RUNIC_BASTION in level.availableSpells)
         assertEquals(CampaignAiDifficulty.HARD, level.enemy.difficulty)

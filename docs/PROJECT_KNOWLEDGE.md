@@ -49,9 +49,20 @@ The current match HUD displays:
   the legacy world-height scale to match the current normalized battlefield
   viewport.
 - Supply follows the legacy resource cadence: after spending, it regenerates
-  by one point every three seconds up to the maximum of one hundred. Wave deployment
+  by one point every three seconds up to the maximum of twenty. Wave deployment
   starts from the unit's garrison position without an artificial positional
   jump, and movement uses the legacy `0.45` speed scale.
+- Unit waves now resolve legacy-style interactions in the deterministic
+   simulation: Defenders and Raging Boars fight nearby enemy units, Slingmasters
+   attack visible-range targets, Demolishers detonate on contact, and Sappers
+   damage the enemy fortress with their bomb before returning toward their own
+   fortress. Units attack the enemy fortress when no enemy unit is in contact,
+   and fortress damage is emitted through the existing match events.
+- Unit behavior is implemented by dedicated `DefenderUnit`, `SapperUnit`,
+   `DemolisherUnit`, `RagingBoarUnit`, and `SlingmasterUnit` classes. Their
+   balance values live centrally in `UnitConfigurations.kt`; `UnitFactory`
+   creates the dedicated class from a configuration or command identifier, so
+   balance tuning does not require editing unit classes.
 - Newly recruited units occupy the fortress-side garrison slot while older
   units walk outward into the next slot instead of overlapping. Garrison
 repositioning uses `40` world-unit spacing and a slower `0.22` movement
@@ -70,6 +81,20 @@ not truncated to a subset; unit frame playback advances at approximately
 `7.5 FPS` to match the slower legacy feel.
 - Unit sprite and animation bitmaps are cached by the asset catalog; rendering
 does not decode the full animation set again for every frame or every unit.
+- Realtime AI decisions now include unit recruitment every second using the
+RED team's supply, followed by `SendWave` after three recruited units finish
+entering the garrison. The AI now also randomizes its match temperament,
+uses defensive SAPPER counter-selection, and varies the wave threshold
+(`1/2/3`) like legacy instead of limiting the opponent to projectile fire.
+- The match renderer draws a legacy-style HP bar above every unit. The bar is
+green above 60% health, orange from 30% through 60%, red below 30%, and keeps
+a dark rounded background with a gray empty state.
+- Enemy units are constrained by an allied-unit debug selector in `DEBUG
+TOOLS`. The selector updates the AI's allowed unit definitions at runtime and
+requires at least one enabled type. Allied units in the same wave keep a
+small minimum world-space separation so faster units can partially overlap
+visually but cannot disappear completely into one another; enemy Sapper
+contact still slows only the Sapper and does not hard-block melee movement.
 - Unit feet are anchored to the renderer's shared `groundTop`/terrain-cap line,
 not to the simulation's normalized Y value, so the sprite and cap remain
 aligned when the viewport aspect or HUD height changes.

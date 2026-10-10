@@ -25,7 +25,7 @@ class SupplyGaugeView(context: Context) : View(context) {
         typeface = android.graphics.Typeface.DEFAULT_BOLD
     }
     private var supply = 0f
-    private val maximum = 100f
+    private val maximum = 20f
 
     fun setSupply(value: Float) {
         supply = value.coerceIn(0f, maximum)

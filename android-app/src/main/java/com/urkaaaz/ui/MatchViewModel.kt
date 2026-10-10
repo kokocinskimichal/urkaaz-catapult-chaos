@@ -29,6 +29,7 @@ class MatchViewModel(
 ) {
     private var commandSequence = 0
     private var paused = false
+    private var aiUnitDecisionElapsedMilliseconds = 0L
     private val aiAgent = AiAgent(
         AiConfiguration(
             playerId = PlayerId("local-ai"),
@@ -42,10 +43,18 @@ class MatchViewModel(
     var renderState: RenderState = RenderStateMapper.map(MatchSnapshot())
         private set
 
+    fun setAiAllowedUnitIds(unitIds: Set<String>) {
+        aiAgent.setAllowedUnitIds(unitIds)
+    }
+
+    fun aiAllowedUnitIds(): Set<String> =
+        aiAgent.allowedUnitIds()
+
     fun dispatch(action: MatchUiAction): RenderState {
         var snapshot = when (action) {
             MatchUiAction.StartMatch -> {
                 paused = false
+                aiUnitDecisionElapsedMilliseconds = 0L
                 gateway.dispatch(
                     MatchCommand.Start(
                     commandId = CommandId("ui-${++commandSequence}"),
@@ -118,7 +127,34 @@ class MatchViewModel(
                 snapshot = gateway.dispatch(command)
             }
             presentationEvents += gateway.consumeEvents()
+            aiUnitDecisionElapsedMilliseconds += 33L
+            if (aiUnitDecisionElapsedMilliseconds >= AI_UNIT_DECISION_INTERVAL_MILLISECONDS) {
+                aiUnitDecisionElapsedMilliseconds = 0L
+                aiAgent.chooseDeployment(snapshot)?.let { command ->
+                    snapshot = gateway.dispatch(command)
+                    presentationEvents += gateway.consumeEvents()
+                }
+                val redUnits = snapshot.units.filter {
+                    it.team == com.urkaaaz.contracts.Team.RED
+                }
+                if (redUnits.size >= aiAgent.waveThreshold() &&
+                    redUnits.none { it.moving }
+                ) {
+                    snapshot = gateway.dispatch(
+                        MatchCommand.SendWave(
+                            commandId = CommandId("ai-${matchId.value}-send-wave-${snapshot.units.size}"),
+                            matchId = matchId,
+                            playerId = PlayerId("local-ai"),
+                        ),
+                    )
+                    presentationEvents += gateway.consumeEvents()
+                }
+            }
         }
         return RenderStateMapper.map(snapshot, presentationEvents).also { renderState = it }
+    }
+
+    private companion object {
+        const val AI_UNIT_DECISION_INTERVAL_MILLISECONDS = 1_000L
     }
 }

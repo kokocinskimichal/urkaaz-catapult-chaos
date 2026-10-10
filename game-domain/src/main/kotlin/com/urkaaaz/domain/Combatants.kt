@@ -90,29 +90,18 @@ data class Projectile(
 }
 
 /** Domain balance definition for a siege unit type. */
-enum class UnitType(
-    val goldCost: Int,
-    val maxHealth: Int,
-    val speed: Float,
-    val attackDamage: Int,
-    val attackCooldownSeconds: Float,
-) {
-    SAPPER(10, 60, 260f, 180, 1.75f),
-    DEFENDER(5, 260, 150f, 30, 0.8f),
-    DEMOLISHER(10, 70, 110f, 0, 0.8f),
-    RAGING_BOAR(10, 420, 240f, 52, 0.8f),
-    SLINGMASTER(5, 75, 120f, 20, 1.2f),
-}
-
 /** A unit deployed on the battlefield. */
 data class Unit(
     val id: EntityId,
-    val type: UnitType,
+    val type: UnitDefinition,
     val team: Team,
     val position: WorldPosition,
     val health: Health = Health(maximum = type.maxHealth),
     val moving: Boolean = false,
     val garrisonTargetX: Float? = null,
+    val attackCooldownRemainingSeconds: Float = 0f,
+    val sapperHasBomb: Boolean = true,
+    val returningToGarrison: Boolean = false,
 ) {
     init {
         require(health.maximum == type.maxHealth) { "unit health maximum must match unit type" }

@@ -58,6 +58,7 @@ data class UnitRenderState(
     val x: Float,
     val y: Float,
     val health: Int,
+    val maxHealth: Int,
     val moving: Boolean,
 )
 
@@ -134,6 +135,7 @@ object RenderStateMapper {
                 x = it.x,
                 y = it.y,
                 health = it.health,
+                maxHealth = it.maxHealth,
                 moving = it.moving,
             )
         },

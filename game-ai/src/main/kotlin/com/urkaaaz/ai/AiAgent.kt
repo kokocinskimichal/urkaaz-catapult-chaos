@@ -9,7 +9,8 @@ import com.urkaaaz.contracts.MatchStatus
 import com.urkaaaz.contracts.PlayerId
 import com.urkaaaz.contracts.Team
 import com.urkaaaz.domain.AmmunitionType
-import com.urkaaaz.domain.UnitType
+import com.urkaaaz.domain.UnitDefinition
+import com.urkaaaz.domain.UnitFactory
 import kotlin.math.atan2
 import kotlin.math.abs
 import kotlin.math.roundToInt
@@ -39,7 +40,7 @@ data class AiConfiguration(
     val difficulty: AiDifficulty = AiDifficulty.MEDIUM,
     val temperament: AiTemperament = AiTemperament.CAUTIOUS,
     val aimErrorScale: Float = 1f,
-    val allowedUnitTypes: Set<UnitType> = UnitType.entries.toSet(),
+    val allowedUnits: Set<UnitDefinition> = UnitFactory.all(),
     val randomSeed: Int = 0,
 ) {
     init {
@@ -54,9 +55,32 @@ data class AiConfiguration(
  * application layer to validate and execute.
  */
 class AiAgent(
-    private val configuration: AiConfiguration,
+    private var configuration: AiConfiguration,
 ) {
     private val random = Random(configuration.randomSeed)
+    private val matchTemperament = if (configuration.temperament == AiTemperament.CAUTIOUS) {
+        AiTemperament.entries[random.nextInt(AiTemperament.entries.size)]
+    } else {
+        configuration.temperament
+    }
+
+    fun setAllowedUnits(allowedUnits: Set<UnitDefinition>) {
+        require(allowedUnits.isNotEmpty()) { "AI must have at least one allowed unit" }
+        configuration = configuration.copy(allowedUnits = allowedUnits)
+    }
+
+    fun setAllowedUnitIds(allowedUnitIds: Set<String>) {
+        setAllowedUnits(allowedUnitIds.map(UnitFactory::byId).toSet())
+    }
+
+    fun allowedUnitIds(): Set<String> = configuration.allowedUnits.map { it.id }.toSet()
+
+    fun waveThreshold(): Int = when (matchTemperament) {
+        AiTemperament.AGGRESSIVE,
+        AiTemperament.DESPERATE -> 1
+        AiTemperament.CAUTIOUS -> 3
+        AiTemperament.CHAOTIC -> 2
+    }
 
     fun decide(snapshot: MatchSnapshot): List<MatchCommand> {
         val matchId = snapshot.matchId ?: return emptyList()
@@ -104,17 +128,17 @@ class AiAgent(
     fun chooseDeployment(snapshot: MatchSnapshot): MatchCommand.DeployUnit? {
         val matchId = snapshot.matchId ?: return null
         if (snapshot.status != MatchStatus.RUNNING ||
-            snapshot.activeTeam != configuration.team ||
-            snapshot.resources.gold < minimumUnitCost()
+            (snapshot.resourcesByTeam[configuration.team]?.supply
+                ?: snapshot.resources.supply) < minimumUnitCost()
         ) {
             return null
         }
-        val unitType = chooseUnit(snapshot) ?: return null
+        val unit = chooseUnit(snapshot) ?: return null
         return MatchCommand.DeployUnit(
             commandId = CommandId("ai-${matchId.value}-deploy-${snapshot.units.size}"),
             matchId = matchId,
             playerId = configuration.playerId,
-            unitType = unitType.name,
+            unitType = unit.id,
         )
     }
 
@@ -136,17 +160,26 @@ class AiAgent(
         }
     }
 
-    private fun chooseUnit(snapshot: MatchSnapshot): UnitType? {
-        val affordable = configuration.allowedUnitTypes.filter {
-            it.goldCost <= snapshot.resources.gold
+    private fun chooseUnit(snapshot: MatchSnapshot): UnitDefinition? {
+        val availableSupply = snapshot.resourcesByTeam[configuration.team]?.supply
+            ?: snapshot.resources.supply
+        val affordable = configuration.allowedUnits.filter {
+            it.supplyCost <= availableSupply
         }
         if (affordable.isEmpty()) return null
+        val enemyHasSapper = snapshot.units.any {
+            it.team != configuration.team && it.unitType == UnitFactory.sapper().id
+        }
+        val defender = affordable.firstOrNull { it.id == UnitFactory.defender().id }
+        if (enemyHasSapper && defender != null) {
+            return defender
+        }
         return when (effectiveTemperament(snapshot)) {
             AiTemperament.AGGRESSIVE,
             AiTemperament.DESPERATE -> affordable.maxBy {
                 it.attackDamage + it.speed.roundToInt()
             }
-            AiTemperament.CAUTIOUS -> affordable.minBy { it.goldCost }
+            AiTemperament.CAUTIOUS -> affordable.minBy { it.supplyCost }
             AiTemperament.CHAOTIC -> affordable[random.nextInt(affordable.size)]
         }
     }
@@ -182,12 +215,12 @@ class AiAgent(
         return if (fortress != null && fortress.health <= fortress.maxHealth * 0.35f) {
             AiTemperament.DESPERATE
         } else {
-            configuration.temperament
+            matchTemperament
         }
     }
 
     private fun minimumUnitCost(): Int =
-        configuration.allowedUnitTypes.minOfOrNull { it.goldCost } ?: Int.MAX_VALUE
+        configuration.allowedUnits.minOfOrNull { it.supplyCost } ?: Int.MAX_VALUE
 
     private fun randomOffset(maximum: Float): Float =
         if (maximum == 0f) 0f else random.nextFloat() * maximum * 2f - maximum

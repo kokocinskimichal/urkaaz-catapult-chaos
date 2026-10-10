@@ -49,6 +49,7 @@ data class UnitSnapshot(
     val x: Float,
     val y: Float,
     val health: Int,
+    val maxHealth: Int = 0,
     val moving: Boolean = false,
 )
 

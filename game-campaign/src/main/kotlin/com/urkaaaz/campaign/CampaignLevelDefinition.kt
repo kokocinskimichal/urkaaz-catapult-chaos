@@ -12,7 +12,8 @@ import com.urkaaaz.contracts.VictoryRulesConfig
 import com.urkaaaz.contracts.WindSnapshot
 import com.urkaaaz.domain.AmmunitionType
 import com.urkaaaz.domain.SpellType
-import com.urkaaaz.domain.UnitType
+import com.urkaaaz.domain.UnitDefinition
+import com.urkaaaz.domain.UnitFactory
 
 /** Biome selected by a campaign level; Android rendering maps it to theme assets. */
 enum class TerrainBiome {
@@ -71,7 +72,7 @@ data class CampaignLevelDefinition(
     val level: Int,
     val terrain: TerrainVariant,
     val enemy: EnemyConfiguration,
-    val availableUnits: Set<UnitType>,
+    val availableUnits: Set<UnitDefinition>,
     val availableAmmunition: Set<AmmunitionType>,
     val availableSpells: Set<SpellType>,
     val startingAmmunition: Int,
@@ -100,8 +101,8 @@ data class CampaignLevelDefinition(
         availableSpells = availableSpells.map { it.name }.sorted(),
         initialUnits = availableUnits.map {
             UnitConfig(
-                entityId = EntityId("level-$level-${it.name.lowercase()}"),
-                unitType = it.name,
+                entityId = EntityId("level-$level-${it.id.lowercase()}"),
+                unitType = it.id,
                 team = Team.BLUE,
             )
         }.sortedBy { it.unitType },
@@ -157,11 +158,11 @@ data class CampaignLevelDefinition(
                     },
                 ),
                 availableUnits = buildSet {
-                    add(UnitType.DEFENDER)
-                    if (safeLevel >= 5) add(UnitType.SAPPER)
-                    if (safeLevel >= 8) add(UnitType.DEMOLISHER)
-                    if (safeLevel >= 11) add(UnitType.RAGING_BOAR)
-                    if (safeLevel >= 13) add(UnitType.SLINGMASTER)
+                    add(UnitFactory.defender())
+                    if (safeLevel >= 5) add(UnitFactory.sapper())
+                    if (safeLevel >= 8) add(UnitFactory.demolisher())
+                    if (safeLevel >= 11) add(UnitFactory.ragingBoar())
+                    if (safeLevel >= 13) add(UnitFactory.slingmaster())
                 },
                 availableAmmunition = buildSet {
                     add(AmmunitionType.ROCK)
