@@ -60,9 +60,17 @@ The target branch is `develop`. The target repository is
 
 ## GitHub account
 
-Use the GitHub account `kokocinskimichal`. If the environment-level Git helper
-selects another account, override the helper for this push with the active
-`gh` credential helper rather than changing repository history or force-pushing:
+Always use the GitHub account `michalkokocinski`. Before pushing, verify that
+this account is authenticated and make it the active GitHub CLI account:
+
+```bash
+gh auth switch --user michalkokocinski
+gh auth status --user michalkokocinski
+```
+
+If the environment-level Git helper selects another account, override the
+helper for this push with the active `gh` credential helper rather than
+changing repository history or force-pushing:
 
 ```bash
 env -u GH_TOKEN git \
