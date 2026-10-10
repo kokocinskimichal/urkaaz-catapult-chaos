@@ -92,4 +92,64 @@ class MatchSessionTest {
         assertTrue(firstRead.isNotEmpty())
         assertTrue(secondRead.isEmpty())
     }
+
+    @Test
+    fun deployingUnitConsumesGoldAndAddsUnitToSnapshot() {
+        val session = MatchSession()
+        val matchId = MatchId("match-units")
+        val playerId = PlayerId("player-units")
+        session.dispatch(MatchCommand.Start(CommandId("start-units"), matchId, playerId))
+
+        val snapshot = session.dispatch(
+            MatchCommand.DeployUnit(
+                CommandId("deploy-units"),
+                matchId,
+                playerId,
+                "DEFENDER",
+            ),
+        )
+
+        assertEquals(1, snapshot.units.size)
+        assertEquals("DEFENDER", snapshot.units.single().unitType)
+        assertEquals(95, snapshot.resourcesByTeam[com.urkaaaz.contracts.Team.BLUE]?.supply)
+        assertTrue(session.consumeEvents().any { it is com.urkaaaz.contracts.MatchEvent.UnitDeployed })
+    }
+
+    @Test
+    fun sendingWaveMovesDeployedUnitsAndMarksThemAsMoving() {
+        val session = MatchSession()
+        val matchId = MatchId("match-wave")
+        val playerId = PlayerId("player-wave")
+        session.dispatch(MatchCommand.Start(CommandId("start-wave"), matchId, playerId))
+        session.dispatch(
+            MatchCommand.DeployUnit(
+                CommandId("deploy-wave"),
+                matchId,
+                playerId,
+                "SAPPER",
+            ),
+        )
+        val before = session.dispatch(
+            MatchCommand.AdvanceSimulation(
+                CommandId("before-wave"),
+                matchId,
+                playerId,
+                33,
+            ),
+        )
+        val after = session.dispatch(
+            MatchCommand.SendWave(CommandId("send-wave"), matchId, playerId),
+        )
+        val advanced = session.dispatch(
+            MatchCommand.AdvanceSimulation(
+                CommandId("after-wave"),
+                matchId,
+                playerId,
+                33,
+            ),
+        )
+
+        assertTrue(after.units.single().moving)
+        assertTrue(advanced.units.single().x > before.units.single().x)
+    }
 }

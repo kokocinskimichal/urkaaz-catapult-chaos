@@ -61,6 +61,9 @@ class BattlefieldView(context: Context) : View(context) {
         enemyReloadRemainingSeconds = 0f,
         playerProjectileActive = false,
         playerAmmunition = emptyMap(),
+        playerGold = 0,
+        playerSupply = 0,
+        units = emptyList(),
         matchTimeRemainingMilliseconds = 300_000L,
         windDirection = 0f,
     )
@@ -110,11 +113,7 @@ class BattlefieldView(context: Context) : View(context) {
         updateProjectileTrails(newState)
         camera.update(newState, width.toFloat(), height.toFloat())
         state = newState
-        animationFrame = if (newState.projectiles.isEmpty()) {
-            0
-        } else {
-            (animationFrame + 1) % assets.animationFor("ROCK").flightFrames.size.coerceAtLeast(1)
-        }
+        animationFrame = (animationFrame + 1) % 1024
         if (newState.impact != null && newState.impact != activeImpact) {
             activeImpact = newState.impact
             impactFrame = 0

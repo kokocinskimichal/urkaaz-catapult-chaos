@@ -8,4 +8,6 @@ sealed interface MatchUiAction {
     data object TogglePause : MatchUiAction
     data class Aim(val directionDegrees: Float, val power: Float) : MatchUiAction
     data class SelectAmmo(val ammunitionType: String) : MatchUiAction
+    data class DeployUnit(val unitType: String) : MatchUiAction
+    data object SendWave : MatchUiAction
 }

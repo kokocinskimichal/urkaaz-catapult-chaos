@@ -5,6 +5,7 @@ import com.urkaaaz.contracts.MatchSnapshot
 import com.urkaaaz.contracts.MatchStatus
 import com.urkaaaz.domain.AmmunitionType
 import com.urkaaaz.domain.WorldBounds
+import com.urkaaaz.domain.UnitType
 import com.urkaaaz.contracts.Team
 import com.urkaaaz.contracts.WindSnapshot
 import com.urkaaaz.simulation.DeterministicMatchSimulation
@@ -31,6 +32,21 @@ class MatchSession(
                 selectedAmmunition[team] = runCatching {
                     AmmunitionType.valueOf(command.ammunitionType)
                 }.getOrElse { throw IllegalArgumentException("unknown ammunition: ${command.ammunitionType}") }
+                requireRunning().snapshot()
+            }
+            is MatchCommand.DeployUnit -> {
+                val unitType = runCatching {
+                    UnitType.valueOf(command.unitType)
+                }.getOrElse {
+                    throw IllegalArgumentException("unknown unit type: ${command.unitType}")
+                }
+                latestEvents = listOf(
+                    requireRunning().deployUnit(unitType, teamForPlayer(command.playerId)),
+                )
+                requireRunning().snapshot()
+            }
+            is MatchCommand.SendWave -> {
+                requireRunning().sendWave(teamForPlayer(command.playerId))
                 requireRunning().snapshot()
             }
             is MatchCommand.Aim -> {

@@ -23,6 +23,7 @@ class MatchScreenController(
     private lateinit var battlefieldView: BattlefieldView
     private lateinit var hudView: MatchHudView
     private lateinit var ammunitionPanel: AmmunitionPanelView
+    private lateinit var unitPanel: UnitPanelView
     private lateinit var debugButton: TextView
     private lateinit var snapshotCloseButton: TextView
     private var snapshotMode = false
@@ -55,7 +56,16 @@ class MatchScreenController(
             onAmmoSelected = { ammunitionType ->
                 render(viewModel.dispatch(MatchUiAction.SelectAmmo(ammunitionType)))
             }
-            debugButton = TextView(activity).apply {
+        }
+        unitPanel = UnitPanelView(activity).apply {
+            onUnitSelected = { unitType ->
+                render(viewModel.dispatch(MatchUiAction.DeployUnit(unitType)))
+            }
+            onSendWave = {
+                render(viewModel.dispatch(MatchUiAction.SendWave))
+            }
+        }
+        debugButton = TextView(activity).apply {
                 text = "DEBUG"
                 setTextColor(Color.WHITE)
                 textSize = 11f
@@ -63,8 +73,8 @@ class MatchScreenController(
                 setPadding(dp(8), dp(3), dp(8), dp(3))
                 setBackgroundResource(com.urkaaaz.android.R.drawable.bg_hud_panel)
                 setOnClickListener { showDebugToolsDialog() }
-            }
-            snapshotCloseButton = TextView(activity).apply {
+        }
+        snapshotCloseButton = TextView(activity).apply {
                 text = "CLOSE SNAPSHOT"
                 setTextColor(Color.WHITE)
                 textSize = 12f
@@ -73,7 +83,6 @@ class MatchScreenController(
                 setBackgroundResource(com.urkaaaz.android.R.drawable.bg_hud_panel)
                 visibility = View.GONE
                 setOnClickListener { setSnapshotMode(false) }
-            }
         }
 
         battlefieldView.onAimChanged = { aim ->
@@ -108,6 +117,16 @@ class MatchScreenController(
         return FrameLayout(activity).apply {
             setBackgroundColor(Color.TRANSPARENT)
             addView(content, FrameLayout.LayoutParams(-1, -1))
+            addView(
+                unitPanel,
+                FrameLayout.LayoutParams(
+                    FrameLayout.LayoutParams.WRAP_CONTENT,
+                    dp(68),
+                ).apply {
+                    gravity = Gravity.BOTTOM or Gravity.START
+                    bottomMargin = dp(22)
+                },
+            )
             addView(
                 ammunitionPanel,
                 FrameLayout.LayoutParams(-1, dp(112)).apply {
@@ -158,6 +177,7 @@ class MatchScreenController(
     private fun render(state: RenderState) {
         hudView.render(state)
         ammunitionPanel.render(state)
+        unitPanel.render(state)
         battlefieldView.render(state)
         debugButton.visibility = if (state.statusLabel == "RUNNING" && !snapshotMode) {
             View.VISIBLE

@@ -26,6 +26,8 @@ import com.urkaaaz.domain.Velocity
 import com.urkaaaz.domain.WorldBounds
 import com.urkaaaz.domain.WorldPosition
 import com.urkaaaz.domain.ResourceWallet
+import com.urkaaaz.domain.Unit
+import com.urkaaaz.domain.UnitType
 
 /**
  * Deterministic projectile-and-impact simulation.
@@ -53,6 +55,12 @@ class DeterministicMatchSimulation(
     private var currentRedFortress = redFortress
     private var currentBlueCatapult = blueCatapult
     private var currentRedCatapult = redCatapult
+    private var units = emptyList<Unit>()
+    private val movingTeams = mutableSetOf<Team>()
+    private val supplyRegenProgressSeconds = mutableMapOf(
+        Team.BLUE to 0f,
+        Team.RED to 0f,
+    )
     private val wind = WindSystem(
         initialAccelerationX = config.windAccelerationX,
         accelerationScale = config.windAccelerationScale,
@@ -134,11 +142,64 @@ class DeterministicMatchSimulation(
         }
     }
 
+    fun deployUnit(type: UnitType, team: Team): MatchEvent.UnitDeployed {
+        check(status == MatchStatus.RUNNING) { "match is not running" }
+        val wallet = resources.getValue(team)
+        check(wallet.canSpendSupply(type.goldCost)) {
+            "insufficient supply for ${type.name}"
+        }
+        resources[team] = wallet.spendSupply(type.goldCost)
+        val spawnX = if (team == Team.BLUE) 250f else config.bounds.width - 250f
+        val direction = if (team == Team.BLUE) 1f else -1f
+        val existingTeamUnits = units.filter { it.team == team && team !in movingTeams }
+        units = units.map { existing ->
+            if (existing.team == team && team !in movingTeams) {
+                val index = existingTeamUnits.indexOf(existing)
+                existing.copy(
+                    moving = true,
+                    garrisonTargetX = spawnX +
+                        direction * (existingTeamUnits.size - index) * GARRISON_SPACING,
+                )
+            } else {
+                existing
+            }
+        }
+        val unit = Unit(
+            id = EntityId("${team.name.lowercase()}-${type.name.lowercase()}-${sequence + 1}"),
+            type = type,
+            team = team,
+            position = WorldPosition(
+                x = spawnX -
+                    direction * NEW_UNIT_REAR_OFFSET,
+                y = config.bounds.height * 0.78f,
+            ),
+            moving = true,
+            garrisonTargetX = spawnX,
+        )
+        units += unit
+        return emitAndReturn {
+            MatchEvent.UnitDeployed(
+                it,
+                matchId,
+                simulationTimeMilliseconds,
+                unit.id,
+                type.name,
+            )
+        }
+    }
+
+    fun sendWave(team: Team) {
+        check(status == MatchStatus.RUNNING) { "match is not running" }
+        check(units.any { it.team == team }) { "no units available to send" }
+        movingTeams += team
+    }
+
     fun advance(deltaMilliseconds: Long): List<MatchEvent> {
         require(deltaMilliseconds >= 0) { "deltaMilliseconds must not be negative" }
         check(status == MatchStatus.RUNNING) { "match is not running" }
         val deltaSeconds = deltaMilliseconds / 1_000f
         wind.update(deltaSeconds)
+        replenishSupply(deltaSeconds)
         reloadRemainingSeconds.keys.forEach { team ->
             reloadRemainingSeconds[team] = (reloadRemainingSeconds.getValue(team) - deltaSeconds)
                 .coerceAtLeast(0f)
@@ -146,6 +207,7 @@ class DeterministicMatchSimulation(
         simulationTimeMilliseconds += deltaMilliseconds
         remainingMatchTimeMilliseconds =
             (remainingMatchTimeMilliseconds - deltaMilliseconds).coerceAtLeast(0L)
+        advanceUnits(deltaSeconds)
         val resolved = mutableListOf<Projectile>()
         projectiles.forEach { projectile ->
             val advanced = projectile.advance(
@@ -187,6 +249,17 @@ class DeterministicMatchSimulation(
         fortresses = listOf(currentBlueFortress, currentRedFortress).map {
             FortressSnapshot(it.id, it.team, it.health.current, it.maxHealth)
         },
+        units = units.map {
+            com.urkaaaz.contracts.UnitSnapshot(
+                entityId = it.id,
+                team = it.team,
+                unitType = it.type.name,
+                x = it.position.x,
+                y = it.position.y,
+                health = it.health.current,
+                moving = it.moving || it.team in movingTeams,
+            )
+        },
         projectiles = projectiles.map {
             ProjectileSnapshot(
                 entityId = it.id,
@@ -204,8 +277,13 @@ class DeterministicMatchSimulation(
         ),
         wind = wind.snapshot(),
         outcome = outcome(),
+        resources = ResourceSnapshot(
+            gold = resources[Team.BLUE]?.gold ?: 0,
+        ),
         resourcesByTeam = resources.mapValues { (_, wallet) ->
             ResourceSnapshot(
+                gold = wallet.gold,
+                supply = wallet.supply,
                 ammunition = wallet.ammunition.mapKeys { (type, _) -> type.name },
             )
         },
@@ -228,6 +306,7 @@ class DeterministicMatchSimulation(
         if (effect.craterRadius > 0f) {
             terrain = terrain.deform(projectile.position, effect.craterRadius, effect.craterDepth)
         }
+
         emit {
             MatchEvent.ProjectileHitTerrain(
                 it,
@@ -249,6 +328,55 @@ class DeterministicMatchSimulation(
             )
         }
         resolveAmmunitionEffect(projectile)
+    }
+
+    private fun advanceUnits(deltaSeconds: Float) {
+        if (deltaSeconds <= 0f) return
+        units = units.map { unit ->
+            val waveMoving = unit.team in movingTeams
+            val targetX = if (waveMoving) {
+                if (unit.team == Team.BLUE) config.bounds.width - 300f else 300f
+            } else {
+                unit.garrisonTargetX ?: return@map unit
+            }
+            val direction = kotlin.math.sign(targetX - unit.position.x)
+            val step = unit.type.speed * if (waveMoving) {
+                UNIT_MOVEMENT_SPEED_SCALE
+            } else {
+                GARRISON_MOVEMENT_SPEED_SCALE
+            } * deltaSeconds
+            val nextX = if (direction >= 0f) {
+                minOf(unit.position.x + step, targetX)
+            } else {
+                maxOf(unit.position.x - step, targetX)
+            }
+            val reachedTarget = nextX == targetX
+            unit.copy(
+                position = unit.position.copy(x = nextX),
+                moving = !reachedTarget || waveMoving,
+                garrisonTargetX = if (reachedTarget) null else unit.garrisonTargetX,
+            )
+        }
+    }
+
+    private fun replenishSupply(deltaSeconds: Float) {
+        if (deltaSeconds <= 0f) return
+        Team.entries.forEach { team ->
+            val wallet = resources.getValue(team)
+            if (wallet.supply >= MAX_SUPPLY) {
+                supplyRegenProgressSeconds[team] = 0f
+                return@forEach
+            }
+            val progress = supplyRegenProgressSeconds.getValue(team) + deltaSeconds
+            val replenished = (progress / SUPPLY_REGEN_INTERVAL_SECONDS).toInt()
+            supplyRegenProgressSeconds[team] =
+                progress - replenished * SUPPLY_REGEN_INTERVAL_SECONDS
+            if (replenished > 0) {
+                resources[team] = wallet.copy(
+                    supply = (wallet.supply + replenished).coerceAtMost(MAX_SUPPLY),
+                )
+            }
+        }
     }
 
     private fun resolveEntityImpact(projectile: Projectile, target: EntityTarget) {
@@ -372,6 +500,11 @@ class DeterministicMatchSimulation(
         pendingEvents += factory(EventId("event-$sequence"))
     }
 
+    private fun <T : MatchEvent> emitAndReturn(factory: (EventId) -> T): T {
+        sequence += 1
+        return factory(EventId("event-$sequence")).also { pendingEvents += it }
+    }
+
     private fun emitDamage(targetId: EntityId, amount: Int) {
         emit {
             MatchEvent.DamageApplied(it, matchId, simulationTimeMilliseconds, targetId, amount)
@@ -379,6 +512,8 @@ class DeterministicMatchSimulation(
     }
 
     private fun initialWallet(): ResourceWallet = ResourceWallet(
+        gold = 100,
+        supply = MAX_SUPPLY,
         ammunition = AmmunitionType.entries
             .filter { !it.unlimited }
             .associateWith { config.startingLimitedAmmunition },
@@ -395,6 +530,13 @@ class DeterministicMatchSimulation(
     private data class EntityTarget(val id: EntityId)
 
     companion object {
+        private const val MAX_SUPPLY = 100
+        private const val SUPPLY_REGEN_INTERVAL_SECONDS = 3f
+        private const val UNIT_MOVEMENT_SPEED_SCALE = 0.45f
+        private const val GARRISON_MOVEMENT_SPEED_SCALE = 0.22f
+        private const val GARRISON_SPACING = 40f
+        private const val NEW_UNIT_REAR_OFFSET = 20f
+
         private fun defaultCatapult(team: Team, bounds: WorldBounds, config: SimulationConfig): Catapult =
             Catapult(
                 id = EntityId("${team.name.lowercase()}-catapult"),

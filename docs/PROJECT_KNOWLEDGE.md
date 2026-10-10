@@ -30,6 +30,49 @@ The current match HUD displays:
 - wind direction and strength;
 - pause/resume control;
 - ammunition selection at the bottom of the battlefield.
+- legacy-style unit deployment controls above the ammunition selector;
+  selecting a unit sends `MatchUiAction.DeployUnit`, spends team gold and
+  exposes the deployed unit through the match snapshot.
+- Unit visuals were migrated from the legacy resource set into
+  `android-app/src/main/res/drawable-nodpi`: icons for the deployment panel,
+  left/right unit sprites, and the available legacy animation frames. The
+  battlefield uses the matching left/right sprite for each deployed unit.
+- Unit battlefield placement follows the legacy renderer contract: the
+  sprite's bottom is anchored to the ground baseline, dimensions are derived
+  from the legacy type heights (`144/150/170/220` world units), the shared
+  `0.96` sprite scale is applied, and the raging boar keeps its `1.6` visual
+  multiplier. Deployed units use the simulation ground line rather than the
+  previous floating `0.72` height.
+- A sent wave marks its units as moving, advances them toward the opposing
+  fortress during simulation ticks, and switches rendering to the copied
+  legacy movement animation frames. Presentation size is reduced to `0.55` of
+  the legacy world-height scale to match the current normalized battlefield
+  viewport.
+- Supply follows the legacy resource cadence: after spending, it regenerates
+  by one point every three seconds up to the maximum of one hundred. Wave deployment
+  starts from the unit's garrison position without an artificial positional
+  jump, and movement uses the legacy `0.45` speed scale.
+- Newly recruited units occupy the fortress-side garrison slot while older
+  units walk outward into the next slot instead of overlapping. Garrison
+repositioning uses `40` world-unit spacing and a slower `0.22` movement
+scale; walk animation frames advance at half the previous cadence. Unit
+sprites use a `0.308` presentation multiplier after the additional 20% size
+reduction.
+- A newly recruited unit spawns behind the existing garrison line and walks
+toward the first production slot instead of appearing at its final position.
+Its rear spawn distance is a fixed `20` world units, independent of the
+number of units already in the garrison.
+- Idle animation frames are used where legacy assets provide them
+(`DEFENDER` and `RAGING_BOAR`). Each unit applies a stable entity-ID-based
+frame offset so idle and walking animations do not start in sync. The shared
+animation clock uses a long cycle so idle sets with more than 16 frames are
+not truncated to a subset; unit frame playback advances at approximately
+`7.5 FPS` to match the slower legacy feel.
+- Unit sprite and animation bitmaps are cached by the asset catalog; rendering
+does not decode the full animation set again for every frame or every unit.
+- Unit feet are anchored to the renderer's shared `groundTop`/terrain-cap line,
+not to the simulation's normalized Y value, so the sprite and cap remain
+aligned when the viewport aspect or HUD height changes.
 
 The ammunition control follows the legacy interaction pattern: the bottom
 control shows the currently selected ammunition, and tapping it opens a
@@ -102,6 +145,7 @@ must go through commands and domain/application boundaries.
 | `android-app/.../ui/MatchScreenController.kt` | Match composition and lifecycle |
 | `android-app/.../ui/MatchHudView.kt` | Timer, wind and pause HUD |
 | `android-app/.../ui/AmmunitionPanelView.kt` | Ammunition controls |
+| `android-app/.../ui/UnitPanelView.kt` | In-match unit deployment controls |
 | `android-app/.../ui/BattlefieldView.kt` | Battlefield interaction and draw entry point |
 | `android-app/.../ui/BattlefieldRenderer.kt` | Battlefield draw orchestration |
 | `android-app/.../ui/BattlefieldCameraController.kt` | Camera, zoom and pan |

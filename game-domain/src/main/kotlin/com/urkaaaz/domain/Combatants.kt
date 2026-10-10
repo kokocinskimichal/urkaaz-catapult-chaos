@@ -111,6 +111,8 @@ data class Unit(
     val team: Team,
     val position: WorldPosition,
     val health: Health = Health(maximum = type.maxHealth),
+    val moving: Boolean = false,
+    val garrisonTargetX: Float? = null,
 ) {
     init {
         require(health.maximum == type.maxHealth) { "unit health maximum must match unit type" }

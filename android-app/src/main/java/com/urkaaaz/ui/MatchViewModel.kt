@@ -94,6 +94,21 @@ class MatchViewModel(
                     ammunitionType = action.ammunitionType,
                 ),
             )
+            is MatchUiAction.DeployUnit -> gateway.dispatch(
+                MatchCommand.DeployUnit(
+                    commandId = CommandId("ui-${++commandSequence}"),
+                    matchId = matchId,
+                    playerId = playerId,
+                    unitType = action.unitType,
+                ),
+            )
+            MatchUiAction.SendWave -> gateway.dispatch(
+                MatchCommand.SendWave(
+                    commandId = CommandId("ui-${++commandSequence}"),
+                    matchId = matchId,
+                    playerId = playerId,
+                ),
+            )
         }
         var presentationEvents = gateway.consumeEvents()
         if (action == MatchUiAction.AdvanceSimulation &&

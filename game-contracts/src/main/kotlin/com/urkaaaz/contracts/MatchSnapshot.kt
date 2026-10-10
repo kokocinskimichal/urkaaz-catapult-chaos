@@ -49,6 +49,7 @@ data class UnitSnapshot(
     val x: Float,
     val y: Float,
     val health: Int,
+    val moving: Boolean = false,
 )
 
 data class ProjectileSnapshot(
@@ -68,6 +69,7 @@ data class TerrainSnapshot(
 
 data class ResourceSnapshot(
     val gold: Int = 0,
+    val supply: Int = 0,
     val mana: Int = 0,
     val ammunition: Map<String, Int> = emptyMap(),
 )

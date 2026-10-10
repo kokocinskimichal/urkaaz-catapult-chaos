@@ -100,4 +100,40 @@ class DeterministicMatchSimulationTest {
 
         assertEquals(listOf("FIRE_RAIN"), simulation.snapshot().effects.map { it.effectType })
     }
+
+    @Test
+    fun supplyRegeneratesByOneEveryThreeSecondsUpToOneHundred() {
+        val simulation = DeterministicMatchSimulation(MatchId("supply-match"), config)
+        simulation.start()
+        simulation.deployUnit(com.urkaaaz.domain.UnitType.DEFENDER, Team.BLUE)
+
+        assertEquals(95, simulation.snapshot().resourcesByTeam[Team.BLUE]?.supply)
+        simulation.advance(2_999)
+        assertEquals(95, simulation.snapshot().resourcesByTeam[Team.BLUE]?.supply)
+        simulation.advance(1)
+        assertEquals(96, simulation.snapshot().resourcesByTeam[Team.BLUE]?.supply)
+    }
+
+    @Test
+    fun deployingAnotherUnitMovesTheExistingUnitToTheNextGarrisonSlot() {
+        val simulation = DeterministicMatchSimulation(MatchId("garrison-match"), config)
+        simulation.start()
+        simulation.deployUnit(com.urkaaaz.domain.UnitType.DEFENDER, Team.BLUE)
+        simulation.deployUnit(com.urkaaaz.domain.UnitType.DEFENDER, Team.BLUE)
+        simulation.advance(15_000)
+        simulation.deployUnit(com.urkaaaz.domain.UnitType.DEFENDER, Team.BLUE)
+
+        val before = simulation.snapshot()
+        assertTrue(before.units[0].moving)
+        assertTrue(before.units[1].moving)
+        assertTrue(before.units.last().moving)
+        assertEquals(230f, before.units.last().x)
+
+        simulation.advance(1_000)
+        val after = simulation.snapshot()
+        assertTrue(after.units[0].x > before.units[0].x)
+        assertTrue(after.units[1].x > before.units[1].x)
+        assertTrue(after.units.last().x > before.units.last().x)
+    }
+
 }

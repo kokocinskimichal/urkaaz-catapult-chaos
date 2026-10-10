@@ -51,11 +51,13 @@ data class Health(
  */
 data class ResourceWallet(
     val gold: Int = 0,
+    val supply: Int = 0,
     val mana: Int = 0,
     val ammunition: Map<AmmunitionType, Int> = emptyMap(),
 ) {
     init {
         require(gold >= 0) { "gold must not be negative" }
+        require(supply >= 0) { "supply must not be negative" }
         require(mana >= 0) { "mana must not be negative" }
         require(ammunition.values.all { it >= 0 }) { "ammunition counts must not be negative" }
     }
@@ -65,6 +67,13 @@ data class ResourceWallet(
     fun spendGold(amount: Int): ResourceWallet {
         require(canSpendGold(amount)) { "insufficient gold" }
         return copy(gold = gold - amount)
+    }
+
+    fun canSpendSupply(amount: Int): Boolean = amount >= 0 && supply >= amount
+
+    fun spendSupply(amount: Int): ResourceWallet {
+        require(canSpendSupply(amount)) { "insufficient supply" }
+        return copy(supply = supply - amount)
     }
 
     fun ammunitionCount(type: AmmunitionType): Int =

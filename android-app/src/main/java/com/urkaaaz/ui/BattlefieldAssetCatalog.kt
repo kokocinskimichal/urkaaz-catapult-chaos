@@ -21,6 +21,8 @@ data class ProjectileAnimation(
 
 class BattlefieldAssetCatalog(private val context: Context) {
     private val resources = context.resources
+    private val unitBitmapCache = mutableMapOf<String, Bitmap?>()
+    private val unitAnimationCache = mutableMapOf<String, List<Bitmap>>()
     private val terrainSoil = BitmapFactory.decodeResource(
         resources,
         R.drawable.terrain_soil_fill_00,
@@ -101,6 +103,53 @@ class BattlefieldAssetCatalog(private val context: Context) {
     val redCatapult: Bitmap =
         BitmapFactory.decodeResource(resources, R.drawable.catapult_right)
 
+    fun unitBitmap(unitType: String, teamLabel: String): Bitmap? {
+        val side = if (teamLabel == "BLUE") "left" else "right"
+        val resourceName = when (unitType) {
+            "SAPPER" -> "sapper_$side"
+            "DEFENDER" -> "defender_$side"
+            "DEMOLISHER" -> "demolisher_$side"
+            "RAGING_BOAR" -> "goblin_raging_boar_idle${if (side == "right") "_right" else ""}_00"
+            "SLINGMASTER" -> "goblin_slingmaster_run_00"
+            else -> return null
+        }
+
+        return unitBitmapCache.getOrPut(resourceName) {
+            val resourceId = resources.getIdentifier(resourceName, "drawable", context.packageName)
+            resourceId.takeIf { it != 0 }?.let { BitmapFactory.decodeResource(resources, it) }
+        }
+    }
+
+    fun unitAnimationFrames(
+        unitType: String,
+        teamLabel: String,
+        moving: Boolean,
+    ): List<Bitmap> {
+        val side = if (teamLabel == "BLUE") "left" else "right"
+        val cacheKey = "$unitType:$side:$moving"
+        return unitAnimationCache.getOrPut(cacheKey) {
+            if (!moving) {
+                when (unitType) {
+                    "DEFENDER" -> loadIdleAnimationFrames("defender_${side}_idle")
+                    "RAGING_BOAR" -> loadAnimationFrames(
+                        "goblin_raging_boar_idle${if (side == "right") "_right" else ""}",
+                    )
+                    else -> emptyList()
+                }
+            } else {
+                val prefix = when (unitType) {
+                    "SAPPER" -> "sapper_${side}_anim"
+                    "DEFENDER" -> "defender_${side}_anim"
+                    "DEMOLISHER" -> "demolisher_${side}_anim"
+                    "RAGING_BOAR" -> "goblin_raging_boar_run${if (side == "right") "_right" else ""}"
+                    "SLINGMASTER" -> "goblin_slingmaster_run"
+                    else -> return@getOrPut emptyList()
+                }
+                loadAnimationFrames(prefix)
+            }
+        }
+    }
+
     fun themeFor(biome: String): BattlefieldTheme =
         themes[biome] ?: themes.getValue("GREEN_FRONTIER")
 
@@ -122,6 +171,16 @@ class BattlefieldAssetCatalog(private val context: Context) {
         (0..31).mapNotNull { index ->
             val resourceId = resources.getIdentifier(
                 "${prefix}_%02d".format(index),
+                "drawable",
+                context.packageName,
+            )
+            resourceId.takeIf { it != 0 }?.let { BitmapFactory.decodeResource(resources, it) }
+        }
+
+    private fun loadIdleAnimationFrames(prefix: String): List<Bitmap> =
+        (0..99).mapNotNull { index ->
+            val resourceId = resources.getIdentifier(
+                "${prefix}_%03d".format(index),
                 "drawable",
                 context.packageName,
             )

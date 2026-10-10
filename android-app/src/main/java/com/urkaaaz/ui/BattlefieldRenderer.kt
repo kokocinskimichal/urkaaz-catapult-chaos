@@ -28,6 +28,7 @@ class BattlefieldRenderer(
     private val redPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         color = Color.rgb(190, 65, 55)
     }
+    private val spritePaint = Paint(Paint.ANTI_ALIAS_FLAG or Paint.FILTER_BITMAP_FLAG)
 
     fun render(
         canvas: Canvas,
@@ -117,6 +118,7 @@ class BattlefieldRenderer(
             val frame = frames.getOrNull(animationFrame % frames.size.coerceAtLeast(1))
             drawTexture(canvas, frame, projectileX - 30f, projectileY - 30f, 60f)
         }
+        drawUnits(canvas, state, viewportWidth, viewportHeight, groundTop, animationFrame)
         activeImpact?.let { impact ->
             val frames = assets.animationFor(impact.ammunitionType).impactFrames
             val frame = frames.getOrNull(impactFrame % frames.size.coerceAtLeast(1))
@@ -199,8 +201,61 @@ class BattlefieldRenderer(
         } else {
             0f
         }
-
         canvas.drawRect(left, top, left + FORTRESS_RENDER_WIDTH * ratio, top + 16f, color)
+    }
+
+    private fun drawUnits(
+        canvas: Canvas,
+        state: RenderState,
+        viewportWidth: Float,
+        viewportHeight: Float,
+        groundTop: Float,
+        animationFrame: Int,
+    ) {
+        val unitPaint = Paint(Paint.ANTI_ALIAS_FLAG)
+        val worldToViewportScale = viewportWidth / WORLD_WIDTH
+        state.units.forEach { unit ->
+            val centerX = worldToViewX(unit.x, viewportWidth)
+            val baselineY = groundTop + 4f * worldToViewportScale
+            val frames = assets.unitAnimationFrames(unit.unitType, unit.teamLabel, unit.moving)
+            val frameOffset = if (frames.isEmpty()) {
+                0
+            } else {
+                Math.floorMod(unit.entityId.hashCode(), frames.size)
+            }
+            val bitmap = frames.getOrNull(
+                (animationFrame / 4 + frameOffset) % frames.size.coerceAtLeast(1),
+            )
+                ?: assets.unitBitmap(unit.unitType, unit.teamLabel)
+            if (bitmap != null) {
+                val spriteHeightWorld = when (unit.unitType) {
+                    "SAPPER" -> 144f
+                    "RAGING_BOAR" -> 220f * 1.6f
+                    "SLINGMASTER" -> 170f
+                    else -> 150f
+                } * 0.96f * 0.308f
+                val spriteHeight = spriteHeightWorld * worldToViewportScale
+                val spriteWidth = spriteHeight * bitmap.width / bitmap.height
+                canvas.drawBitmap(
+                    bitmap,
+                    null,
+                    RectF(
+                        centerX - spriteWidth / 2f,
+                        baselineY - spriteHeight,
+                        centerX + spriteWidth / 2f,
+                        baselineY,
+                    ),
+                    spritePaint,
+                )
+            } else {
+                unitPaint.color = if (unit.teamLabel == "BLUE") {
+                    Color.rgb(65, 125, 220)
+                } else {
+                    Color.rgb(210, 70, 60)
+                }
+                canvas.drawCircle(centerX, baselineY - 30f * worldToViewportScale, 18f, unitPaint)
+            }
+        }
     }
 
     private fun drawDebugHitboxes(
