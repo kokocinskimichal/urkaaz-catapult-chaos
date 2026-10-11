@@ -99,6 +99,7 @@ data class Unit(
     val health: Health = Health(maximum = type.maxHealth),
     val moving: Boolean = false,
     val garrisonTargetX: Float? = null,
+    val inGarrison: Boolean = true,
     val combatState: UnitCombatState = UnitCombatState(),
     val sapperHasBomb: Boolean = true,
     val returningToGarrison: Boolean = false,

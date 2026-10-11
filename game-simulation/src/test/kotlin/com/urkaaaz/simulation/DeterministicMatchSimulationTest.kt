@@ -158,6 +158,56 @@ class DeterministicMatchSimulationTest {
     }
 
     @Test
+    fun deployingDuringAnActiveWaveKeepsTheNewUnitInGarrison() {
+        val simulation = DeterministicMatchSimulation(MatchId("wave-garrison-match"), config)
+        simulation.start()
+        simulation.deployUnit(com.urkaaaz.domain.UnitFactory.defender(), Team.BLUE)
+        simulation.sendWave(Team.BLUE)
+        simulation.advance(1_000)
+
+        simulation.deployUnit(com.urkaaaz.domain.UnitFactory.sapper(), Team.BLUE)
+
+        val deployed = simulation.snapshot().units.first { it.unitType == "SAPPER" }
+        assertEquals("GARRISONED", deployed.actionState)
+        assertTrue(deployed.x < 250f)
+
+        simulation.advance(1_000)
+
+        val after = simulation.snapshot().units.first { it.unitType == "SAPPER" }
+        assertTrue(after.x > deployed.x)
+        assertTrue(after.x < 300f)
+    }
+
+    @Test
+    fun deployingMultipleUnitsDuringAnActiveWaveShiftsOnlyGarrisonSlots() {
+        val simulation = DeterministicMatchSimulation(MatchId("wave-garrison-slots-match"), config)
+        simulation.start()
+        simulation.deployUnit(com.urkaaaz.domain.UnitFactory.defender(), Team.BLUE)
+        simulation.sendWave(Team.BLUE)
+        simulation.advance(1_000)
+
+        simulation.deployUnit(com.urkaaaz.domain.UnitFactory.sapper(), Team.BLUE)
+        simulation.deployUnit(com.urkaaaz.domain.UnitFactory.slingmaster(), Team.BLUE)
+
+        val blueUnits = simulation.snapshot().units.filter { it.team == Team.BLUE }
+        val activeDefender = blueUnits.first { it.unitType == "DEFENDER" }
+        val garrisonedSapper = blueUnits.first { it.unitType == "SAPPER" }
+        val garrisonedSlingmaster = blueUnits.first { it.unitType == "SLINGMASTER" }
+
+        assertTrue(activeDefender.x > 250f, "blue unit positions: $blueUnits")
+        assertEquals(230f, garrisonedSapper.x, "blue unit positions: $blueUnits")
+        assertEquals(230f, garrisonedSlingmaster.x, "blue unit positions: $blueUnits")
+
+        simulation.advance(1_000)
+
+        val after = simulation.snapshot().units.filter { it.team == Team.BLUE }
+        val afterSapper = after.first { it.unitType == "SAPPER" }
+        val afterSlingmaster = after.first { it.unitType == "SLINGMASTER" }
+        assertTrue(afterSapper.x > afterSlingmaster.x)
+        assertTrue(afterSlingmaster.x > 230f)
+    }
+
+    @Test
     fun opposingDefendersStopAndDamageEachOtherAfterTheirWavesMeet() {
         val simulation = DeterministicMatchSimulation(MatchId("unit-combat-match"), config)
         simulation.start()
@@ -377,8 +427,8 @@ class DeterministicMatchSimulationTest {
     }
 
     @Test
-    fun alliedUnitsKeepVisibleSpacingWhenAFasterSapperCatchesADefender() {
-        val simulation = DeterministicMatchSimulation(MatchId("allied-spacing-match"), config)
+    fun aFasterAlliedUnitCanOvertakeASlowerUnit() {
+        val simulation = DeterministicMatchSimulation(MatchId("allied-overtake-match"), config)
         simulation.start()
         simulation.deployUnit(com.urkaaaz.domain.UnitFactory.defender(), Team.BLUE)
         simulation.deployUnit(com.urkaaaz.domain.UnitFactory.sapper(), Team.BLUE)
@@ -388,8 +438,10 @@ class DeterministicMatchSimulationTest {
 
         val blueUnits = simulation.snapshot().units.filter { it.team == Team.BLUE }
         assertEquals(2, blueUnits.size)
+        val defender = blueUnits.first { it.unitType == "DEFENDER" }
+        val sapper = blueUnits.first { it.unitType == "SAPPER" }
         assertTrue(
-            kotlin.math.abs(blueUnits[0].x - blueUnits[1].x) >= 12f,
+            sapper.x > defender.x,
             "blue unit positions: ${blueUnits.map { it.x }}",
         )
     }

@@ -169,9 +169,9 @@ class DeterministicMatchSimulation(
         resources[team] = wallet.spendSupply(type.supplyCost)
         val spawnX = if (team == Team.BLUE) 250f else config.bounds.width - 250f
         val direction = if (team == Team.BLUE) 1f else -1f
-        val existingTeamUnits = units.filter { it.team == team && team !in movingTeams }
+        val existingTeamUnits = units.filter { it.team == team && it.inGarrison }
         units = units.map { existing ->
-            if (existing.team == team && team !in movingTeams) {
+            if (existing.team == team && existing.inGarrison) {
                 val index = existingTeamUnits.indexOf(existing)
                 existing.copy(
                     moving = true,
@@ -193,6 +193,7 @@ class DeterministicMatchSimulation(
             ),
             moving = true,
             garrisonTargetX = spawnX,
+            inGarrison = true,
         )
         units += unit
         logCombatState("unit-deployed:${unit.id.value}")
@@ -210,6 +211,13 @@ class DeterministicMatchSimulation(
     fun sendWave(team: Team) {
         check(status == MatchStatus.RUNNING) { "match is not running" }
         check(units.any { it.team == team }) { "no units available to send" }
+        units = units.map { unit ->
+            if (unit.team == team && unit.isAlive && !unit.returningToGarrison) {
+                unit.copy(inGarrison = false)
+            } else {
+                unit
+            }
+        }
         movingTeams += team
     }
 
@@ -413,7 +421,7 @@ class DeterministicMatchSimulation(
             if (unit.isAttacking()) {
                 return@map unit.copy(moving = false)
             }
-            val waveMoving = unit.team in movingTeams
+            val waveMoving = unit.team in movingTeams && !unit.inGarrison
             val targetX = if (waveMoving && !unit.returningToGarrison) {
                 fortressAttackX(opposingTeam(unit.team))
             } else if (unit.returningToGarrison) {
@@ -508,6 +516,7 @@ class DeterministicMatchSimulation(
                             it.id != unit.id &&
                             it.isAlive &&
                             !it.returningToGarrison &&
+                            it.type.speed >= unit.type.speed &&
                             (
                                 (it.position.x - unit.position.x) * direction > 0f ||
                                     (
@@ -582,7 +591,7 @@ class DeterministicMatchSimulation(
                             combatStopX == null &&
                             unit.type !is SapperUnit
                         ),
-                garrisonTargetX = if (reachedTarget && !unit.returningToGarrison) {
+                garrisonTargetX = if (reachedTarget && !unit.returningToGarrison && !unit.inGarrison) {
                     null
                 } else {
                     unit.garrisonTargetX
@@ -673,6 +682,7 @@ class DeterministicMatchSimulation(
                     current[index] = attacker.copy(
                         moving = false,
                         returningToGarrison = false,
+                        inGarrison = true,
                         sapperHasBomb = true,
                         health = attacker.health.copy(current = attacker.health.maximum),
                         combatState = attacker.combatState.copy(
@@ -946,13 +956,14 @@ class DeterministicMatchSimulation(
             return
         }
         if (!attacker.sapperHasBomb) {
-            current[index] = attacker.copy(returningToGarrison = true)
+            current[index] = attacker.copy(returningToGarrison = true, inGarrison = false)
             return
         }
         damageFortress(fortress(opposingTeam(attacker.team)), behavior.fortressDamage)
         current[index] = attacker.copy(
             sapperHasBomb = false,
             returningToGarrison = true,
+            inGarrison = false,
         )
     }
 
