@@ -736,7 +736,7 @@ class DeterministicMatchSimulation(
                 }
             } else {
                 val enemyFortress = fortress(opposingTeam(attacker.team))
-                if (kotlin.math.abs(enemyFortress.center.x - attacker.position.x) <= FORTRESS_ATTACK_RANGE) {
+                if (canAttackFortress(attacker, enemyFortress, current)) {
                     startIntents += AttackIntent(attacker.id, enemyFortress.id, AttackType.SIEGE_MISSION)
                 }
             }
@@ -942,6 +942,26 @@ class DeterministicMatchSimulation(
         val formationReach =
             config.unitCollisionRadius + formationRank * ATTACK_FORMATION_SPACING
         return kotlin.math.abs(target.position.x - attacker.position.x) <= formationReach
+    }
+
+    private fun canAttackFortress(
+        attacker: Unit,
+        target: Fortress,
+        current: List<Unit>,
+    ): Boolean {
+        val formationRank = current
+            .filter {
+                it.team == attacker.team &&
+                    it.isAlive &&
+                    !it.inGarrison &&
+                    !it.returningToGarrison &&
+                    it.type !is SapperUnit
+            }
+            .sortedBy { it.id.value }
+            .indexOfFirst { it.id == attacker.id }
+            .coerceAtLeast(0)
+        val formationReach = FORTRESS_ATTACK_RANGE + formationRank * ATTACK_FORMATION_SPACING
+        return kotlin.math.abs(target.center.x - attacker.position.x) <= formationReach
     }
 
     private fun Unit.isAttacking(): Boolean =
@@ -1271,7 +1291,7 @@ class DeterministicMatchSimulation(
         private const val DEMOLISHER_BLAST_RADIUS = 260f
         private const val DEMOLISHER_DAMAGE = 300
         private const val DEATH_ANIMATION_SECONDS = 0.8f
-        private const val SAPPER_CONTACT_SPEED_MULTIPLIER = 0.65f
+        private const val SAPPER_CONTACT_SPEED_MULTIPLIER = 0.45f
         private const val ALLIED_UNIT_MIN_SEPARATION = 16f
         private const val ATTACK_FORMATION_SPACING = 42f
 
