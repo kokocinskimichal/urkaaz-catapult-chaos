@@ -16,6 +16,7 @@ data class MatchSnapshot(
     val wind: WindSnapshot = WindSnapshot(),
     val outcome: MatchOutcome? = null,
     val reloadRemainingSeconds: Map<Team, Float> = emptyMap(),
+    val reloadRemainingSecondsByAmmunition: Map<Team, Map<String, Float>> = emptyMap(),
     val activeProjectileTeams: Set<Team> = emptySet(),
     val remainingMilliseconds: Long = 300_000L,
 ) {
@@ -59,6 +60,13 @@ data class UnitSnapshot(
     val attackProgress: Float = 0f,
     val facingDirection: Float = 1f,
     val sapperHasBomb: Boolean = true,
+    val statuses: Map<String, Float> = emptyMap(),
+    val statusDetails: Map<String, StatusSnapshot> = emptyMap(),
+)
+
+data class StatusSnapshot(
+    val remainingMilliseconds: Long,
+    val strength: Float,
 )
 
 data class ProjectileSnapshot(
@@ -69,11 +77,29 @@ data class ProjectileSnapshot(
     val y: Float,
     val velocityX: Float,
     val velocityY: Float,
+    val ageMilliseconds: Long = 0L,
+    val parentProjectileId: EntityId? = null,
+    val generation: Int = 0,
+    val mass: Float = 1f,
+    val windResponse: Float = 1f,
+    val gravityResponse: Float = 1f,
+    val drag: Float = 0f,
 )
 
 data class TerrainSnapshot(
     val revision: Long = 0L,
     val biome: String = "GREEN_FRONTIER",
+    val craters: List<CraterSnapshot> = emptyList(),
+    val worldWidth: Float = 1_600f,
+    val sampleSpacing: Float = 8f,
+    val heightSamples: List<Float> = emptyList(),
+)
+
+data class CraterSnapshot(
+    val centerX: Float,
+    val centerY: Float,
+    val radius: Float,
+    val depth: Float,
 )
 
 data class ResourceSnapshot(
@@ -86,6 +112,12 @@ data class ResourceSnapshot(
 data class EffectSnapshot(
     val effectType: String,
     val remainingMilliseconds: Long,
+    val effectId: EntityId? = null,
+    val sourceProjectileId: EntityId? = null,
+    val x: Float = 0f,
+    val y: Float = 0f,
+    val radius: Float = 0f,
+    val status: String? = null,
 )
 
 data class WindSnapshot(

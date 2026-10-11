@@ -27,12 +27,19 @@ class BattlefieldView(context: Context) : View(context) {
         color = Color.rgb(111, 145, 77)
     }
 
-    private fun drawThemeDecorations(canvas: Canvas, theme: BattlefieldTheme, groundTop: Float) {
+    private fun drawThemeDecorations(
+        canvas: Canvas,
+        theme: BattlefieldTheme,
+        groundTop: Float,
+        groundHeightAt: (Float) -> Float,
+    ) {
         val positions = floatArrayOf(0.34f, 0.48f, 0.62f)
         theme.decorations.forEachIndexed { index, bitmap ->
             if (bitmap != null) {
-                val x = width * positions[index % positions.size]
-                drawTexture(canvas, bitmap, x, groundTop - 94f, 94f)
+                val worldX = WORLD_WIDTH * positions[index % positions.size]
+                val x = worldToViewX(worldX)
+                val groundY = worldToViewY(groundHeightAt(worldX))
+                drawTexture(canvas, bitmap, x, groundY - 94f, 94f)
             }
         }
     }

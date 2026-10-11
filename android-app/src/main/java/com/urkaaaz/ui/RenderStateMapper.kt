@@ -11,6 +11,10 @@ data class RenderState(
     val projectileCount: Int,
     val terrainRevision: Long,
     val terrainBiome: String,
+    val craters: List<CraterRenderState> = emptyList(),
+    val terrainWorldWidth: Float = 1_600f,
+    val terrainSampleSpacing: Float = 8f,
+    val terrainHeightSamples: List<Float> = emptyList(),
     val projectiles: List<ProjectileRenderState>,
     val blueCatapultX: Float,
     val blueCatapultY: Float,
@@ -27,6 +31,8 @@ data class RenderState(
     val outcomeLabel: String?,
     val playerReloadRemainingSeconds: Float,
     val enemyReloadRemainingSeconds: Float,
+    val playerReloadByAmmunition: Map<String, Float> = emptyMap(),
+    val enemyReloadByAmmunition: Map<String, Float> = emptyMap(),
     val playerProjectileActive: Boolean,
     val playerAmmunition: Map<String, Int>,
     val playerGold: Int,
@@ -43,6 +49,13 @@ data class ProjectileRenderState(
     val x: Float,
     val y: Float,
     val ammunitionType: String,
+)
+
+data class CraterRenderState(
+    val centerX: Float,
+    val centerY: Float,
+    val radius: Float,
+    val depth: Float,
 )
 
 data class ImpactRenderState(
@@ -96,6 +109,12 @@ object RenderStateMapper {
         projectileCount = snapshot.projectiles.size,
         terrainRevision = snapshot.terrain.revision,
         terrainBiome = snapshot.terrain.biome,
+        craters = snapshot.terrain.craters.map {
+            CraterRenderState(it.centerX, it.centerY, it.radius, it.depth)
+        },
+        terrainWorldWidth = snapshot.terrain.worldWidth,
+        terrainSampleSpacing = snapshot.terrain.sampleSpacing,
+        terrainHeightSamples = snapshot.terrain.heightSamples,
         projectiles = snapshot.projectiles.map {
             ProjectileRenderState(
                 projectileId = it.entityId.value,
@@ -143,6 +162,12 @@ object RenderStateMapper {
         enemyReloadRemainingSeconds = snapshot.reloadRemainingSeconds[
             com.urkaaaz.contracts.Team.RED
         ] ?: 0f,
+        playerReloadByAmmunition = snapshot.reloadRemainingSecondsByAmmunition[
+            com.urkaaaz.contracts.Team.BLUE
+        ] ?: emptyMap(),
+        enemyReloadByAmmunition = snapshot.reloadRemainingSecondsByAmmunition[
+            com.urkaaaz.contracts.Team.RED
+        ] ?: emptyMap(),
         playerProjectileActive = com.urkaaaz.contracts.Team.BLUE in snapshot.activeProjectileTeams,
         playerAmmunition = snapshot.resourcesByTeam[
             com.urkaaaz.contracts.Team.BLUE

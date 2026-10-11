@@ -5,6 +5,7 @@ import android.graphics.Canvas
 import android.graphics.Color
 import android.graphics.LinearGradient
 import android.graphics.Paint
+import android.graphics.Path
 import android.graphics.RectF
 import android.graphics.Shader
 import android.graphics.Typeface
@@ -12,7 +13,7 @@ import com.urkaaaz.contracts.FortressHitboxProfile
 
 class BattlefieldRenderer(
     private val assets: BattlefieldAssetCatalog,
-    private val drawThemeDecorations: (Canvas, BattlefieldTheme, Float) -> Unit,
+    private val drawThemeDecorations: (Canvas, BattlefieldTheme, Float, (Float) -> Float) -> Unit,
     private val drawTiledTexture: (Canvas, Bitmap?, Float, Float, Float, Int) -> Unit,
     private val drawTexture: (Canvas, Bitmap?, Float, Float, Float) -> Unit,
     private val drawTextureAtBaseline: (Canvas, Bitmap?, Float, Float, Float) -> Unit,
@@ -53,32 +54,78 @@ class BattlefieldRenderer(
         val theme = assets.themeFor(state.terrainBiome)
         drawBackground(canvas, theme, viewportWidth, viewportHeight)
         val groundTop = viewportHeight * 0.76f
-        drawTiledTexture(canvas, theme.soil, groundTop, viewportHeight, 128f, theme.fallbackColor)
-        drawTiledTexture(canvas, theme.cap, groundTop - 20f, groundTop + 6f, 150f, theme.fallbackColor)
-        drawThemeDecorations(canvas, theme, groundTop)
+        drawTerrainSurface(
+            canvas = canvas,
+            bitmap = theme.soil,
+            samples = state.terrainHeightSamples,
+            sampleSpacing = state.terrainSampleSpacing,
+            viewportWidth = viewportWidth,
+            viewportHeight = viewportHeight,
+            fallbackColor = theme.fallbackColor,
+            textureTop = state.terrainHeightSamples.minOrNull()?.let {
+                worldToViewY(it, viewportHeight) - 16f
+            } ?: groundTop,
+            textureBottom = viewportHeight,
+        )
+        drawDeformedCap(
+            canvas = canvas,
+            bitmap = theme.cap,
+            samples = state.terrainHeightSamples,
+            sampleSpacing = state.terrainSampleSpacing,
+            viewportWidth = viewportWidth,
+            viewportHeight = viewportHeight,
+            fallbackColor = theme.fallbackColor,
+        )
+        drawThemeDecorations(canvas, theme, groundTop) { worldX ->
+            terrainHeightAt(
+                samples = state.terrainHeightSamples,
+                sampleSpacing = state.terrainSampleSpacing,
+                worldX = worldX,
+                fallbackWorldY = groundTop / viewportHeight * WORLD_HEIGHT,
+            )
+        }
 
         val blueFortressCenterX = worldToViewX(160f, viewportWidth)
         val redFortressCenterX = worldToViewX(WORLD_WIDTH - 160f, viewportWidth)
-        val fortressBaseline = groundTop + 4f
+        val blueFortressBaseline = worldToViewY(
+            terrainHeightAt(
+                state.terrainHeightSamples,
+                state.terrainSampleSpacing,
+                160f,
+                groundTop / viewportHeight * WORLD_HEIGHT,
+            ),
+            viewportHeight,
+        ) + 4f
+        val redFortressBaseline = worldToViewY(
+            terrainHeightAt(
+                state.terrainHeightSamples,
+                state.terrainSampleSpacing,
+                WORLD_WIDTH - 160f,
+                groundTop / viewportHeight * WORLD_HEIGHT,
+            ),
+            viewportHeight,
+        ) + 4f
         drawTextureAtBaseline(
             canvas,
             assets.blueFortress,
             blueFortressCenterX,
-            fortressBaseline,
+            blueFortressBaseline,
             FORTRESS_RENDER_WIDTH,
         )
         drawTextureAtBaseline(
             canvas,
             assets.redFortress,
             redFortressCenterX,
-            fortressBaseline,
+            redFortressBaseline,
             FORTRESS_RENDER_WIDTH,
         )
 
         val blueCatapultCenterX = worldToViewX(state.blueCatapultX, viewportWidth)
         val redCatapultCenterX = worldToViewX(state.redCatapultX, viewportWidth)
         val catapultBaseline =
-            fortressBaseline - FORTRESS_RENDER_HEIGHT * CATAPULT_PLATFORM_HEIGHT_RATIO
+            blueFortressBaseline - FORTRESS_RENDER_HEIGHT * CATAPULT_PLATFORM_HEIGHT_RATIO
+        val redCatapultBaseline =
+            redFortressBaseline - FORTRESS_RENDER_HEIGHT * CATAPULT_PLATFORM_HEIGHT_RATIO
         drawTextureAtBaseline(
             canvas,
             assets.blueCatapult,
@@ -90,7 +137,7 @@ class BattlefieldRenderer(
             canvas,
             assets.redCatapult,
             redCatapultCenterX,
-            catapultBaseline,
+            redCatapultBaseline,
             CATAPULT_RENDER_WIDTH,
         )
         drawReloadIndicator(
@@ -103,7 +150,7 @@ class BattlefieldRenderer(
         drawReloadIndicator(
             canvas,
             redCatapultCenterX,
-            catapultBaseline - RELOAD_INDICATOR_OFFSET,
+            redCatapultBaseline - RELOAD_INDICATOR_OFFSET,
             state.enemyReloadRemainingSeconds,
             state.projectiles.any { it.teamLabel == "RED" },
         )
@@ -132,7 +179,7 @@ class BattlefieldRenderer(
         drawHealthBar(
             canvas,
             blueFortressCenterX - FORTRESS_RENDER_WIDTH / 2f,
-            fortressBaseline - FORTRESS_RENDER_HEIGHT - 18f,
+            blueFortressBaseline - FORTRESS_RENDER_HEIGHT - 18f,
             state.blueFortressHealth,
             state.blueFortressMaxHealth,
             bluePaint,
@@ -140,12 +187,18 @@ class BattlefieldRenderer(
         drawHealthBar(
             canvas,
             redFortressCenterX - FORTRESS_RENDER_WIDTH / 2f,
-            fortressBaseline - FORTRESS_RENDER_HEIGHT - 18f,
+            redFortressBaseline - FORTRESS_RENDER_HEIGHT - 18f,
             state.redFortressHealth,
             state.redFortressMaxHealth,
             redPaint,
         )
-        drawFortressLabels(canvas, blueFortressCenterX, redFortressCenterX, fortressBaseline)
+        drawFortressLabels(
+            canvas,
+            blueFortressCenterX,
+            redFortressCenterX,
+            blueFortressBaseline,
+            redFortressBaseline,
+        )
         if (debugHitboxesVisible) {
             drawDebugHitboxes(
                 canvas = canvas,
@@ -186,6 +239,133 @@ class BattlefieldRenderer(
             canvas.drawRect(0f, 0f, viewportWidth, viewportHeight, backgroundPaint)
             backgroundPaint.shader = null
         }
+
+    }
+
+    private fun drawTerrainSurface(
+        canvas: Canvas,
+        bitmap: Bitmap?,
+        samples: List<Float>,
+        sampleSpacing: Float,
+        viewportWidth: Float,
+        viewportHeight: Float,
+        fallbackColor: Int,
+        surfaceThickness: Float = viewportHeight,
+        textureTop: Float,
+        textureBottom: Float,
+    ) {
+        if (samples.isEmpty()) {
+            drawTiledTexture(
+                canvas,
+                bitmap,
+                textureTop,
+                textureBottom,
+                128f,
+                fallbackColor,
+            )
+            return
+        }
+        val surface = Path().apply {
+            moveTo(0f, worldToViewY(samples.first(), viewportHeight))
+            samples.forEachIndexed { index, height ->
+                lineTo(
+                    worldToViewX(index * sampleSpacing, viewportWidth),
+                    worldToViewY(height, viewportHeight),
+                )
+            }
+            samples.indices.reversed().forEach { index ->
+                lineTo(
+                    worldToViewX(index * sampleSpacing, viewportWidth),
+                    worldToViewY(samples[index] + surfaceThickness, viewportHeight),
+                )
+            }
+            close()
+        }
+        canvas.save()
+        canvas.clipPath(surface)
+        drawTiledTexture(canvas, bitmap, textureTop, textureBottom, 128f, fallbackColor)
+        canvas.restore()
+    }
+
+    private fun drawDeformedCap(
+        canvas: Canvas,
+        bitmap: Bitmap?,
+        samples: List<Float>,
+        sampleSpacing: Float,
+        viewportWidth: Float,
+        viewportHeight: Float,
+        fallbackColor: Int,
+    ) {
+        if (samples.isEmpty() || bitmap == null) {
+            drawTiledTexture(
+                canvas,
+                bitmap,
+                viewportHeight * 0.76f - 20f,
+                viewportHeight * 0.76f + 6f,
+                150f,
+                fallbackColor,
+            )
+            return
+        }
+
+        val sliceCount = 96
+        val tileWorldWidth = 360f
+        val sliceWorldWidth = tileWorldWidth / sliceCount
+        val sourceSliceWidth = (bitmap.width / sliceCount).coerceAtLeast(1)
+        val source = android.graphics.Rect()
+        val destination = RectF()
+        var sliceIndex = 0
+        while (sliceIndex * sliceWorldWidth <= WORLD_WIDTH + sliceWorldWidth) {
+            val worldX = sliceIndex * sliceWorldWidth
+            val surfaceY = sampleHeightAt(samples, sampleSpacing, worldX)
+            val sourceColumn = sliceIndex % sliceCount
+            val sourceLeft = (sourceColumn * sourceSliceWidth)
+                .coerceAtMost(bitmap.width - sourceSliceWidth)
+            source.set(
+                sourceLeft,
+                0,
+                (sourceLeft + sourceSliceWidth).coerceAtMost(bitmap.width),
+                bitmap.height,
+            )
+            val left = worldToViewX(worldX, viewportWidth)
+            val right = worldToViewX(worldX + sliceWorldWidth, viewportWidth)
+            destination.set(
+                left,
+                worldToViewY(surfaceY - 40f, viewportHeight),
+                right + 1f,
+                worldToViewY(surfaceY + 46f, viewportHeight),
+            )
+            canvas.drawBitmap(
+                bitmap,
+                source,
+                destination,
+                null,
+            )
+            sliceIndex += 1
+        }
+    }
+
+    private fun sampleHeightAt(
+        samples: List<Float>,
+        sampleSpacing: Float,
+        worldX: Float,
+    ): Float {
+        val position = worldX.coerceIn(0f, WORLD_WIDTH) / sampleSpacing
+        val left = position.toInt().coerceIn(0, samples.lastIndex)
+        val right = (left + 1).coerceAtMost(samples.lastIndex)
+        val fraction = (position - left).coerceIn(0f, 1f)
+        return samples[left] + (samples[right] - samples[left]) * fraction
+    }
+
+    private fun terrainHeightAt(
+        samples: List<Float>,
+        sampleSpacing: Float,
+        worldX: Float,
+        fallbackWorldY: Float,
+    ): Float = if (samples.isEmpty()) {
+        fallbackWorldY
+    } else {
+        sampleHeightAt(samples, sampleSpacing, worldX)
     }
 
     private fun drawHealthBar(
@@ -218,7 +398,8 @@ class BattlefieldRenderer(
         val worldToViewportScale = viewportWidth / WORLD_WIDTH
         state.units.forEach { unit ->
             val centerX = worldToViewX(unit.x, viewportWidth)
-            val baselineY = groundTop + 4f * worldToViewportScale
+            val baselineY =
+                worldToViewY(unit.y, viewportHeight) + 4f * worldToViewportScale
             val defeated = unit.actionState == "DEAD"
             val attacking = unit.actionState == "WINDING_UP" ||
                 unit.actionState == "ATTACKING" ||
@@ -476,7 +657,8 @@ class BattlefieldRenderer(
         canvas: Canvas,
         blueCenterX: Float,
         redCenterX: Float,
-        baseline: Float,
+        blueBaseline: Float,
+        redBaseline: Float,
     ) {
         val paint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
             color = Color.WHITE
@@ -484,9 +666,18 @@ class BattlefieldRenderer(
             typeface = Typeface.DEFAULT_BOLD
             setShadowLayer(4f, 1f, 1f, Color.BLACK)
         }
-        val labelY = baseline - FORTRESS_RENDER_HEIGHT - 25f
-        canvas.drawText("YOU", blueCenterX - FORTRESS_RENDER_WIDTH / 2f, labelY, paint)
-        canvas.drawText("ENEMY", redCenterX - FORTRESS_RENDER_WIDTH / 2f, labelY, paint)
+        canvas.drawText(
+            "YOU",
+            blueCenterX - FORTRESS_RENDER_WIDTH / 2f,
+            blueBaseline - FORTRESS_RENDER_HEIGHT - 25f,
+            paint,
+        )
+        canvas.drawText(
+            "ENEMY",
+            redCenterX - FORTRESS_RENDER_WIDTH / 2f,
+            redBaseline - FORTRESS_RENDER_HEIGHT - 25f,
+            paint,
+        )
     }
 
     private fun drawOutcome(

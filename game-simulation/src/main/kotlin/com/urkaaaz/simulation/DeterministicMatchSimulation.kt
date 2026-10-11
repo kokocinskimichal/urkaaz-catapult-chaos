@@ -19,6 +19,7 @@ import com.urkaaaz.contracts.TerrainSnapshot
 import com.urkaaaz.contracts.WindSnapshot
 import com.urkaaaz.domain.Aim
 import com.urkaaaz.domain.AmmunitionType
+import com.urkaaaz.domain.AmmunitionCatalog
 import com.urkaaaz.domain.Catapult
 import com.urkaaaz.domain.Fortress
 import com.urkaaaz.domain.Projectile
@@ -33,6 +34,8 @@ import com.urkaaaz.domain.UnitDefinition
 import com.urkaaaz.domain.AttackType
 import com.urkaaaz.domain.AttackGroupId
 import com.urkaaaz.domain.UnitActionState
+import com.urkaaaz.domain.UnitStatus
+import com.urkaaaz.domain.FriendlyFirePolicy
 import kotlin.math.min
 import kotlin.random.Random
 
@@ -50,6 +53,7 @@ class DeterministicMatchSimulation(
     private val blueFortress: Fortress = defaultFortress(Team.BLUE, config.bounds),
     private val redFortress: Fortress = defaultFortress(Team.RED, config.bounds),
     private val combatLogSink: CombatLogSink = NoOpCombatLogSink,
+    private val ammunitionLogSink: AmmunitionLogSink = NoOpAmmunitionLogSink,
 ) {
     private var status = MatchStatus.NOT_STARTED
     private var phase = MatchPhase.CREATED
@@ -57,8 +61,16 @@ class DeterministicMatchSimulation(
     private var simulationTimeMilliseconds = 0L
     private var remainingMatchTimeMilliseconds = config.matchDurationMilliseconds
     private var sequence = 0L
-    private var terrain = TerrainState(config.bounds.height * 0.78f)
+    private var terrain = TerrainState.legacyProfile(
+        baselineHeight = config.bounds.height * 0.78f,
+        worldWidth = config.bounds.width,
+        worldHeight = config.bounds.height,
+    ).flattenFoundation(160f, 150f)
+        .flattenFoundation(config.bounds.width - 160f, 150f)
+        .protectRange(160f, 150f)
+        .protectRange(config.bounds.width - 160f, 150f)
     private var projectiles = emptyList<Projectile>()
+    private val pendingProjectiles = mutableListOf<Projectile>()
     private var currentBlueFortress = blueFortress
     private var currentRedFortress = redFortress
     private var currentBlueCatapult = blueCatapult
@@ -78,10 +90,12 @@ class DeterministicMatchSimulation(
         Team.BLUE to initialWallet(),
         Team.RED to initialWallet(),
     )
-    private val reloadRemainingSeconds = mutableMapOf(
-        Team.BLUE to 0f,
-        Team.RED to 0f,
-    )
+    private val reloadRemainingSecondsByAmmunition =
+        mutableMapOf<Team, MutableMap<AmmunitionType, Float>>().apply {
+            Team.entries.forEach { team ->
+                this[team] = AmmunitionCatalog.all.associate { it.type to 0f }.toMutableMap()
+            }
+        }
     private val pendingEvents = mutableListOf<MatchEvent>()
     private var lingeringEffects = emptyList<LingeringEffect>()
     private val combatRandom = Random(matchId.value.hashCode().toLong())
@@ -104,7 +118,12 @@ class DeterministicMatchSimulation(
     ): List<MatchEvent> {
         check(status == MatchStatus.RUNNING) { "match is not running" }
         val catapult = catapult(catapultId)
-        check(reloadRemainingSeconds.getValue(catapult.team) <= 0f) {
+        val ammunitionDefinition = AmmunitionCatalog.definition(ammunition)
+        check(
+            reloadRemainingSecondsByAmmunition
+                .getValue(catapult.team)
+                .getValue(ammunition) <= 0f,
+        ) {
             "catapult is reloading"
         }
         val availableResources = resources.getValue(catapult.team)
@@ -115,7 +134,7 @@ class DeterministicMatchSimulation(
             "catapult already has an active projectile"
         }
         val radians = Math.toRadians(catapult.aim.directionDegrees.toDouble())
-        val speed = catapult.aim.power * 8f
+        val speed = catapult.aim.power * ammunitionDefinition.flight.initialSpeedMultiplier
         val direction = if (catapult.team == Team.BLUE) 1f else -1f
         val projectile = Projectile(
             id = EntityId("projectile-${sequence + 1}"),
@@ -126,10 +145,24 @@ class DeterministicMatchSimulation(
                 x = kotlin.math.cos(radians).toFloat() * speed * direction,
                 y = -kotlin.math.sin(radians).toFloat() * speed,
             ),
+            mass = ammunitionDefinition.flight.mass,
+            windResponse = ammunitionDefinition.flight.windResponse,
+            gravityResponse = ammunitionDefinition.flight.gravityResponse,
+            drag = ammunitionDefinition.flight.drag,
         )
         projectiles = projectiles + projectile
         resources[catapult.team] = availableResources.consume(ammunition)
-        reloadRemainingSeconds[catapult.team] = ammunition.reloadSeconds
+        logAmmunition(
+            reason = "inventory-consumed",
+            projectile = projectile,
+        )
+        reloadRemainingSecondsByAmmunition
+            .getValue(catapult.team)[ammunition] = ammunitionDefinition.reloadSeconds
+        logAmmunition(
+            reason = "reload-started",
+            projectile = projectile,
+            remainingReloadSeconds = ammunitionDefinition.reloadSeconds,
+        )
         phase = MatchPhase.PROJECTILE_IN_FLIGHT
         emit {
             MatchEvent.ProjectileFired(
@@ -138,8 +171,16 @@ class DeterministicMatchSimulation(
                 simulationTimeMilliseconds,
                 projectile.id,
                 catapult.id,
+                ammunition.name,
+                projectile.position.x,
+                projectile.position.y,
             )
         }
+        logAmmunition(
+            reason = "projectile-fired",
+            projectile = projectile,
+            remainingReloadSeconds = ammunitionDefinition.reloadSeconds,
+        )
         return drainEvents()
     }
 
@@ -187,9 +228,8 @@ class DeterministicMatchSimulation(
             type = type,
             team = team,
             position = WorldPosition(
-                x = spawnX -
-                    direction * NEW_UNIT_REAR_OFFSET,
-                y = config.bounds.height * 0.78f,
+                x = spawnX - direction * NEW_UNIT_REAR_OFFSET,
+                y = terrain.heightAt(spawnX - direction * NEW_UNIT_REAR_OFFSET),
             ),
             moving = true,
             garrisonTargetX = spawnX,
@@ -227,9 +267,20 @@ class DeterministicMatchSimulation(
         val deltaSeconds = deltaMilliseconds / 1_000f
         wind.update(deltaSeconds)
         replenishSupply(deltaSeconds)
-        reloadRemainingSeconds.keys.forEach { team ->
-            reloadRemainingSeconds[team] = (reloadRemainingSeconds.getValue(team) - deltaSeconds)
-                .coerceAtLeast(0f)
+        reloadRemainingSecondsByAmmunition.forEach { (team, reloads) ->
+            reloads.keys.forEach { ammunition ->
+                val previous = reloads.getValue(ammunition)
+                val next = (previous - deltaSeconds)
+                    .coerceAtLeast(0f)
+                reloads[ammunition] = next
+                if (previous > 0f && next == 0f) {
+                    logAmmunition(
+                        reason = "reload-finished",
+                        ammunitionType = ammunition.name,
+                        team = team,
+                    )
+                }
+            }
         }
         simulationTimeMilliseconds += deltaMilliseconds
         remainingMatchTimeMilliseconds =
@@ -247,16 +298,27 @@ class DeterministicMatchSimulation(
                 deltaSeconds = deltaSeconds,
                 windAccelerationX = wind.accelerationX(),
                 gravityAccelerationY = config.gravityAccelerationY,
+                windResponse = projectile.windResponse,
+                gravityResponse = projectile.gravityResponse,
+                drag = projectile.drag,
             )
             val target = targetHitBy(advanced)
             when {
-                target != null -> resolveEntityImpact(advanced, target)
+                target != null -> {
+                    resolveEntityImpact(advanced, target)
+                    if (!target.stopsProjectile) resolved += advanced
+                }
                 terrain.contains(advanced.position) -> resolveTerrainImpact(advanced)
-                outsideBounds(advanced.position) -> Unit
+                outsideBounds(advanced.position) ||
+                    advanced.ageSeconds >= AmmunitionCatalog
+                        .definition(advanced.ammunition)
+                        .flight
+                        .maximumLifetimeSeconds -> Unit
                 else -> resolved += advanced
             }
         }
-        projectiles = resolved
+        projectiles = resolved + pendingProjectiles
+        pendingProjectiles.clear()
         advanceLingeringEffects(deltaSeconds)
         logCombatState("tick")
         if (projectiles.isEmpty() && status == MatchStatus.RUNNING) {
@@ -301,6 +363,15 @@ class DeterministicMatchSimulation(
                 attackProgress = attackProgress(it),
                 facingDirection = if (it.team == Team.BLUE) 1f else -1f,
                 sapperHasBomb = it.sapperHasBomb,
+                statuses = it.statuses.mapKeys { (status, _) -> status.name }
+                    .mapValues { (_, state) -> state.remainingSeconds },
+                statusDetails = it.statuses.mapKeys { (status, _) -> status.name }
+                    .mapValues { (_, state) ->
+                        com.urkaaaz.contracts.StatusSnapshot(
+                            remainingMilliseconds = (state.remainingSeconds * 1_000f).toLong(),
+                            strength = state.strength,
+                        )
+                    },
             )
         },
         projectiles = projectiles.map {
@@ -312,11 +383,33 @@ class DeterministicMatchSimulation(
                 y = it.position.y,
                 velocityX = it.velocity.x,
                 velocityY = it.velocity.y,
+                ageMilliseconds = (it.ageSeconds * 1_000f).toLong(),
+                parentProjectileId = it.parentProjectileId,
+                generation = it.generation,
+                mass = it.mass,
+                windResponse = it.windResponse,
+                gravityResponse = it.gravityResponse,
+                drag = it.drag,
             )
         },
         terrain = TerrainSnapshot(
             revision = terrain.revision,
             biome = config.terrainBiome,
+            craters = terrain.craters.map {
+                com.urkaaaz.contracts.CraterSnapshot(
+                    centerX = it.center.x,
+                    centerY = it.center.y,
+                    radius = it.radius,
+                    depth = it.depth,
+                )
+            },
+            worldWidth = terrain.worldWidth,
+            sampleSpacing = terrain.sampleSpacing,
+            heightSamples = terrain.heightSamples.ifEmpty {
+                List((terrain.worldWidth / terrain.sampleSpacing).toInt() + 2) {
+                    terrain.baselineHeight
+                }
+            },
         ),
         wind = wind.snapshot(),
         outcome = outcome(),
@@ -334,9 +427,20 @@ class DeterministicMatchSimulation(
             EffectSnapshot(
                 effectType = it.ammunition.name,
                 remainingMilliseconds = (it.remainingSeconds * 1_000f).toLong(),
+                effectId = it.id,
+                sourceProjectileId = it.sourceProjectileId,
+                x = it.currentCenter.x,
+                y = it.currentCenter.y,
+                radius = it.radius,
+                status = it.status?.name,
             )
         },
-        reloadRemainingSeconds = reloadRemainingSeconds.toMap(),
+        reloadRemainingSeconds = reloadRemainingSecondsByAmmunition.mapValues { (_, reloads) ->
+            reloads.values.maxOrNull() ?: 0f
+        },
+        reloadRemainingSecondsByAmmunition = reloadRemainingSecondsByAmmunition.mapValues { (_, reloads) ->
+            reloads.mapKeys { (type, _) -> type.name }
+        },
         activeProjectileTeams = projectiles.map { it.firedBy }.toSet(),
         remainingMilliseconds = remainingMatchTimeMilliseconds,
     )
@@ -387,9 +491,13 @@ class DeterministicMatchSimulation(
 
     private fun resolveTerrainImpact(projectile: Projectile) {
         phase = MatchPhase.RESOLVING_IMPACT
-        val effect = projectile.ammunition
-        if (effect.craterRadius > 0f) {
-            terrain = terrain.deform(projectile.position, effect.craterRadius, effect.craterDepth)
+        val definition = AmmunitionCatalog.definition(projectile.ammunition)
+        if (definition.terrain.deformsTerrain) {
+            terrain = terrain.deform(
+                projectile.position,
+                definition.terrain.craterRadius,
+                definition.terrain.craterDepth,
+            )
         }
 
         emit {
@@ -408,18 +516,33 @@ class DeterministicMatchSimulation(
                 simulationTimeMilliseconds,
                 projectile.position.x,
                 projectile.position.y,
-                effect.craterRadius,
+                definition.terrain.craterRadius,
                 projectile.ammunition.name,
             )
         }
+        logAmmunition("projectile-hit-terrain", projectile)
         resolveAmmunitionEffect(projectile)
     }
 
     private fun advanceUnits(deltaSeconds: Float) {
         if (deltaSeconds <= 0f) return
         units = units.map { unit ->
+            val statusAdvanced = unit.advanceStatuses(deltaSeconds)
+            if (statusAdvanced.statuses.containsKey(UnitStatus.STUNNED)) {
+                return@map statusAdvanced.copy(
+                    position = statusAdvanced.position.copy(
+                        y = terrain.heightAt(statusAdvanced.position.x),
+                    ),
+                    moving = false,
+                )
+            }
             if (unit.isAttacking()) {
-                return@map unit.copy(moving = false)
+                return@map statusAdvanced.copy(
+                    position = statusAdvanced.position.copy(
+                        y = terrain.heightAt(statusAdvanced.position.x),
+                    ),
+                    moving = false,
+                )
             }
             val waveMoving = unit.team in movingTeams && !unit.inGarrison
             val targetX = if (waveMoving && !unit.returningToGarrison) {
@@ -427,7 +550,11 @@ class DeterministicMatchSimulation(
             } else if (unit.returningToGarrison) {
                 fortressAttackX(unit.team)
             } else {
-                unit.garrisonTargetX ?: return@map unit
+                unit.garrisonTargetX ?: return@map statusAdvanced.copy(
+                    position = statusAdvanced.position.copy(
+                        y = terrain.heightAt(statusAdvanced.position.x),
+                    ),
+                )
             }
             val direction = kotlin.math.sign(targetX - unit.position.x)
             val combatTarget = if (waveMoving) {
@@ -556,7 +683,11 @@ class DeterministicMatchSimulation(
                 direction >= 0f -> minOf(combatStopX, alliedStopX)
                 else -> maxOf(combatStopX, alliedStopX)
             }
-            val step = unit.type.speed * if (waveMoving) {
+            val slowMultiplier = statusAdvanced.statuses[UnitStatus.SLOWED]
+                ?.strength
+                ?.let { (1f - it).coerceIn(0.05f, 1f) }
+                ?: 1f
+            val step = unit.type.speed * slowMultiplier * if (waveMoving) {
                 UNIT_MOVEMENT_SPEED_SCALE
             } else {
                 GARRISON_MOVEMENT_SPEED_SCALE
@@ -582,8 +713,11 @@ class DeterministicMatchSimulation(
                 maxOf(unit.position.x - step, movementTargetX)
             }
             val reachedTarget = nextX == movementTargetX
-            unit.copy(
-                position = unit.position.copy(x = nextX),
+            statusAdvanced.copy(
+                position = WorldPosition(
+                    x = nextX,
+                    y = terrain.heightAt(nextX),
+                ),
                 moving = !reachedTarget ||
                     (
                         waveMoving &&
@@ -625,7 +759,10 @@ class DeterministicMatchSimulation(
 
         current.indices.forEach { index ->
             val attacker = current[index]
-            if (!attacker.isAlive || !attacker.isAttacking()) return@forEach
+            if (!attacker.isAlive ||
+                !attacker.isAttacking() ||
+                attacker.statuses.containsKey(UnitStatus.STUNNED)
+            ) return@forEach
             val duration = attacker.type.attackCooldownSeconds
             val previousProgress = attacker.combatState.attackProgress
             val progress = if (duration <= 0f) {
@@ -1128,53 +1265,237 @@ class DeterministicMatchSimulation(
         phase = MatchPhase.RESOLVING_IMPACT
         emit {
             MatchEvent.ProjectileHitEntity(
-                it,
-                matchId,
-                simulationTimeMilliseconds,
-                projectile.id,
-                target.id,
-                projectile.ammunition.name,
+                eventId = it,
+                matchId = matchId,
+                simulationTimeMilliseconds = simulationTimeMilliseconds,
+                projectileId = projectile.id,
+                targetId = target.id,
+                ammunitionType = projectile.ammunition.name,
+                targetLayer = target.layer.name,
+                x = projectile.position.x,
+                y = projectile.position.y,
             )
         }
-        resolveAmmunitionEffect(projectile)
+        logAmmunition("projectile-hit-${target.layer.name.lowercase()}", projectile, targetId = target.id)
+        resolveAmmunitionEffect(projectile, target.layer)
     }
 
-    private fun resolveAmmunitionEffect(projectile: Projectile) {
-        val ammunition = projectile.ammunition
-        when (ammunition.effect) {
-            com.urkaaaz.domain.AmmunitionEffect.CLUSTER -> {
-                listOf(-32f, 0f, 32f).forEach { offset ->
+    private fun resolveAmmunitionEffect(
+        projectile: Projectile,
+        hitLayer: com.urkaaaz.domain.AmmunitionHitLayer? = null,
+    ) {
+        val definition = AmmunitionCatalog.definition(projectile.ammunition)
+        when (val behavior = definition.behavior) {
+            is com.urkaaaz.domain.AmmunitionImpactBehavior.Fragmentation -> {
+                if (projectile.generation == 0) {
+                    spawnSubprojectiles(projectile, behavior)
+                } else {
                     applyDamageAt(
-                        position = projectile.position.copy(x = projectile.position.x + offset),
-                        radius = ammunition.damageRadius,
-                        damage = ammunition.damage / 2,
+                        position = projectile.position,
+                        radius = definition.damage.fortressRadius,
+                        damage = behavior.fragmentDamage,
+                        sourceTeam = projectile.firedBy,
+                        unitDamage = behavior.fragmentDamage,
+                        hitLayer = hitLayer,
+                        sourceProjectileId = projectile.id,
+                        minimumDamage = definition.damage.minimumDamage,
+                        friendlyFire = definition.collision.friendlyFire,
                     )
                 }
             }
-            com.urkaaaz.domain.AmmunitionEffect.INCENDIARY -> {
-                applyDamageAt(projectile.position, ammunition.damageRadius, ammunition.damage)
+            is com.urkaaaz.domain.AmmunitionImpactBehavior.LingeringArea -> {
+                applyDamageAt(
+                    position = projectile.position,
+                    radius = definition.damage.fortressRadius,
+                    damage = definition.damage.fortressDamage,
+                    sourceTeam = projectile.firedBy,
+                    unitDamage = behavior.damagePerTick,
+                    status = behavior.status,
+                    statusDurationSeconds = behavior.durationSeconds,
+                    hitLayer = hitLayer,
+                    sourceProjectileId = projectile.id,
+                    minimumDamage = definition.damage.minimumDamage,
+                    friendlyFire = definition.collision.friendlyFire,
+                )
                 lingeringEffects += LingeringEffect(
-                    ammunition = ammunition,
+                    id = EntityId("effect-${sequence + 1}"),
+                    sourceProjectileId = projectile.id,
+                    ammunition = projectile.ammunition,
+                    sourceTeam = projectile.firedBy,
                     center = projectile.position,
-                    remainingSeconds = 3f,
-                    tickIntervalSeconds = 0.5f,
-                    untilNextTickSeconds = 0.5f,
+                    radius = behavior.radius,
+                    remainingSeconds = behavior.durationSeconds,
+                    tickIntervalSeconds = behavior.tickIntervalSeconds,
+                    untilNextTickSeconds = behavior.tickIntervalSeconds,
+                    status = behavior.status,
+                    driftsWithWind = behavior.driftsWithWind,
                 )
             }
-            else -> applyDamageAt(projectile.position, ammunition.damageRadius, ammunition.damage)
+            is com.urkaaaz.domain.AmmunitionImpactBehavior.Explosion -> {
+                emit {
+                    MatchEvent.ExplosionTriggered(
+                        it,
+                        matchId,
+                        simulationTimeMilliseconds,
+                        projectile.id,
+                        projectile.position.x,
+                        projectile.position.y,
+                        behavior.radius,
+                        definition.damage.fortressDamage,
+                    )
+                }
+                applyDamageAt(
+                    position = projectile.position,
+                    radius = behavior.radius,
+                    damage = definition.damage.fortressDamage,
+                    sourceTeam = projectile.firedBy,
+                    unitDamage = definition.damage.unitDamage,
+                    hitLayer = hitLayer,
+                    sourceProjectileId = projectile.id,
+                    minimumDamage = definition.damage.minimumDamage,
+                    friendlyFire = definition.collision.friendlyFire,
+                )
+            }
+            com.urkaaaz.domain.AmmunitionImpactBehavior.DirectImpact -> {
+                applyDamageAt(
+                    position = projectile.position,
+                    radius = definition.damage.fortressRadius,
+                    damage = definition.damage.fortressDamage,
+                    sourceTeam = projectile.firedBy,
+                    unitDamage = definition.damage.unitDamage,
+                    hitLayer = hitLayer,
+                    sourceProjectileId = projectile.id,
+                    minimumDamage = definition.damage.minimumDamage,
+                    friendlyFire = definition.collision.friendlyFire,
+                )
+            }
         }
         finishIfFortressDestroyed()
     }
 
-    private fun applyDamageAt(position: WorldPosition, radius: Float, damage: Int) {
-        if (currentBlueFortress.intersects(position, radius)) {
+    private fun spawnSubprojectiles(
+        parent: Projectile,
+        behavior: com.urkaaaz.domain.AmmunitionImpactBehavior.Fragmentation,
+    ) {
+        val centerIndex = (behavior.fragmentCount - 1) / 2f
+        repeat(behavior.fragmentCount) { index ->
+            val offset = (index - centerIndex) * behavior.spread
+            pendingProjectiles += parent.copy(
+                id = EntityId("${parent.id.value}-fragment-$index"),
+                position = parent.position.copy(x = parent.position.x + offset),
+                velocity = Velocity(
+                    x = parent.velocity.x * 0.35f + offset * 1.8f,
+                    y = parent.velocity.y * 0.35f - kotlin.math.abs(offset) * 0.4f,
+                ),
+                ageSeconds = 0f,
+                parentProjectileId = parent.id,
+                generation = parent.generation + 1,
+                mass = parent.mass,
+                windResponse = parent.windResponse,
+                gravityResponse = parent.gravityResponse,
+                drag = parent.drag,
+            )
+            logAmmunition(
+                reason = "subprojectile-spawned",
+                projectile = pendingProjectiles.last(),
+            )
+        }
+    }
+
+    private fun applyDamageAt(
+        position: WorldPosition,
+        radius: Float,
+        damage: Int,
+        sourceTeam: Team? = null,
+        unitDamage: Int = damage,
+        status: UnitStatus? = null,
+        statusDurationSeconds: Float = 3f,
+        hitLayer: com.urkaaaz.domain.AmmunitionHitLayer? = null,
+        sourceProjectileId: EntityId? = null,
+        minimumDamage: Int = 0,
+        friendlyFire: FriendlyFirePolicy = FriendlyFirePolicy.ENEMY_ONLY,
+    ) {
+        if (currentBlueFortress.intersects(position, radius) &&
+            canHitFortress(sourceTeam, Team.BLUE, friendlyFire)
+        ) {
             currentBlueFortress = currentBlueFortress.withDamage(damage)
-            emitDamage(currentBlueFortress.id, damage)
+            emitDamage(
+                targetId = currentBlueFortress.id,
+                amount = damage,
+                position = position,
+                sourceProjectileId = sourceProjectileId,
+                targetLayer = com.urkaaaz.domain.AmmunitionHitLayer.FORTRESS,
+            )
         }
-        if (currentRedFortress.intersects(position, radius)) {
+        if (currentRedFortress.intersects(position, radius) &&
+            canHitFortress(sourceTeam, Team.RED, friendlyFire)
+        ) {
             currentRedFortress = currentRedFortress.withDamage(damage)
-            emitDamage(currentRedFortress.id, damage)
+            emitDamage(
+                targetId = currentRedFortress.id,
+                amount = damage,
+                position = position,
+                sourceProjectileId = sourceProjectileId,
+                targetLayer = com.urkaaaz.domain.AmmunitionHitLayer.FORTRESS,
+            )
         }
+        if (unitDamage > 0) {
+            units = units.map { unit ->
+                val distance = kotlin.math.hypot(
+                    unit.position.x - position.x,
+                    unit.position.y - position.y,
+                )
+                if (unit.isAlive &&
+                    distance <= radius &&
+                    canHitUnit(sourceTeam, unit.team, friendlyFire)
+                ) {
+                    val distanceFactor = if (radius <= 0f) 1f else {
+                        (1f - distance / radius).coerceIn(0f, 1f)
+                    }
+                    val scaledDamage = if (distanceFactor >= 1f) {
+                        unitDamage
+                    } else {
+                        maxOf(
+                            minimumDamage,
+                            kotlin.math.round(unitDamage * distanceFactor).toInt(),
+                        )
+                    }
+                    unit.withDamage(scaledDamage).let {
+                        if (status == null ||
+                            status in unit.type.statusImmunities ||
+                            (unit.type.statusResistance[status] ?: 1f) <= 0f
+                        ) {
+                            it
+                        } else {
+                            val resistance = unit.type.statusResistance[status] ?: 1f
+                            it.withStatus(
+                                status = status,
+                                durationSeconds = statusDurationSeconds * resistance,
+                                strength = (1f * resistance).coerceIn(0f, 1f),
+                            )
+                        }
+                    }.also {
+                        emitDamage(
+                            targetId = it.id,
+                            amount = scaledDamage,
+                            position = position,
+                            sourceProjectileId = sourceProjectileId,
+                            targetLayer = com.urkaaaz.domain.AmmunitionHitLayer.UNIT,
+                        )
+                    }
+                } else {
+                    unit
+                }
+            }
+        }
+        logAmmunition(
+            reason = "damage-area",
+            ammunitionType = null,
+            x = position.x,
+            y = position.y,
+            amount = damage,
+            radius = radius,
+        )
     }
 
     private fun advanceLingeringEffects(deltaSeconds: Float) {
@@ -1185,14 +1506,52 @@ class DeterministicMatchSimulation(
             var untilNextTick = effect.untilNextTickSeconds - deltaSeconds
             while (remaining > 0f && untilNextTick <= 0f) {
                 applyDamageAt(
-                    position = effect.center,
-                    radius = effect.ammunition.damageRadius,
-                    damage = effect.ammunition.damage / 2,
+                    position = effect.currentCenter,
+                    radius = effect.radius,
+                    damage = AmmunitionCatalog
+                        .definition(effect.ammunition)
+                        .damage
+                        .fortressDamage / 2,
+                    sourceTeam = effect.sourceTeam,
+                    unitDamage = AmmunitionCatalog
+                        .definition(effect.ammunition)
+                        .behavior
+                        .let { behavior ->
+                            (behavior as? com.urkaaaz.domain.AmmunitionImpactBehavior.LingeringArea)
+                                ?.damagePerTick
+                                ?: 0
+                        },
+                    status = (
+                        AmmunitionCatalog.definition(effect.ammunition).behavior as?
+                            com.urkaaaz.domain.AmmunitionImpactBehavior.LingeringArea
+                    )?.status,
+                    statusDurationSeconds = (
+                        AmmunitionCatalog.definition(effect.ammunition).behavior as?
+                            com.urkaaaz.domain.AmmunitionImpactBehavior.LingeringArea
+                    )?.durationSeconds ?: 3f,
+                    sourceProjectileId = effect.sourceProjectileId,
+                    friendlyFire = AmmunitionCatalog
+                        .definition(effect.ammunition)
+                        .collision
+                        .friendlyFire,
+                    minimumDamage = AmmunitionCatalog
+                        .definition(effect.ammunition)
+                        .damage
+                        .minimumDamage,
                 )
                 untilNextTick += effect.tickIntervalSeconds
             }
             if (remaining > 0f) {
+                val nextCenter = if (effect.driftsWithWind) {
+                    effect.currentCenter.copy(
+                        x = effect.currentCenter.x +
+                            wind.accelerationX() * deltaSeconds,
+                    )
+                } else {
+                    effect.currentCenter
+                }
                 updated += effect.copy(
+                    currentCenter = nextCenter,
                     remainingSeconds = remaining,
                     untilNextTickSeconds = untilNextTick,
                 )
@@ -1217,12 +1576,84 @@ class DeterministicMatchSimulation(
         }
     }
 
+    private fun canHitFortress(
+        sourceTeam: Team?,
+        targetTeam: Team,
+        friendlyFire: FriendlyFirePolicy,
+    ): Boolean = sourceTeam == null ||
+        friendlyFire == FriendlyFirePolicy.ALL_TARGETS ||
+        targetTeam != sourceTeam
+
+    private fun canHitUnit(
+        sourceTeam: Team?,
+        targetTeam: Team,
+        friendlyFire: FriendlyFirePolicy,
+    ): Boolean = sourceTeam == null ||
+        friendlyFire != FriendlyFirePolicy.ENEMY_ONLY ||
+        targetTeam != sourceTeam
+
     private fun targetHitBy(projectile: Projectile): EntityTarget? {
-        val target = if (projectile.firedBy == Team.BLUE) currentRedFortress else currentBlueFortress
-        return if (target.intersects(projectile.position, config.fortressCollisionRadius)) {
-            EntityTarget(target.id)
+        val definition = AmmunitionCatalog.definition(projectile.ammunition)
+        val targetUnit = if (com.urkaaaz.domain.AmmunitionHitLayer.UNIT in definition.collision.hitLayers) {
+            if (definition.collision.mode ==
+                com.urkaaaz.domain.AmmunitionCollisionMode.IGNORE_UNITS
+            ) {
+                null
+            } else {
+            units.asSequence()
+                .filter { unit ->
+                    unit.isAlive &&
+                        canHitUnit(
+                            sourceTeam = projectile.firedBy,
+                            targetTeam = unit.team,
+                            friendlyFire = definition.collision.friendlyFire,
+                        ) &&
+                        kotlin.math.hypot(
+                            unit.position.x - projectile.position.x,
+                            unit.position.y - projectile.position.y,
+                        ) <= definition.collision.hitRadius
+                }
+                .minByOrNull { unit ->
+                    kotlin.math.hypot(
+                        unit.position.x - projectile.position.x,
+                        unit.position.y - projectile.position.y,
+                    )
+                }
+            }
         } else {
             null
+        }
+        if (targetUnit != null) {
+            return EntityTarget(
+                id = targetUnit.id,
+                layer = com.urkaaaz.domain.AmmunitionHitLayer.UNIT,
+                stopsProjectile = definition.collision.mode !=
+                    com.urkaaaz.domain.AmmunitionCollisionMode.PIERCE_UNITS,
+            )
+        }
+        if (com.urkaaaz.domain.AmmunitionHitLayer.FORTRESS !in definition.collision.hitLayers) {
+            return null
+        }
+        val fortressCandidates = listOf(currentBlueFortress, currentRedFortress)
+            .filter { fortress ->
+                canHitFortress(
+                    sourceTeam = projectile.firedBy,
+                    targetTeam = fortress.team,
+                    friendlyFire = definition.collision.friendlyFire,
+                )
+            }
+        val target = fortressCandidates.firstOrNull { fortress ->
+            fortress.intersects(
+                projectile.position,
+                maxOf(config.fortressCollisionRadius, definition.collision.hitRadius),
+            )
+        }
+        return target?.let {
+            EntityTarget(
+                it.id,
+                com.urkaaaz.domain.AmmunitionHitLayer.FORTRESS,
+                stopsProjectile = true,
+            )
         }
     }
 
@@ -1250,10 +1681,65 @@ class DeterministicMatchSimulation(
         return factory(EventId("event-$sequence")).also { pendingEvents += it }
     }
 
-    private fun emitDamage(targetId: EntityId, amount: Int) {
+    private fun emitDamage(
+        targetId: EntityId,
+        amount: Int,
+        position: WorldPosition? = null,
+        sourceProjectileId: EntityId? = null,
+        targetLayer: com.urkaaaz.domain.AmmunitionHitLayer =
+            com.urkaaaz.domain.AmmunitionHitLayer.FORTRESS,
+    ) {
         emit {
-            MatchEvent.DamageApplied(it, matchId, simulationTimeMilliseconds, targetId, amount)
+            MatchEvent.DamageApplied(
+                eventId = it,
+                matchId = matchId,
+                simulationTimeMilliseconds = simulationTimeMilliseconds,
+                targetId = targetId,
+                amount = amount,
+                ammunitionType = "AMMUNITION",
+                x = position?.x ?: 0f,
+                y = position?.y ?: 0f,
+                targetLayer = targetLayer.name,
+                sourceProjectileId = sourceProjectileId,
+            )
         }
+        logAmmunition(
+            reason = "damage-applied",
+            targetId = targetId,
+            x = position?.x,
+            y = position?.y,
+            amount = amount,
+        )
+    }
+
+    private fun logAmmunition(
+        reason: String,
+        projectile: Projectile? = null,
+        ammunitionType: String? = projectile?.ammunition?.name,
+        team: Team? = projectile?.firedBy,
+        x: Float? = projectile?.position?.x,
+        y: Float? = projectile?.position?.y,
+        targetId: EntityId? = null,
+        amount: Int? = null,
+        radius: Float? = null,
+        remainingReloadSeconds: Float? = null,
+    ) {
+        ammunitionLogSink.log(
+            AmmunitionLogRecord(
+                matchId = matchId,
+                simulationTimeMilliseconds = simulationTimeMilliseconds,
+                reason = reason,
+                projectileId = projectile?.id,
+                ammunitionType = ammunitionType,
+                team = team,
+                x = x,
+                y = y,
+                targetId = targetId,
+                amount = amount,
+                radius = radius,
+                remainingReloadSeconds = remainingReloadSeconds,
+            ),
+        )
     }
 
     private fun initialWallet(): ResourceWallet = ResourceWallet(
@@ -1265,11 +1751,18 @@ class DeterministicMatchSimulation(
     )
 
     private data class LingeringEffect(
+        val id: EntityId,
+        val sourceProjectileId: EntityId,
         val ammunition: AmmunitionType,
+        val sourceTeam: Team,
         val center: WorldPosition,
+        val currentCenter: WorldPosition = center,
+        val radius: Float,
         val remainingSeconds: Float,
         val tickIntervalSeconds: Float,
         val untilNextTickSeconds: Float,
+        val status: UnitStatus?,
+        val driftsWithWind: Boolean,
     )
 
     private data class DefeatedUnit(
@@ -1277,7 +1770,11 @@ class DeterministicMatchSimulation(
         val remainingSeconds: Float,
     )
 
-    private data class EntityTarget(val id: EntityId)
+    private data class EntityTarget(
+        val id: EntityId,
+        val layer: com.urkaaaz.domain.AmmunitionHitLayer,
+        val stopsProjectile: Boolean,
+    )
 
     companion object {
         private const val MAX_SUPPLY = 20

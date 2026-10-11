@@ -20,6 +20,10 @@ sealed interface UnitDefinition {
     val detonatesOnContact: Boolean
     val returnsAfterFortressAttack: Boolean
     val participatesInMeleeSynergy: Boolean
+    val statusImmunities: Set<UnitStatus>
+        get() = emptySet()
+    val statusResistance: Map<UnitStatus, Float>
+        get() = emptyMap()
 
     fun incomingDamage(damage: Int): Int = damage
 }

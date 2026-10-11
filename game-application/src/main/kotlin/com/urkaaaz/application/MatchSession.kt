@@ -12,11 +12,14 @@ import com.urkaaaz.simulation.DeterministicMatchSimulation
 import com.urkaaaz.simulation.CombatLogSink
 import com.urkaaaz.simulation.NoOpCombatLogSink
 import com.urkaaaz.simulation.SimulationConfig
+import com.urkaaaz.simulation.AmmunitionLogSink
+import com.urkaaaz.simulation.NoOpAmmunitionLogSink
 
 class MatchSession(
     private val terrainBiome: String = "GREEN_FRONTIER",
     private val initialWind: WindSnapshot = WindSnapshot(),
     private val combatLogSink: CombatLogSink = NoOpCombatLogSink,
+    private val ammunitionLogSink: AmmunitionLogSink = NoOpAmmunitionLogSink,
 ) {
     private var simulation: DeterministicMatchSimulation? = null
     private val selectedAmmunition = mutableMapOf(
@@ -124,6 +127,7 @@ class MatchSession(
                 windAccelerationX = initialWind.direction * initialWind.strength,
             ),
             combatLogSink = combatLogSink,
+            ammunitionLogSink = ammunitionLogSink,
         )
         latestEvents = requireNotNull(simulation).start()
         paused = false

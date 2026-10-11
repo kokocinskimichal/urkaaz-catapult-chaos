@@ -32,6 +32,9 @@ sealed interface MatchEvent {
         override val simulationTimeMilliseconds: Long,
         val projectileId: EntityId,
         val catapultId: EntityId,
+        val ammunitionType: String = "ROCK",
+        val x: Float = 0f,
+        val y: Float = 0f,
     ) : MatchEvent
 
     data class ProjectileHitTerrain(
@@ -49,6 +52,9 @@ sealed interface MatchEvent {
         val projectileId: EntityId,
         val targetId: EntityId,
         val ammunitionType: String = "ROCK",
+        val targetLayer: String = "FORTRESS",
+        val x: Float = 0f,
+        val y: Float = 0f,
     ) : MatchEvent
 
     data class DamageApplied(
@@ -57,6 +63,12 @@ sealed interface MatchEvent {
         override val simulationTimeMilliseconds: Long,
         val targetId: EntityId,
         val amount: Int,
+        val ammunitionType: String = "ROCK",
+        val x: Float = 0f,
+        val y: Float = 0f,
+        val targetLayer: String = "FORTRESS",
+        val sourceProjectileId: EntityId? = null,
+        val falloffMultiplier: Float = 1f,
     ) : MatchEvent
 
     data class SpellCast(

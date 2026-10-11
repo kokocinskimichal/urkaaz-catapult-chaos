@@ -52,8 +52,13 @@ class AmmunitionPanelView(context: Context) : FrameLayout(context) {
         latestState = state
         val count = state.playerAmmunition[selectedAmmo]
         val enabled = count == null || count > 0
+        val reload = state.playerReloadByAmmunition[selectedAmmo]
+            ?: state.playerReloadRemainingSeconds
         selectorButton.isEnabled = enabled
         selectorButton.alpha = if (enabled) 1f else 0.35f
+        selectorButton.contentDescription =
+            "Choose ammunition: $selectedAmmo, stock=${count ?: "unlimited"}, " +
+                "reload=${"%.1f".format(java.util.Locale.US, reload)} seconds"
         selectorButton.setImageResource(iconResource(selectedAmmo))
     }
 
@@ -72,6 +77,7 @@ class AmmunitionPanelView(context: Context) : FrameLayout(context) {
             }
             val row = content.getChildAt(content.childCount - 1) as LinearLayout
             val count = latestState.playerAmmunition[ammunitionType]
+            val reload = latestState.playerReloadByAmmunition[ammunitionType] ?: 0f
             val enabled = count == null || count > 0
             row.addView(ImageButton(context).apply {
                 setImageResource(iconResource(ammunitionType))
@@ -80,7 +86,9 @@ class AmmunitionPanelView(context: Context) : FrameLayout(context) {
                 scaleType = ImageView.ScaleType.CENTER_INSIDE
                 alpha = if (enabled) 1f else 0.35f
                 isEnabled = enabled
-                contentDescription = ammunitionType
+                contentDescription =
+                    "$ammunitionType, stock=${count ?: "unlimited"}, " +
+                        "reload=${"%.1f".format(java.util.Locale.US, reload)} seconds"
                 setOnClickListener {
                     selectedAmmo = ammunitionType
                     selectorButton.setImageResource(iconResource(selectedAmmo))

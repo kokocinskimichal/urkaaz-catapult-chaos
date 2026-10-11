@@ -49,6 +49,29 @@ class DeterministicMatchSimulationTest {
     }
 
     @Test
+    fun reloadIsTrackedPerAmmunitionAndSelectionDoesNotBlockAnotherType() {
+        val simulation = DeterministicMatchSimulation(
+            MatchId("per-ammunition-reload"),
+            SimulationConfig(
+                bounds = WorldBounds(width = 1_000f, height = 600f),
+                gravityAccelerationY = 1_000f,
+            ),
+        )
+        simulation.start()
+        simulation.fire(EntityId("blue-catapult"), AmmunitionType.SIEGE_BOMB)
+        simulation.advance(2_000)
+
+        val snapshotAfterImpact = simulation.snapshot()
+        assertTrue(
+            snapshotAfterImpact
+                .reloadRemainingSecondsByAmmunition[Team.BLUE]
+                ?.get(AmmunitionType.SIEGE_BOMB.name)
+                ?.let { it > 0f } == true,
+        )
+        simulation.fire(EntityId("blue-catapult"), AmmunitionType.ROCK)
+    }
+
+    @Test
     fun terrainImpactEmitsImpactAndDeformationAndIncrementsRevision() {
         val simulation = DeterministicMatchSimulation(
             MatchId("match-1"),
@@ -83,6 +106,29 @@ class DeterministicMatchSimulationTest {
 
         assertTrue(events.any { it is MatchEvent.ProjectileHitTerrain })
         assertEquals(0L, simulation.snapshot().terrain.revision)
+    }
+
+    @Test
+    fun clusterImpactSpawnsDeterministicNonRecursiveSubprojectiles() {
+        val logs = mutableListOf<AmmunitionLogRecord>()
+        val simulation = DeterministicMatchSimulation(
+            MatchId("cluster-match"),
+            SimulationConfig(
+                bounds = WorldBounds(width = 1_000f, height = 600f),
+                gravityAccelerationY = 1_000f,
+            ),
+            ammunitionLogSink = AmmunitionLogSink { logs += it },
+        )
+        simulation.start()
+        simulation.fire(EntityId("blue-catapult"), AmmunitionType.CLUSTER_BOMB)
+
+        simulation.advance(2_000)
+
+        val fragments = simulation.snapshot().projectiles
+            .filter { it.parentProjectileId != null }
+        assertEquals(3, fragments.size)
+        assertTrue(fragments.all { it.generation == 1 })
+        assertEquals(3, logs.count { it.reason == "subprojectile-spawned" })
     }
 
     @Test

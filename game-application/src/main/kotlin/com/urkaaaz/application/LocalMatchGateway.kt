@@ -6,16 +6,20 @@ import com.urkaaaz.contracts.MatchSnapshot
 import com.urkaaaz.contracts.WindSnapshot
 import com.urkaaaz.simulation.CombatLogSink
 import com.urkaaaz.simulation.NoOpCombatLogSink
+import com.urkaaaz.simulation.AmmunitionLogSink
+import com.urkaaaz.simulation.NoOpAmmunitionLogSink
 
 /** Local in-memory application boundary for the Android host. */
 class LocalMatchGateway(
     terrainBiome: String = "GREEN_FRONTIER",
     initialWind: WindSnapshot = WindSnapshot(),
     combatLogSink: CombatLogSink = NoOpCombatLogSink,
+    ammunitionLogSink: AmmunitionLogSink = NoOpAmmunitionLogSink,
     private val session: MatchSession = MatchSession(
         terrainBiome = terrainBiome,
         initialWind = initialWind,
         combatLogSink = combatLogSink,
+        ammunitionLogSink = ammunitionLogSink,
     ),
 ) {
     fun dispatch(command: MatchCommand): MatchSnapshot = session.dispatch(command)

@@ -78,6 +78,19 @@ view/controller and connect it through `AppScreen` and `AppNavigator`.
 - Do not introduce a second parallel terrain, asset or navigation contract.
 - Prefer existing helpers and patterns before adding new abstractions.
 
+## Ammunition rules
+
+- `AmmunitionCatalog` is the single source of truth for player, AI and
+  simulation ammunition definitions.
+- `AmmunitionType` remains a stable serialized identifier; do not duplicate
+  ammunition balance values in Android or AI.
+- Projectile, impact, explosion and lingering-area visuals use world-space
+  coordinates and the battlefield camera transform. HUD reload and inventory
+  controls remain screen-space.
+- Subprojectiles are normal deterministic projectiles with a parent ID and
+  generation; a subprojectile must never recursively spawn another generation.
+- Ammunition logging is host-independent and must never change gameplay state.
+
 ## Validation gate
 
 Before every commit, run:

@@ -68,16 +68,30 @@ data class Projectile(
     val position: WorldPosition,
     val velocity: Velocity,
     val active: Boolean = true,
+    val ageSeconds: Float = 0f,
+    val parentProjectileId: EntityId? = null,
+    val generation: Int = 0,
+    val mass: Float = 1f,
+    val windResponse: Float = 1f,
+    val gravityResponse: Float = 1f,
+    val drag: Float = 0f,
 ) {
     fun advance(
         deltaSeconds: Float,
         windAccelerationX: Float = 0f,
         gravityAccelerationY: Float = 0f,
+        windResponse: Float = 1f,
+        gravityResponse: Float = 1f,
+        drag: Float = 0f,
     ): Projectile {
         require(deltaSeconds >= 0f) { "deltaSeconds must not be negative" }
+        require(windResponse >= 0f) { "windResponse must not be negative" }
+        require(gravityResponse >= 0f) { "gravityResponse must not be negative" }
+        require(drag >= 0f) { "drag must not be negative" }
+        val dragFactor = (1f - drag * deltaSeconds).coerceAtLeast(0f)
         val nextVelocity = velocity.copy(
-            x = velocity.x + windAccelerationX * deltaSeconds,
-            y = velocity.y + gravityAccelerationY * deltaSeconds,
+            x = (velocity.x + windAccelerationX * windResponse * deltaSeconds) * dragFactor,
+            y = (velocity.y + gravityAccelerationY * gravityResponse * deltaSeconds) * dragFactor,
         )
         return copy(
             position = WorldPosition(
@@ -85,6 +99,7 @@ data class Projectile(
                 y = position.y + nextVelocity.y * deltaSeconds,
             ),
             velocity = nextVelocity,
+            ageSeconds = ageSeconds + deltaSeconds,
         )
     }
 }
@@ -103,6 +118,7 @@ data class Unit(
     val combatState: UnitCombatState = UnitCombatState(),
     val sapperHasBomb: Boolean = true,
     val returningToGarrison: Boolean = false,
+    val statuses: Map<UnitStatus, StatusState> = emptyMap(),
 ) {
     init {
         require(health.maximum == type.maxHealth) { "unit health maximum must match unit type" }
@@ -112,4 +128,25 @@ data class Unit(
         get() = health.isAlive
 
     fun withDamage(amount: Int): Unit = copy(health = health.damage(amount))
+
+    fun withStatus(
+        status: UnitStatus,
+        durationSeconds: Float,
+        strength: Float,
+        maximumStrength: Float = strength,
+    ): Unit = copy(
+        statuses = statuses + (
+            status to StatusState(
+                remainingSeconds = durationSeconds,
+                strength = strength.coerceAtMost(maximumStrength),
+            )
+        ),
+    )
+
+    fun advanceStatuses(deltaSeconds: Float): Unit = copy(
+        statuses = statuses.mapNotNull { (status, state) ->
+            val remaining = state.remainingSeconds - deltaSeconds
+            if (remaining > 0f) status to state.copy(remainingSeconds = remaining) else null
+        }.toMap(),
+    )
 }

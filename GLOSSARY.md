@@ -75,6 +75,13 @@
 | **Wave Button** | Przycisk wysyłający zrekrutowane jednostki z garnizonu do walki. |
 | **Unit Loadout** | Ekran konfiguracji przed bitwą, na którym gracz wybiera maksymalnie trzy odblokowane jednostki dostępne w danym poziomie. Tylko wybrane jednostki są widoczne w HUD-zie i mogą zostać zrekrutowane. |
 | **Game Balance Configuration** | Planowana konfiguracja parametrów balansu, oddzielona od stanu rozgrywki. Składa się z osobnych sekcji dla jednostek, amunicji, czarów, bossów i poziomów oraz obsługuje walidację i wersjonowanie. |
+| **AmmunitionCatalog** | Wspólny katalog domenowy wszystkich dostępnych typów amunicji. Player, AI, symulacja i UI korzystają z tego samego źródła definicji. |
+| **AmmunitionDefinition** | Jawna definicja jednego typu amunicji obejmująca identyfikator, reload, inventory, lot, kolizję, obrażenia, deformację terenu i zachowanie impactu. |
+| **AmmunitionCollisionLayer** | Warstwa celu pocisku: `TERRAIN`, `UNIT`, `FORTRESS` albo `OUT_OF_BOUNDS`. Warstwa jest częścią kontraktu symulacji, a nie heurystyką renderera. |
+| **Subprojectile** | Pełnoprawny pocisk utworzony przez pocisk macierzysty. Ma własne ID, pozycję, prędkość, snapshot i eventy oraz nie może tworzyć kolejnych subprojectiles. |
+| **Lingering Area** | Utrzymujący się w świecie efekt obszarowy z własnym ID, czasem trwania, tickami, statusem i opcjonalnym dryfem przez wiatr. |
+| **Unit Status Effect** | Deterministyczny efekt na jednostce, np. `BURNING`, `POISONED`, `SLOWED` albo `STUNNED`, z czasem trwania, siłą, capem, odpornością i immunitetem. |
+| **World-Space Projectile Rendering** | Zasada, według której pociski, lot, impacty, eksplozje i lingering areas są rysowane w przestrzeni świata i skalują się dokładnie razem z zoomem kamery. |
 | **Balance Simulation** | Planowany zestaw automatycznych rozgrywek używający wersjonowanej konfiguracji balansu do pomiaru zwycięstw, czasu gry, zużycia zasobów i skuteczności jednostek oraz loadoutów. |
 | **Fortress Health Bars** | Paski HUD-u w lewym i prawym górnym rogu pokazujące zdrowie obu fortec. |
 | **Central Objective** | Specjalny, zniszczalny obiekt umieszczony na płaskim centralnym wzgórzu poziomów 5, 15, 25 itd. Nie zastępuje fortec, ale jest dodatkowym celem ostrzału. |

@@ -23,6 +23,7 @@ class MatchScreenController(
     private val viewModel = MatchViewModel(
         campaignLevel = campaignLevel,
         combatLogSink = AndroidCombatLogSink(),
+        ammunitionLogSink = AndroidAmmunitionLogSink(),
     )
     private val gameHandler = Handler(Looper.getMainLooper())
     private lateinit var battlefieldView: BattlefieldView

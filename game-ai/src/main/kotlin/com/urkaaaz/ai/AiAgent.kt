@@ -9,6 +9,7 @@ import com.urkaaaz.contracts.MatchStatus
 import com.urkaaaz.contracts.PlayerId
 import com.urkaaaz.contracts.Team
 import com.urkaaaz.domain.AmmunitionType
+import com.urkaaaz.domain.AmmunitionCatalog
 import com.urkaaaz.domain.UnitDefinition
 import com.urkaaaz.domain.UnitFactory
 import kotlin.math.atan2
@@ -87,15 +88,17 @@ class AiAgent(
         if (snapshot.status != MatchStatus.RUNNING || snapshot.phase == MatchPhase.FINISHED) {
             return emptyList()
         }
-        if ((snapshot.reloadRemainingSeconds[configuration.team] ?: 0f) > 0f ||
-            configuration.team in snapshot.activeProjectileTeams
-        ) {
-            return emptyList()
-        }
-
         val catapult = snapshot.catapults.firstOrNull { it.team == configuration.team }
             ?: return emptyList()
         val ammunition = chooseAmmunition(snapshot)
+        val reloadRemaining = snapshot
+            .reloadRemainingSecondsByAmmunition[configuration.team]
+            ?.get(ammunition)
+            ?: snapshot.reloadRemainingSeconds[configuration.team]
+            ?: 0f
+        if (reloadRemaining > 0f || configuration.team in snapshot.activeProjectileTeams) {
+            return emptyList()
+        }
         val target = snapshot.catapults.firstOrNull { it.team != configuration.team }
             ?: return emptyList()
         val (angle, power) = aimAt(catapult.x, catapult.y, target.x, target.y, snapshot)
@@ -153,9 +156,12 @@ class AiAgent(
         return when (effectiveTemperament(snapshot)) {
             AiTemperament.AGGRESSIVE,
             AiTemperament.DESPERATE -> available.maxBy {
-                it.damage + it.damageRadius.toInt()
+                val definition = AmmunitionCatalog.definition(it)
+                definition.damage.fortressDamage + definition.damage.fortressRadius.toInt()
             }.name
-            AiTemperament.CAUTIOUS -> available.minBy { it.damageRadius }.name
+            AiTemperament.CAUTIOUS -> available.minBy {
+                AmmunitionCatalog.definition(it).damage.fortressRadius
+            }.name
             AiTemperament.CHAOTIC -> available[random.nextInt(available.size)].name
         }
     }

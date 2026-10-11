@@ -13,6 +13,8 @@ import com.urkaaaz.contracts.MatchSnapshot
 import com.urkaaaz.contracts.PlayerId
 import com.urkaaaz.simulation.CombatLogSink
 import com.urkaaaz.simulation.NoOpCombatLogSink
+import com.urkaaaz.simulation.AmmunitionLogSink
+import com.urkaaaz.simulation.NoOpAmmunitionLogSink
 
 /**
  * Presentation coordinator for one Android match screen.
@@ -23,10 +25,12 @@ import com.urkaaaz.simulation.NoOpCombatLogSink
 class MatchViewModel(
     campaignLevel: Int = 1,
     private val combatLogSink: CombatLogSink = NoOpCombatLogSink,
+    private val ammunitionLogSink: AmmunitionLogSink = NoOpAmmunitionLogSink,
     private val gateway: LocalMatchGateway = LocalMatchGateway(
         CampaignLevelDefinition.forLevel(campaignLevel).terrain.biome.name,
         CampaignLevelDefinition.forLevel(campaignLevel).initialWind,
         combatLogSink = combatLogSink,
+        ammunitionLogSink = ammunitionLogSink,
     ),
     private val matchId: MatchId = MatchId("local-match"),
     private val playerId: PlayerId = PlayerId("local-player"),
