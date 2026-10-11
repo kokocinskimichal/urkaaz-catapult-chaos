@@ -3,6 +3,7 @@ package com.urkaaaz.application
 import com.urkaaaz.contracts.MatchCommand
 import com.urkaaaz.contracts.MatchSnapshot
 import com.urkaaaz.contracts.MatchStatus
+import com.urkaaaz.contracts.MapDefinition
 import com.urkaaaz.domain.AmmunitionType
 import com.urkaaaz.domain.WorldBounds
 import com.urkaaaz.domain.UnitFactory
@@ -19,6 +20,7 @@ import com.urkaaaz.simulation.NoOpAmmunitionLogSink
 class MatchSession(
     private val terrainBiome: String = "GREEN_FRONTIER",
     private val initialWind: WindSnapshot = WindSnapshot(),
+    private val mapDefinition: MapDefinition? = null,
     private val combatLogSink: CombatLogSink = NoOpCombatLogSink,
     private val ammunitionLogSink: AmmunitionLogSink = NoOpAmmunitionLogSink,
 ) {
@@ -129,6 +131,7 @@ class MatchSession(
                 ),
                 terrainBiome = terrainBiome,
                 windAccelerationX = initialWind.direction * initialWind.strength,
+                mapDefinition = mapDefinition,
             ),
             combatLogSink = combatLogSink,
             ammunitionLogSink = ammunitionLogSink,

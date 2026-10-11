@@ -8,11 +8,15 @@ import com.urkaaaz.ui.MatchScreenController
 class MatchScreen(
     activity: Activity,
     campaignLevel: Int,
+    demoMode: Boolean = false,
+    onBackClicked: () -> Unit,
     openDebugOnStart: Boolean = false,
 ) : ScreenContent {
     private val controller = MatchScreenController(
         activity = activity,
         campaignLevel = campaignLevel,
+        demoMode = demoMode,
+        onBackClicked = onBackClicked,
         openDebugOnStart = openDebugOnStart,
     )
 

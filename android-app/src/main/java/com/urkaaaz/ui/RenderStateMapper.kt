@@ -42,6 +42,19 @@ data class RenderState(
     val matchTimeRemainingMilliseconds: Long,
     val windDirection: Float,
     val combatFeedback: List<CombatFeedbackRenderState>,
+    val initialCameraAnchor: String? = null,
+    val mapObjects: List<MapObjectRenderState> = emptyList(),
+)
+
+data class MapObjectRenderState(
+    val id: String,
+    val type: String,
+    val x: Float,
+    val y: Float,
+    val scale: Float,
+    val rotationDegrees: Float,
+    val assetKey: String,
+    val collisionEnabled: Boolean,
 )
 
 data class ProjectileRenderState(
@@ -250,6 +263,19 @@ object RenderStateMapper {
                 else -> null
             }
         },
+        initialCameraAnchor = snapshot.mapDefinition?.initialCameraAnchor?.name,
+        mapObjects = snapshot.mapDefinition?.objects?.map {
+            MapObjectRenderState(
+                id = it.id,
+                type = it.type.name,
+                x = it.x,
+                y = it.y,
+                scale = it.scale,
+                rotationDegrees = it.rotationDegrees,
+                assetKey = it.assetKey,
+                collisionEnabled = it.collision != com.urkaaaz.contracts.ObjectCollision.NONE,
+            )
+        } ?: emptyList(),
     )
 
     private fun fortressX(id: String): Float =

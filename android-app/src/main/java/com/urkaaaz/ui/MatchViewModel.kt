@@ -1,6 +1,8 @@
 package com.urkaaaz.ui
 
 import com.urkaaaz.campaign.CampaignLevelDefinition
+import com.urkaaaz.campaign.DemoLevelDefinition
+import com.urkaaaz.campaign.DemoLevelDefinitions
 import com.urkaaaz.application.LocalMatchGateway
 import com.urkaaaz.ai.AiAgent
 import com.urkaaaz.ai.AiConfiguration
@@ -24,11 +26,13 @@ import com.urkaaaz.simulation.NoOpAmmunitionLogSink
  */
 class MatchViewModel(
     campaignLevel: Int = 1,
+    demoMode: Boolean = false,
     private val combatLogSink: CombatLogSink = NoOpCombatLogSink,
     private val ammunitionLogSink: AmmunitionLogSink = NoOpAmmunitionLogSink,
     private val gateway: LocalMatchGateway = LocalMatchGateway(
-        CampaignLevelDefinition.forLevel(campaignLevel).terrain.biome.name,
-        CampaignLevelDefinition.forLevel(campaignLevel).initialWind,
+        selectedDefinition(campaignLevel, demoMode).biome.name,
+        selectedDefinition(campaignLevel, demoMode).initialWind,
+        mapDefinition = selectedDefinition(campaignLevel, demoMode).mapDefinition,
         combatLogSink = combatLogSink,
         ammunitionLogSink = ammunitionLogSink,
     ),
@@ -55,6 +59,21 @@ class MatchViewModel(
     fun setAiAllowedUnitIds(unitIds: Set<String>) {
         aiAgent.setAllowedUnitIds(unitIds)
     }
+
+    private fun selectedDefinition(
+        campaignLevel: Int,
+        demoMode: Boolean,
+    ): DemoLevelDefinition =
+        if (demoMode) {
+            DemoLevelDefinitions.default
+        } else {
+            val campaign = CampaignLevelDefinition.forLevel(campaignLevel)
+            DemoLevelDefinition(
+                mapDefinition = campaign.mapDefinition,
+                biome = campaign.terrain.biome,
+                initialWind = campaign.initialWind,
+            )
+        }
 
     fun aiAllowedUnitIds(): Set<String> =
         aiAgent.allowedUnitIds()
@@ -215,3 +234,18 @@ class MatchViewModel(
         const val AI_UNIT_DECISION_INTERVAL_MILLISECONDS = 1_000L
     }
 }
+
+private fun selectedDefinition(
+    campaignLevel: Int,
+    demoMode: Boolean,
+): DemoLevelDefinition =
+    if (demoMode) {
+        DemoLevelDefinitions.default
+    } else {
+        val campaign = CampaignLevelDefinition.forLevel(campaignLevel)
+        DemoLevelDefinition(
+            mapDefinition = campaign.mapDefinition,
+            biome = campaign.terrain.biome,
+            initialWind = campaign.initialWind,
+        )
+    }

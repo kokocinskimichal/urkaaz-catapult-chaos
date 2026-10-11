@@ -10,6 +10,7 @@ data class MatchScenario(
     val initialUnits: List<UnitConfig> = emptyList(),
     val wind: WindSnapshot = WindSnapshot(),
     val victoryRules: VictoryRulesConfig = VictoryRulesConfig(),
+    val mapDefinition: MapDefinition? = null,
 ) {
     init {
         require(scenarioId.isNotBlank()) { "scenarioId must not be blank" }

@@ -1,5 +1,6 @@
 package com.urkaaaz.simulation
 
+import com.urkaaaz.contracts.MapDefinition
 import com.urkaaaz.contracts.WorldDimensions
 import com.urkaaaz.domain.WorldPosition
 import kotlin.math.abs
@@ -100,6 +101,17 @@ data class TerrainState(
     }
 
     companion object {
+        fun fromMapDefinition(definition: MapDefinition): TerrainState =
+            TerrainState(
+                baselineHeight = definition.terrain.samples.first().height,
+                worldWidth = definition.worldWidth,
+                sampleSpacing = definition.terrain.sampleStep,
+                heightSamples = definition.terrain.samples.map { it.height },
+                protectedRanges = definition.protectedTerrainZones.map {
+                    it.minX to it.maxX
+                },
+            )
+
         /**
          * Builds the initial sampled surface using the legacy Ground rules:
          * smoothed control points plus rounded mountain ridges.

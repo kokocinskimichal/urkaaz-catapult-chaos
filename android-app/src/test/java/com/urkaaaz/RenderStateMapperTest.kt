@@ -4,6 +4,13 @@ import com.urkaaaz.contracts.MatchPhase
 import com.urkaaaz.contracts.MatchSnapshot
 import com.urkaaaz.contracts.MatchStatus
 import com.urkaaaz.contracts.EntityId
+import com.urkaaaz.contracts.InitialCameraAnchor
+import com.urkaaaz.contracts.MapDefinition
+import com.urkaaaz.contracts.MapGenerationMetadata
+import com.urkaaaz.contracts.MapObjectPlacement
+import com.urkaaaz.contracts.MapObjectType
+import com.urkaaaz.contracts.TerrainProfile
+import com.urkaaaz.contracts.TerrainSample
 import com.urkaaaz.contracts.ProjectileSnapshot
 import com.urkaaaz.contracts.Team
 import com.urkaaaz.contracts.WindSnapshot
@@ -110,5 +117,49 @@ class RenderStateMapperTest {
         assertEquals(820f, feedback.x)
         assertEquals(43, feedback.amount)
         assertEquals("x1.35", feedback.label)
+    }
+
+    @Test
+    fun mapperExposesTypedMapObjectsAndCameraAnchor() {
+        val snapshot = MatchSnapshot(
+            mapDefinition = MapDefinition(
+                levelId = "render-map",
+                schemaVersion = 1,
+                worldWidth = 80f,
+                worldHeight = 100f,
+                terrain = TerrainProfile(
+                    samples = listOf(
+                        TerrainSample(0f, 50f),
+                        TerrainSample(40f, 55f),
+                        TerrainSample(80f, 60f),
+                    ),
+                ),
+                protectedTerrainZones = emptyList(),
+                fortresses = emptyList(),
+                catapults = emptyList(),
+                objects = listOf(
+                    MapObjectPlacement(
+                        id = "tree-1",
+                        type = MapObjectType.DECORATION,
+                        x = 40f,
+                        y = 55f,
+                        assetKey = "decoration.test.tree",
+                    ),
+                ),
+                initialCameraAnchor = InitialCameraAnchor.CENTER,
+                generationMetadata = MapGenerationMetadata(
+                    seed = 3L,
+                    generatorVersion = "test",
+                    authoringVersion = "test",
+                    source = "render-test",
+                ),
+            ),
+        )
+
+        val state = RenderStateMapper.map(snapshot)
+
+        assertEquals("CENTER", state.initialCameraAnchor)
+        assertEquals("decoration.test.tree", state.mapObjects.single().assetKey)
+        assertEquals(false, state.mapObjects.single().collisionEnabled)
     }
 }

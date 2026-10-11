@@ -11,6 +11,7 @@ import android.graphics.Shader
 import android.graphics.Typeface
 import com.urkaaaz.contracts.FortressHitboxProfile
 import com.urkaaaz.contracts.WorldDimensions
+import com.urkaaaz.contracts.WorldScale
 
 class BattlefieldRenderer(
     private val assets: BattlefieldAssetCatalog,
@@ -444,7 +445,7 @@ class BattlefieldRenderer(
                     "RAGING_BOAR" -> 220f * 1.6f
                     "SLINGMASTER" -> 170f
                     else -> 150f
-                } * 0.96f * 0.308f
+                } * 0.96f * 0.308f * WorldScale.UNIT_SCALE
                 val spriteHeight = spriteHeightWorld * worldToViewportScale
                 val spriteWidth = spriteHeight * bitmap.width / bitmap.height
                 canvas.drawBitmap(
@@ -462,7 +463,8 @@ class BattlefieldRenderer(
                     canvas = canvas,
                     centerX = centerX,
                     centerY = baselineY - spriteHeight - 14f * worldToViewportScale,
-                    width = UNIT_HEALTH_BAR_WIDTH_WORLD * worldToViewportScale,
+                    width = UNIT_HEALTH_BAR_WIDTH_WORLD * WorldScale.UNIT_SCALE *
+                        worldToViewportScale,
                     health = unit.health,
                     maxHealth = unit.maxHealth,
                 )
@@ -470,7 +472,8 @@ class BattlefieldRenderer(
                     drawSapperBombIndicator(
                         canvas,
                         centerX,
-                        baselineY - spriteHeight - 30f * worldToViewportScale,
+                        baselineY - spriteHeight - 30f * WorldScale.UNIT_SCALE *
+                            worldToViewportScale,
                         unit.sapperHasBomb,
                     )
                 }
@@ -480,12 +483,19 @@ class BattlefieldRenderer(
                 } else {
                     Color.rgb(210, 70, 60)
                 }
-                canvas.drawCircle(centerX, baselineY - 30f * worldToViewportScale, 18f, unitPaint)
+                canvas.drawCircle(
+                    centerX,
+                    baselineY - 30f * WorldScale.UNIT_SCALE * worldToViewportScale,
+                    18f * WorldScale.UNIT_SCALE * worldToViewportScale,
+                    unitPaint,
+                )
                 drawUnitHealthBar(
                     canvas = canvas,
                     centerX = centerX,
-                    centerY = baselineY - 48f * worldToViewportScale,
-                    width = UNIT_HEALTH_BAR_WIDTH_WORLD * worldToViewportScale,
+                    centerY = baselineY - 48f * WorldScale.UNIT_SCALE *
+                        worldToViewportScale,
+                    width = UNIT_HEALTH_BAR_WIDTH_WORLD * WorldScale.UNIT_SCALE *
+                        worldToViewportScale,
                     health = unit.health,
                     maxHealth = unit.maxHealth,
                 )
@@ -724,8 +734,12 @@ class BattlefieldRenderer(
         private const val WORLD_HEIGHT = WorldDimensions.HEIGHT
         private const val FORTRESS_CENTER_MARGIN = 490f
         private const val UNIT_HEALTH_BAR_WIDTH_WORLD = 46.2f
-        private const val FORTRESS_RENDER_WIDTH = 280f
-        private const val FORTRESS_RENDER_HEIGHT = 210f
+        private const val LEGACY_FORTRESS_RENDER_WIDTH = 280f
+        private const val LEGACY_FORTRESS_RENDER_HEIGHT = 210f
+        private val FORTRESS_RENDER_WIDTH =
+            LEGACY_FORTRESS_RENDER_WIDTH * WorldScale.FORTRESS_SCALE
+        private val FORTRESS_RENDER_HEIGHT =
+            LEGACY_FORTRESS_RENDER_HEIGHT * WorldScale.FORTRESS_SCALE
         private const val CATAPULT_RENDER_WIDTH = 95f
         private const val RELOAD_INDICATOR_OFFSET = 72f
         private const val CATAPULT_PLATFORM_HEIGHT_RATIO = 0.40f

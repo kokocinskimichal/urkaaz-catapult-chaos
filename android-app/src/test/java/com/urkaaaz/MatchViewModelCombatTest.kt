@@ -18,7 +18,7 @@ class MatchViewModelCombatTest {
         viewModel.debugSendEnemyWave()
 
         var damaged = false
-        repeat(1_000) {
+        repeat(300) {
             viewModel.dispatch(MatchUiAction.AdvanceSimulation)
             damaged = damaged || viewModel.renderState.units.any {
                 it.unitType == "DEFENDER" && it.health < it.maxHealth

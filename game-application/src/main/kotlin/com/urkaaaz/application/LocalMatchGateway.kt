@@ -3,6 +3,7 @@ package com.urkaaaz.application
 import com.urkaaaz.contracts.MatchCommand
 import com.urkaaaz.contracts.MatchEvent
 import com.urkaaaz.contracts.MatchSnapshot
+import com.urkaaaz.contracts.MapDefinition
 import com.urkaaaz.contracts.WindSnapshot
 import com.urkaaaz.simulation.CombatLogSink
 import com.urkaaaz.simulation.NoOpCombatLogSink
@@ -13,11 +14,13 @@ import com.urkaaaz.simulation.NoOpAmmunitionLogSink
 class LocalMatchGateway(
     terrainBiome: String = "GREEN_FRONTIER",
     initialWind: WindSnapshot = WindSnapshot(),
+    mapDefinition: MapDefinition? = null,
     combatLogSink: CombatLogSink = NoOpCombatLogSink,
     ammunitionLogSink: AmmunitionLogSink = NoOpAmmunitionLogSink,
     private val session: MatchSession = MatchSession(
         terrainBiome = terrainBiome,
         initialWind = initialWind,
+        mapDefinition = mapDefinition,
         combatLogSink = combatLogSink,
         ammunitionLogSink = ammunitionLogSink,
     ),

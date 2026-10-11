@@ -89,6 +89,12 @@ class MainActivity : ComponentActivity() {
             is AppScreen.Match -> MatchScreen(
                 activity = this,
                 campaignLevel = screen.campaignLevel,
+                demoMode = screen.levelId == "DEMO_LEVEL",
+                onBackClicked = {
+                    if (!navigator.back()) {
+                        finish()
+                    }
+                },
                 openDebugOnStart = screen.levelId == "DEMO_LEVEL",
             )
             is AppScreen.Result -> ResultScreen(this)

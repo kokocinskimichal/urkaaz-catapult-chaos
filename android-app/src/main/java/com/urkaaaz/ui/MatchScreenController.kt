@@ -19,10 +19,13 @@ import android.widget.TextView
 class MatchScreenController(
     private val activity: Activity,
     campaignLevel: Int,
+    demoMode: Boolean = false,
+    private val onBackClicked: () -> Unit,
     private val openDebugOnStart: Boolean = false,
 ) {
     private val viewModel = MatchViewModel(
         campaignLevel = campaignLevel,
+        demoMode = demoMode,
         combatLogSink = AndroidCombatLogSink(),
         ammunitionLogSink = AndroidAmmunitionLogSink(),
     )
@@ -65,6 +68,7 @@ class MatchScreenController(
             onPauseClicked = {
                 render(viewModel.dispatch(MatchUiAction.TogglePause))
             }
+            onBackClicked = this@MatchScreenController.onBackClicked
         }
         ammunitionPanel = AmmunitionPanelView(activity).apply {
             onAmmoSelected = { ammunitionType ->

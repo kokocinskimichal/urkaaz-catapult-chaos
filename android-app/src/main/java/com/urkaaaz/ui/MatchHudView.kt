@@ -33,6 +33,18 @@ class MatchHudView(context: Context) : FrameLayout(context) {
         minimumHeight = 0
         setPadding(0, 0, 0, 0)
     }
+    private val backButton = Button(context).apply {
+        text = "BACK"
+        textSize = 9f
+        setTextColor(Color.WHITE)
+        background = panelBackground(Color.argb(150, 61, 72, 78))
+        minWidth = 0
+        minHeight = 0
+        minimumWidth = 0
+        minimumHeight = 0
+        setPadding(6, 0, 6, 0)
+        contentDescription = "Back"
+    }
     private val timerPanel = LinearLayout(context).apply {
         orientation = LinearLayout.HORIZONTAL
         gravity = Gravity.CENTER
@@ -61,6 +73,13 @@ class MatchHudView(context: Context) : FrameLayout(context) {
             },
         )
         addView(
+            backButton,
+            LayoutParams(52, 36).apply {
+                gravity = Gravity.TOP or Gravity.START
+                marginStart = 8
+            },
+        )
+        addView(
             windIndicator,
             LayoutParams(208, 136).apply {
                 gravity = Gravity.TOP or Gravity.CENTER_HORIZONTAL
@@ -68,14 +87,17 @@ class MatchHudView(context: Context) : FrameLayout(context) {
             },
         )
         pauseButton.setOnClickListener { onPauseClicked?.invoke() }
+        backButton.setOnClickListener { onBackClicked?.invoke() }
     }
 
     var onPauseClicked: (() -> Unit)? = null
+    var onBackClicked: (() -> Unit)? = null
 
     fun render(state: RenderState) {
         timerText.text = formatMatchTime(state.matchTimeRemainingMilliseconds)
         val visible = state.statusLabel == "RUNNING" || state.statusLabel == "PAUSED"
         timerPanel.visibility = if (visible) View.VISIBLE else View.INVISIBLE
+        backButton.visibility = if (visible) View.VISIBLE else View.INVISIBLE
         windIndicator.visibility = timerPanel.visibility
         windIndicator.setImageResource(
             windIndicatorResource(state.windDirection, state.windStrength),

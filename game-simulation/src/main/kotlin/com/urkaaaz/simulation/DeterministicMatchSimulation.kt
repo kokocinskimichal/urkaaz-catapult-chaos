@@ -15,6 +15,7 @@ import com.urkaaaz.contracts.ProjectileSnapshot
 import com.urkaaaz.contracts.ResourceSnapshot
 import com.urkaaaz.contracts.EffectSnapshot
 import com.urkaaaz.contracts.Team
+import com.urkaaaz.contracts.WorldScale
 import com.urkaaaz.contracts.TerrainSnapshot
 import com.urkaaaz.contracts.WindSnapshot
 import com.urkaaaz.domain.Aim
@@ -50,8 +51,8 @@ class DeterministicMatchSimulation(
     private val config: SimulationConfig,
     private val blueCatapult: Catapult = defaultCatapult(Team.BLUE, config.bounds, config),
     private val redCatapult: Catapult = defaultCatapult(Team.RED, config.bounds, config),
-    private val blueFortress: Fortress = defaultFortress(Team.BLUE, config.bounds),
-    private val redFortress: Fortress = defaultFortress(Team.RED, config.bounds),
+    private val blueFortress: Fortress = defaultFortress(Team.BLUE, config.bounds, config),
+    private val redFortress: Fortress = defaultFortress(Team.RED, config.bounds, config),
     private val combatLogSink: CombatLogSink = NoOpCombatLogSink,
     private val ammunitionLogSink: AmmunitionLogSink = NoOpAmmunitionLogSink,
 ) {
@@ -64,20 +65,21 @@ class DeterministicMatchSimulation(
     private var simulationTimeMilliseconds = 0L
     private var remainingMatchTimeMilliseconds = config.matchDurationMilliseconds
     private var sequence = 0L
-    private var terrain = TerrainState.legacyProfile(
-        baselineHeight = config.bounds.height * 0.78f,
-        worldWidth = config.bounds.width,
-        worldHeight = config.bounds.height,
-    ).flattenFoundation(fortressCenterMargin, FORTRESS_FLAT_HALF_WIDTH)
-        .flattenFoundation(
-            config.bounds.width - fortressCenterMargin,
-            FORTRESS_FLAT_HALF_WIDTH,
-        )
-        .protectRange(fortressCenterMargin, FORTRESS_FLAT_HALF_WIDTH)
-        .protectRange(
-            config.bounds.width - fortressCenterMargin,
-            FORTRESS_FLAT_HALF_WIDTH,
-        )
+    private var terrain = config.mapDefinition?.let(TerrainState::fromMapDefinition)
+        ?: TerrainState.legacyProfile(
+            baselineHeight = config.bounds.height * 0.78f,
+            worldWidth = config.bounds.width,
+            worldHeight = config.bounds.height,
+        ).flattenFoundation(fortressCenterMargin, FORTRESS_FLAT_HALF_WIDTH)
+            .flattenFoundation(
+                config.bounds.width - fortressCenterMargin,
+                FORTRESS_FLAT_HALF_WIDTH,
+            )
+            .protectRange(fortressCenterMargin, FORTRESS_FLAT_HALF_WIDTH)
+            .protectRange(
+                config.bounds.width - fortressCenterMargin,
+                FORTRESS_FLAT_HALF_WIDTH,
+            )
     private var projectiles = emptyList<Projectile>()
     private val pendingProjectiles = mutableListOf<Projectile>()
     private var currentBlueFortress = blueFortress
@@ -423,6 +425,7 @@ class DeterministicMatchSimulation(
                 }
             },
         ),
+        mapDefinition = config.mapDefinition,
         wind = wind.snapshot(),
         outcome = outcome(),
         resources = ResourceSnapshot(
@@ -1791,8 +1794,9 @@ class DeterministicMatchSimulation(
     companion object {
         private const val MAX_SUPPLY = 20
         private const val SUPPLY_REGEN_INTERVAL_SECONDS = 3f
-        private const val UNIT_MOVEMENT_SPEED_SCALE = 0.45f
-        private const val GARRISON_MOVEMENT_SPEED_SCALE = 0.22f
+        private const val UNIT_MOVEMENT_SPEED_MULTIPLIER = 2f
+        private const val UNIT_MOVEMENT_SPEED_SCALE = 0.45f * UNIT_MOVEMENT_SPEED_MULTIPLIER
+        private const val GARRISON_MOVEMENT_SPEED_SCALE = 0.22f * UNIT_MOVEMENT_SPEED_MULTIPLIER
         private const val GARRISON_SPACING = 40f
         private const val NEW_UNIT_REAR_OFFSET = 20f
         private const val UNIT_INTERACTION_RANGE = 260f
@@ -1806,7 +1810,7 @@ class DeterministicMatchSimulation(
         private const val FORTRESS_CENTER_MARGIN = 490f
         private const val CATAPULT_CENTER_MARGIN = 450f
         // 140f fortress half-width plus 20% of the full 280f fortress width.
-        private const val FORTRESS_FLAT_HALF_WIDTH = 196f
+        private val FORTRESS_FLAT_HALF_WIDTH = WorldScale.FORTRESS_HALF_WIDTH
         private const val BASE_PHYSICS_WORLD_WIDTH = 1_600f
 
         private fun fortressMarginFor(worldWidth: Float): Float =
@@ -1820,23 +1824,35 @@ class DeterministicMatchSimulation(
                 id = EntityId("${team.name.lowercase()}-catapult"),
                 team = team,
                 position = WorldPosition(
-                    x = if (team == Team.BLUE) catapultMarginFor(bounds.width) else {
-                        bounds.width - catapultMarginFor(bounds.width)
-                    },
-                    y = bounds.height * config.defaultCatapultHeightRatio,
+                    x = config.mapDefinition?.catapults
+                        ?.firstOrNull { it.owner == team }?.x
+                        ?: if (team == Team.BLUE) catapultMarginFor(bounds.width) else {
+                            bounds.width - catapultMarginFor(bounds.width)
+                        },
+                    y = config.mapDefinition?.catapults
+                        ?.firstOrNull { it.owner == team }?.foundationHeight
+                        ?: bounds.height * config.defaultCatapultHeightRatio,
                 ),
                 aim = Aim(directionDegrees = 45f, power = 50f),
             )
 
-        private fun defaultFortress(team: Team, bounds: WorldBounds): Fortress =
+        private fun defaultFortress(
+            team: Team,
+            bounds: WorldBounds,
+            config: SimulationConfig,
+        ): Fortress =
             Fortress(
                 id = EntityId("${team.name.lowercase()}-fortress"),
                 team = team,
                 center = WorldPosition(
-                    x = if (team == Team.BLUE) fortressMarginFor(bounds.width) else {
-                        bounds.width - fortressMarginFor(bounds.width)
-                    },
-                    y = bounds.height * 0.68f,
+                    x = config.mapDefinition?.fortresses
+                        ?.firstOrNull { it.owner == team }?.x
+                        ?: if (team == Team.BLUE) fortressMarginFor(bounds.width) else {
+                            bounds.width - fortressMarginFor(bounds.width)
+                        },
+                    y = config.mapDefinition?.fortresses
+                        ?.firstOrNull { it.owner == team }?.foundationHeight
+                        ?: bounds.height * 0.68f,
                 ),
             )
     }

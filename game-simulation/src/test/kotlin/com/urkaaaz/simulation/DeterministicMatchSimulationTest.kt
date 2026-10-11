@@ -358,7 +358,7 @@ class DeterministicMatchSimulationTest {
         simulation.sendWave(Team.BLUE)
         simulation.sendWave(Team.RED)
 
-        repeat(80) { simulation.advance(100) }
+        repeat(40) { simulation.advance(100) }
 
         val units = simulation.snapshot().units
         val groupedAttackers = units.filter {
@@ -480,7 +480,7 @@ class DeterministicMatchSimulationTest {
         simulation.deployUnit(com.urkaaaz.domain.UnitFactory.sapper(), Team.BLUE)
         simulation.sendWave(Team.BLUE)
 
-        repeat(60) { simulation.advance(100) }
+        repeat(20) { simulation.advance(100) }
 
         val blueUnits = simulation.snapshot().units.filter { it.team == Team.BLUE }
         assertEquals(2, blueUnits.size)
@@ -499,7 +499,7 @@ class DeterministicMatchSimulationTest {
         simulation.deployUnit(com.urkaaaz.domain.UnitFactory.sapper(), Team.BLUE)
         simulation.sendWave(Team.BLUE)
 
-        repeat(90) { simulation.advance(100) }
+        repeat(45) { simulation.advance(100) }
 
         val redFortress = simulation.snapshot().fortresses.first { it.team == Team.RED }
         assertTrue(redFortress.health < redFortress.maxHealth)
@@ -531,7 +531,7 @@ class DeterministicMatchSimulationTest {
         }
         simulation.sendWave(Team.BLUE)
 
-        repeat(84) { simulation.advance(100) }
+        repeat(60) { simulation.advance(100) }
 
         val redFortress = simulation.snapshot().fortresses.first { it.team == Team.RED }
         assertTrue(

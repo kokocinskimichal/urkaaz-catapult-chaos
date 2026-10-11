@@ -24,6 +24,30 @@ For emulator testing, `CampaignUiState` currently initializes
 campaign entries are selectable. This is a temporary test configuration; it
 does not represent persistent campaign progression.
 
+The Level Definition System (LDS) uses immutable contracts in `game-contracts`:
+`MapDefinition`, `TerrainProfile`, `TerrainSample`,
+`ProtectedTerrainZone`, fortress and catapult placements, map object
+placements, `InitialCameraAnchor` and `MapGenerationMetadata`. Campaign
+authoring uses `LevelAuthoringRequest`, `LevelDefinitionBuilder`,
+`MapDefinitionValidator` and `CampaignLevelRegistry`. Definitions are passed
+through `CampaignLevelDefinition` and `MatchScenario` into
+`SimulationConfig`; the deterministic simulation consumes the materialized
+terrain profile without mutating the definition. The Android render-state
+mapper exposes immutable map objects and the initial camera anchor for
+presentation.
+
+The production map rules are: terrain samples every 40 world units, adjacent
+height delta no greater than 20 world units, at least three foundation
+transition samples, fortress foundation tolerance of ±80 world units,
+40-world-unit decoration margin, explicit protected terrain zones, neutral
+asset keys and deterministic seed/generator/authoring metadata. The first
+typed level is stored in
+`game-campaign/src/main/kotlin/com/urkaaaz/campaign/chapter1/Chapter1Level1.kt`;
+all 100 campaign levels have typed files grouped by chapter and are exposed
+through the same campaign definition boundary. The standalone
+`DemoLevelDefinitions.default` map uses the same LDS contracts and validator
+without being a campaign level.
+
 The current match HUD displays:
 
 - match countdown timer;
@@ -41,17 +65,18 @@ The current match HUD displays:
   sprite's bottom is anchored to the ground baseline, dimensions are derived
   from the legacy type heights (`144/150/170/220` world units), the shared
   `0.96` sprite scale is applied, and the raging boar keeps its `1.6` visual
-  multiplier. Deployed units use the simulation ground line rather than the
-  previous floating `0.72` height.
+  multiplier. The shared `WorldScale.UNIT_SCALE` is now `3.0` for all unit
+  presentation sizes; simulation separation and collision rules remain stable.
+  Deployed units use the simulation ground line rather than the previous
+  floating `0.72` height.
 - A sent wave marks its units as moving, advances them toward the opposing
   fortress during simulation ticks, and switches rendering to the copied
-  legacy movement animation frames. Presentation size is reduced to `0.55` of
-  the legacy world-height scale to match the current normalized battlefield
-  viewport.
+  legacy movement animation frames.
 - Supply follows the legacy resource cadence: after spending, it regenerates
   by one point every three seconds up to the maximum of twenty. Wave deployment
   starts from the unit's garrison position without an artificial positional
-  jump, and movement uses the legacy `0.45` speed scale.
+  jump, and movement uses the legacy `0.45` speed scale multiplied by the
+  global `2.0` movement rule.
 - Unit waves now resolve legacy-style interactions in the deterministic
    simulation: Defenders and Raging Boars fight nearby enemy units, Slingmasters
    attack visible-range targets, Demolishers detonate on contact, and Sappers
@@ -65,8 +90,9 @@ The current match HUD displays:
    balance tuning does not require editing unit classes.
 - Newly recruited units occupy the fortress-side garrison slot while older
   units walk outward into the next slot instead of overlapping. Garrison
-repositioning uses `40` world-unit spacing and a slower `0.22` movement
-scale; walk animation frames advance at half the previous cadence. Unit
+repositioning uses `40` world-unit spacing and a slower `0.22` movement scale,
+also multiplied by the global `2.0` movement rule; walk animation frames
+advance at half the previous cadence. Unit
 sprites use a `0.308` presentation multiplier after the additional 20% size
 reduction.
 - A newly recruited unit spawns behind the existing garrison line and walks

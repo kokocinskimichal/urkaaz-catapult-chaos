@@ -78,6 +78,8 @@ data class CampaignLevelDefinition(
     val startingAmmunition: Int,
     val initialWind: WindSnapshot = WindSnapshot(),
     val tutorial: TutorialParameters = TutorialParameters(enabled = false),
+    val mapDefinition: com.urkaaaz.contracts.MapDefinition =
+        CampaignMapDefinitions.forLevel(level),
 ) {
     init {
         require(level in 1..MAX_LEVELS) { "level must be between 1 and $MAX_LEVELS" }
@@ -89,7 +91,10 @@ data class CampaignLevelDefinition(
         opponentId: PlayerId = PlayerId("opponent"),
     ): MatchScenario = MatchScenario(
         scenarioId = "campaign-$level",
-        battlefield = BattlefieldConfig(terrain.width, terrain.height),
+        battlefield = BattlefieldConfig(
+            mapDefinition.worldWidth.toInt(),
+            mapDefinition.worldHeight.toInt(),
+        ),
         players = listOf(
             PlayerConfig(playerId, Team.BLUE),
             PlayerConfig(opponentId, Team.RED),
@@ -108,6 +113,7 @@ data class CampaignLevelDefinition(
         }.sortedBy { it.unitType },
         wind = initialWind,
         victoryRules = VictoryRulesConfig(defeatAllOpponents = true),
+        mapDefinition = mapDefinition,
     )
 
     companion object {
@@ -191,6 +197,7 @@ data class CampaignLevelDefinition(
                         emptyList()
                     },
                 ),
+                mapDefinition = CampaignMapDefinitions.forLevel(safeLevel),
             )
         }
 

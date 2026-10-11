@@ -75,4 +75,43 @@ class ContractsTest {
         assertEquals(matchId, event.matchId)
         assertEquals(0, event.simulationTimeMilliseconds)
     }
+
+    @Test
+    fun mapDefinitionCarriesImmutableTypedAuthoringData() {
+        val definition = MapDefinition(
+            levelId = "test-map",
+            schemaVersion = 1,
+            worldWidth = 80f,
+            worldHeight = 100f,
+            terrain = TerrainProfile(
+                samples = listOf(
+                    TerrainSample(0f, 50f),
+                    TerrainSample(40f, 55f),
+                    TerrainSample(80f, 60f),
+                ),
+            ),
+            protectedTerrainZones = emptyList(),
+            fortresses = emptyList(),
+            catapults = emptyList(),
+            objects = emptyList(),
+            initialCameraAnchor = InitialCameraAnchor.CENTER,
+            generationMetadata = MapGenerationMetadata(
+                seed = 1L,
+                generatorVersion = "test",
+                authoringVersion = "test",
+                source = "contracts-test",
+            ),
+        )
+
+        assertEquals(InitialCameraAnchor.CENTER, definition.initialCameraAnchor)
+        assertEquals(40f, definition.terrain.sampleStep)
+        assertEquals(1L, definition.generationMetadata.seed)
+    }
+
+    @Test
+    fun sharedMatchEntityScaleUsesCurrentGlobalRules() {
+        assertEquals(0.70f, WorldScale.FORTRESS_SCALE)
+        assertEquals(137.2f, WorldScale.FORTRESS_HALF_WIDTH)
+        assertEquals(3.0f, WorldScale.UNIT_SCALE)
+    }
 }
