@@ -1,7 +1,7 @@
 # Chapter 1 LDS map comparison
 
 Porównanie wszystkich 10 map Chapter 1 po ponownym wygenerowaniu profili z
-gładszym polem nachylenia, większą amplitudą i limitem 40 world units między
+gładszym polem nachylenia, większą amplitudą i limitem 200 world units między
 próbkami.
 
 | Poziom | Seed | Min | Max | Zakres | Średnia | Max delta | Dekoracje |
@@ -20,7 +20,7 @@ próbkami.
 ## Wnioski
 
 - Profile wykorzystują szerokie, deterministyczne wzgórza i doliny z płynną zmianą nachylenia.
-- Każda mapa zachowuje limit maksymalnej różnicy sąsiednich próbek 40 world units.
+- Każda mapa zachowuje limit maksymalnej różnicy sąsiednich próbek 200 world units.
 - Fundamenty pozostają płaskie i odporne na generowanie terenu.
 - Dekoracje są generowane deterministycznie z większą liczbą prób i różnorodnością typów.
 - Contact sheet: `chapter1-contact-sheet.png`.

@@ -37,7 +37,7 @@ mapper exposes immutable map objects and the initial camera anchor for
 presentation.
 
 The production map rules are: terrain samples every 40 world units, adjacent
-height delta no greater than 40 world units, at least three foundation
+height delta no greater than 200 world units, at least three foundation
 transition samples, fortress foundation tolerance of ±80 world units,
 40-world-unit decoration margin, explicit protected terrain zones, neutral
 asset keys and deterministic seed/generator/authoring metadata. Each of the 100 campaign levels is stored in its own `ChapterXLevelY.kt` file
@@ -50,8 +50,15 @@ without being a campaign level.
 The campaign terrain was generated from broad deterministic slope fields, then
 materialized into the individual level files. Runtime loading does not invoke a
 campaign terrain generator; it consumes the authored samples while preserving
-smooth transitions, flat protected foundations and the 40-world-unit
+smooth transitions, flat protected foundations and the 200-world-unit
 adjacent-sample limit.
+
+`tools/level_ground_authoring.py` is a standard-library Python authoring helper.
+It opens a local browser canvas with the canonical 7200x4800 world proportions,
+proportional fortress previews, editable fortress foundation heights and
+automatic flat foundation zones. It exports 40-world-unit terrain samples and
+protected foundation metadata as JSON for later conversion into a campaign
+level definition.
 
 The current match HUD displays:
 

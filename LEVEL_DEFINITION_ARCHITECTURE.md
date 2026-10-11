@@ -106,13 +106,13 @@ Wymagania:
 
 - próbki muszą być uporządkowane rosnąco po osi X;
 - odstęp między kolejnymi próbkami wynosi 40 world units;
-- różnica wysokości między sąsiednimi próbkami nie może przekraczać 40 world
+- różnica wysokości między sąsiednimi próbkami nie może przekraczać 200 world
   units;
 - pierwszy i ostatni punkt muszą pokrywać zakres wymagany przez mapę;
 - interpolacja pomiędzy próbkami musi być deterministyczna;
 - profil bazowy nie może zawierać przypadkowych zmian generowanych w UI.
 
-Limit różnicy 40 world units ogranicza ostre uskoki, pomaga utrzymać czytelny
+Limit różnicy 200 world units ogranicza skrajne uskoki, pomaga utrzymać czytelny
 kontur mapy i zapewnia bezpieczne rozmieszczenie obiektów na przejściach.
 
 ### Fundamenty

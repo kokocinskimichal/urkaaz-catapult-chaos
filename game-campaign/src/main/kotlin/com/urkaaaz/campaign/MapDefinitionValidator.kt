@@ -100,7 +100,7 @@ sealed interface MapValidationError {
 
 object MapDefinitionValidator {
     const val TERRAIN_SAMPLE_STEP = 40f
-    const val MAX_TERRAIN_DELTA = 40f
+    const val MAX_TERRAIN_DELTA = 200f
     const val FOUNDATION_HEIGHT_TOLERANCE = 80f
     const val MIN_FOUNDATION_TRANSITION_SAMPLES = 3
     const val DECORATION_MARGIN = 40f

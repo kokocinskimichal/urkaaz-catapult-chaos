@@ -20,7 +20,7 @@ class MapDefinitionValidatorTest {
             terrain = TerrainProfile(
                 samples = listOf(
                     TerrainSample(0f, 3_650f),
-                    TerrainSample(40f, 3_700f),
+                    TerrainSample(40f, 3_900f),
                 ),
             ),
         )

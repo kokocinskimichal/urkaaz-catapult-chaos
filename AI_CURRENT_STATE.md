@@ -59,7 +59,7 @@ kampanię, AI oraz działający match screen. Gałąź robocza: `develop`.
   fundamentów i kotwice obiektów; strefy fortec pozostają płaskie i chronione.
   Profile terenu są zapisane jawnie w plikach poziomów; szerokie, gładkie
   wzgórza i doliny zostały zmaterializowane podczas authoringu przy limicie
-  40 world units między sąsiednimi próbkami.
+  200 world units między sąsiednimi próbkami.
 
 ## Ograniczenia i niedokończone obszary
 

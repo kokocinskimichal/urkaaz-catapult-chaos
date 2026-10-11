@@ -50,6 +50,23 @@ Nie wymyślaj potajemnie parametrów wpływających na gameplay. Wartości
 proponowane przez agenta muszą zostać oznaczone jako propozycje i zaakceptowane
 przed implementacją.
 
+### Ponowne authoringowanie istniejącej definicji
+
+Przed przygotowaniem planu sprawdź, czy docelowy plik
+`game-campaign/src/main/kotlin/com/urkaaaz/campaign/chapterX/ChapterXLevelY.kt`
+już istnieje. Jeżeli istnieje, traktuj uruchomienie `/addLevel chapter level`
+jako ponowne authoringowanie tego poziomu:
+
+- po akceptacji planu zastąp bieżącą zawartość nową definicją;
+- zachowaj stabilny identyfikator `chapter-X-level-Y` i właściwe podłączenie
+  do `CampaignMapDefinitions`;
+- nie twórz alternatywnego pliku ani drugiego wpisu registry dla tego samego
+  poziomu;
+- przed zapisem pokaż w podsumowaniu, że istniejący plik zostanie nadpisany.
+
+Samo wywołanie skilla nadal nie zapisuje zmian bez akceptacji kompletnego planu,
+ale akceptacja planu jest zgodą na nadpisanie istniejącego pliku docelowego.
+
 ## Dane wejściowe
 
 Minimalne dane wymagane do authoringu:
@@ -129,7 +146,7 @@ mechanizmów walidacji. Użyj istniejących typów i kontraktów. Nie kopiuj
 
 - Profil materializuj jawnie w `TerrainProfile`.
 - Próbki `TerrainSample` umieszczaj co dokładnie **40 world units**.
-- Maksymalna różnica wysokości sąsiednich próbek wynosi **40 world units**.
+- Maksymalna różnica wysokości sąsiednich próbek wynosi **200 world units**.
 - Próbki muszą być uporządkowane i pokrywać wymagany zakres mapy.
 - Główna geometria poziomu nie może być losowana w runtime.
 - Seed służy do deterministycznego authoringu/generowania danych, ale wynikowa
