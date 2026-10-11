@@ -409,6 +409,22 @@ class DeterministicMatchSimulationTest {
     }
 
     @Test
+    fun aMeleeUnitDamagesTheEnemyFortress() {
+        val simulation = DeterministicMatchSimulation(MatchId("melee-fortress-attack-match"), config)
+        simulation.start()
+        simulation.deployUnit(com.urkaaaz.domain.UnitFactory.defender(), Team.BLUE)
+        simulation.sendWave(Team.BLUE)
+
+        repeat(120) { simulation.advance(100) }
+
+        val redFortress = simulation.snapshot().fortresses.first { it.team == Team.RED }
+        assertTrue(
+            redFortress.health < redFortress.maxHealth,
+            "fortress=${redFortress.health}/${redFortress.maxHealth}, units=${simulation.snapshot().units}",
+        )
+    }
+
+    @Test
     fun combatDamageIsSeededByMatchIdAndReplaysExactly() {
         fun trace(): Pair<List<MatchEvent>, com.urkaaaz.contracts.MatchSnapshot> {
             val simulation = DeterministicMatchSimulation(MatchId("seeded-combat"), config)

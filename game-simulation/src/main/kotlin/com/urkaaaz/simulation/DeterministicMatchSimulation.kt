@@ -636,11 +636,19 @@ class DeterministicMatchSimulation(
                 ),
             )
             if (previousProgress < 0.5f && progress >= 0.5f) {
+                val targetId = attacker.combatState.targetId
+                    ?: return@forEach
                 hitIntents += AttackIntent(
                     attackerId = attacker.id,
-                    targetId = attacker.combatState.targetId
-                        ?: return@forEach,
-                    type = attacker.type.attackType,
+                    targetId = targetId,
+                    type = if (
+                        targetId == currentBlueFortress.id ||
+                        targetId == currentRedFortress.id
+                    ) {
+                        AttackType.SIEGE_MISSION
+                    } else {
+                        attacker.type.attackType
+                    },
                 )
             }
             if (progress >= 1f) {
@@ -784,7 +792,6 @@ class DeterministicMatchSimulation(
             }
             when (intent.type) {
                 AttackType.CONTACT_EXPLOSIVE -> detonateDemolisher(current, attackerIndex, attacker)
-                AttackType.SIEGE_MISSION -> attackMission(current, attackerIndex, attacker)
                 AttackType.MELEE, AttackType.RANGED -> {
                     val roll = rollDamage(attacker)
                     val members = meleeMembersForTarget(current, target.id)
