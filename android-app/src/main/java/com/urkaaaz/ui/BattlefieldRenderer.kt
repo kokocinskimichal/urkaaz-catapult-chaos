@@ -10,6 +10,7 @@ import android.graphics.RectF
 import android.graphics.Shader
 import android.graphics.Typeface
 import com.urkaaaz.contracts.FortressHitboxProfile
+import com.urkaaaz.contracts.WorldDimensions
 
 class BattlefieldRenderer(
     private val assets: BattlefieldAssetCatalog,
@@ -85,13 +86,14 @@ class BattlefieldRenderer(
             )
         }
 
-        val blueFortressCenterX = worldToViewX(160f, viewportWidth)
-        val redFortressCenterX = worldToViewX(WORLD_WIDTH - 160f, viewportWidth)
+        val blueFortressCenterX = worldToViewX(FORTRESS_CENTER_MARGIN, viewportWidth)
+        val redFortressCenterX =
+            worldToViewX(WORLD_WIDTH - FORTRESS_CENTER_MARGIN, viewportWidth)
         val blueFortressBaseline = worldToViewY(
             terrainHeightAt(
                 state.terrainHeightSamples,
                 state.terrainSampleSpacing,
-                160f,
+                FORTRESS_CENTER_MARGIN,
                 groundTop / viewportHeight * WORLD_HEIGHT,
             ),
             viewportHeight,
@@ -100,7 +102,7 @@ class BattlefieldRenderer(
             terrainHeightAt(
                 state.terrainHeightSamples,
                 state.terrainSampleSpacing,
-                WORLD_WIDTH - 160f,
+                WORLD_WIDTH - FORTRESS_CENTER_MARGIN,
                 groundTop / viewportHeight * WORLD_HEIGHT,
             ),
             viewportHeight,
@@ -309,7 +311,7 @@ class BattlefieldRenderer(
         }
 
         val sliceCount = 96
-        val tileWorldWidth = 360f
+        val tileWorldWidth = 450f
         val sliceWorldWidth = tileWorldWidth / sliceCount
         val sourceSliceWidth = (bitmap.width / sliceCount).coerceAtLeast(1)
         val source = android.graphics.Rect()
@@ -331,9 +333,9 @@ class BattlefieldRenderer(
             val right = worldToViewX(worldX + sliceWorldWidth, viewportWidth)
             destination.set(
                 left,
-                worldToViewY(surfaceY - 40f, viewportHeight),
+                worldToViewY(surfaceY - 48f, viewportHeight),
                 right + 1f,
-                worldToViewY(surfaceY + 46f, viewportHeight),
+                worldToViewY(surfaceY + 56f, viewportHeight),
             )
             canvas.drawBitmap(
                 bitmap,
@@ -627,9 +629,15 @@ class BattlefieldRenderer(
             setShadowLayer(4f, 1f, 1f, Color.BLACK)
         }
         val fortressTop = groundTop - FORTRESS_RENDER_HEIGHT
-        listOf(
-            "BLUE FORTRESS" to (160f to fortressTop + FORTRESS_RENDER_HEIGHT / 2f),
-            "RED FORTRESS" to (WORLD_WIDTH - 160f to fortressTop + FORTRESS_RENDER_HEIGHT / 2f),
+        listOf<Pair<String, Pair<Float, Float>>>(
+            "BLUE FORTRESS" to Pair(
+                FORTRESS_CENTER_MARGIN,
+                fortressTop + FORTRESS_RENDER_HEIGHT / 2f,
+            ),
+            "RED FORTRESS" to Pair(
+                WORLD_WIDTH - FORTRESS_CENTER_MARGIN,
+                fortressTop + FORTRESS_RENDER_HEIGHT / 2f,
+            ),
         ).forEach { (label, center) ->
             val centerX = worldToViewX(center.first, viewportWidth)
             val centerY = center.second
@@ -712,8 +720,9 @@ class BattlefieldRenderer(
         worldY / WORLD_HEIGHT * viewportHeight
 
     companion object {
-        private const val WORLD_WIDTH = 1_600f
-        private const val WORLD_HEIGHT = 900f
+        private const val WORLD_WIDTH = WorldDimensions.WIDTH
+        private const val WORLD_HEIGHT = WorldDimensions.HEIGHT
+        private const val FORTRESS_CENTER_MARGIN = 490f
         private const val UNIT_HEALTH_BAR_WIDTH_WORLD = 46.2f
         private const val FORTRESS_RENDER_WIDTH = 280f
         private const val FORTRESS_RENDER_HEIGHT = 210f

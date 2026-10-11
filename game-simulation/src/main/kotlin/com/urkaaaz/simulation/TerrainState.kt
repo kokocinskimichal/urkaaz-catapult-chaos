@@ -1,5 +1,6 @@
 package com.urkaaaz.simulation
 
+import com.urkaaaz.contracts.WorldDimensions
 import com.urkaaaz.domain.WorldPosition
 import kotlin.math.abs
 import kotlin.math.cos
@@ -15,7 +16,7 @@ data class TerrainState(
     val baselineHeight: Float,
     val craters: List<Crater> = emptyList(),
     val revision: Long = 0L,
-    val worldWidth: Float = 1_600f,
+    val worldWidth: Float = WorldDimensions.WIDTH,
     val sampleSpacing: Float = 8f,
     val heightSamples: List<Float> = emptyList(),
     val protectedRanges: List<Pair<Float, Float>> = emptyList(),

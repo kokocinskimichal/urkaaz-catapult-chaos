@@ -25,4 +25,30 @@ class TerrainStateTest {
         assertEquals(500f, terrain.heightAt(300f))
         assertTrue(terrain.heightAt(220f) > 500f)
     }
+
+    @Test
+    fun foundationIsFlatAcrossFortressWidthAndApproach() {
+        val terrain = TerrainState.legacyProfile(
+            baselineHeight = 3_744f,
+            worldWidth = 7_200f,
+            worldHeight = 4_800f,
+        ).flattenFoundation(centerX = 490f, halfWidth = 196f)
+
+        assertEquals(terrain.heightAt(490f), terrain.heightAt(294f), 0.1f)
+        assertEquals(terrain.heightAt(490f), terrain.heightAt(686f), 0.1f)
+    }
+
+    @Test
+    fun bothFortressFoundationsAreFlatAtCurrentWorldPositions() {
+        val terrain = TerrainState.legacyProfile(
+            baselineHeight = 3_744f,
+            worldWidth = 7_200f,
+            worldHeight = 4_800f,
+        ).flattenFoundation(490f, 196f)
+            .flattenFoundation(6_710f, 196f)
+
+        assertEquals(terrain.heightAt(490f), terrain.heightAt(294f), 0.1f)
+        assertEquals(terrain.heightAt(6_710f), terrain.heightAt(6_514f), 0.1f)
+        assertEquals(terrain.heightAt(6_710f), terrain.heightAt(6_906f), 0.1f)
+    }
 }

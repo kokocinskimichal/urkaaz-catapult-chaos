@@ -1,5 +1,6 @@
 package com.urkaaaz.ui
 
+import com.urkaaaz.contracts.WorldDimensions
 import kotlin.math.abs
 import kotlin.math.hypot
 
@@ -10,8 +11,8 @@ data class CameraTransform(
 )
 
 class BattlefieldCameraController(
-    private val worldWidth: Float = 1_600f,
-    private val worldHeight: Float = 900f,
+    private val worldWidth: Float = WorldDimensions.WIDTH,
+    private val worldHeight: Float = WorldDimensions.HEIGHT,
 ) {
     var transform: CameraTransform = CameraTransform(1f, 0f, 0f)
         private set
@@ -187,9 +188,7 @@ class BattlefieldCameraController(
     /**
      * Opens a match on the player's fortress, matching the legacy level-start framing.
      *
-     * The presentation world is a 1600x900 normalization of the legacy 7200x4800
-     * gameplay viewport. A 1.5 scale therefore shows approximately the same two-thirds
-     * battlefield width as the legacy default zoom.
+     * The presentation world uses the legacy 7200x4800 gameplay coordinates.
      */
     private fun positionAtLevelStart(viewportWidth: Float, viewportHeight: Float) {
         if (viewportWidth <= 0f || viewportHeight <= 0f) return
@@ -259,15 +258,15 @@ class BattlefieldCameraController(
     }
 
     companion object {
-        private const val WORLD_WIDTH = 1_600f
-        private const val WORLD_HEIGHT = 900f
-        private const val BLUE_FORTRESS_CENTER_X = 160f
+        private const val WORLD_WIDTH = WorldDimensions.WIDTH
+        private const val WORLD_HEIGHT = WorldDimensions.HEIGHT
+        private const val BLUE_FORTRESS_CENTER_X = 490f
         private const val FORTRESS_WIDTH = 280f
-        private const val GROUND_Y = 684f
-        private const val LEGACY_START_SCALE = 1.5f
+        private const val GROUND_Y = 3_452f
+        private const val LEGACY_START_SCALE = 1f
         private const val LEGACY_VIEWPORT_WIDTH = 4_800f
         private const val LEGACY_VIEWPORT_HEIGHT = 2_400f
-        private const val LEGACY_LEFT_MARGIN = 72f
+        private const val LEGACY_LEFT_MARGIN = 280f
         private const val LEGACY_BOTTOM_MARGIN = 96f
         private const val MIN_MAP_SCALE = 1f
         private const val MAX_MAP_SCALE = 2.5f

@@ -9,6 +9,7 @@ import android.graphics.Typeface
 import android.view.View
 import android.view.MotionEvent
 import android.view.ScaleGestureDetector
+import com.urkaaaz.contracts.WorldDimensions
 import kotlin.math.hypot
 
 /** Minimal renderer that draws only the presentation model, never the engine. */
@@ -51,9 +52,9 @@ class BattlefieldView(context: Context) : View(context) {
         terrainRevision = 0,
         terrainBiome = "GREEN_FRONTIER",
         projectiles = emptyList(),
-        blueCatapultX = 120f,
+        blueCatapultX = 450f,
         blueCatapultY = 648f,
-        redCatapultX = 1480f,
+        redCatapultX = 6750f,
         redCatapultY = 648f,
         playerAngleDegrees = 45f,
         playerPower = 50f,
@@ -548,7 +549,7 @@ class BattlefieldView(context: Context) : View(context) {
         private const val TRAJECTORY_PREVIEW_POINTS = 50
         private const val TRAJECTORY_PREVIEW_STEP_SECONDS = 1f / 30f
         private const val PROJECTILE_TRAIL_POINTS = 60
-        private const val WORLD_WIDTH = 1_600f
-        private const val WORLD_HEIGHT = 900f
+        private const val WORLD_WIDTH = WorldDimensions.WIDTH
+        private const val WORLD_HEIGHT = WorldDimensions.HEIGHT
     }
 }

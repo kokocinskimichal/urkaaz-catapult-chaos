@@ -7,6 +7,7 @@ import android.graphics.Color
 import android.graphics.Typeface
 import android.os.Handler
 import android.os.Looper
+import android.util.Log
 import android.view.Gravity
 import android.view.View
 import android.widget.FrameLayout
@@ -41,14 +42,20 @@ class MatchScreenController(
     private val gameTick = object : Runnable {
         override fun run() {
             if (!activity.isFinishing) {
-                val state = if (viewModel.renderState.statusLabel == "RUNNING") {
-                    viewModel.dispatch(MatchUiAction.AdvanceSimulation)
-                } else {
+                val state = try {
+                    if (viewModel.renderState.statusLabel == "RUNNING") {
+                        viewModel.dispatch(MatchUiAction.AdvanceSimulation)
+                    } else {
+                        viewModel.renderState
+                    }
+                } catch (exception: IllegalStateException) {
+                    Log.e(TAG, "Match tick failed", exception)
                     viewModel.renderState
                 }
                 render(state)
                 gameHandler.postDelayed(this, 33L)
             }
+
         }
     }
 
@@ -365,6 +372,7 @@ class MatchScreenController(
     }
 
     private companion object {
+        const val TAG = "MatchScreenController"
         val DEBUG_UNIT_IDS = setOf(
             "DEFENDER",
             "SAPPER",

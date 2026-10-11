@@ -55,6 +55,9 @@ class DeterministicMatchSimulation(
     private val combatLogSink: CombatLogSink = NoOpCombatLogSink,
     private val ammunitionLogSink: AmmunitionLogSink = NoOpAmmunitionLogSink,
 ) {
+    private val fortressCenterMargin = fortressMarginFor(config.bounds.width)
+    private val worldPhysicsScale =
+        (config.bounds.width / BASE_PHYSICS_WORLD_WIDTH).coerceAtLeast(1f)
     private var status = MatchStatus.NOT_STARTED
     private var phase = MatchPhase.CREATED
     private var activeTeam = Team.BLUE
@@ -65,10 +68,16 @@ class DeterministicMatchSimulation(
         baselineHeight = config.bounds.height * 0.78f,
         worldWidth = config.bounds.width,
         worldHeight = config.bounds.height,
-    ).flattenFoundation(160f, 150f)
-        .flattenFoundation(config.bounds.width - 160f, 150f)
-        .protectRange(160f, 150f)
-        .protectRange(config.bounds.width - 160f, 150f)
+    ).flattenFoundation(fortressCenterMargin, FORTRESS_FLAT_HALF_WIDTH)
+        .flattenFoundation(
+            config.bounds.width - fortressCenterMargin,
+            FORTRESS_FLAT_HALF_WIDTH,
+        )
+        .protectRange(fortressCenterMargin, FORTRESS_FLAT_HALF_WIDTH)
+        .protectRange(
+            config.bounds.width - fortressCenterMargin,
+            FORTRESS_FLAT_HALF_WIDTH,
+        )
     private var projectiles = emptyList<Projectile>()
     private val pendingProjectiles = mutableListOf<Projectile>()
     private var currentBlueFortress = blueFortress
@@ -134,7 +143,10 @@ class DeterministicMatchSimulation(
             "catapult already has an active projectile"
         }
         val radians = Math.toRadians(catapult.aim.directionDegrees.toDouble())
-        val speed = catapult.aim.power * ammunitionDefinition.flight.initialSpeedMultiplier
+        val speed =
+            catapult.aim.power *
+                ammunitionDefinition.flight.initialSpeedMultiplier *
+                worldPhysicsScale
         val direction = if (catapult.team == Team.BLUE) 1f else -1f
         val projectile = Projectile(
             id = EntityId("projectile-${sequence + 1}"),
@@ -297,7 +309,7 @@ class DeterministicMatchSimulation(
             val advanced = projectile.advance(
                 deltaSeconds = deltaSeconds,
                 windAccelerationX = wind.accelerationX(),
-                gravityAccelerationY = config.gravityAccelerationY,
+                gravityAccelerationY = config.gravityAccelerationY * worldPhysicsScale,
                 windResponse = projectile.windResponse,
                 gravityResponse = projectile.gravityResponse,
                 drag = projectile.drag,
@@ -1791,13 +1803,26 @@ class DeterministicMatchSimulation(
         private const val SAPPER_CONTACT_SPEED_MULTIPLIER = 0.45f
         private const val ALLIED_UNIT_MIN_SEPARATION = 16f
         private const val ATTACK_FORMATION_SPACING = 42f
+        private const val FORTRESS_CENTER_MARGIN = 490f
+        private const val CATAPULT_CENTER_MARGIN = 450f
+        // 140f fortress half-width plus 20% of the full 280f fortress width.
+        private const val FORTRESS_FLAT_HALF_WIDTH = 196f
+        private const val BASE_PHYSICS_WORLD_WIDTH = 1_600f
+
+        private fun fortressMarginFor(worldWidth: Float): Float =
+            if (worldWidth < 2_000f) 160f else FORTRESS_CENTER_MARGIN
+
+        private fun catapultMarginFor(worldWidth: Float): Float =
+            if (worldWidth < 2_000f) 120f else CATAPULT_CENTER_MARGIN
 
         private fun defaultCatapult(team: Team, bounds: WorldBounds, config: SimulationConfig): Catapult =
             Catapult(
                 id = EntityId("${team.name.lowercase()}-catapult"),
                 team = team,
                 position = WorldPosition(
-                    x = if (team == Team.BLUE) 120f else bounds.width - 120f,
+                    x = if (team == Team.BLUE) catapultMarginFor(bounds.width) else {
+                        bounds.width - catapultMarginFor(bounds.width)
+                    },
                     y = bounds.height * config.defaultCatapultHeightRatio,
                 ),
                 aim = Aim(directionDegrees = 45f, power = 50f),
@@ -1808,11 +1833,14 @@ class DeterministicMatchSimulation(
                 id = EntityId("${team.name.lowercase()}-fortress"),
                 team = team,
                 center = WorldPosition(
-                    x = if (team == Team.BLUE) 160f else bounds.width - 160f,
+                    x = if (team == Team.BLUE) fortressMarginFor(bounds.width) else {
+                        bounds.width - fortressMarginFor(bounds.width)
+                    },
                     y = bounds.height * 0.68f,
                 ),
             )
     }
+
 }
 
 private fun WorldPosition.distanceTo(other: WorldPosition): Float {

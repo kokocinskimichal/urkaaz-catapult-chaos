@@ -2,6 +2,7 @@ package com.urkaaaz.ui
 
 import com.urkaaaz.contracts.MatchEvent
 import com.urkaaaz.contracts.MatchSnapshot
+import com.urkaaaz.contracts.WorldDimensions
 
 /** Immutable presentation model derived from the public match snapshot. */
 data class RenderState(
@@ -12,7 +13,7 @@ data class RenderState(
     val terrainRevision: Long,
     val terrainBiome: String,
     val craters: List<CraterRenderState> = emptyList(),
-    val terrainWorldWidth: Float = 1_600f,
+    val terrainWorldWidth: Float = WorldDimensions.WIDTH,
     val terrainSampleSpacing: Float = 8f,
     val terrainHeightSamples: List<Float> = emptyList(),
     val projectiles: List<ProjectileRenderState>,
@@ -124,10 +125,10 @@ object RenderStateMapper {
                 ammunitionType = it.ammunitionType,
             )
         },
-        blueCatapultX = snapshot.catapults.firstOrNull { it.team.name == "BLUE" }?.x ?: 120f,
-        blueCatapultY = snapshot.catapults.firstOrNull { it.team.name == "BLUE" }?.y ?: 648f,
-        redCatapultX = snapshot.catapults.firstOrNull { it.team.name == "RED" }?.x ?: 1480f,
-        redCatapultY = snapshot.catapults.firstOrNull { it.team.name == "RED" }?.y ?: 648f,
+        blueCatapultX = snapshot.catapults.firstOrNull { it.team.name == "BLUE" }?.x ?: 450f,
+        blueCatapultY = snapshot.catapults.firstOrNull { it.team.name == "BLUE" }?.y ?: 3648f,
+        redCatapultX = snapshot.catapults.firstOrNull { it.team.name == "RED" }?.x ?: 6750f,
+        redCatapultY = snapshot.catapults.firstOrNull { it.team.name == "RED" }?.y ?: 3648f,
         playerAngleDegrees = snapshot.catapults.firstOrNull { it.entityId.value == "blue-catapult" }
             ?.directionDegrees ?: 45f,
         playerPower = snapshot.catapults.firstOrNull { it.entityId.value == "blue-catapult" }
@@ -148,8 +149,8 @@ object RenderStateMapper {
                     )
                     is MatchEvent.ProjectileHitEntity -> ImpactRenderState(
                         event.eventId.value,
-                        if (event.targetId.value.startsWith("blue")) 160f else 1440f,
-                        600f,
+                        if (event.targetId.value.startsWith("blue")) 490f else 6710f,
+                        3600f,
                         event.ammunitionType,
                     )
                     else -> null
@@ -252,5 +253,5 @@ object RenderStateMapper {
     )
 
     private fun fortressX(id: String): Float =
-        if (id.startsWith("blue")) 160f else 1440f
+        if (id.startsWith("blue")) 490f else 6710f
 }

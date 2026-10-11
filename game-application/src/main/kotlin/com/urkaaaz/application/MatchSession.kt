@@ -8,6 +8,7 @@ import com.urkaaaz.domain.WorldBounds
 import com.urkaaaz.domain.UnitFactory
 import com.urkaaaz.contracts.Team
 import com.urkaaaz.contracts.WindSnapshot
+import com.urkaaaz.contracts.WorldDimensions
 import com.urkaaaz.simulation.DeterministicMatchSimulation
 import com.urkaaaz.simulation.CombatLogSink
 import com.urkaaaz.simulation.NoOpCombatLogSink
@@ -122,7 +123,10 @@ class MatchSession(
         simulation = DeterministicMatchSimulation(
             matchId = command.matchId,
             config = SimulationConfig(
-                bounds = WorldBounds(width = 1_600f, height = 900f),
+                bounds = WorldBounds(
+                    width = WorldDimensions.WIDTH,
+                    height = WorldDimensions.HEIGHT,
+                ),
                 terrainBiome = terrainBiome,
                 windAccelerationX = initialWind.direction * initialWind.strength,
             ),

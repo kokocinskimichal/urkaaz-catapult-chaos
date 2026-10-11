@@ -94,6 +94,11 @@ class MatchViewModel(
     }
 
     fun dispatch(action: MatchUiAction): RenderState {
+        if (action == MatchUiAction.AdvanceSimulation &&
+            renderState.statusLabel != com.urkaaaz.contracts.MatchStatus.RUNNING.name
+        ) {
+            return renderState
+        }
         var snapshot = when (action) {
             MatchUiAction.StartMatch -> {
                 paused = false

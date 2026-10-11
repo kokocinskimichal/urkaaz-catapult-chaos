@@ -90,7 +90,7 @@ data class TerrainSnapshot(
     val revision: Long = 0L,
     val biome: String = "GREEN_FRONTIER",
     val craters: List<CraterSnapshot> = emptyList(),
-    val worldWidth: Float = 1_600f,
+    val worldWidth: Float = WorldDimensions.WIDTH,
     val sampleSpacing: Float = 8f,
     val heightSamples: List<Float> = emptyList(),
 )
