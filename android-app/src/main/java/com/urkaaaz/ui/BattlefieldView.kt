@@ -66,6 +66,7 @@ class BattlefieldView(context: Context) : View(context) {
         units = emptyList(),
         matchTimeRemainingMilliseconds = 300_000L,
         windDirection = 0f,
+        combatFeedback = emptyList(),
     )
     private var animationFrame = 0
     private var impactFrame = 0
@@ -139,6 +140,7 @@ class BattlefieldView(context: Context) : View(context) {
             viewportWidth = width.toFloat(),
             viewportHeight = height.toFloat(),
             debugHitboxesVisible = debugHitboxesVisible,
+            combatFeedback = state.combatFeedback,
         )
     }
 

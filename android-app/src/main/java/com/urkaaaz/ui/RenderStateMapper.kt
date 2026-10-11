@@ -34,6 +34,7 @@ data class RenderState(
     val units: List<UnitRenderState>,
     val matchTimeRemainingMilliseconds: Long,
     val windDirection: Float,
+    val combatFeedback: List<CombatFeedbackRenderState>,
 )
 
 data class ProjectileRenderState(
@@ -51,6 +52,23 @@ data class ImpactRenderState(
     val ammunitionType: String,
 )
 
+data class CombatFeedbackRenderState(
+    val eventId: String,
+    val kind: Kind,
+    val x: Float,
+    val y: Float,
+    val amount: Int = 0,
+    val radius: Float = 0f,
+    val label: String? = null,
+) {
+    enum class Kind {
+        DAMAGE,
+        HIT_FLASH,
+        EXPLOSION,
+        SYNERGY,
+    }
+}
+
 data class UnitRenderState(
     val entityId: String,
     val teamLabel: String,
@@ -60,6 +78,14 @@ data class UnitRenderState(
     val health: Int,
     val maxHealth: Int,
     val moving: Boolean,
+    val attackType: String,
+    val actionState: String,
+    val targetId: String?,
+    val attackGroupId: String?,
+    val attackCycleId: Long,
+    val attackProgress: Float,
+    val facingDirection: Float,
+    val sapperHasBomb: Boolean,
 )
 
 object RenderStateMapper {
@@ -137,9 +163,69 @@ object RenderStateMapper {
                 health = it.health,
                 maxHealth = it.maxHealth,
                 moving = it.moving,
+                attackType = it.attackType,
+                actionState = it.actionState,
+                targetId = it.targetId?.value,
+                attackGroupId = it.attackGroupId,
+                attackCycleId = it.attackCycleId,
+                attackProgress = it.attackProgress,
+                facingDirection = it.facingDirection,
+                sapperHasBomb = it.sapperHasBomb,
             )
         },
         matchTimeRemainingMilliseconds = snapshot.remainingMilliseconds,
         windDirection = snapshot.wind.direction,
+        combatFeedback = events.mapNotNull { event ->
+            when (event) {
+                is MatchEvent.AttackHit -> {
+                    val target = snapshot.units.firstOrNull { it.entityId == event.targetId }
+                    CombatFeedbackRenderState(
+                        eventId = event.eventId.value,
+                        kind = CombatFeedbackRenderState.Kind.DAMAGE,
+                        x = target?.x ?: fortressX(event.targetId.value),
+                        y = target?.y ?: 470f,
+                        amount = event.finalDamage,
+                        label = if (event.synergyCount > 1) {
+                            "x${"%.2f".format(event.synergyMultiplier)}"
+                        } else {
+                            null
+                        },
+                    )
+                }
+                is MatchEvent.ExplosionTriggered -> CombatFeedbackRenderState(
+                    eventId = event.eventId.value,
+                    kind = CombatFeedbackRenderState.Kind.EXPLOSION,
+                    x = event.x,
+                    y = event.y,
+                    radius = event.radius,
+                )
+                is MatchEvent.DamageApplied -> {
+                    val target = snapshot.units.firstOrNull {
+                        it.entityId == event.targetId
+                    }
+                    CombatFeedbackRenderState(
+                        eventId = event.eventId.value,
+                        kind = CombatFeedbackRenderState.Kind.DAMAGE,
+                        x = target?.x ?: fortressX(event.targetId.value),
+                        y = target?.y ?: 470f,
+                        amount = event.amount,
+                    )
+                }
+                is MatchEvent.AttackGroupJoined -> {
+                    val unit = snapshot.units.firstOrNull { it.entityId == event.unitId }
+                    CombatFeedbackRenderState(
+                        eventId = event.eventId.value,
+                        kind = CombatFeedbackRenderState.Kind.SYNERGY,
+                        x = unit?.x ?: 0f,
+                        y = unit?.y ?: 470f,
+                        label = event.groupId,
+                    )
+                }
+                else -> null
+            }
+        },
     )
+
+    private fun fortressX(id: String): Float =
+        if (id.startsWith("blue")) 160f else 1440f
 }

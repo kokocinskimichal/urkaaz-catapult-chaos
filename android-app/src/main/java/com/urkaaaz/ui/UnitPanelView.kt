@@ -18,6 +18,8 @@ class UnitPanelView(context: Context) : LinearLayout(context) {
         UnitOption("SAPPER", "sapper_icon", 10),
         UnitOption("DEFENDER", "defender_icon", 5),
         UnitOption("DEMOLISHER", "demolisher_icon", 10),
+        UnitOption("RAGING_BOAR", "goblin_raging_boar_icon", 10),
+        UnitOption("SLINGMASTER", "goblin_slingmaster_icon", 5),
     )
     private val supplyGauge = SupplyGaugeView(context)
     private val buttons = options.associateWith { option ->

@@ -12,13 +12,18 @@ import android.view.View
 import android.widget.FrameLayout
 import android.widget.LinearLayout
 import android.widget.CheckBox
+import android.widget.ScrollView
 import android.widget.TextView
 
 class MatchScreenController(
     private val activity: Activity,
     campaignLevel: Int,
+    private val openDebugOnStart: Boolean = false,
 ) {
-    private val viewModel = MatchViewModel(campaignLevel = campaignLevel)
+    private val viewModel = MatchViewModel(
+        campaignLevel = campaignLevel,
+        combatLogSink = AndroidCombatLogSink(),
+    )
     private val gameHandler = Handler(Looper.getMainLooper())
     private lateinit var battlefieldView: BattlefieldView
     private lateinit var hudView: MatchHudView
@@ -27,6 +32,7 @@ class MatchScreenController(
     private lateinit var debugButton: TextView
     private lateinit var snapshotCloseButton: TextView
     private var snapshotMode = false
+    private var debugPausedMatch = false
 
     private var aimAngle = 45f
     private var aimPower = 50f
@@ -162,6 +168,10 @@ class MatchScreenController(
                 },
             )
             render(viewModel.dispatch(MatchUiAction.StartMatch))
+            if (openDebugOnStart) {
+                viewModel.setAiUnitAutomationEnabled(false)
+                post { showDebugToolsDialog() }
+            }
         }
     }
 
@@ -187,6 +197,10 @@ class MatchScreenController(
     }
 
     private fun showDebugToolsDialog() {
+        debugPausedMatch = viewModel.renderState.statusLabel == "RUNNING"
+        if (debugPausedMatch) {
+            render(viewModel.dispatch(MatchUiAction.TogglePause))
+        }
         val dialog = Dialog(activity)
         val root = LinearLayout(activity).apply {
             orientation = LinearLayout.VERTICAL
@@ -233,6 +247,7 @@ class MatchScreenController(
             setPadding(0, dp(18), 0, dp(4))
         })
         val unitChecks = mutableMapOf<String, CheckBox>()
+        val recruitButtons = mutableMapOf<String, TextView>()
         DEBUG_UNIT_IDS.sorted().forEach { unitId ->
             val checkBox = CheckBox(activity).apply {
                 text = debugUnitLabel(unitId)
@@ -251,9 +266,51 @@ class MatchScreenController(
                     return@setOnCheckedChangeListener
                 }
                 viewModel.setAiAllowedUnitIds(selected)
+                recruitButtons.forEach { (id, button) ->
+                    button.isEnabled = id in selected
+                    button.alpha = if (button.isEnabled) 1f else 0.4f
+                }
             }
             root.addView(checkBox)
+            recruitButtons[unitId] = TextView(activity).apply {
+                text = "RECRUIT ENEMY ${debugUnitLabel(unitId).uppercase()}"
+                setTextColor(Color.WHITE)
+                textSize = 13f
+                setTypeface(typeface, Typeface.BOLD)
+                setPadding(dp(12), dp(8), dp(12), dp(8))
+                setBackgroundResource(com.urkaaaz.android.R.drawable.bg_hud_panel)
+                isEnabled = unitId in viewModel.aiAllowedUnitIds()
+                alpha = if (isEnabled) 1f else 0.4f
+                setOnClickListener {
+                    render(viewModel.debugRecruitEnemyUnit(unitId))
+                }
+            }
+            root.addView(
+                recruitButtons.getValue(unitId),
+                LinearLayout.LayoutParams(
+                    LinearLayout.LayoutParams.MATCH_PARENT,
+                    LinearLayout.LayoutParams.WRAP_CONTENT,
+                ).apply {
+                    topMargin = dp(2)
+                },
+            )
         }
+        root.addView(TextView(activity).apply {
+            text = "SEND ENEMY WAVE"
+            setTextColor(Color.WHITE)
+            textSize = 14f
+            setTypeface(typeface, Typeface.BOLD)
+            setPadding(dp(12), dp(10), dp(12), dp(10))
+            setBackgroundResource(com.urkaaaz.android.R.drawable.bg_hud_panel)
+            setOnClickListener {
+                render(viewModel.debugSendEnemyWave())
+            }
+        }, LinearLayout.LayoutParams(
+            LinearLayout.LayoutParams.MATCH_PARENT,
+            LinearLayout.LayoutParams.WRAP_CONTENT,
+        ).apply {
+            topMargin = dp(10)
+        })
         root.addView(TextView(activity).apply {
             text = "CLOSE"
             setTextColor(Color.WHITE)
@@ -268,12 +325,21 @@ class MatchScreenController(
         ).apply {
             topMargin = dp(14)
         })
-        dialog.setContentView(root)
+        dialog.setContentView(ScrollView(activity).apply {
+            isFillViewport = true
+            addView(root)
+        })
         dialog.setOnShowListener {
             dialog.window?.setLayout(
                 (activity.resources.displayMetrics.widthPixels * 0.45f).toInt(),
                 -2,
             )
+        }
+        dialog.setOnDismissListener {
+            if (debugPausedMatch) {
+                debugPausedMatch = false
+                render(viewModel.dispatch(MatchUiAction.TogglePause))
+            }
         }
         dialog.show()
     }

@@ -51,6 +51,14 @@ data class UnitSnapshot(
     val health: Int,
     val maxHealth: Int = 0,
     val moving: Boolean = false,
+    val attackType: String = "MELEE",
+    val actionState: String = "GARRISONED",
+    val targetId: EntityId? = null,
+    val attackGroupId: String? = null,
+    val attackCycleId: Long = 0L,
+    val attackProgress: Float = 0f,
+    val facingDirection: Float = 1f,
+    val sapperHasBomb: Boolean = true,
 )
 
 data class ProjectileSnapshot(

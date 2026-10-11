@@ -41,6 +41,7 @@ class BattlefieldRenderer(
         viewportWidth: Float,
         viewportHeight: Float,
         debugHitboxesVisible: Boolean,
+        combatFeedback: List<CombatFeedbackRenderState>,
     ) {
         canvas.save()
         canvas.scale(camera.scale, camera.scale)
@@ -126,6 +127,7 @@ class BattlefieldRenderer(
             val impactY = worldToViewY(impact.y, viewportHeight).coerceIn(0f, groundTop)
             drawTexture(canvas, frame, impactX - 54f, impactY - 54f, 108f)
         }
+        drawCombatFeedback(canvas, combatFeedback, viewportWidth, viewportHeight, groundTop)
 
         drawHealthBar(
             canvas,
@@ -217,16 +219,42 @@ class BattlefieldRenderer(
         state.units.forEach { unit ->
             val centerX = worldToViewX(unit.x, viewportWidth)
             val baselineY = groundTop + 4f * worldToViewportScale
-            val frames = assets.unitAnimationFrames(unit.unitType, unit.teamLabel, unit.moving)
-            val frameOffset = if (frames.isEmpty()) {
-                0
+            val defeated = unit.actionState == "DEAD"
+            val attacking = unit.actionState == "WINDING_UP" ||
+                unit.actionState == "ATTACKING" ||
+                unit.actionState == "RECOVERING" ||
+                (
+                    unit.actionState == "SEEKING_TARGET" &&
+                        unit.targetId != null &&
+                        !unit.moving &&
+                        (unit.attackCycleId > 0 || unit.attackGroupId != null)
+                    )
+            val frames = if (defeated) {
+                assets.unitDeathAnimationFrames(unit.unitType, unit.teamLabel)
             } else {
-                Math.floorMod(unit.entityId.hashCode(), frames.size)
+                assets.unitAnimationFrames(
+                    unit.unitType,
+                    unit.teamLabel,
+                    unit.moving,
+                    attacking,
+                )
             }
-            val bitmap = frames.getOrNull(
-                (animationFrame / 4 + frameOffset) % frames.size.coerceAtLeast(1),
-            )
-                ?: assets.unitBitmap(unit.unitType, unit.teamLabel)
+            val frame = if (frames.isEmpty()) {
+                null
+            } else if (defeated) {
+                frames[(animationFrame / 3).coerceIn(0, frames.lastIndex)]
+            } else if (attacking) {
+                frames[(unit.attackProgress * frames.size)
+                    .toInt()
+                    .coerceIn(0, frames.lastIndex)]
+            } else {
+                frames[
+                    (animationFrame / 4 +
+                        Math.floorMod(unit.entityId.hashCode(), frames.size)) %
+                        frames.size
+                ]
+            }
+            val bitmap = frame ?: assets.unitBitmap(unit.unitType, unit.teamLabel)
             if (bitmap != null) {
                 val spriteHeightWorld = when (unit.unitType) {
                     "SAPPER" -> 144f
@@ -255,6 +283,14 @@ class BattlefieldRenderer(
                     health = unit.health,
                     maxHealth = unit.maxHealth,
                 )
+                if (unit.unitType == "SAPPER") {
+                    drawSapperBombIndicator(
+                        canvas,
+                        centerX,
+                        baselineY - spriteHeight - 30f * worldToViewportScale,
+                        unit.sapperHasBomb,
+                    )
+                }
             } else {
                 unitPaint.color = if (unit.teamLabel == "BLUE") {
                     Color.rgb(65, 125, 220)
@@ -287,6 +323,7 @@ class BattlefieldRenderer(
         } else {
             0f
         }
+
         val background = Paint(Paint.ANTI_ALIAS_FLAG).apply {
             color = Color.argb(220, 25, 20, 16)
         }
@@ -315,6 +352,80 @@ class BattlefieldRenderer(
             3f,
             fill,
         )
+    }
+
+    private fun drawCombatFeedback(
+        canvas: Canvas,
+        feedback: List<CombatFeedbackRenderState>,
+        viewportWidth: Float,
+        viewportHeight: Float,
+        groundTop: Float,
+    ) {
+        feedback.forEach { item ->
+            val x = worldToViewX(item.x, viewportWidth)
+            val y = worldToViewY(item.y, viewportHeight).coerceIn(32f, groundTop)
+            when (item.kind) {
+                CombatFeedbackRenderState.Kind.DAMAGE -> {
+                    val paint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+                        color = Color.rgb(255, 224, 120)
+                        textSize = 28f
+                        typeface = Typeface.DEFAULT_BOLD
+                        setShadowLayer(4f, 1f, 1f, Color.BLACK)
+                    }
+
+                    canvas.drawText("-${item.amount}", x - 18f, y - 42f, paint)
+                    item.label?.let {
+                        paint.color = Color.WHITE
+                        paint.textSize = 20f
+                        canvas.drawText(it, x - 18f, y - 66f, paint)
+                    }
+                }
+                CombatFeedbackRenderState.Kind.HIT_FLASH -> {
+                    val paint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+                        color = Color.argb(180, 255, 245, 190)
+                        style = Paint.Style.STROKE
+                        strokeWidth = 5f
+                    }
+                    canvas.drawCircle(x, y - 35f, 28f, paint)
+                }
+                CombatFeedbackRenderState.Kind.EXPLOSION -> {
+                    val paint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+                        color = Color.argb(105, 255, 120, 35)
+                        style = Paint.Style.FILL
+                    }
+                    canvas.drawCircle(
+                        x,
+                        y,
+                        item.radius * viewportWidth / WORLD_WIDTH,
+                        paint,
+                    )
+                }
+                CombatFeedbackRenderState.Kind.SYNERGY -> {
+                    val paint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+                        color = Color.rgb(160, 235, 255)
+                        textSize = 18f
+                        typeface = Typeface.DEFAULT_BOLD
+                        setShadowLayer(3f, 1f, 1f, Color.BLACK)
+                    }
+                    canvas.drawText("GROUP", x - 28f, y - 105f, paint)
+                }
+            }
+        }
+    }
+
+    private fun drawSapperBombIndicator(
+        canvas: Canvas,
+        centerX: Float,
+        centerY: Float,
+        hasBomb: Boolean,
+    ) {
+        val paint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+            color = if (hasBomb) Color.rgb(255, 205, 65) else Color.GRAY
+            textSize = 16f
+            typeface = Typeface.DEFAULT_BOLD
+            setShadowLayer(3f, 1f, 1f, Color.BLACK)
+        }
+        canvas.drawText(if (hasBomb) "BOMB" else "EMPTY", centerX - 24f, centerY, paint)
     }
 
     private fun drawDebugHitboxes(

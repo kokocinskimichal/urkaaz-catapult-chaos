@@ -124,11 +124,19 @@ class BattlefieldAssetCatalog(private val context: Context) {
         unitType: String,
         teamLabel: String,
         moving: Boolean,
+        attacking: Boolean = false,
     ): List<Bitmap> {
         val side = if (teamLabel == "BLUE") "left" else "right"
-        val cacheKey = "$unitType:$side:$moving"
+        val cacheKey = "$unitType:$side:$moving:$attacking"
         return unitAnimationCache.getOrPut(cacheKey) {
-            if (!moving) {
+            if (attacking) {
+                val prefix = when (unitType) {
+                    "DEFENDER" -> "defender_${side}_fight"
+                    "RAGING_BOAR" -> "goblin_raging_boar_attack${if (side == "right") "_right" else ""}"
+                    else -> ""
+                }
+                if (prefix.isEmpty()) emptyList() else loadAnimationFrames(prefix)
+            } else if (!moving) {
                 when (unitType) {
                     "DEFENDER" -> loadIdleAnimationFrames("defender_${side}_idle")
                     "RAGING_BOAR" -> loadAnimationFrames(
@@ -146,6 +154,21 @@ class BattlefieldAssetCatalog(private val context: Context) {
                     else -> return@getOrPut emptyList()
                 }
                 loadAnimationFrames(prefix)
+            }
+        }
+
+    }
+
+    fun unitDeathAnimationFrames(unitType: String, teamLabel: String): List<Bitmap> {
+        val side = if (teamLabel == "BLUE") "left" else "right"
+        val cacheKey = "death:$unitType:$side"
+        return unitAnimationCache.getOrPut(cacheKey) {
+            when (unitType) {
+                "DEFENDER" -> loadAnimationFrames("defender_${side}_death")
+                "RAGING_BOAR" -> loadAnimationFrames(
+                    "goblin_raging_boar_death${if (side == "right") "_right" else ""}",
+                )
+                else -> emptyList()
             }
         }
     }

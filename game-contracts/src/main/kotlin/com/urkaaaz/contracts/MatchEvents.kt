@@ -82,6 +82,59 @@ sealed interface MatchEvent {
         val unitId: EntityId,
     ) : MatchEvent
 
+    data class TargetAcquired(
+        override val eventId: EventId,
+        override val matchId: MatchId,
+        override val simulationTimeMilliseconds: Long,
+        val unitId: EntityId,
+        val targetId: EntityId,
+    ) : MatchEvent
+
+    data class AttackStarted(
+        override val eventId: EventId,
+        override val matchId: MatchId,
+        override val simulationTimeMilliseconds: Long,
+        val attackerId: EntityId,
+        val targetId: EntityId,
+        val attackType: String,
+        val attackCycleId: Long,
+    ) : MatchEvent
+
+    data class AttackHit(
+        override val eventId: EventId,
+        override val matchId: MatchId,
+        override val simulationTimeMilliseconds: Long,
+        val attackerId: EntityId,
+        val targetId: EntityId,
+        val attackType: String,
+        val attackCycleId: Long,
+        val baseDamage: Int,
+        val rolledDamage: Int,
+        val synergyCount: Int,
+        val synergyMultiplier: Float,
+        val finalDamage: Int,
+    ) : MatchEvent
+
+    data class AttackGroupJoined(
+        override val eventId: EventId,
+        override val matchId: MatchId,
+        override val simulationTimeMilliseconds: Long,
+        val groupId: String,
+        val unitId: EntityId,
+        val targetId: EntityId,
+    ) : MatchEvent
+
+    data class ExplosionTriggered(
+        override val eventId: EventId,
+        override val matchId: MatchId,
+        override val simulationTimeMilliseconds: Long,
+        val sourceId: EntityId,
+        val x: Float,
+        val y: Float,
+        val radius: Float,
+        val baseDamage: Int,
+    ) : MatchEvent
+
     data class TerrainDeformed(
         override val eventId: EventId,
         override val matchId: MatchId,

@@ -23,6 +23,12 @@ data class UnitConfiguration(
         require(attackRange >= 0f) { "unit attack range must not be negative" }
         require(fortressDamage >= 0) { "unit fortress damage must not be negative" }
     }
+
+    val minimumAttackDamage: Int
+        get() = (attackDamage * 0.90f).toInt().coerceAtLeast(1)
+
+    val maximumAttackDamage: Int
+        get() = kotlin.math.ceil(attackDamage * 1.10f).toInt().coerceAtLeast(minimumAttackDamage)
 }
 
 object UnitConfigurations {

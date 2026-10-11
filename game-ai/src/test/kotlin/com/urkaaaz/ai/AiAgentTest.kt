@@ -77,6 +77,32 @@ class AiAgentTest {
     }
 
     @Test
+    fun aiDoesNotDeploySecondActiveSapper() {
+        val withSapper = snapshot.copy(
+            units = listOf(
+                com.urkaaaz.contracts.UnitSnapshot(
+                    entityId = EntityId("red-sapper-1"),
+                    team = Team.RED,
+                    unitType = UnitFactory.sapper().id,
+                    x = 700f,
+                    y = 400f,
+                    health = UnitFactory.sapper().maxHealth,
+                    maxHealth = UnitFactory.sapper().maxHealth,
+                ),
+            ),
+        )
+        val deployment = AiAgent(
+            AiConfiguration(
+                playerId = PlayerId("ai-player"),
+                team = Team.RED,
+                allowedUnits = setOf(UnitFactory.sapper()),
+            ),
+        ).chooseDeployment(withSapper)
+
+        assertEquals(null, deployment)
+    }
+
+    @Test
     fun aiDoesNotDecideWhenItIsNotItsTurn() {
         val commands = AiAgent(
             AiConfiguration(PlayerId("ai-player"), Team.RED),

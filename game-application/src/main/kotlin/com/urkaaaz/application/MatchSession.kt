@@ -9,11 +9,14 @@ import com.urkaaaz.domain.UnitFactory
 import com.urkaaaz.contracts.Team
 import com.urkaaaz.contracts.WindSnapshot
 import com.urkaaaz.simulation.DeterministicMatchSimulation
+import com.urkaaaz.simulation.CombatLogSink
+import com.urkaaaz.simulation.NoOpCombatLogSink
 import com.urkaaaz.simulation.SimulationConfig
 
 class MatchSession(
     private val terrainBiome: String = "GREEN_FRONTIER",
     private val initialWind: WindSnapshot = WindSnapshot(),
+    private val combatLogSink: CombatLogSink = NoOpCombatLogSink,
 ) {
     private var simulation: DeterministicMatchSimulation? = null
     private val selectedAmmunition = mutableMapOf(
@@ -100,6 +103,18 @@ class MatchSession(
     fun consumeEvents(): List<com.urkaaaz.contracts.MatchEvent> =
         latestEvents.also { latestEvents = emptyList() }
 
+    fun canDeployUnit(team: Team, unitType: String): Boolean {
+        val definition = runCatching { UnitFactory.byId(unitType) }.getOrNull() ?: return false
+        val resources = latestSnapshot.resourcesByTeam[team] ?: return false
+        if (resources.supply < definition.supplyCost) return false
+        return definition !is com.urkaaaz.domain.SapperUnit ||
+            latestSnapshot.units.none {
+                it.team == team &&
+                    it.unitType == definition.id &&
+                    it.health > 0
+            }
+    }
+
     private fun start(command: MatchCommand.Start): MatchSnapshot {
         simulation = DeterministicMatchSimulation(
             matchId = command.matchId,
@@ -108,6 +123,7 @@ class MatchSession(
                 terrainBiome = terrainBiome,
                 windAccelerationX = initialWind.direction * initialWind.strength,
             ),
+            combatLogSink = combatLogSink,
         )
         latestEvents = requireNotNull(simulation).start()
         paused = false

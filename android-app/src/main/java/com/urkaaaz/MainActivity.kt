@@ -86,7 +86,11 @@ class MainActivity : ComponentActivity() {
             )
             AppScreen.Loadout -> LoadoutScreen(this)
             AppScreen.Shop -> ShopScreen(this)
-            is AppScreen.Match -> MatchScreen(this, screen.campaignLevel)
+            is AppScreen.Match -> MatchScreen(
+                activity = this,
+                campaignLevel = screen.campaignLevel,
+                openDebugOnStart = screen.levelId == "DEMO_LEVEL",
+            )
             is AppScreen.Result -> ResultScreen(this)
         }
         screenHost.show(content)

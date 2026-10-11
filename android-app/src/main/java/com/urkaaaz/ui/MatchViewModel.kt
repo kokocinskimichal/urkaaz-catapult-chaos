@@ -11,6 +11,8 @@ import com.urkaaaz.contracts.MatchCommand
 import com.urkaaaz.contracts.MatchId
 import com.urkaaaz.contracts.MatchSnapshot
 import com.urkaaaz.contracts.PlayerId
+import com.urkaaaz.simulation.CombatLogSink
+import com.urkaaaz.simulation.NoOpCombatLogSink
 
 /**
  * Presentation coordinator for one Android match screen.
@@ -20,15 +22,18 @@ import com.urkaaaz.contracts.PlayerId
  */
 class MatchViewModel(
     campaignLevel: Int = 1,
+    private val combatLogSink: CombatLogSink = NoOpCombatLogSink,
     private val gateway: LocalMatchGateway = LocalMatchGateway(
         CampaignLevelDefinition.forLevel(campaignLevel).terrain.biome.name,
         CampaignLevelDefinition.forLevel(campaignLevel).initialWind,
+        combatLogSink = combatLogSink,
     ),
     private val matchId: MatchId = MatchId("local-match"),
     private val playerId: PlayerId = PlayerId("local-player"),
 ) {
     private var commandSequence = 0
     private var paused = false
+    private var aiUnitAutomationEnabled = true
     private var aiUnitDecisionElapsedMilliseconds = 0L
     private val aiAgent = AiAgent(
         AiConfiguration(
@@ -49,6 +54,40 @@ class MatchViewModel(
 
     fun aiAllowedUnitIds(): Set<String> =
         aiAgent.allowedUnitIds()
+
+    fun setAiUnitAutomationEnabled(enabled: Boolean) {
+        aiUnitAutomationEnabled = enabled
+    }
+
+    fun debugRecruitEnemyUnit(unitId: String): RenderState {
+        if (unitId !in aiAgent.allowedUnitIds() ||
+            !gateway.canDeployUnit(com.urkaaaz.contracts.Team.RED, unitId)
+        ) {
+            return renderState
+        }
+        val snapshot = gateway.dispatch(
+            MatchCommand.DeployUnit(
+                commandId = CommandId("debug-ai-${++commandSequence}-deploy"),
+                matchId = matchId,
+                playerId = PlayerId("local-ai"),
+                unitType = unitId,
+            ),
+        )
+        return RenderStateMapper.map(snapshot, gateway.consumeEvents())
+            .also { renderState = it }
+    }
+
+    fun debugSendEnemyWave(): RenderState {
+        val snapshot = gateway.dispatch(
+            MatchCommand.SendWave(
+                commandId = CommandId("debug-ai-${++commandSequence}-send-wave"),
+                matchId = matchId,
+                playerId = PlayerId("local-ai"),
+            ),
+        )
+        return RenderStateMapper.map(snapshot, gateway.consumeEvents())
+            .also { renderState = it }
+    }
 
     fun dispatch(action: MatchUiAction): RenderState {
         var snapshot = when (action) {
@@ -103,14 +142,19 @@ class MatchViewModel(
                     ammunitionType = action.ammunitionType,
                 ),
             )
-            is MatchUiAction.DeployUnit -> gateway.dispatch(
-                MatchCommand.DeployUnit(
-                    commandId = CommandId("ui-${++commandSequence}"),
-                    matchId = matchId,
-                    playerId = playerId,
-                    unitType = action.unitType,
-                ),
-            )
+            is MatchUiAction.DeployUnit -> {
+                if (!gateway.canDeployUnit(com.urkaaaz.contracts.Team.BLUE, action.unitType)) {
+                    return renderState
+                }
+                gateway.dispatch(
+                    MatchCommand.DeployUnit(
+                        commandId = CommandId("ui-${++commandSequence}"),
+                        matchId = matchId,
+                        playerId = playerId,
+                        unitType = action.unitType,
+                    ),
+                )
+            }
             MatchUiAction.SendWave -> gateway.dispatch(
                 MatchCommand.SendWave(
                     commandId = CommandId("ui-${++commandSequence}"),
@@ -127,8 +171,12 @@ class MatchViewModel(
                 snapshot = gateway.dispatch(command)
             }
             presentationEvents += gateway.consumeEvents()
-            aiUnitDecisionElapsedMilliseconds += 33L
-            if (aiUnitDecisionElapsedMilliseconds >= AI_UNIT_DECISION_INTERVAL_MILLISECONDS) {
+            if (aiUnitAutomationEnabled) {
+                aiUnitDecisionElapsedMilliseconds += 33L
+            }
+            if (aiUnitAutomationEnabled &&
+                aiUnitDecisionElapsedMilliseconds >= AI_UNIT_DECISION_INTERVAL_MILLISECONDS
+            ) {
                 aiUnitDecisionElapsedMilliseconds = 0L
                 aiAgent.chooseDeployment(snapshot)?.let { command ->
                     snapshot = gateway.dispatch(command)

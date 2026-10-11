@@ -4,12 +4,19 @@ import com.urkaaaz.contracts.MatchCommand
 import com.urkaaaz.contracts.MatchEvent
 import com.urkaaaz.contracts.MatchSnapshot
 import com.urkaaaz.contracts.WindSnapshot
+import com.urkaaaz.simulation.CombatLogSink
+import com.urkaaaz.simulation.NoOpCombatLogSink
 
 /** Local in-memory application boundary for the Android host. */
 class LocalMatchGateway(
     terrainBiome: String = "GREEN_FRONTIER",
     initialWind: WindSnapshot = WindSnapshot(),
-    private val session: MatchSession = MatchSession(terrainBiome, initialWind),
+    combatLogSink: CombatLogSink = NoOpCombatLogSink,
+    private val session: MatchSession = MatchSession(
+        terrainBiome = terrainBiome,
+        initialWind = initialWind,
+        combatLogSink = combatLogSink,
+    ),
 ) {
     fun dispatch(command: MatchCommand): MatchSnapshot = session.dispatch(command)
 
@@ -25,4 +32,7 @@ class LocalMatchGateway(
     ): MatchSnapshot = session.restart(matchId, playerId)
 
     fun consumeEvents(): List<MatchEvent> = session.consumeEvents()
+
+    fun canDeployUnit(team: com.urkaaaz.contracts.Team, unitType: String): Boolean =
+        session.canDeployUnit(team, unitType)
 }

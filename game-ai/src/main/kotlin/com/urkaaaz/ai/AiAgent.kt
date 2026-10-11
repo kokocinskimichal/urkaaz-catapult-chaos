@@ -164,7 +164,13 @@ class AiAgent(
         val availableSupply = snapshot.resourcesByTeam[configuration.team]?.supply
             ?: snapshot.resources.supply
         val affordable = configuration.allowedUnits.filter {
-            it.supplyCost <= availableSupply
+            it.supplyCost <= availableSupply &&
+                (it.id != UnitFactory.sapper().id ||
+                    snapshot.units.none {
+                        it.team == configuration.team &&
+                            it.unitType == UnitFactory.sapper().id &&
+                            it.health > 0
+                    })
         }
         if (affordable.isEmpty()) return null
         val enemyHasSapper = snapshot.units.any {

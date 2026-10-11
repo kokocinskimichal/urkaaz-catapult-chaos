@@ -105,4 +105,13 @@ class DomainModelsTest {
         )
         assertEquals(240, tuned.attackDamage)
     }
+
+    @Test
+    fun unitFactoryAssignsAttackTypeToEveryUnit() {
+        assertEquals(AttackType.MELEE, UnitFactory.defender().attackType)
+        assertEquals(AttackType.SIEGE_MISSION, UnitFactory.sapper().attackType)
+        assertEquals(AttackType.CONTACT_EXPLOSIVE, UnitFactory.demolisher().attackType)
+        assertEquals(AttackType.MELEE, UnitFactory.ragingBoar().attackType)
+        assertEquals(AttackType.RANGED, UnitFactory.slingmaster().attackType)
+    }
 }

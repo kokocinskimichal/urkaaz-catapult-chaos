@@ -8,8 +8,13 @@ import com.urkaaaz.ui.MatchScreenController
 class MatchScreen(
     activity: Activity,
     campaignLevel: Int,
+    openDebugOnStart: Boolean = false,
 ) : ScreenContent {
-    private val controller = MatchScreenController(activity, campaignLevel)
+    private val controller = MatchScreenController(
+        activity = activity,
+        campaignLevel = campaignLevel,
+        openDebugOnStart = openDebugOnStart,
+    )
 
     override val view: View = controller.createView()
 
