@@ -129,7 +129,7 @@ mechanizmów walidacji. Użyj istniejących typów i kontraktów. Nie kopiuj
 
 - Profil materializuj jawnie w `TerrainProfile`.
 - Próbki `TerrainSample` umieszczaj co dokładnie **40 world units**.
-- Maksymalna różnica wysokości sąsiednich próbek wynosi **20 world units**.
+- Maksymalna różnica wysokości sąsiednich próbek wynosi **40 world units**.
 - Próbki muszą być uporządkowane i pokrywać wymagany zakres mapy.
 - Główna geometria poziomu nie może być losowana w runtime.
 - Seed służy do deterministycznego authoringu/generowania danych, ale wynikowa
@@ -299,7 +299,7 @@ Walidator nie może:
 - dodawać fallbackowych assetów;
 - mutować wejścia.
 
-## `LevelAuthoringRequest` i builder/factory
+## `LevelAuthoringRequest` i builder authoringu
 
 Użyj istniejącego lub dodaj typowany `LevelAuthoringRequest` obejmujący
 minimum:
@@ -317,10 +317,10 @@ minimum:
 - `authoringVersion`;
 - opcjonalne nadpisania balansu.
 
-Dodaj lub użyj `LevelDefinitionBuilder`/factory, który:
+Dodaj lub użyj `LevelDefinitionBuilder`, który:
 
 - buduje `MapDefinition`;
-- materializuje profil terenu;
+- materializuje i zapisuje profil terenu w pliku `ChapterXLevelY.kt`;
 - ustawia placementy;
 - nie ukrywa reguł walidacji;
 - zwraca typowane błędy niekompletnego authoringu;

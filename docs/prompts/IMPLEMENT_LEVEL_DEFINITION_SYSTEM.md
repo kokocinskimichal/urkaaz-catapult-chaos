@@ -117,7 +117,7 @@ Profil terenu:
 - używa próbek co dokładnie **40 world units**;
 - ma uporządkowane próbki;
 - pokrywa wymagany zakres świata;
-- nie pozwala na różnicę wysokości sąsiednich próbek większą niż **20 world
+- nie pozwala na różnicę wysokości sąsiednich próbek większą niż **40 world
   units**;
 - ma deterministyczną interpolację lub jawnie określony sposób odczytu
   wysokości.

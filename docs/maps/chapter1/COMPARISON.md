@@ -1,24 +1,26 @@
 # Chapter 1 LDS map comparison
 
-Porównanie wszystkich 10 map Chapter 1 po zwiększeniu amplitudy, wygładzeniu fal i zwiększeniu losowości dekoracji.
+Porównanie wszystkich 10 map Chapter 1 po ponownym wygenerowaniu profili z
+gładszym polem nachylenia, większą amplitudą i limitem 40 world units między
+próbkami.
 
 | Poziom | Seed | Min | Max | Zakres | Średnia | Max delta | Dekoracje |
 |---:|---:|---:|---:|---:|---:|---:|---:|
-| 1 | 1001 | 3649.9 | 4491.3 | 841.4 | 4017.6 | 19.50 | 18 |
-| 2 | 10002 | 3550.2 | 4363.3 | 813.1 | 3902.1 | 19.50 | 17 |
-| 3 | 10003 | 3595.2 | 4439.5 | 844.3 | 3954.6 | 19.50 | 17 |
-| 4 | 10004 | 3432.1 | 4207.2 | 775.1 | 3799.5 | 19.50 | 18 |
-| 5 | 10005 | 3182.1 | 3699.3 | 517.2 | 3485.4 | 19.50 | 18 |
-| 6 | 10006 | 2916.5 | 3650.0 | 733.5 | 3284.8 | 19.50 | 18 |
-| 7 | 10007 | 2721.5 | 3650.0 | 928.5 | 3187.0 | 19.50 | 14 |
-| 8 | 10008 | 2913.7 | 3650.0 | 736.3 | 3317.3 | 19.50 | 18 |
-| 9 | 10009 | 3007.0 | 3683.2 | 676.3 | 3405.8 | 19.50 | 18 |
-| 10 | 10010 | 3094.1 | 3831.4 | 737.2 | 3499.0 | 19.50 | 18 |
+| 1 | 1001 | 3616.7 | 4650.0 | 1033.3 | 4099.2 | 34.79 | 18 |
+| 2 | 10002 | 3392.3 | 4535.3 | 1143.0 | 3856.5 | 39.50 | 18 |
+| 3 | 10003 | 3535.0 | 4640.0 | 1104.9 | 4000.4 | 39.50 | 18 |
+| 4 | 10004 | 3041.7 | 4160.4 | 1118.7 | 3560.5 | 30.33 | 18 |
+| 5 | 10005 | 2650.0 | 3708.2 | 1058.2 | 3321.0 | 27.67 | 18 |
+| 6 | 10006 | 2650.0 | 3721.3 | 1071.3 | 3315.0 | 26.87 | 18 |
+| 7 | 10007 | 2650.0 | 3650.2 | 1000.2 | 3266.9 | 23.75 | 18 |
+| 8 | 10008 | 2650.0 | 3734.2 | 1084.2 | 3279.0 | 29.07 | 18 |
+| 9 | 10009 | 2650.0 | 3672.4 | 1022.4 | 3227.4 | 26.73 | 18 |
+| 10 | 10010 | 2813.3 | 3904.8 | 1091.5 | 3372.2 | 36.67 | 18 |
 
 ## Wnioski
 
 - Profile wykorzystują szerokie, deterministyczne wzgórza i doliny z płynną zmianą nachylenia.
-- Każda mapa zachowuje limit maksymalnej różnicy sąsiednich próbek 20 world units.
+- Każda mapa zachowuje limit maksymalnej różnicy sąsiednich próbek 40 world units.
 - Fundamenty pozostają płaskie i odporne na generowanie terenu.
 - Dekoracje są generowane deterministycznie z większą liczbą prób i różnorodnością typów.
 - Contact sheet: `chapter1-contact-sheet.png`.

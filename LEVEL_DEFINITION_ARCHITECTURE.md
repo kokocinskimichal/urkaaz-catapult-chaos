@@ -106,13 +106,13 @@ Wymagania:
 
 - próbki muszą być uporządkowane rosnąco po osi X;
 - odstęp między kolejnymi próbkami wynosi 40 world units;
-- różnica wysokości między sąsiednimi próbkami nie może przekraczać 20 world
+- różnica wysokości między sąsiednimi próbkami nie może przekraczać 40 world
   units;
 - pierwszy i ostatni punkt muszą pokrywać zakres wymagany przez mapę;
 - interpolacja pomiędzy próbkami musi być deterministyczna;
 - profil bazowy nie może zawierać przypadkowych zmian generowanych w UI.
 
-Limit różnicy 20 world units ogranicza ostre uskoki, pomaga utrzymać czytelny
+Limit różnicy 40 world units ogranicza ostre uskoki, pomaga utrzymać czytelny
 kontur mapy i zapewnia bezpieczne rozmieszczenie obiektów na przejściach.
 
 ### Fundamenty
@@ -309,7 +309,8 @@ Skill `/addLevel` jest procesem authoringu nowego campaign level. Powinien:
 
 1. odczytać istniejące kontrakty, reguły architektury i podobne poziomy;
 2. utworzyć definicję w `game-campaign`;
-3. dobrać profil terenu z próbkami co 40 world units;
+3. dobrać lub wygenerować podczas authoringu profil terenu z próbkami co 40
+   world units;
 4. ustawić fundamenty, strefy ochronne, fortecy, katapulty i kamerę;
 5. przypisać dekoracje przez stabilne asset keys;
 6. wygenerować `MapGenerationMetadata`;
@@ -319,7 +320,7 @@ Skill `/addLevel` jest procesem authoringu nowego campaign level. Powinien:
 10. zebrać akceptację przed uznaniem poziomu za gotowy.
 
 Skill nie powinien dodawać logiki poziomu do `MainActivity`, duplikować
-generatora terenu ani omijać walidatora. Poziom ma być opisany danymi i
+generatora terenu podczas runtime ani omijać walidatora. Poziom ma być opisany danymi i
 kontraktami, a nie specjalnymi warunkami w rendererze.
 
 ## `LevelAuthoringRequest`
@@ -354,7 +355,7 @@ go do walidatora. Sam request nie jest kontraktem uruchamianym przez
 
 ```text
 LevelAuthoringRequest
-  → generator / ręczna definicja w game-campaign
+  → authoring / ręczna definicja w game-campaign
   → MapDefinition
   → MapDefinitionValidator
   → testy kontraktów i scenariusza

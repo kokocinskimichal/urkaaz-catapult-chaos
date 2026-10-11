@@ -253,7 +253,6 @@ class BattlefieldRenderer(
         viewportWidth: Float,
         viewportHeight: Float,
         fallbackColor: Int,
-        surfaceThickness: Float = viewportHeight,
         textureTop: Float,
         textureBottom: Float,
     ) {
@@ -279,7 +278,7 @@ class BattlefieldRenderer(
             samples.indices.reversed().forEach { index ->
                 lineTo(
                     worldToViewX(index * sampleSpacing, viewportWidth),
-                    worldToViewY(samples[index] + surfaceThickness, viewportHeight),
+                    worldToViewY(WORLD_HEIGHT, viewportHeight),
                 )
             }
             close()

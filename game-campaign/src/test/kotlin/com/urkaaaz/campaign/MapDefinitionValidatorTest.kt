@@ -52,8 +52,11 @@ class MapDefinitionValidatorTest {
         assertTrue(second.terrain.samples != laterChapter.terrain.samples)
         assertTrue(second.terrain.samples.maxOf { it.height } -
             second.terrain.samples.minOf { it.height } > 100f)
+        assertTrue(first.terrain.samples.maxOf { it.height } -
+            first.terrain.samples.minOf { it.height } > 950f)
         assertTrue(second.terrain.samples.zipWithNext().all {
-            kotlin.math.abs(it.second.height - it.first.height) <= 20f
+            kotlin.math.abs(it.second.height - it.first.height) <=
+                MapDefinitionValidator.MAX_TERRAIN_DELTA
         })
         assertTrue(first.fortresses.map { it.foundationHeight } !=
             second.fortresses.map { it.foundationHeight })

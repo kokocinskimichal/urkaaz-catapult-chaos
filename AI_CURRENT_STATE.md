@@ -46,16 +46,20 @@ kampanię, AI oraz działający match screen. Gałąź robocza: `develop`.
   `MapDefinition`, builder authoringu, typowany `MapDefinitionValidator`,
   registry kampanii, deterministyczny profil terenu, placementy fortec,
   katapult i obiektów oraz `InitialCameraAnchor`.
-- Pierwsza materializowana definicja znajduje się w
-  `game-campaign/src/main/kotlin/com/urkaaaz/campaign/chapter1/Chapter1Level1.kt`.
-  Dane przechodzą przez `CampaignLevelDefinition` i `MatchScenario`, a
-  symulacja nie losuje głównej geometrii runtime.
+- Każda materializowana definicja znajduje się bezpośrednio w swoim pliku
+  `ChapterXLevelY.kt` jako własny `LevelAuthoringRequest`, z jawnymi próbkami
+  terenu, placementami i metadanymi. Dane przechodzą przez
+  `LevelDefinitionBuilder`, `CampaignLevelDefinition` i `MatchScenario`, a
+  symulacja nie losuje geometrii runtime.
 - Wszystkie 100 poziomów kampanii mają osobne typowane pliki Kotlin
   pogrupowane w chapterach 1–10 oraz jawny `CampaignMapDefinitions` index.
   `DemoLevelDefinitions.default` jest niezależną od kampanii mapą `demo-map`,
   która korzysta z tych samych kontraktów i produkcyjnego validatora LDS.
   Poziomy kampanii mają deterministycznie różne profile terenu, wysokości
   fundamentów i kotwice obiektów; strefy fortec pozostają płaskie i chronione.
+  Profile terenu są zapisane jawnie w plikach poziomów; szerokie, gładkie
+  wzgórza i doliny zostały zmaterializowane podczas authoringu przy limicie
+  40 world units między sąsiednimi próbkami.
 
 ## Ograniczenia i niedokończone obszary
 

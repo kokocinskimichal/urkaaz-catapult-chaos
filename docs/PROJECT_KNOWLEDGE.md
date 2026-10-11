@@ -37,16 +37,21 @@ mapper exposes immutable map objects and the initial camera anchor for
 presentation.
 
 The production map rules are: terrain samples every 40 world units, adjacent
-height delta no greater than 20 world units, at least three foundation
+height delta no greater than 40 world units, at least three foundation
 transition samples, fortress foundation tolerance of ±80 world units,
 40-world-unit decoration margin, explicit protected terrain zones, neutral
-asset keys and deterministic seed/generator/authoring metadata. The first
-typed level is stored in
-`game-campaign/src/main/kotlin/com/urkaaaz/campaign/chapter1/Chapter1Level1.kt`;
-all 100 campaign levels have typed files grouped by chapter and are exposed
-through the same campaign definition boundary. The standalone
+asset keys and deterministic seed/generator/authoring metadata. Each of the 100 campaign levels is stored in its own `ChapterXLevelY.kt` file
+as an explicit `LevelAuthoringRequest` with materialized terrain samples,
+placements and metadata. The files are grouped by chapter and exposed through
+the same campaign definition boundary. The standalone
 `DemoLevelDefinitions.default` map uses the same LDS contracts and validator
 without being a campaign level.
+
+The campaign terrain was generated from broad deterministic slope fields, then
+materialized into the individual level files. Runtime loading does not invoke a
+campaign terrain generator; it consumes the authored samples while preserving
+smooth transitions, flat protected foundations and the 40-world-unit
+adjacent-sample limit.
 
 The current match HUD displays:
 
