@@ -60,6 +60,21 @@ kampanię, AI oraz działający match screen. Gałąź robocza: `develop`.
   Profile terenu są zapisane jawnie w plikach poziomów; szerokie, gładkie
   wzgórza i doliny zostały zmaterializowane podczas authoringu przy limicie
   200 world units między sąsiednimi próbkami.
+- Chapter 1 został zaimportowany z zaakceptowanego eksportu authoringowego:
+  wszystkie 10 poziomów ma jawne profile, fundamenty, fortece, katapulty oraz
+  dekoracje drzew, skał i propsów zakotwiczone do terenu. Profile są
+  walidowane przed zapisaniem, a przejścia nie przekraczają 200 world units.
+
+## Ustalony kierunek dalszego rozwoju
+
+Kolejne większe funkcjonalności będą projektowane jako niezależne podsystemy,
+z własną odpowiedzialnością, kontraktami, stanem, eventami, testami i
+integracją z pozostałymi warstwami. Dotyczy to między innymi planowanych
+`SpellSystem`, `TutorialSystem`, `AISystem` i `CampaignSystem`. `AISystem`
+pozostaje właścicielem logiki decyzji AI w `game-ai`, a `CampaignSystem`
+odpowiedzialnością kampanii w `game-campaign`; nazwa podsystemu nie oznacza
+automatycznie nowego modułu Gradle. Podsystemy mają korzystać z komend,
+snapshotów i eventów zamiast mutować bezpośrednio stan innych podsystemów.
 
 ## Ograniczenia i niedokończone obszary
 

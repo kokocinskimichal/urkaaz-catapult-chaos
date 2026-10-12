@@ -60,6 +60,15 @@ automatic flat foundation zones. It exports 40-world-unit terrain samples and
 protected foundation metadata as JSON for later conversion into a campaign
 level definition.
 
+The authoring helper also supports chapter generation: it creates ten terrain
+proposals from hill count, hill size, terrain style, variation and seed
+parameters, applies repeated smoothing, and lets the author accept or reject
+each level. Rejected proposals are regenerated individually; a chapter JSON
+export is enabled only after all ten levels are accepted. Imported campaign
+profiles must retain fortress foundations, terrain-anchored trees, rocks and
+props, while keeping decorations outside foundation margins and away from
+steep slopes.
+
 The current match HUD displays:
 
 - match countdown timer;

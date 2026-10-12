@@ -39,6 +39,48 @@
     Do tego czasu kotwice maga i katapulty pozostają osobnym etapem dopasowania. Każdy AGP
     fortecy musi podawać te kotwice co do piksela na kanonicznym canvasie `1024 × 768 px`.
 
+## Game subsystems / Podsystemy gry
+
+Skróty są kanonicznymi oznaczeniami używanymi w dokumentacji projektowej.
+Nazwa podsystemu nie oznacza automatycznie osobnego modułu Gradle. Podsystem
+może pozostać częścią istniejącego modułu, jeżeli jego odpowiedzialność i
+kontrakty są wyraźnie oddzielone.
+
+| Skrót | Podsystem | Odpowiedzialność | Status |
+| --- | --- | --- | --- |
+| **MS** | **Match System** | Orkiestracja sesji meczu, komendy, ticki, snapshoty i eventy. | Działa częściowo jako `MatchSession` i symulacja. |
+| **AS** | **Ammunition System** | Katalog amunicji, lot, przeładowanie, zapasy, kolizje, impacty, eksplozje i efekty amunicji. | Działa. |
+| **CS** | **Combat System** | Cele, grupy ataku, harmonogram ataków, obrażenia, śmierć i eventy walki jednostek. | Działa dla obecnego zakresu jednostek. |
+| **TS** | **Terrain System** | Profil terenu, deformacje, kratery, próbki wysokości i materializacja terenu w symulacji. | Działa. |
+| **LDS** | **Level Definition System** | Niemutowalne definicje poziomów, authoring, walidacja, placementy, fundamenty i rejestr kampanii. | Działa. |
+| **PS** | **Projectile System** | Ruch pocisków, balistyka, wiatr, trajektoria i cykl życia pocisku. | Działa jako część symulacji i AS. |
+| **CoS** | **Collision System** | Wykrywanie i klasyfikacja kolizji pocisków, jednostek, fortec i terenu. | Działa jako część symulacji i AS/CS. |
+| **DS** | **Damage System** | Rozstrzyganie obrażeń jednostek, fortec, terenu i efektów obszarowych. | Działa jako część symulacji i CS/AS. |
+| **WS** | **Wind System** | Początkowy wiatr, opóźnienie, przejścia i deterministyczne zmiany siły oraz kierunku. | Działa. |
+| **US** | **Unit System** | Rekrutacja, supply, garnizon, fale, ruch, konfiguracje i interakcje jednostek. | Działa dla obecnych jednostek. |
+| **AIS** | **AI System** | Decyzje AI na podstawie snapshotów, rekrutacja, dobór kontr, fale i temperament. | Działa w obecnym zakresie. Właściciel: `game-ai`. |
+| **CaS** | **Campaign System** | Poziomy, chaptery, odblokowania, cele, modyfikatory i postęp kampanii. | Częściowy; definicje poziomów działają, persystencja progresji jest planowana. Właściciel: `game-campaign`. |
+| **SS** | **Spell System** | Definicje czarów, mana, aktywacja, efekty, cooldowny, dostępność i integracja z walką. | Planowany. |
+| **TutS** | **Tutorial System** | Kroki tutoriala, hinty, spotlighty, cele, odblokowywanie paneli i ograniczenia AI. | Planowany. |
+| **PSys** | **Persistence System** | Trwały zapis profilu, lives, waluty, loadoutu, odblokowań i postępu. | Planowany. |
+| **LoS** | **Loadout System** | Konfiguracja jednostek, amunicji i czarów przed poziomem. | Częściowy; pełny loadout pozostaje planowany. |
+| **RS** | **Reward System** | Wynik meczu, nagrody, OrCoins, lives, event rewards i przejście do kolejnego poziomu. | Planowany; obecny wynik jest uproszczonym overlayem. |
+| **BS** | **Balance System** | Wersjonowane parametry balansu, walidacja konfiguracji i symulacje porównawcze. | Planowany. |
+| **ObjS** | **Objective System** | Cele główne i specjalne, Central Objective oraz reguły poziomów boss/special. | Częściowy; Central Objective i pełne reguły bossów są planowane. |
+| **AssetS** | **Asset System** | Klucze assetów, cache, mapowanie wariantów wizualnych i ładowanie zasobów. | Działa częściowo dla obecnego zakresu renderingu. |
+| **RenderS** | **Rendering System** | Mapowanie snapshotów na render state, kamera, world-space, HUD i kolejność rysowania. | Działa dla obecnego match screen. |
+| **NavS** | **Navigation System** | Przejścia między ekranami i lifecycle hosta ekranów. | Działa w lekkim modelu `AppNavigator`/`ScreenHost`. |
+| **UIS** | **UI System** | Prezentacja ekranów, HUD, input, kontrolki i obsługa stanów interfejsu. | Działa częściowo; część ekranów pozostaje placeholderami. |
+
+### Reguły nazewnictwa skrótów
+
+- Skróty kończące się na `S` oznaczają podsystem, np. `AIS`, `TutS` i `RenderS`.
+- `CS` oznacza **Combat System**, a nie **Campaign System**; kampania używa
+  skrótu `CaS`, aby uniknąć kolizji.
+- `TS` oznacza **Terrain System**; `TutS` jest skrótem tutoriala.
+- `LDS` pozostaje stabilnym skrótem **Level Definition System** i nie jest
+  zastępowany przez ogólny skrót terrainu.
+
 ## Tutorial
 
 | Term | Meaning |

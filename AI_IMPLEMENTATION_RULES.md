@@ -15,6 +15,26 @@
 - Komendy, snapshoty i eventy są jawnymi granicami komunikacji.
 - Nie tworzyć równoległych kontraktów terenu, assetów, nawigacji ani balansu.
 
+## Reguła rozwoju przez podsystemy
+
+- Każda większa funkcjonalność gameplayowa ma być projektowana jako osobny
+  podsystem z własną odpowiedzialnością, kontraktem wejścia/wyjścia, stanem,
+  eventami, testami i adapterem UI, jeśli jest potrzebny.
+- Istniejące wzorce referencyjne to `AmmunitionSystem`, `CombatSystem` i
+  `Level Definition/TerrainSystem`.
+- Kolejne obszary, takie jak `SpellSystem`, `TutorialSystem`, system progresji
+  (`CampaignSystem`), `AISystem` czy system nagród, nie powinny być
+  implementowane jako przypadkowe pola i warunki w `Match`, `MainActivity`,
+  ViewModelu albo jednym „God Object”.
+- Nazwa podsystemu nie wymusza osobnego modułu Gradle. `AISystem` może należeć
+  do `game-ai`, a `CampaignSystem` do `game-campaign`, o ile granice
+  odpowiedzialności i kontrakty pozostają jawne.
+- Podsystemy komunikują się przez istniejące granice komend, snapshotów,
+  eventów i kontraktów aplikacyjnych. Nie mutują bezpośrednio stanu należącego
+  do innego podsystemu.
+- Przed implementacją nowego podsystemu należy opisać jego właściciela,
+  zależności, kontrakt, wpływ na runtime state oraz strategię testowania.
+
 ## Reguły domeny, symulacji i AI
 
 - Reguły gameplayu pozostają w `game-domain` lub `game-simulation`, nigdy w
