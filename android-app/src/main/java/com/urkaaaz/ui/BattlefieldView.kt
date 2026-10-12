@@ -371,6 +371,7 @@ class BattlefieldView(context: Context) : View(context) {
         val speed = aim.power * PROJECTILE_SPEED_SCALE
         val velocityX = kotlin.math.cos(angleRadians).toFloat() * speed
         val velocityY = -kotlin.math.sin(angleRadians).toFloat() * speed
+        val windAccelerationX = state.windDirection * state.windStrength * WIND_ACCELERATION_SCALE
         val lastIndex = (TRAJECTORY_PREVIEW_POINTS - 1).toFloat()
         val previewPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
             style = Paint.Style.FILL
@@ -378,7 +379,7 @@ class BattlefieldView(context: Context) : View(context) {
 
         for (index in 0 until TRAJECTORY_PREVIEW_POINTS) {
             val time = index * TRAJECTORY_PREVIEW_STEP_SECONDS
-            val x = originX + velocityX * time + 0.5f * WIND_ACCELERATION_X * time * time
+            val x = originX + velocityX * time + 0.5f * windAccelerationX * time * time
             val y = originY + velocityY * time + 0.5f * GRAVITY_ACCELERATION_Y * time * time
             if (x !in 0f..WORLD_WIDTH || y !in 0f..WORLD_HEIGHT) break
             val fraction = index / lastIndex
@@ -482,11 +483,37 @@ class BattlefieldView(context: Context) : View(context) {
     private fun catapultBaseline(worldY: Float, groundTop: Float): Float =
         minOf(groundTop + 6f, worldToViewY(worldY) + 10f)
 
-    private fun playerAimOrigin(): Pair<Float, Float> {
+    private fun playerAimOrigin(): Pair<Float, Float> = catapultVisualCenter()
+
+    private fun catapultVisualCenter(): Pair<Float, Float> {
         val groundTop = height * 0.76f
-        val fortressBaseline = groundTop + 4f
+        val fortressBaseline = worldToViewY(
+            terrainHeightAt(
+                samples = state.terrainHeightSamples,
+                sampleSpacing = state.terrainSampleSpacing,
+                worldX = FORTRESS_CENTER_MARGIN,
+                fallbackWorldY = groundTop / height * WORLD_HEIGHT,
+            ),
+        ) + 4f
         val baseline = fortressBaseline - FORTRESS_RENDER_HEIGHT * CATAPULT_PLATFORM_HEIGHT_RATIO
-        return worldToViewX(state.blueCatapultX) to (baseline - AIM_ORIGIN_OFFSET)
+        val catapult = assets.blueCatapult
+        val catapultHeight = CATAPULT_RENDER_WIDTH *
+            catapult.height.toFloat() / catapult.width.coerceAtLeast(1)
+        return worldToViewX(state.blueCatapultX) to (baseline - catapultHeight / 2f)
+    }
+
+    private fun terrainHeightAt(
+        samples: List<Float>,
+        sampleSpacing: Float,
+        worldX: Float,
+        fallbackWorldY: Float,
+    ): Float {
+        if (samples.isEmpty() || sampleSpacing <= 0f) return fallbackWorldY
+        val position = (worldX / sampleSpacing).coerceIn(0f, (samples.size - 1).toFloat())
+        val lowerIndex = position.toInt()
+        val upperIndex = (lowerIndex + 1).coerceAtMost(samples.lastIndex)
+        val fraction = position - lowerIndex
+        return samples[lowerIndex] + (samples[upperIndex] - samples[lowerIndex]) * fraction
     }
 
     private fun drawTiledTexture(
@@ -539,15 +566,15 @@ class BattlefieldView(context: Context) : View(context) {
         private const val FORTRESS_RENDER_WIDTH = 280f
         private const val FORTRESS_RENDER_HEIGHT = 210f
         private const val CATAPULT_RENDER_WIDTH = 95f
+        private const val FORTRESS_CENTER_MARGIN = 490f
         private const val RELOAD_INDICATOR_OFFSET = 72f
-        private const val AIM_ORIGIN_OFFSET = 62f
         private const val CATAPULT_PLATFORM_HEIGHT_RATIO = 0.40f
-        private const val MUZZLE_OFFSET = 34f
         private const val PROJECTILE_SPEED_SCALE = 8f
         private const val GRAVITY_ACCELERATION_Y = 420f
-        private const val WIND_ACCELERATION_X = 0f
-        private const val TRAJECTORY_PREVIEW_POINTS = 50
-        private const val TRAJECTORY_PREVIEW_STEP_SECONDS = 1f / 30f
+        private const val WIND_ACCELERATION_SCALE = 260f
+        private const val MUZZLE_OFFSET = 34f
+        private const val TRAJECTORY_PREVIEW_POINTS = 36
+        private const val TRAJECTORY_PREVIEW_STEP_SECONDS = 1f / 16f
         private const val PROJECTILE_TRAIL_POINTS = 60
         private const val WORLD_WIDTH = WorldDimensions.WIDTH
         private const val WORLD_HEIGHT = WorldDimensions.HEIGHT

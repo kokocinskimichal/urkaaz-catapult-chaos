@@ -235,6 +235,13 @@ must go through commands and domain/application boundaries.
 - Wind uses low, medium and high visual indicators for left/right direction.
 - Projectile trails are keyed by projectile identity, not team label, so a new
   projectile cannot inherit the previous projectile's trail.
+- `BattlefieldView` keeps `SlingshotAim`, the trajectory preview and the
+  rendered catapult geometry aligned: aim origin uses the interpolated terrain
+  baseline and the catapult bitmap center, while the preview starts at the
+  simulation muzzle (`catapultY - 34`) and applies the current wind vector.
+  Preview timing and point density are presentation-only (`36` points at
+  `1/16` second intervals); the deterministic simulation remains the source of
+  truth for the fired projectile.
 - Camera panning must be distinguished from aiming release so `ACTION_UP` fires
   only when the gesture was an aim gesture.
 - System status bar and Back handling use modern AndroidX APIs.
