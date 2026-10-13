@@ -167,7 +167,13 @@ class BattlefieldRenderer(
                 .coerceIn(0f, groundTop)
             val frames = assets.animationFor(projectile.ammunitionType).flightFrames
             val frame = frames.getOrNull(animationFrame % frames.size.coerceAtLeast(1))
-            drawTexture(canvas, frame, projectileX - 30f, projectileY - 30f, 60f)
+            drawTexture(
+                canvas,
+                frame,
+                projectileX - PROJECTILE_RENDER_SIZE / 2f,
+                projectileY - PROJECTILE_RENDER_SIZE / 2f,
+                PROJECTILE_RENDER_SIZE,
+            )
         }
         drawUnits(canvas, state, viewportWidth, viewportHeight, groundTop, animationFrame)
         activeImpact?.let { impact ->
@@ -743,5 +749,6 @@ class BattlefieldRenderer(
         private const val RELOAD_INDICATOR_OFFSET = 72f
         private const val CATAPULT_PLATFORM_HEIGHT_RATIO = 0.40f
         private const val PROJECTILE_DEBUG_RADIUS = 30f
+        private const val PROJECTILE_RENDER_SIZE = 36f
     }
 }

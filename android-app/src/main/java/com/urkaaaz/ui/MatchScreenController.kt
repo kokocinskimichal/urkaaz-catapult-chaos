@@ -36,6 +36,7 @@ class MatchScreenController(
     private lateinit var unitPanel: UnitPanelView
     private lateinit var debugButton: TextView
     private lateinit var snapshotCloseButton: TextView
+    private lateinit var restartButton: TextView
     private var snapshotMode = false
     private var debugPausedMatch = false
 
@@ -101,6 +102,22 @@ class MatchScreenController(
                 setBackgroundResource(com.urkaaaz.android.R.drawable.bg_hud_panel)
                 visibility = View.GONE
                 setOnClickListener { setSnapshotMode(false) }
+        }
+        restartButton = TextView(activity).apply {
+            text = "RESTART MATCH"
+            setTextColor(Color.WHITE)
+            textSize = 16f
+            setTypeface(Typeface.DEFAULT, Typeface.BOLD)
+            gravity = Gravity.CENTER
+            setPadding(dp(20), dp(12), dp(20), dp(12))
+            setBackgroundResource(com.urkaaaz.android.R.drawable.bg_hud_panel)
+            elevation = dp(12).toFloat()
+            visibility = View.GONE
+            setOnClickListener {
+                aimAngle = 45f
+                aimPower = 50f
+                render(viewModel.dispatch(MatchUiAction.RestartMatch))
+            }
         }
 
         battlefieldView.onAimChanged = { aim ->
@@ -179,6 +196,16 @@ class MatchScreenController(
                     rightMargin = dp(12)
                 },
             )
+            addView(
+                restartButton,
+                FrameLayout.LayoutParams(
+                    FrameLayout.LayoutParams.WRAP_CONTENT,
+                    FrameLayout.LayoutParams.WRAP_CONTENT,
+                ).apply {
+                    gravity = Gravity.BOTTOM or Gravity.CENTER_HORIZONTAL
+                    bottomMargin = dp(180)
+                },
+            )
             render(viewModel.dispatch(MatchUiAction.StartMatch))
             if (openDebugOnStart) {
                 viewModel.setAiUnitAutomationEnabled(false)
@@ -205,6 +232,14 @@ class MatchScreenController(
             View.VISIBLE
         } else {
             View.GONE
+        }
+        restartButton.visibility = if (state.outcomeLabel != null && !snapshotMode) {
+            View.VISIBLE
+        } else {
+            View.GONE
+        }
+        if (restartButton.visibility == View.VISIBLE) {
+            restartButton.bringToFront()
         }
     }
 

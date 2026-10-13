@@ -3,6 +3,7 @@ package com.urkaaaz.ui
 /** User intent understood by the Android presentation layer. */
 sealed interface MatchUiAction {
     data object StartMatch : MatchUiAction
+    data object RestartMatch : MatchUiAction
     data object FireRock : MatchUiAction
     data object AdvanceSimulation : MatchUiAction
     data object TogglePause : MatchUiAction

@@ -74,6 +74,8 @@ The current match HUD displays:
 - match countdown timer;
 - wind direction and strength;
 - pause/resume control;
+- a `RESTART MATCH` control after the match outcome overlay, which restarts the
+  current local match through `LocalMatchGateway.restart`;
 - ammunition selection at the bottom of the battlefield.
 - legacy-style unit deployment controls above the ammunition selector;
   selecting a unit sends `MatchUiAction.DeployUnit`, spends team gold and
@@ -170,6 +172,15 @@ Android layer only renders the current snapshot.
 
 The HUD is rendered as an overlay on the battlefield rather than as a separate
 black strip above the map.
+
+The match aiming presentation uses the catapult bitmap center as the visual
+aim anchor, while the trajectory preview preserves the simulation muzzle
+origin and applies the same scaled projectile physics as the deterministic
+simulation. The pull-radius circle adapts to the visible viewport and camera
+transform so it remains inside the screen. The preview is intentionally a
+short sequence of decreasing dots rather than a full-flight line. Active
+projectile sprites use a smaller world-space render size and therefore scale
+with the battlefield camera zoom.
 
 The match now exposes a legacy-style `DEBUG` control after the match starts.
 Its panel supports `Show hitboxes`, which renders presentation hitbox guides

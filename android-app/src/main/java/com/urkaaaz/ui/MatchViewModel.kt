@@ -130,6 +130,11 @@ class MatchViewModel(
                     ),
                 )
             }
+            MatchUiAction.RestartMatch -> {
+                paused = false
+                aiUnitDecisionElapsedMilliseconds = 0L
+                gateway.restart(matchId, playerId)
+            }
             MatchUiAction.FireRock -> gateway.dispatch(
                 MatchCommand.Fire(
                     commandId = CommandId("ui-${++commandSequence}"),

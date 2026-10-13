@@ -190,7 +190,7 @@ class BattlefieldView(context: Context) : View(context) {
             state.playerReloadRemainingSeconds <= 0f
 
     private fun handleAimTouch(event: MotionEvent): Boolean {
-        val (originX, originY) = playerAimOrigin()
+        val (originX, originY) = playerAimOriginView()
         val mapX = camera.screenToWorldX(event.x)
         val mapY = camera.screenToWorldY(event.y)
         when (event.actionMasked) {
@@ -257,7 +257,8 @@ class BattlefieldView(context: Context) : View(context) {
     }
 
     private fun drawAimGesture(canvas: Canvas, groundTop: Float) {
-        val (originX, originY) = playerAimOrigin()
+        val (originX, originY) = playerAimOriginView()
+        val visualRadius = visualPullRadius(originX, originY)
         val limitPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
             color = Color.argb(110, 255, 255, 255)
             style = Paint.Style.STROKE
@@ -266,14 +267,14 @@ class BattlefieldView(context: Context) : View(context) {
         canvas.drawCircle(
             originX,
             originY,
-            VISUAL_MAX_PULL_DISTANCE,
+            visualRadius,
             limitPaint,
         )
         val dx = aimController.state.x - originX
         val dy = aimController.state.y - originY
         val distance = hypot(dx, dy)
-        val scale = if (distance > VISUAL_MAX_PULL_DISTANCE) {
-            VISUAL_MAX_PULL_DISTANCE / distance
+        val scale = if (distance > visualRadius) {
+            visualRadius / distance
         } else {
             1f
         }
@@ -291,6 +292,19 @@ class BattlefieldView(context: Context) : View(context) {
         }
         canvas.drawLine(originX, originY, pullX, pullY, paint)
         canvas.drawCircle(pullX, pullY, 28f, paint)
+    }
+
+    private fun visualPullRadius(originX: Float, originY: Float): Float {
+        val cameraTransform = camera.transform
+        val screenOriginX = originX * cameraTransform.scale + cameraTransform.offsetX
+        val screenOriginY = originY * cameraTransform.scale + cameraTransform.offsetY
+        val availableRadius = minOf(
+            screenOriginX,
+            width - screenOriginX,
+            screenOriginY,
+            height - screenOriginY,
+        ) / cameraTransform.scale - AIM_CIRCLE_EDGE_MARGIN
+        return minOf(VISUAL_MAX_PULL_DISTANCE, availableRadius.coerceAtLeast(MIN_VISUAL_PULL_RADIUS))
     }
 
     private fun drawHealthBar(
@@ -365,24 +379,31 @@ class BattlefieldView(context: Context) : View(context) {
         val aim = aimController.state.aim ?: return
         if (!aim.directionValid || state.playerProjectileActive) return
 
-        val originX = state.blueCatapultX
-        val originY = state.blueCatapultY - MUZZLE_OFFSET
+        val (displayOriginX, displayOriginY) = playerAimOriginWorld()
+        val physicsOriginX = state.blueCatapultX
+        val physicsOriginY = state.blueCatapultY - MUZZLE_OFFSET
+        val displayOffsetX = displayOriginX - physicsOriginX
+        val displayOffsetY = displayOriginY - physicsOriginY
         val angleRadians = Math.toRadians(aim.angleDegrees.toDouble())
-        val speed = aim.power * PROJECTILE_SPEED_SCALE
-        val velocityX = kotlin.math.cos(angleRadians).toFloat() * speed
-        val velocityY = -kotlin.math.sin(angleRadians).toFloat() * speed
+        var x = physicsOriginX
+        var y = physicsOriginY
+        var velocityX = kotlin.math.cos(angleRadians).toFloat() *
+            aim.power * PROJECTILE_SPEED_SCALE * PHYSICS_WORLD_SCALE
+        var velocityY = -kotlin.math.sin(angleRadians).toFloat() *
+            aim.power * PROJECTILE_SPEED_SCALE * PHYSICS_WORLD_SCALE
         val windAccelerationX = state.windDirection * state.windStrength * WIND_ACCELERATION_SCALE
-        val lastIndex = (TRAJECTORY_PREVIEW_POINTS - 1).toFloat()
         val previewPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
             style = Paint.Style.FILL
         }
 
         for (index in 0 until TRAJECTORY_PREVIEW_POINTS) {
-            val time = index * TRAJECTORY_PREVIEW_STEP_SECONDS
-            val x = originX + velocityX * time + 0.5f * windAccelerationX * time * time
-            val y = originY + velocityY * time + 0.5f * GRAVITY_ACCELERATION_Y * time * time
+            val step = TRAJECTORY_PREVIEW_STEP_SECONDS
+            velocityX += windAccelerationX * step
+            velocityY += GRAVITY_ACCELERATION_Y * PHYSICS_WORLD_SCALE * step
+            x += velocityX * step
+            y += velocityY * step
             if (x !in 0f..WORLD_WIDTH || y !in 0f..WORLD_HEIGHT) break
-            val fraction = index / lastIndex
+            val fraction = index / TRAJECTORY_PREVIEW_POINTS.toFloat()
             previewPaint.color = Color.argb(
                 (255f - 75f * fraction).toInt(),
                 255,
@@ -390,9 +411,9 @@ class BattlefieldView(context: Context) : View(context) {
                 190,
             )
             canvas.drawCircle(
-                worldToViewX(x),
-                worldToViewY(y),
-                10f - 7f * fraction,
+                worldToViewX(x + displayOffsetX),
+                worldToViewY(y + displayOffsetY),
+                4.5f - 3.5f * fraction,
                 previewPaint,
             )
         }
@@ -483,7 +504,13 @@ class BattlefieldView(context: Context) : View(context) {
     private fun catapultBaseline(worldY: Float, groundTop: Float): Float =
         minOf(groundTop + 6f, worldToViewY(worldY) + 10f)
 
-    private fun playerAimOrigin(): Pair<Float, Float> = catapultVisualCenter()
+    private fun playerAimOriginWorld(): Pair<Float, Float> =
+        playerAimOriginView().let { (viewX, viewY) ->
+            viewX / width.coerceAtLeast(1) * WORLD_WIDTH to
+                viewY / height.coerceAtLeast(1) * WORLD_HEIGHT
+        }
+
+    private fun playerAimOriginView(): Pair<Float, Float> = catapultVisualCenter()
 
     private fun catapultVisualCenter(): Pair<Float, Float> {
         val groundTop = height * 0.76f
@@ -492,7 +519,7 @@ class BattlefieldView(context: Context) : View(context) {
                 samples = state.terrainHeightSamples,
                 sampleSpacing = state.terrainSampleSpacing,
                 worldX = FORTRESS_CENTER_MARGIN,
-                fallbackWorldY = groundTop / height * WORLD_HEIGHT,
+                fallbackWorldY = groundTop / height.coerceAtLeast(1) * WORLD_HEIGHT,
             ),
         ) + 4f
         val baseline = fortressBaseline - FORTRESS_RENDER_HEIGHT * CATAPULT_PLATFORM_HEIGHT_RATIO
@@ -560,7 +587,7 @@ class BattlefieldView(context: Context) : View(context) {
     }
 
     companion object {
-        private const val VISUAL_MAX_PULL_DISTANCE = 190f
+        private const val VISUAL_MAX_PULL_DISTANCE = 96f
         private const val RELOAD_INDICATOR_RADIUS = 30f
         private const val RELOAD_INDICATOR_DURATION = 5.5f
         private const val FORTRESS_RENDER_WIDTH = 280f
@@ -573,8 +600,11 @@ class BattlefieldView(context: Context) : View(context) {
         private const val GRAVITY_ACCELERATION_Y = 420f
         private const val WIND_ACCELERATION_SCALE = 260f
         private const val MUZZLE_OFFSET = 34f
-        private const val TRAJECTORY_PREVIEW_POINTS = 36
-        private const val TRAJECTORY_PREVIEW_STEP_SECONDS = 1f / 16f
+        private const val PHYSICS_WORLD_SCALE = 4.5f
+        private const val AIM_CIRCLE_EDGE_MARGIN = 8f
+        private const val MIN_VISUAL_PULL_RADIUS = 24f
+        private const val TRAJECTORY_PREVIEW_POINTS = 42
+        private const val TRAJECTORY_PREVIEW_STEP_SECONDS = 1f / 30f
         private const val PROJECTILE_TRAIL_POINTS = 60
         private const val WORLD_WIDTH = WorldDimensions.WIDTH
         private const val WORLD_HEIGHT = WorldDimensions.HEIGHT
