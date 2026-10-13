@@ -23,6 +23,7 @@ class BattlefieldRenderer(
     private val drawTrajectoryPreview: (Canvas) -> Unit,
     private val drawProjectileTrails: (Canvas) -> Unit,
     private val drawAimGesture: (Canvas, Float) -> Unit,
+    private val projectileAnchorOffset: (String) -> Pair<Float, Float>,
 ) {
     private val backgroundPaint = Paint(Paint.ANTI_ALIAS_FLAG)
     private val bluePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
@@ -162,16 +163,22 @@ class BattlefieldRenderer(
         drawTrajectoryPreview(canvas)
         drawProjectileTrails(canvas)
         state.projectiles.forEach { projectile ->
-            val projectileX = worldToViewX(projectile.x, viewportWidth)
+            val (offsetX, offsetY) = projectileAnchorOffset(projectile.teamLabel)
+            val projectileX = worldToViewX(projectile.x + offsetX, viewportWidth)
                 .coerceIn(0f, viewportWidth)
-            val projectileY = worldToViewY(projectile.y, viewportHeight)
+            val projectileY = worldToViewY(projectile.y + offsetY, viewportHeight)
             val frames = assets.animationFor(projectile.ammunitionType).flightFrames
             val frame = frames.getOrNull(animationFrame % frames.size.coerceAtLeast(1))
+            val projectileHeight = if (frame == null) {
+                PROJECTILE_RENDER_SIZE
+            } else {
+                PROJECTILE_RENDER_SIZE * frame.height.toFloat() / frame.width.coerceAtLeast(1)
+            }
             drawTexture(
                 canvas,
                 frame,
                 projectileX - PROJECTILE_RENDER_SIZE / 2f,
-                projectileY - PROJECTILE_RENDER_SIZE / 2f,
+                projectileY - projectileHeight / 2f,
                 PROJECTILE_RENDER_SIZE,
             )
         }

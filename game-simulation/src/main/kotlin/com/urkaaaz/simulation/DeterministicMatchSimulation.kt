@@ -154,7 +154,7 @@ class DeterministicMatchSimulation(
             id = EntityId("projectile-${sequence + 1}"),
             ammunition = ammunition,
             firedBy = catapult.team,
-            position = catapult.muzzlePosition(),
+            position = catapult.position,
             velocity = Velocity(
                 x = kotlin.math.cos(radians).toFloat() * speed * direction,
                 y = -kotlin.math.sin(radians).toFloat() * speed,

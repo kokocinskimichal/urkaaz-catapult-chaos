@@ -24,7 +24,6 @@ data class Catapult(
 
     fun withDamage(amount: Int): Catapult = copy(health = health.damage(amount))
 
-    fun muzzlePosition(): WorldPosition = position.copy(y = position.y - 34f)
 }
 
 /** A fortress that can receive damage and be eliminated. */

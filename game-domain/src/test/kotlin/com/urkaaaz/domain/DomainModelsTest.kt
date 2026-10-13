@@ -21,14 +21,14 @@ class DomainModelsTest {
     }
 
     @Test
-    fun catapultAimIsValidatedAndMuzzleIsAboveBase() {
+    fun catapultAimIsValidatedAndPositionIsUsedAsProjectileStart() {
         val catapult = Catapult(
             id = EntityId("catapult-1"),
             team = Team.BLUE,
             position = WorldPosition(100f, 300f),
         )
 
-        assertEquals(266f, catapult.muzzlePosition().y)
+        assertEquals(300f, catapult.position.y)
         assertFailsWith<IllegalArgumentException> {
             Aim(directionDegrees = 181f, power = 50f)
         }

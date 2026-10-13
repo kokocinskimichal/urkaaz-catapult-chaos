@@ -194,14 +194,17 @@ Android layer only renders the current snapshot.
 The HUD is rendered as an overlay on the battlefield rather than as a separate
 black strip above the map.
 
-The match aiming presentation uses the catapult bitmap center as the visual
-aim anchor, while the trajectory preview preserves the simulation muzzle
-origin and applies the same scaled projectile physics as the deterministic
-simulation. The pull-radius circle adapts to the visible viewport and camera
-transform so it remains inside the screen. The preview is intentionally a
-short sequence of decreasing dots rather than a full-flight line. Active
-projectile sprites use a smaller world-space render size and therefore scale
-with the battlefield camera zoom.
+The match aiming presentation uses one catapult-center anchor for the
+pull-radius circle, trajectory preview and projectile rendering. The
+trajectory preview starts at that anchor and applies the same scaled
+projectile physics as the deterministic simulation. The simulation starts a
+projectile at `catapult.position`; the Android renderer translates the active
+projectile and its identity-keyed trail into the catapult-anchor space for
+consistent flight rendering. The pull-radius circle adapts to the visible
+viewport and camera transform so it remains inside the screen. The preview is
+intentionally a short sequence of decreasing dots rather than a full-flight
+line. Active projectile sprites use a smaller world-space render size and
+therefore scale with the battlefield camera zoom.
 
 The match now exposes a legacy-style `DEBUG` control after the match starts.
 Its panel supports `Show hitboxes`, which renders presentation hitbox guides
@@ -267,13 +270,14 @@ must go through commands and domain/application boundaries.
 - Wind uses low, medium and high visual indicators for left/right direction.
 - Projectile trails are keyed by projectile identity, not team label, so a new
   projectile cannot inherit the previous projectile's trail.
-- `BattlefieldView` keeps `SlingshotAim`, the trajectory preview and the
-  rendered catapult geometry aligned: aim origin uses the interpolated terrain
-  baseline and the catapult bitmap center, while the preview starts at the
-  simulation muzzle (`catapultY - 34`) and applies the current wind vector.
+- `BattlefieldView` uses the catapult bitmap center as the single aim anchor
+  for `SlingshotAim`, the trajectory preview, and both BLUE/RED projectile
+  rendering paths. The legacy `muzzlePosition()` offset was removed; the
+  deterministic simulation starts projectiles at `catapult.position`, while
+  the Android renderer keeps the active flight and trail in anchor space.
   Preview timing and point density are presentation-only (`36` points at
-  `1/16` second intervals); the deterministic simulation remains the source of
-  truth for the fired projectile.
+  `1/16` second intervals); the deterministic simulation remains the source
+  of truth for the fired projectile.
 - Camera panning must be distinguished from aiming release so `ACTION_UP` fires
   only when the gesture was an aim gesture.
 - The ammunition selector remains clickable when the equipped limited
