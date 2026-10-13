@@ -72,6 +72,12 @@ FIRE_RAIN
 PLAGUE_CAULDRON
 ```
 
+Current `POWDER_BARREL` balance uses a 220-world-unit blast radius, allows
+friendly fire against units but not the firing team's fortress, and deforms
+terrain with a 150-world-unit crater radius and 90-world-unit depth. Its stock
+and reload rules remain three shots and 6.5 seconds respectively. It deals
+220 damage to units and fortresses within the blast radius.
+
 Future types may include fantasy and humorous equivalents of modern weapons,
 for example:
 

@@ -1937,6 +1937,11 @@ class DeterministicMatchSimulation(
                         ?.firstOrNull { it.owner == team }?.foundationHeight
                         ?: bounds.height * 0.68f,
                 ),
+                maxHealth = if (team == Team.BLUE) {
+                        config.blueFortressMaxHealth
+                } else {
+                        config.redFortressMaxHealth
+                },
             )
     }
 

@@ -21,6 +21,7 @@ class MatchSession(
     private val terrainBiome: String = "GREEN_FRONTIER",
     private val initialWind: WindSnapshot = WindSnapshot(),
     private val mapDefinition: MapDefinition? = null,
+    private val blueFortressMaxHealth: Int = 500,
     private val combatLogSink: CombatLogSink = NoOpCombatLogSink,
     private val ammunitionLogSink: AmmunitionLogSink = NoOpAmmunitionLogSink,
 ) {
@@ -133,6 +134,7 @@ class MatchSession(
                 ),
                 terrainBiome = terrainBiome,
                 windAccelerationX = initialWind.direction * initialWind.strength,
+                blueFortressMaxHealth = blueFortressMaxHealth,
                 mapDefinition = mapDefinition,
             ),
             combatLogSink = combatLogSink,

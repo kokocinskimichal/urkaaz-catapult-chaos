@@ -38,4 +38,18 @@ class AmmunitionDefinitionsTest {
             (plague.behavior as AmmunitionImpactBehavior.LingeringArea).driftsWithWind,
         )
     }
+
+    @Test
+    fun powderBarrelHasLargeBlastAndFriendlyFire() {
+        val powderBarrel = AmmunitionCatalog.definition(AmmunitionType.POWDER_BARREL)
+        val explosion = powderBarrel.behavior as AmmunitionImpactBehavior.Explosion
+
+        assertEquals(FriendlyFirePolicy.ALL_UNITS, powderBarrel.collision.friendlyFire)
+        assertEquals(220f, powderBarrel.collision.hitRadius)
+        assertEquals(220, powderBarrel.damage.unitDamage)
+        assertEquals(220, powderBarrel.damage.fortressDamage)
+        assertEquals(220f, explosion.radius)
+        assertEquals(150f, powderBarrel.terrain.craterRadius)
+        assertEquals(90f, powderBarrel.terrain.craterDepth)
+    }
 }

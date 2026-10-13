@@ -246,16 +246,17 @@ object PowderBarrelAmmunition : AmmunitionDefinition(
     collision = CollisionProfile(
         hitLayers = setOf(AmmunitionHitLayer.TERRAIN, AmmunitionHitLayer.FORTRESS),
         mode = AmmunitionCollisionMode.IMPACT_ON_TERRAIN,
-        hitRadius = 155f,
+        hitRadius = 220f,
+        friendlyFire = FriendlyFirePolicy.ALL_UNITS,
     ),
     damage = DamageProfile(
-        unitDamage = 110,
-        fortressDamage = 110,
-        unitRadius = 155f,
-        fortressRadius = 155f,
+        unitDamage = 220,
+        fortressDamage = 220,
+        unitRadius = 220f,
+        fortressRadius = 220f,
     ),
-    terrain = TerrainProfile(true, 105f, 64f),
-    behavior = AmmunitionImpactBehavior.Explosion(155f, 0.8f),
+    terrain = TerrainProfile(true, 150f, 90f),
+    behavior = AmmunitionImpactBehavior.Explosion(220f, 0.8f),
     availableLayers = setOf(AmmunitionHitLayer.TERRAIN, AmmunitionHitLayer.FORTRESS),
 )
 

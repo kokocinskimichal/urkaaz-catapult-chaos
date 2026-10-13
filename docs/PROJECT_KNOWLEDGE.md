@@ -283,6 +283,17 @@ must go through commands and domain/application boundaries.
   binary-searches the first terrain crossing, rather than checking only the
   final position of a simulation tick. This also handles a projectile that
   starts inside the sampled surface, exits it while rising and later returns.
+- Ammunition damage profiles keep separate `unitDamage` and `fortressDamage`
+  values and separate falloff radii, even when a type currently uses the same
+  value for both target classes.
+- `POWDER_BARREL` currently deals 220 damage within a 220-world-unit blast
+  radius, creates a 150-world-unit crater with depth 90, and can damage allied
+  units but not the firing team's fortress. Its inventory remains limited to
+  three shots with a 6.5-second reload.
+- Demo matches configure the BLUE player fortress with 5,000 maximum health
+  (ten times the standard 500), while the RED fortress and non-demo matches
+  retain 500 maximum health. The value is passed through the application
+  gateway into `SimulationConfig`.
 - Projectile and impact rendering must not clamp world Y to the fixed
   `groundTop` screen line. Such clamping freezes falling projectiles at one
   screen height and makes their remaining horizontal movement appear as

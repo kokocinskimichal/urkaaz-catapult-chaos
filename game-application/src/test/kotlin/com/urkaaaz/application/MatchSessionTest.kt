@@ -26,6 +26,28 @@ class MatchSessionTest {
     }
 
     @Test
+    fun configurablePlayerFortressHealthIsExposedInTheStartingSnapshot() {
+        val snapshot = MatchSession(
+            blueFortressMaxHealth = 5_000,
+        ).dispatch(
+            MatchCommand.Start(
+                commandId = CommandId("start-demo-health"),
+                matchId = MatchId("demo-health"),
+                playerId = PlayerId("player-demo-health"),
+            ),
+        )
+
+        assertEquals(
+            5_000,
+            snapshot.fortresses.first { it.team == com.urkaaaz.contracts.Team.BLUE }.maxHealth,
+        )
+        assertEquals(
+            500,
+            snapshot.fortresses.first { it.team == com.urkaaaz.contracts.Team.RED }.maxHealth,
+        )
+    }
+
+    @Test
     fun initialWindIsAppliedToTheSimulationAndSnapshot() {
         val session = MatchSession(
             initialWind = WindSnapshot(direction = -1f, strength = 0.5f),

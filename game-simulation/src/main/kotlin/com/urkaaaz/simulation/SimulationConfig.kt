@@ -14,6 +14,8 @@ data class SimulationConfig(
     val fortressCollisionRadius: Float = 46f,
     val unitCollisionRadius: Float = WorldScale.UNIT_COLLISION_RADIUS,
     val defaultCatapultHeightRatio: Float = 0.72f,
+    val blueFortressMaxHealth: Int = 500,
+    val redFortressMaxHealth: Int = 500,
     val startingLimitedAmmunition: Int = 3,
     val matchDurationMilliseconds: Long = 300_000L,
     val mapDefinition: MapDefinition? = null,
@@ -25,6 +27,12 @@ data class SimulationConfig(
         }
         require(defaultCatapultHeightRatio in 0f..1f) {
             "default catapult height ratio must be between 0 and 1"
+        }
+        require(blueFortressMaxHealth > 0) {
+            "blue fortress max health must be positive"
+        }
+        require(redFortressMaxHealth > 0) {
+            "red fortress max health must be positive"
         }
         require(startingLimitedAmmunition >= 0) {
             "starting limited ammunition must not be negative"

@@ -33,6 +33,7 @@ class MatchViewModel(
         selectedDefinition(campaignLevel, demoMode).biome.name,
         selectedDefinition(campaignLevel, demoMode).initialWind,
         mapDefinition = selectedDefinition(campaignLevel, demoMode).mapDefinition,
+        blueFortressMaxHealth = if (demoMode) DEMO_BLUE_FORTRESS_MAX_HEALTH else DEFAULT_FORTRESS_MAX_HEALTH,
         combatLogSink = combatLogSink,
         ammunitionLogSink = ammunitionLogSink,
     ),
@@ -250,6 +251,8 @@ class MatchViewModel(
 
     private companion object {
         const val AI_UNIT_DECISION_INTERVAL_MILLISECONDS = 1_000L
+        const val DEFAULT_FORTRESS_MAX_HEALTH = 500
+        const val DEMO_BLUE_FORTRESS_MAX_HEALTH = DEFAULT_FORTRESS_MAX_HEALTH * 10
     }
 }
 
