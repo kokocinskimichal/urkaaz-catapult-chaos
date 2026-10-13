@@ -60,12 +60,19 @@ The target branch is `develop`. The target repository is
 
 ## GitHub account
 
-Always use the GitHub account `michalkokocinski`. Before pushing, verify that
+Before creating a commit, use this repository-local Git identity:
+
+```bash
+git config user.name "Michał Kokociński"
+git config user.email "kokocinm@gmail.com"
+```
+
+Always use the GitHub account `kokocinskimichal`. Before pushing, verify that
 this account is authenticated and make it the active GitHub CLI account:
 
 ```bash
-gh auth switch --user michalkokocinski
-gh auth status --user michalkokocinski
+gh auth switch --user kokocinskimichal
+gh auth status --user kokocinskimichal
 ```
 
 If the environment-level Git helper selects another account, override the
