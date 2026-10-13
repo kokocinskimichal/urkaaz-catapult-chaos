@@ -207,6 +207,9 @@ private val chapter2Level7Authoring = LevelAuthoringRequest(
         CatapultPlacement(Team.RED, 6750f, 3662.00f, Facing.LEFT, assetKey = "catapult.red.default", protectedZoneId = "chapter-2-level-7-red-foundation"),
     ),
     objects = listOf(
+        MapObjectPlacement("chapter-2-level-7-relic-1", MapObjectType.DECORATION, 1100.00f, 3586.75f, 1.00f, assetKey = "relic.frostbound.small.7", collision = ObjectCollision.NONE, relicSize = RelicSize.SMALL),
+        MapObjectPlacement("chapter-2-level-7-relic-2", MapObjectType.DECORATION, 1540.00f, 3285.36f, 1.00f, assetKey = "relic.frostbound.small.8", collision = ObjectCollision.NONE, relicSize = RelicSize.SMALL),
+        MapObjectPlacement("chapter-2-level-7-relic-3", MapObjectType.DECORATION, 2180.00f, 2962.69f, 1.00f, assetKey = "relic.frostbound.small.9", collision = ObjectCollision.NONE, relicSize = RelicSize.SMALL),
         MapObjectPlacement("chapter-2-level-7-marker", MapObjectType.GAMEPLAY, 3600.00f, 2658.19f, 1.00f, assetKey = "prop.frostbound.marker", collision = ObjectCollision.SOLID),
         MapObjectPlacement("chapter-2-level-7-decoration-1", MapObjectType.DECORATION, 795.00f, 3631.85f, 1.00f, assetKey = "decoration.chapter-2.ruin", collision = ObjectCollision.NONE),
         MapObjectPlacement("chapter-2-level-7-decoration-2", MapObjectType.DECORATION, 958.00f, 3582.87f, 1.40f, assetKey = "decoration.chapter-2.rock", collision = ObjectCollision.NONE),

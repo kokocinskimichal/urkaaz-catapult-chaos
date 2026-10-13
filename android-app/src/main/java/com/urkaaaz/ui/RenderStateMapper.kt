@@ -55,6 +55,8 @@ data class MapObjectRenderState(
     val rotationDegrees: Float,
     val assetKey: String,
     val collisionEnabled: Boolean,
+    val relicSize: String? = null,
+    val relicRenderSize: Float? = null,
 )
 
 data class ProjectileRenderState(
@@ -274,6 +276,8 @@ object RenderStateMapper {
                 rotationDegrees = it.rotationDegrees,
                 assetKey = it.assetKey,
                 collisionEnabled = it.collision != com.urkaaaz.contracts.ObjectCollision.NONE,
+                relicSize = it.relicSize?.name,
+                relicRenderSize = it.relicSize?.renderSize,
             )
         } ?: emptyList(),
     )

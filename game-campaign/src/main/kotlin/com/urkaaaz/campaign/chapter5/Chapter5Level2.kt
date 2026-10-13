@@ -207,6 +207,9 @@ private val chapter5Level2Authoring = LevelAuthoringRequest(
         CatapultPlacement(Team.RED, 6750f, 3669.00f, Facing.LEFT, assetKey = "catapult.red.default", protectedZoneId = "chapter-5-level-2-red-foundation"),
     ),
     objects = listOf(
+        MapObjectPlacement("chapter-5-level-2-relic-1", MapObjectType.DECORATION, 1100.00f, 3558.47f, 1.00f, assetKey = "relic.sunken_marshes.small.2", collision = ObjectCollision.NONE, relicSize = RelicSize.SMALL),
+        MapObjectPlacement("chapter-5-level-2-relic-2", MapObjectType.DECORATION, 3260.00f, 2900.73f, 1.00f, assetKey = "relic.sunken_marshes.small.3", collision = ObjectCollision.NONE, relicSize = RelicSize.SMALL),
+        MapObjectPlacement("chapter-5-level-2-relic-3", MapObjectType.DECORATION, 4260.00f, 3367.21f, 1.00f, assetKey = "relic.sunken_marshes.small.4", collision = ObjectCollision.NONE, relicSize = RelicSize.SMALL),
         MapObjectPlacement("chapter-5-level-2-marker", MapObjectType.GAMEPLAY, 3600.00f, 2937.88f, 1.00f, assetKey = "prop.sunken-marshes.marker", collision = ObjectCollision.SOLID),
         MapObjectPlacement("chapter-5-level-2-decoration-1", MapObjectType.DECORATION, 818.00f, 3621.03f, 0.86f, assetKey = "decoration.chapter-5.rock", collision = ObjectCollision.NONE),
         MapObjectPlacement("chapter-5-level-2-decoration-2", MapObjectType.DECORATION, 924.00f, 3582.10f, 0.81f, assetKey = "decoration.chapter-5.bush", collision = ObjectCollision.NONE),

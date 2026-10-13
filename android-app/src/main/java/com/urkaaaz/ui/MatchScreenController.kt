@@ -112,6 +112,9 @@ class MatchScreenController(
             setPadding(dp(20), dp(12), dp(20), dp(12))
             setBackgroundResource(com.urkaaaz.android.R.drawable.bg_hud_panel)
             elevation = dp(12).toFloat()
+            translationZ = dp(24).toFloat()
+            minWidth = dp(190)
+            minHeight = dp(52)
             visibility = View.GONE
             setOnClickListener {
                 aimAngle = 45f
@@ -151,6 +154,7 @@ class MatchScreenController(
         }
         return FrameLayout(activity).apply {
             setBackgroundColor(Color.TRANSPARENT)
+            clipChildren = false
             addView(content, FrameLayout.LayoutParams(-1, -1))
             addView(
                 unitPanel,
@@ -202,8 +206,8 @@ class MatchScreenController(
                     FrameLayout.LayoutParams.WRAP_CONTENT,
                     FrameLayout.LayoutParams.WRAP_CONTENT,
                 ).apply {
-                    gravity = Gravity.BOTTOM or Gravity.CENTER_HORIZONTAL
-                    bottomMargin = dp(180)
+                    gravity = Gravity.CENTER
+                    topMargin = dp(92)
                 },
             )
             render(viewModel.dispatch(MatchUiAction.StartMatch))
@@ -233,12 +237,17 @@ class MatchScreenController(
         } else {
             View.GONE
         }
-        restartButton.visibility = if (state.outcomeLabel != null && !snapshotMode) {
+        restartButton.visibility = if (
+            state.statusLabel == com.urkaaaz.contracts.MatchStatus.FINISHED.name &&
+            !snapshotMode
+        ) {
             View.VISIBLE
         } else {
             View.GONE
         }
         if (restartButton.visibility == View.VISIBLE) {
+            restartButton.alpha = 1f
+            restartButton.isClickable = true
             restartButton.bringToFront()
         }
     }

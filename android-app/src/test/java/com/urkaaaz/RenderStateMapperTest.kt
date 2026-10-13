@@ -12,6 +12,7 @@ import com.urkaaaz.contracts.MapObjectType
 import com.urkaaaz.contracts.TerrainProfile
 import com.urkaaaz.contracts.TerrainSample
 import com.urkaaaz.contracts.ProjectileSnapshot
+import com.urkaaaz.contracts.RelicSize
 import com.urkaaaz.contracts.Team
 import com.urkaaaz.contracts.WindSnapshot
 import com.urkaaaz.ui.RenderStateMapper
@@ -145,6 +146,14 @@ class RenderStateMapperTest {
                         y = 55f,
                         assetKey = "decoration.test.tree",
                     ),
+                    MapObjectPlacement(
+                        id = "relic-1",
+                        type = MapObjectType.DECORATION,
+                        x = 60f,
+                        y = 100f,
+                        assetKey = "relic.green_frontier.small.1",
+                        relicSize = RelicSize.SMALL,
+                    ),
                 ),
                 initialCameraAnchor = InitialCameraAnchor.CENTER,
                 generationMetadata = MapGenerationMetadata(
@@ -159,7 +168,9 @@ class RenderStateMapperTest {
         val state = RenderStateMapper.map(snapshot)
 
         assertEquals("CENTER", state.initialCameraAnchor)
-        assertEquals("decoration.test.tree", state.mapObjects.single().assetKey)
-        assertEquals(false, state.mapObjects.single().collisionEnabled)
+        assertEquals("decoration.test.tree", state.mapObjects.first().assetKey)
+        assertEquals(false, state.mapObjects.first().collisionEnabled)
+        assertEquals("SMALL", state.mapObjects[1].relicSize)
+        assertEquals(76f, state.mapObjects[1].relicRenderSize)
     }
 }

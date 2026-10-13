@@ -207,6 +207,9 @@ private val chapter3Level4Authoring = LevelAuthoringRequest(
         CatapultPlacement(Team.RED, 6750f, 3659.00f, Facing.LEFT, assetKey = "catapult.red.default", protectedZoneId = "chapter-3-level-4-red-foundation"),
     ),
     objects = listOf(
+        MapObjectPlacement("chapter-3-level-4-relic-1", MapObjectType.DECORATION, 1420.00f, 3513.66f, 1.00f, assetKey = "relic.copperwood.small.4", collision = ObjectCollision.NONE, relicSize = RelicSize.SMALL),
+        MapObjectPlacement("chapter-3-level-4-relic-2", MapObjectType.DECORATION, 2700.00f, 2974.18f, 1.00f, assetKey = "relic.copperwood.small.5", collision = ObjectCollision.NONE, relicSize = RelicSize.SMALL),
+        MapObjectPlacement("chapter-3-level-4-relic-3", MapObjectType.DECORATION, 3420.00f, 2731.33f, 1.00f, assetKey = "relic.copperwood.small.6", collision = ObjectCollision.NONE, relicSize = RelicSize.SMALL),
         MapObjectPlacement("chapter-3-level-4-marker", MapObjectType.GAMEPLAY, 3600.00f, 2653.15f, 1.00f, assetKey = "prop.copperwood.marker", collision = ObjectCollision.SOLID),
         MapObjectPlacement("chapter-3-level-4-decoration-1", MapObjectType.DECORATION, 760.00f, 3646.79f, 0.87f, assetKey = "decoration.chapter-3.rock", collision = ObjectCollision.NONE),
         MapObjectPlacement("chapter-3-level-4-decoration-2", MapObjectType.DECORATION, 987.00f, 3615.58f, 1.15f, assetKey = "decoration.chapter-3.bush", collision = ObjectCollision.NONE),

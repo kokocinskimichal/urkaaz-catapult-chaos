@@ -41,6 +41,7 @@ class MatchViewModel(
 ) {
     private var commandSequence = 0
     private var paused = false
+    private var selectedAmmunition = "ROCK"
     private var aiUnitAutomationEnabled = true
     private var aiUnitDecisionElapsedMilliseconds = 0L
     private val aiAgent = AiAgent(
@@ -113,9 +114,13 @@ class MatchViewModel(
     }
 
     fun dispatch(action: MatchUiAction): RenderState {
-        if (action == MatchUiAction.AdvanceSimulation &&
-            renderState.statusLabel != com.urkaaaz.contracts.MatchStatus.RUNNING.name
-        ) {
+        if (action == MatchUiAction.AdvanceSimulation) {
+            val currentSnapshot = gateway.snapshot()
+            if (currentSnapshot.status != com.urkaaaz.contracts.MatchStatus.RUNNING) {
+                return RenderStateMapper.map(currentSnapshot).also { renderState = it }
+            }
+        }
+        if (action == MatchUiAction.FireRock && !selectedAmmunitionIsAvailable()) {
             return renderState
         }
         var snapshot = when (action) {
@@ -133,6 +138,7 @@ class MatchViewModel(
             MatchUiAction.RestartMatch -> {
                 paused = false
                 aiUnitDecisionElapsedMilliseconds = 0L
+                selectedAmmunition = "ROCK"
                 gateway.restart(matchId, playerId)
             }
             MatchUiAction.FireRock -> gateway.dispatch(
@@ -167,14 +173,18 @@ class MatchViewModel(
                     power = action.power,
                 ),
             )
-            is MatchUiAction.SelectAmmo -> gateway.dispatch(
-                MatchCommand.SelectAmmo(
-                    commandId = CommandId("ui-${++commandSequence}"),
-                    matchId = matchId,
-                    playerId = playerId,
-                    ammunitionType = action.ammunitionType,
-                ),
-            )
+            is MatchUiAction.SelectAmmo -> {
+                val selected = gateway.dispatch(
+                    MatchCommand.SelectAmmo(
+                        commandId = CommandId("ui-${++commandSequence}"),
+                        matchId = matchId,
+                        playerId = playerId,
+                        ammunitionType = action.ammunitionType,
+                    ),
+                )
+                selectedAmmunition = action.ammunitionType
+                selected
+            }
             is MatchUiAction.DeployUnit -> {
                 if (!gateway.canDeployUnit(com.urkaaaz.contracts.Team.BLUE, action.unitType)) {
                     return renderState
@@ -234,6 +244,9 @@ class MatchViewModel(
         }
         return RenderStateMapper.map(snapshot, presentationEvents).also { renderState = it }
     }
+
+    private fun selectedAmmunitionIsAvailable(): Boolean =
+        renderState.playerAmmunition[selectedAmmunition]?.let { it > 0 } ?: true
 
     private companion object {
         const val AI_UNIT_DECISION_INTERVAL_MILLISECONDS = 1_000L

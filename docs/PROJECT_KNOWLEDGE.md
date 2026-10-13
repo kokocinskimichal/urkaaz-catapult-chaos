@@ -36,6 +36,20 @@ terrain profile without mutating the definition. The Android render-state
 mapper exposes immutable map objects and the initial camera anchor for
 presentation.
 
+Decorative relics are represented by `MapObjectPlacement.relicSize` with
+`RelicSize.SMALL`, `MEDIUM` or `LARGE`. The current implementation materializes
+three `SMALL` relics in every Chapter 1–5 level. `MapDefinitionValidator`
+checks the transformed conservative footprint against world bounds, the full
+soil surface, foundations, catapults, steep slopes and neighboring objects;
+runtime never randomizes or mutates relic placement. The renderer draws relics
+in world-space after soil/cap and before fortresses and catapults.
+
+Legacy relic bitmaps are copied into `android-app/src/main/res/drawable-nodpi`
+for Green Frontier, Frostbound, Copperwood and Ashen March. Sunken Marshes
+explicitly reuses the Green Frontier relic set because no dedicated legacy
+Sunken Marshes set was available. Asset keys use the
+`relic.<biome>.small.<index>` namespace and remain presentation-only.
+
 The production map rules are: terrain samples every 40 world units, adjacent
 height delta no greater than 200 world units, at least three foundation
 transition samples, fortress foundation tolerance of ±80 world units,
@@ -77,6 +91,13 @@ The current match HUD displays:
 - a `RESTART MATCH` control after the match outcome overlay, which restarts the
   current local match through `LocalMatchGateway.restart`;
 - ammunition selection at the bottom of the battlefield.
+- `MatchViewModel` blocks firing when the selected limited ammunition has no
+  remaining stock, preventing an exhausted selection from crashing the Android
+  match screen.
+- The match tick reads the immutable simulation snapshot through
+  `LocalMatchGateway` before advancing. This prevents a stale presentation
+  state from dispatching `AdvanceSimulation` after the simulation has reached
+  `FINISHED`; the finished snapshot keeps the restart control visible.
 - legacy-style unit deployment controls above the ammunition selector;
   selecting a unit sends `MatchUiAction.DeployUnit`, spends team gold and
   exposes the deployed unit through the match snapshot.

@@ -176,6 +176,11 @@ class BattlefieldAssetCatalog(private val context: Context) {
     fun themeFor(biome: String): BattlefieldTheme =
         themes[biome] ?: themes.getValue("GREEN_FRONTIER")
 
+    fun relicBitmap(assetKey: String): Bitmap? {
+        val resourceName = RELIC_ASSET_RESOURCES[assetKey] ?: return null
+        return loadBitmap(resourceName)
+    }
+
     fun animationFor(ammunitionType: String): ProjectileAnimation =
         animations[ammunitionType] ?: animations.getValue("ROCK")
 
@@ -209,4 +214,76 @@ class BattlefieldAssetCatalog(private val context: Context) {
             )
             resourceId.takeIf { it != 0 }?.let { BitmapFactory.decodeResource(resources, it) }
         }
+
+    private companion object {
+        val RELIC_ASSET_RESOURCES = buildMap {
+            val biomeResources = mapOf(
+                "green_frontier" to listOf(
+                    "terrain_green_frontier_relic_01_cracked_watering_can",
+                    "terrain_green_frontier_relic_02_rabbit_skull_flower",
+                    "terrain_green_frontier_relic_03_potato_shaped_stone",
+                    "terrain_green_frontier_relic_04_mini_horseshoe",
+                    "terrain_green_frontier_relic_05_peeking_mole",
+                    "terrain_green_frontier_relic_06_helmet_worm",
+                    "terrain_green_frontier_relic_07_large_tibia_bone",
+                    "terrain_green_frontier_relic_08_partial_skeleton",
+                    "terrain_green_frontier_relic_09_worn_boot",
+                    "terrain_green_frontier_relic_10_hand_shovel",
+                ),
+                "frostbound" to listOf(
+                    "terrain_frost_relic_01_frozen_goblin_chest",
+                    "terrain_frost_relic_02_buried_orc_helmet",
+                    "terrain_frost_relic_03_ice_wolf_skeleton",
+                    "terrain_frost_relic_04_cracked_runic_tablet",
+                    "terrain_frost_relic_05_frozen_coin_pouch",
+                    "terrain_frost_relic_06_expedition_sled_fragment",
+                    "terrain_frost_relic_07_buried_miner_pickaxe",
+                    "terrain_frost_relic_08_ice_creature_egg",
+                    "terrain_frost_relic_09_buried_snowman_mask",
+                    "terrain_frost_relic_10_frozen_alarm_horn",
+                ),
+                "copperwood" to listOf(
+                    "terrain_copperwood_detail_01_copper_coin",
+                    "terrain_copperwood_detail_02_metal_acorn",
+                    "terrain_copperwood_detail_03_orc_wooden_spoon",
+                    "terrain_copperwood_detail_04_cracked_leaf_cup",
+                    "terrain_copperwood_detail_05_deer_skull",
+                    "terrain_copperwood_detail_06_caped_leaf",
+                    "terrain_copperwood_detail_07_dwarven_key",
+                    "terrain_copperwood_detail_08_pawprint_stone",
+                    "terrain_copperwood_detail_09_blank_cracked_plaque",
+                    "terrain_copperwood_detail_10_neutral_buried_detail",
+                ),
+                "ashen_march" to listOf(
+                    "terrain_ashen_march_relic_01_burned_goblin_helmet",
+                    "terrain_ashen_march_relic_02_burned_spoon",
+                    "terrain_ashen_march_relic_03_cracked_ash_bottle",
+                    "terrain_ashen_march_relic_04_charred_tower_bone",
+                    "terrain_ashen_march_relic_05_melted_paw_coin",
+                    "terrain_ashen_march_relic_06_cart_wheel_fragment",
+                    "terrain_ashen_march_relic_07_extinguished_candle",
+                    "terrain_ashen_march_relic_08_burned_glove",
+                    "terrain_ashen_march_relic_09_charred_carrot",
+                    "terrain_ashen_march_relic_10_empty_ash_pot",
+                ),
+                "sunken_marshes" to listOf(
+                    "terrain_green_frontier_relic_01_cracked_watering_can",
+                    "terrain_green_frontier_relic_02_rabbit_skull_flower",
+                    "terrain_green_frontier_relic_03_potato_shaped_stone",
+                    "terrain_green_frontier_relic_04_mini_horseshoe",
+                    "terrain_green_frontier_relic_05_peeking_mole",
+                    "terrain_green_frontier_relic_06_helmet_worm",
+                    "terrain_green_frontier_relic_07_large_tibia_bone",
+                    "terrain_green_frontier_relic_08_partial_skeleton",
+                    "terrain_green_frontier_relic_09_worn_boot",
+                    "terrain_green_frontier_relic_10_hand_shovel",
+                ),
+            )
+            biomeResources.forEach { (biome, resources) ->
+                resources.forEachIndexed { index, resourceName ->
+                    put("relic.$biome.small.${index + 1}", resourceName)
+                }
+            }
+        }
+    }
 }

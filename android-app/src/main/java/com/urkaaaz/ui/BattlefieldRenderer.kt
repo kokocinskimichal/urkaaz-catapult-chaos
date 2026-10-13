@@ -86,6 +86,7 @@ class BattlefieldRenderer(
                 fallbackWorldY = groundTop / viewportHeight * WORLD_HEIGHT,
             )
         }
+        drawRelics(canvas, state, viewportWidth, viewportHeight)
 
         val blueFortressCenterX = worldToViewX(FORTRESS_CENTER_MARGIN, viewportWidth)
         val redFortressCenterX =
@@ -220,6 +221,32 @@ class BattlefieldRenderer(
         drawOutcome(canvas, state.outcomeLabel, viewportWidth, viewportHeight)
         if (isAiming) drawAimGesture(canvas, groundTop)
         canvas.restore()
+    }
+
+    private fun drawRelics(
+        canvas: Canvas,
+        state: RenderState,
+        viewportWidth: Float,
+        viewportHeight: Float,
+    ) {
+        state.mapObjects
+            .filter { it.relicSize == "SMALL" }
+            .forEach { relic ->
+                val bitmap = assets.relicBitmap(relic.assetKey) ?: return@forEach
+                val centerX = worldToViewX(relic.x, viewportWidth)
+                val centerY = worldToViewY(relic.y, viewportHeight)
+                val size = (relic.relicRenderSize ?: 76f) * relic.scale
+                canvas.save()
+                canvas.rotate(relic.rotationDegrees, centerX, centerY)
+                drawTexture(
+                    canvas,
+                    bitmap,
+                    centerX - size / 2f,
+                    centerY - size / 2f,
+                    size,
+                )
+                canvas.restore()
+            }
     }
 
     private fun drawBackground(

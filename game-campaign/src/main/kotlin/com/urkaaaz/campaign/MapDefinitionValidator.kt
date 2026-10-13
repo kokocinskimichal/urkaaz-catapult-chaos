@@ -7,9 +7,12 @@ import com.urkaaaz.contracts.MapDefinition
 import com.urkaaaz.contracts.MapObjectPlacement
 import com.urkaaaz.contracts.MapObjectType
 import com.urkaaaz.contracts.ObjectCollision
+import com.urkaaaz.contracts.RelicSize
 import com.urkaaaz.contracts.TerrainSample
 import com.urkaaaz.contracts.Team
 import kotlin.math.abs
+import kotlin.math.cos
+import kotlin.math.sin
 
 data class MapValidationResult(
     val errors: List<MapValidationError>,
@@ -250,9 +253,20 @@ object MapDefinitionValidator {
         definition: MapDefinition,
         errors: MutableList<MapValidationError>,
     ) {
+        val largeRelicCount = definition.objects.count { it.relicSize == RelicSize.LARGE }
+        if (largeRelicCount > 1) {
+            errors += MapValidationError.InvalidDefinition(
+                "objects",
+                "at most one LARGE relic is allowed per map",
+            )
+        }
         definition.objects.forEachIndexed { index, objectPlacement ->
             val path = "objects[$index]"
             validateAsset(objectPlacement.assetKey, path, errors)
+            if (objectPlacement.relicSize != null) {
+                validateRelic(definition, objectPlacement, path, errors)
+                return@forEachIndexed
+            }
             if (objectPlacement.type == MapObjectType.DECORATION) {
                 if (definition.fortresses.any {
                         abs(objectPlacement.x - it.x) <= it.halfWidth + DECORATION_MARGIN
@@ -303,6 +317,128 @@ object MapDefinitionValidator {
             }
         }
     }
+
+    private fun validateRelic(
+        definition: MapDefinition,
+        relic: MapObjectPlacement,
+        path: String,
+        errors: MutableList<MapValidationError>,
+    ) {
+        val size = relic.relicSize ?: return
+        if (relic.type != MapObjectType.DECORATION) {
+            errors += MapValidationError.InvalidDefinition(
+                "$path.type",
+                "relics must be decorations",
+            )
+        }
+        if (relic.collision != ObjectCollision.NONE) {
+            errors += MapValidationError.InvalidDefinition(
+                "$path.collision",
+                "decorative relics cannot have gameplay collision",
+            )
+        }
+        if (!relic.assetKey.startsWith("relic.")) {
+            errors += MapValidationError.InvalidDefinition(
+                "$path.assetKey",
+                "relic asset keys must use the relic. namespace",
+            )
+        }
+
+        val rotationRadians = Math.toRadians(relic.rotationDegrees.toDouble())
+        val rotatedHalfWidth =
+            abs(size.halfWidth * relic.scale * cos(rotationRadians).toFloat()) +
+                abs(size.halfHeight * relic.scale * sin(rotationRadians).toFloat())
+        val rotatedHalfHeight =
+            abs(size.halfWidth * relic.scale * sin(rotationRadians).toFloat()) +
+                abs(size.halfHeight * relic.scale * cos(rotationRadians).toFloat())
+        val left = relic.x - rotatedHalfWidth
+        val right = relic.x + rotatedHalfWidth
+        val top = relic.y - rotatedHalfHeight
+        val bottom = relic.y + rotatedHalfHeight
+
+        if (left < 0f || right > definition.worldWidth || top < 0f || bottom > definition.worldHeight) {
+            errors += MapValidationError.InvalidDefinition(
+                "$path.footprint",
+                "relic footprint must stay inside world bounds",
+            )
+        }
+
+        val soilSurface = maxTerrainHeightInRange(definition, left, right)
+        if (top < soilSurface) {
+            errors += MapValidationError.InvalidDefinition(
+                "$path.footprint",
+                "relic footprint must be fully inside soil",
+            )
+        }
+
+        if (definition.fortresses.any {
+                horizontalFootprintsOverlap(
+                    relic.x,
+                    rotatedHalfWidth,
+                    it.x,
+                    it.halfWidth + DECORATION_MARGIN,
+                )
+            }
+        ) {
+            errors += MapValidationError.DecorationOnFoundation(path)
+        }
+        if (definition.catapults.any {
+                horizontalFootprintsOverlap(
+                    relic.x,
+                    rotatedHalfWidth,
+                    it.x,
+                    it.halfWidth + DECORATION_MARGIN,
+                )
+            }
+        ) {
+            errors += MapValidationError.DecorationOnFoundation(path)
+        }
+        if (definition.protectedTerrainZones.any {
+                relic.leftEdge(rotatedHalfWidth) < it.maxX &&
+                    relic.rightEdge(rotatedHalfWidth) > it.minX
+            }
+        ) {
+            errors += MapValidationError.DecorationOnFoundation(path)
+        }
+
+        val slope = slopeAt(definition.terrain.samples, relic.x)
+        if (slope > MAX_TERRAIN_DELTA / TERRAIN_SAMPLE_STEP) {
+            errors += MapValidationError.DecorationOnSteepSlope(path)
+        }
+
+        definition.objects.filter { it.id != relic.id }.forEach { other ->
+            val otherHalfWidth = other.relicSize?.halfWidth?.times(other.scale) ?: 40f
+            if (!relic.allowOverlap &&
+                !other.allowOverlap &&
+                horizontalFootprintsOverlap(relic.x, rotatedHalfWidth, other.x, otherHalfWidth)
+            ) {
+                errors += MapValidationError.ObjectOverlapsAnotherObject(path, other.id)
+            }
+        }
+    }
+
+    private fun horizontalFootprintsOverlap(
+        leftCenter: Float,
+        leftHalfWidth: Float,
+        rightCenter: Float,
+        rightHalfWidth: Float,
+    ): Boolean = abs(leftCenter - rightCenter) < leftHalfWidth + rightHalfWidth
+
+    private fun MapObjectPlacement.leftEdge(halfWidth: Float): Float = x - halfWidth
+
+    private fun MapObjectPlacement.rightEdge(halfWidth: Float): Float = x + halfWidth
+
+    private fun maxTerrainHeightInRange(
+        definition: MapDefinition,
+        minX: Float,
+        maxX: Float,
+    ): Float = definition.terrain.samples
+        .filter { it.x in minX..maxX }
+        .map { it.height }
+        .plus(terrainHeightAt(definition, minX))
+        .plus(terrainHeightAt(definition, maxX))
+        .maxOrNull()
+        ?: terrainHeightAt(definition, minX)
 
     private fun validateCamera(
         definition: MapDefinition,

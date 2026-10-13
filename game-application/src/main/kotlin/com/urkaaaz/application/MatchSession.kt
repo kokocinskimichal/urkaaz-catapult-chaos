@@ -109,6 +109,8 @@ class MatchSession(
     fun consumeEvents(): List<com.urkaaaz.contracts.MatchEvent> =
         latestEvents.also { latestEvents = emptyList() }
 
+    fun snapshot(): MatchSnapshot = simulation?.snapshot() ?: latestSnapshot
+
     fun canDeployUnit(team: Team, unitType: String): Boolean {
         val definition = runCatching { UnitFactory.byId(unitType) }.getOrNull() ?: return false
         val resources = latestSnapshot.resourcesByTeam[team] ?: return false

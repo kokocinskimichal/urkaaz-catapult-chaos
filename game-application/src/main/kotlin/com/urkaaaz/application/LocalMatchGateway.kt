@@ -27,6 +27,8 @@ class LocalMatchGateway(
 ) {
     fun dispatch(command: MatchCommand): MatchSnapshot = session.dispatch(command)
 
+    fun snapshot(): MatchSnapshot = session.snapshot()
+
     fun pause() = session.pause()
 
     fun resume() = session.resume()

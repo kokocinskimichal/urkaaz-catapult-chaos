@@ -207,6 +207,9 @@ private val chapter4Level10Authoring = LevelAuthoringRequest(
         CatapultPlacement(Team.RED, 6750f, 3666.00f, Facing.LEFT, assetKey = "catapult.red.default", protectedZoneId = "chapter-4-level-10-red-foundation"),
     ),
     objects = listOf(
+        MapObjectPlacement("chapter-4-level-10-relic-1", MapObjectType.DECORATION, 4180.00f, 4538.82f, 1.00f, assetKey = "relic.ashen_march.small.10", collision = ObjectCollision.NONE, relicSize = RelicSize.SMALL),
+        MapObjectPlacement("chapter-4-level-10-relic-2", MapObjectType.DECORATION, 4340.00f, 4463.45f, 1.00f, assetKey = "relic.ashen_march.small.1", collision = ObjectCollision.NONE, relicSize = RelicSize.SMALL),
+        MapObjectPlacement("chapter-4-level-10-relic-3", MapObjectType.DECORATION, 4500.00f, 4380.38f, 1.00f, assetKey = "relic.ashen_march.small.2", collision = ObjectCollision.NONE, relicSize = RelicSize.SMALL),
         MapObjectPlacement("chapter-4-level-10-marker", MapObjectType.GAMEPLAY, 3600.00f, 4643.20f, 1.00f, assetKey = "prop.ashen-march.marker", collision = ObjectCollision.SOLID),
         MapObjectPlacement("chapter-4-level-10-decoration-1", MapObjectType.DECORATION, 830.00f, 3656.49f, 0.97f, assetKey = "decoration.chapter-4.ruin", collision = ObjectCollision.NONE),
         MapObjectPlacement("chapter-4-level-10-decoration-2", MapObjectType.DECORATION, 949.00f, 3669.50f, 1.09f, assetKey = "decoration.chapter-4.rock", collision = ObjectCollision.NONE),

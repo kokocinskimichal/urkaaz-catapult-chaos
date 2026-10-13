@@ -98,11 +98,23 @@ data class MapObjectPlacement(
     val assetKey: String,
     val collision: ObjectCollision = ObjectCollision.NONE,
     val allowOverlap: Boolean = false,
+    val relicSize: RelicSize? = null,
 ) {
     init {
         require(id.isNotBlank())
         require(scale > 0f)
+        require(type == MapObjectType.DECORATION || relicSize == null)
     }
+}
+
+enum class RelicSize(
+    val halfWidth: Float,
+    val halfHeight: Float,
+    val renderSize: Float,
+) {
+    SMALL(56f, 40f, 76f),
+    MEDIUM(96f, 72f, 112f),
+    LARGE(160f, 120f, 176f),
 }
 
 enum class MapObjectType {

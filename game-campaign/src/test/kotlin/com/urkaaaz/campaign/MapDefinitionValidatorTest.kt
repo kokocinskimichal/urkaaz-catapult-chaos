@@ -2,6 +2,9 @@ package com.urkaaaz.campaign
 
 import com.urkaaaz.campaign.chapter1.chapter1Level1MapDefinition
 import com.urkaaaz.contracts.MapDefinition
+import com.urkaaaz.contracts.MapObjectType
+import com.urkaaaz.contracts.ObjectCollision
+import com.urkaaaz.contracts.RelicSize
 import com.urkaaaz.contracts.TerrainProfile
 import com.urkaaaz.contracts.TerrainSample
 import kotlin.test.Test
@@ -60,5 +63,45 @@ class MapDefinitionValidatorTest {
         })
         assertTrue(first.fortresses.map { it.foundationHeight } !=
             second.fortresses.map { it.foundationHeight })
+    }
+
+    @Test
+    fun relicFootprintMustBeFullyInsideSoil() {
+        val relic = chapter1Level1MapDefinition.objects.first { it.relicSize == RelicSize.SMALL }
+        val invalid = chapter1Level1MapDefinition.copy(
+            objects = chapter1Level1MapDefinition.objects.map {
+                if (it.id == relic.id) it.copy(y = it.y - 100f) else it
+            },
+        )
+
+        val result = MapDefinitionValidator.validate(invalid)
+
+        assertTrue(result.errors.any {
+            it.path == "objects[0].footprint" &&
+                it.message.contains("fully inside soil")
+        })
+    }
+
+    @Test
+    fun relicCannotOverlapCatapultFoundation() {
+        val relic = chapter1Level1MapDefinition.objects.first { it.relicSize == RelicSize.SMALL }
+        val invalid = chapter1Level1MapDefinition.copy(
+            objects = chapter1Level1MapDefinition.objects.map {
+                if (it.id == relic.id) {
+                    it.copy(
+                        x = 450f,
+                        y = 3700f,
+                        type = MapObjectType.DECORATION,
+                        collision = ObjectCollision.NONE,
+                    )
+                } else {
+                    it
+                }
+            },
+        )
+
+        val result = MapDefinitionValidator.validate(invalid)
+
+        assertTrue(result.errors.any { it is MapValidationError.DecorationOnFoundation })
     }
 }
