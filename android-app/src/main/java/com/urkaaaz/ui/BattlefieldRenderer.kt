@@ -15,7 +15,6 @@ import com.urkaaaz.contracts.WorldScale
 
 class BattlefieldRenderer(
     private val assets: BattlefieldAssetCatalog,
-    private val drawThemeDecorations: (Canvas, BattlefieldTheme, Float, Boolean, (Float) -> Float) -> Unit,
     private val drawTiledTexture: (Canvas, Bitmap?, Float, Float, Float, Int) -> Unit,
     private val drawTexture: (Canvas, Bitmap?, Float, Float, Float) -> Unit,
     private val drawTextureAtBaseline: (Canvas, Bitmap?, Float, Float, Float) -> Unit,
@@ -69,6 +68,15 @@ class BattlefieldRenderer(
             } ?: groundTop,
             textureBottom = viewportHeight,
         )
+        drawMapDecorations(
+            canvas = canvas,
+            state = state,
+            theme = theme,
+            viewportWidth = viewportWidth,
+            viewportHeight = viewportHeight,
+            debugHitboxesVisible = debugHitboxesVisible,
+        )
+        drawRelics(canvas, state, viewportWidth, viewportHeight, debugHitboxesVisible)
         drawDeformedCap(
             canvas = canvas,
             bitmap = theme.cap,
@@ -78,15 +86,6 @@ class BattlefieldRenderer(
             viewportHeight = viewportHeight,
             fallbackColor = theme.fallbackColor,
         )
-        drawThemeDecorations(canvas, theme, groundTop, debugHitboxesVisible) { worldX ->
-            terrainHeightAt(
-                samples = state.terrainHeightSamples,
-                sampleSpacing = state.terrainSampleSpacing,
-                worldX = worldX,
-                fallbackWorldY = groundTop / viewportHeight * WORLD_HEIGHT,
-            )
-        }
-        drawRelics(canvas, state, viewportWidth, viewportHeight, debugHitboxesVisible)
 
         val blueFortressCenterX = worldToViewX(FORTRESS_CENTER_MARGIN, viewportWidth)
         val redFortressCenterX =
@@ -262,6 +261,57 @@ class BattlefieldRenderer(
                     )
                 }
                 canvas.restore()
+            }
+    }
+
+    private fun drawMapDecorations(
+        canvas: Canvas,
+        state: RenderState,
+        theme: BattlefieldTheme,
+        viewportWidth: Float,
+        viewportHeight: Float,
+        debugHitboxesVisible: Boolean,
+    ) {
+        state.mapObjects
+            .filter { it.type == "DECORATION" && it.relicSize == null }
+            .forEach { decoration ->
+                val resolved = assets.mapDecoration(
+                    assetKey = decoration.assetKey,
+                    variationKey = decoration.id,
+                    theme = theme,
+                ) ?: return@forEach
+                val centerX = worldToViewX(decoration.x, viewportWidth)
+                val baselineY = worldToViewY(decoration.y, viewportHeight) +
+                    DECORATION_GROUND_SINK
+                val width = DECORATION_RENDER_SIZE * decoration.scale
+                val height = width *
+                    resolved.bitmap.height.toFloat() /
+                    resolved.bitmap.width.coerceAtLeast(1)
+                canvas.save()
+                canvas.rotate(
+                    decoration.rotationDegrees,
+                    centerX,
+                    baselineY - height / 2f,
+                )
+                drawTextureAtBaseline(
+                    canvas,
+                    resolved.bitmap,
+                    centerX,
+                    baselineY,
+                    width,
+                )
+                canvas.restore()
+                if (debugHitboxesVisible) {
+                    drawDebugAssetBounds(
+                        canvas = canvas,
+                        bitmap = resolved.bitmap,
+                        left = centerX - width / 2f,
+                        top = baselineY - height,
+                        width = width,
+                        kind = resolved.kind,
+                        rotationDegrees = decoration.rotationDegrees,
+                    )
+                }
             }
     }
 
@@ -839,5 +889,7 @@ class BattlefieldRenderer(
         private const val CATAPULT_PLATFORM_HEIGHT_RATIO = 0.40f
         private const val PROJECTILE_DEBUG_RADIUS = 30f
         private const val PROJECTILE_RENDER_SIZE = 36f
+        private const val DECORATION_RENDER_SIZE = 94f
+        private const val DECORATION_GROUND_SINK = 12f
     }
 }

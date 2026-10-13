@@ -19,6 +19,11 @@ data class TerrainDecoration(
     val kind: BattlefieldAssetKind,
 )
 
+data class ResolvedMapDecoration(
+    val bitmap: Bitmap,
+    val kind: BattlefieldAssetKind,
+)
+
 enum class BattlefieldAssetKind {
     TREE,
     ROCK,
@@ -62,8 +67,12 @@ class BattlefieldAssetCatalog(private val context: Context) {
             soil = terrainSoil,
             cap = loadBitmap("terrain_green_frontier_cap") ?: grassCap,
             decorations = listOf(
-                TerrainDecoration(loadBitmap("terrain_tree_00"), BattlefieldAssetKind.TREE),
-                TerrainDecoration(loadBitmap("terrain_tree_01"), BattlefieldAssetKind.TREE),
+                TerrainDecoration(loadBitmap("terrain_green_frontier_tree_00"), BattlefieldAssetKind.TREE),
+                TerrainDecoration(loadBitmap("terrain_green_frontier_tree_01"), BattlefieldAssetKind.TREE),
+                TerrainDecoration(loadBitmap("terrain_green_frontier_rock_00"), BattlefieldAssetKind.ROCK),
+                TerrainDecoration(loadBitmap("terrain_green_frontier_rock_01"), BattlefieldAssetKind.ROCK),
+                TerrainDecoration(loadBitmap("terrain_green_frontier_prop_00"), BattlefieldAssetKind.PROP),
+                TerrainDecoration(loadBitmap("terrain_green_frontier_prop_01"), BattlefieldAssetKind.PROP),
             ),
             fallbackColor = Color.rgb(111, 145, 77),
         ),
@@ -75,6 +84,8 @@ class BattlefieldAssetCatalog(private val context: Context) {
                 TerrainDecoration(loadBitmap("terrain_frost_tree_00"), BattlefieldAssetKind.TREE),
                 TerrainDecoration(loadBitmap("terrain_frost_tree_01"), BattlefieldAssetKind.TREE),
                 TerrainDecoration(loadBitmap("terrain_frost_rock_00"), BattlefieldAssetKind.ROCK),
+                TerrainDecoration(loadBitmap("terrain_frost_prop_00"), BattlefieldAssetKind.PROP),
+                TerrainDecoration(loadBitmap("terrain_frost_prop_01"), BattlefieldAssetKind.PROP),
             ),
             fallbackColor = Color.rgb(169, 185, 193),
         ),
@@ -86,6 +97,8 @@ class BattlefieldAssetCatalog(private val context: Context) {
                 TerrainDecoration(loadBitmap("terrain_copperwood_tree_00"), BattlefieldAssetKind.TREE),
                 TerrainDecoration(loadBitmap("terrain_copperwood_tree_01"), BattlefieldAssetKind.TREE),
                 TerrainDecoration(loadBitmap("terrain_copperwood_rock_00"), BattlefieldAssetKind.ROCK),
+                TerrainDecoration(loadBitmap("terrain_copperwood_prop_00"), BattlefieldAssetKind.PROP),
+                TerrainDecoration(loadBitmap("terrain_copperwood_prop_01"), BattlefieldAssetKind.PROP),
             ),
             fallbackColor = Color.rgb(111, 75, 48),
         ),
@@ -97,6 +110,8 @@ class BattlefieldAssetCatalog(private val context: Context) {
                 TerrainDecoration(loadBitmap("terrain_ashen_march_tree_00"), BattlefieldAssetKind.TREE),
                 TerrainDecoration(loadBitmap("terrain_ashen_march_tree_01"), BattlefieldAssetKind.TREE),
                 TerrainDecoration(loadBitmap("terrain_ashen_march_rock_00"), BattlefieldAssetKind.ROCK),
+                TerrainDecoration(loadBitmap("terrain_ashen_march_prop_00"), BattlefieldAssetKind.PROP),
+                TerrainDecoration(loadBitmap("terrain_ashen_march_prop_01"), BattlefieldAssetKind.PROP),
             ),
             fallbackColor = Color.rgb(81, 75, 68),
         ),
@@ -105,8 +120,10 @@ class BattlefieldAssetCatalog(private val context: Context) {
             soil = terrainSoil,
             cap = grassCap,
             decorations = listOf(
-                TerrainDecoration(loadBitmap("terrain_prop_00"), BattlefieldAssetKind.PROP),
-                TerrainDecoration(loadBitmap("terrain_prop_01"), BattlefieldAssetKind.PROP),
+                TerrainDecoration(loadBitmap("terrain_green_frontier_prop_00"), BattlefieldAssetKind.PROP),
+                TerrainDecoration(loadBitmap("terrain_green_frontier_prop_01"), BattlefieldAssetKind.PROP),
+                TerrainDecoration(loadBitmap("terrain_green_frontier_tree_00"), BattlefieldAssetKind.TREE),
+                TerrainDecoration(loadBitmap("terrain_green_frontier_rock_00"), BattlefieldAssetKind.ROCK),
             ),
             fallbackColor = Color.rgb(77, 98, 76),
         ),
@@ -197,6 +214,28 @@ class BattlefieldAssetCatalog(private val context: Context) {
     fun relicBitmap(assetKey: String): Bitmap? {
         val resourceName = RELIC_ASSET_RESOURCES[assetKey] ?: return null
         return loadBitmap(resourceName)
+    }
+
+    fun mapDecoration(
+        assetKey: String,
+        variationKey: String,
+        theme: BattlefieldTheme,
+    ): ResolvedMapDecoration? {
+        val kind = when {
+            assetKey.endsWith(".tree") -> BattlefieldAssetKind.TREE
+            assetKey.endsWith(".rock") -> BattlefieldAssetKind.ROCK
+            assetKey.endsWith(".bush") || assetKey.endsWith(".ruin") ->
+                BattlefieldAssetKind.PROP
+            else -> return null
+        }
+        val candidates = theme.decorations.filter { it.kind == kind && it.bitmap != null }
+        val preferred = candidates
+            .getOrNull(
+                Math.floorMod(variationKey.hashCode(), candidates.size.coerceAtLeast(1)),
+            )
+            ?.bitmap
+        val fallback = theme.decorations.firstOrNull { it.bitmap != null }?.bitmap
+        return (preferred ?: fallback)?.let { ResolvedMapDecoration(it, kind) }
     }
 
     fun animationFor(ammunitionType: String): ProjectileAnimation =

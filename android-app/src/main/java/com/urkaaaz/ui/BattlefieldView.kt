@@ -28,33 +28,6 @@ class BattlefieldView(context: Context) : View(context) {
         color = Color.rgb(111, 145, 77)
     }
 
-    private fun drawThemeDecorations(
-        canvas: Canvas,
-        theme: BattlefieldTheme,
-        groundTop: Float,
-        debugHitboxesVisible: Boolean,
-        groundHeightAt: (Float) -> Float,
-    ) {
-        val positions = floatArrayOf(0.34f, 0.48f, 0.62f)
-        theme.decorations.forEachIndexed { index, decoration ->
-            decoration.bitmap?.let { bitmap ->
-                val worldX = WORLD_WIDTH * positions[index % positions.size]
-                val x = worldToViewX(worldX)
-                val groundY = worldToViewY(groundHeightAt(worldX))
-                drawTexture(canvas, bitmap, x, groundY - 94f, 94f)
-                if (debugHitboxesVisible) {
-                    drawDebugAssetBounds(
-                        canvas = canvas,
-                        bitmap = bitmap,
-                        left = x - 47f,
-                        top = groundY - 94f,
-                        width = 94f,
-                        kind = decoration.kind,
-                    )
-                }
-            }
-        }
-    }
     private var state = RenderState(
         statusLabel = "NOT_STARTED",
         phaseLabel = "CREATED",
@@ -119,7 +92,6 @@ class BattlefieldView(context: Context) : View(context) {
     )
     private val renderer = BattlefieldRenderer(
         assets = assets,
-        drawThemeDecorations = ::drawThemeDecorations,
         drawTiledTexture = ::drawTiledTexture,
         drawTexture = ::drawTexture,
         drawTextureAtBaseline = ::drawTextureAtBaseline,
@@ -516,30 +488,6 @@ class BattlefieldView(context: Context) : View(context) {
         )
     }
 
-    private fun drawDebugAssetBounds(
-        canvas: Canvas,
-        bitmap: android.graphics.Bitmap,
-        left: Float,
-        top: Float,
-        width: Float,
-        kind: BattlefieldAssetKind,
-    ) {
-        val height = width * bitmap.height.toFloat() / bitmap.width.coerceAtLeast(1)
-        val paint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-            color = when (kind) {
-                BattlefieldAssetKind.TREE -> Color.rgb(70, 255, 120)
-                BattlefieldAssetKind.ROCK -> Color.rgb(190, 210, 255)
-                BattlefieldAssetKind.PROP -> Color.rgb(80, 230, 255)
-                BattlefieldAssetKind.RELIC -> Color.rgb(255, 100, 240)
-            }
-            style = Paint.Style.STROKE
-            strokeWidth = 3f
-        }
-        canvas.drawRect(left, top, left + width, top + height, paint)
-        canvas.drawLine(left + width / 2f, top + height - 8f, left + width / 2f, top + height + 8f, paint)
-        canvas.drawLine(left + width / 2f - 8f, top + height, left + width / 2f + 8f, top + height, paint)
-    }
-
     private fun worldToViewX(worldX: Float): Float = worldX / WORLD_WIDTH * width
 
     private fun worldToViewY(worldY: Float): Float = worldY / WORLD_HEIGHT * height
@@ -609,6 +557,7 @@ class BattlefieldView(context: Context) : View(context) {
         private const val TRAJECTORY_PREVIEW_POINTS = 42
         private const val TRAJECTORY_PREVIEW_STEP_SECONDS = 1f / 30f
         private const val PROJECTILE_TRAIL_POINTS = 60
+        private const val DECORATION_GROUND_SINK = 12f
         private const val WORLD_WIDTH = WorldDimensions.WIDTH
         private const val WORLD_HEIGHT = WorldDimensions.HEIGHT
     }

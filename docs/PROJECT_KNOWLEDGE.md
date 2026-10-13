@@ -43,6 +43,15 @@ checks the transformed conservative footprint against world bounds, the full
 soil surface, foundations, catapults, steep slopes and neighboring objects;
 runtime never randomizes or mutates relic placement. The renderer draws relics
 in world-space after soil/cap and before fortresses and catapults.
+Non-relic map decorations (`tree`, `rock`, `bush` and `ruin`) are rendered from
+the same `MapObjectPlacement` list using their authored `x`, `y`, `scale` and
+rotation. `BattlefieldView` must not add a second hard-coded decoration layout;
+the terrain theme supplies only the bitmap candidates. The terrain cap is drawn
+after decorations and relics so it masks their buried lower edges.
+Every non-relic decoration must be placed on a locally flat terrain span: the
+interpolated heights one terrain sample step to the left, at the anchor and one
+step to the right may differ by at most `1f`. The campaign validator enforces
+this rule and the all-level audit test prevents slope placements from returning.
 
 Legacy relic bitmaps are copied into `android-app/src/main/res/drawable-nodpi`
 for Green Frontier, Frostbound, Copperwood and Ashen March. Sunken Marshes
@@ -340,3 +349,29 @@ The project slash command `/push` is defined in
 `.github/skills/push/SKILL.md`. Before a commit, it updates relevant knowledge
 Markdown files with durable facts about the changes, then runs the validation
 gate and pushes `develop` using the configured project GitHub account.
+
+## Map authoring
+
+Map authoring decisions are documented in `docs/MAP_EDITOR_DESIGN.md`,
+`docs/MAP_EDITOR_RISKS.md` and
+`docs/MAP_EDITOR_IMPLEMENTATION_PROMPT.md`. The planned authoring tool is a
+separate Kotlin/JVM Compose Desktop application. It will use a shared
+`game-assets` source instead of maintaining an editor-only copy, keep JSON as
+the single map-definition source of truth, lock terrain before decoration
+placement, and export only validated versioned JSON. The current repository
+does not yet contain the editor implementation.
+
+Map decorations are authored only from map object data; the renderer no longer
+adds a second hard-coded decoration layout. Green Frontier tree, rock and prop
+resources use the full `terrain_green_frontier_<category>_<variant>` naming
+convention, and map decoration variants are selected deterministically from
+the map object ID. The terrain cap is drawn after map decorations and relics
+so it covers their buried lower edges.
+
+The campaign decoration audit removed all currently authored non-relic
+decorations that were not on locally flat terrain. `MapDefinitionValidator`
+enforces the same rule by comparing interpolated terrain heights one terrain
+sample step left, at the anchor and one step right, with a maximum height
+difference of `1f`. `DecorationPlacementAuditTest` covers all 100 campaign
+levels, and `MapDefinitionValidatorTest` includes a regression case for a
+decoration placed on a slope.

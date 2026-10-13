@@ -107,6 +107,7 @@ object MapDefinitionValidator {
     const val FOUNDATION_HEIGHT_TOLERANCE = 80f
     const val MIN_FOUNDATION_TRANSITION_SAMPLES = 3
     const val DECORATION_MARGIN = 40f
+    const val FLAT_TERRAIN_HEIGHT_TOLERANCE = 1f
 
     fun validate(definition: MapDefinition): MapValidationResult {
         val errors = buildList {
@@ -278,8 +279,7 @@ object MapDefinitionValidator {
                     }) {
                     errors += MapValidationError.DecorationOnFoundation(path)
                 }
-                val slope = slopeAt(definition.terrain.samples, objectPlacement.x)
-                if (slope > MAX_TERRAIN_DELTA / TERRAIN_SAMPLE_STEP) {
+                if (!isFlatTerrainAt(definition, objectPlacement.x)) {
                     errors += MapValidationError.DecorationOnSteepSlope(path)
                 }
             }
@@ -543,6 +543,14 @@ object MapDefinitionValidator {
         return if (next.x == nearest.x) 0f else {
             abs(next.height - nearest.height) / (next.x - nearest.x)
         }
+    }
+
+    private fun isFlatTerrainAt(definition: MapDefinition, x: Float): Boolean {
+        val left = terrainHeightAt(definition, x - TERRAIN_SAMPLE_STEP)
+        val center = terrainHeightAt(definition, x)
+        val right = terrainHeightAt(definition, x + TERRAIN_SAMPLE_STEP)
+        return abs(left - center) <= FLAT_TERRAIN_HEIGHT_TOLERANCE &&
+            abs(center - right) <= FLAT_TERRAIN_HEIGHT_TOLERANCE
     }
 
     private fun terrainHeightAt(definition: MapDefinition, x: Float): Float {

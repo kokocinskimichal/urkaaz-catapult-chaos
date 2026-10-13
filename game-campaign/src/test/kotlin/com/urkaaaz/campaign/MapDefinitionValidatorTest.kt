@@ -2,6 +2,7 @@ package com.urkaaaz.campaign
 
 import com.urkaaaz.campaign.chapter1.chapter1Level1MapDefinition
 import com.urkaaaz.contracts.MapDefinition
+import com.urkaaaz.contracts.MapObjectPlacement
 import com.urkaaaz.contracts.MapObjectType
 import com.urkaaaz.contracts.ObjectCollision
 import com.urkaaaz.contracts.RelicSize
@@ -32,6 +33,32 @@ class MapDefinitionValidatorTest {
 
         assertFalse(result.isValid)
         assertTrue(result.errors.any { it is MapValidationError.TerrainSlopeExceeded })
+    }
+
+    @Test
+    fun environmentalDecorationOnSlopeIsRejected() {
+        val decorationX = chapter1Level1MapDefinition.worldWidth / 2f
+        val decorationY = 3_700f
+        val invalid = chapter1Level1MapDefinition.copy(
+            objects = chapter1Level1MapDefinition.objects + MapObjectPlacement(
+                id = "synthetic-slope-decoration",
+                type = MapObjectType.DECORATION,
+                x = decorationX,
+                y = decorationY,
+                assetKey = "decoration.chapter-1.tree",
+            ),
+            terrain = TerrainProfile(
+                samples = listOf(
+                    TerrainSample(decorationX - 40f, decorationY),
+                    TerrainSample(decorationX, decorationY + 100f),
+                    TerrainSample(decorationX + 40f, decorationY),
+                ),
+            ),
+        )
+
+        val result = MapDefinitionValidator.validate(invalid)
+
+        assertTrue(result.errors.any { it is MapValidationError.DecorationOnSteepSlope })
     }
 
     @Test
