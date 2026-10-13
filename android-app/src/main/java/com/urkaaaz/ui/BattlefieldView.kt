@@ -32,15 +32,26 @@ class BattlefieldView(context: Context) : View(context) {
         canvas: Canvas,
         theme: BattlefieldTheme,
         groundTop: Float,
+        debugHitboxesVisible: Boolean,
         groundHeightAt: (Float) -> Float,
     ) {
         val positions = floatArrayOf(0.34f, 0.48f, 0.62f)
-        theme.decorations.forEachIndexed { index, bitmap ->
-            if (bitmap != null) {
+        theme.decorations.forEachIndexed { index, decoration ->
+            decoration.bitmap?.let { bitmap ->
                 val worldX = WORLD_WIDTH * positions[index % positions.size]
                 val x = worldToViewX(worldX)
                 val groundY = worldToViewY(groundHeightAt(worldX))
                 drawTexture(canvas, bitmap, x, groundY - 94f, 94f)
+                if (debugHitboxesVisible) {
+                    drawDebugAssetBounds(
+                        canvas = canvas,
+                        bitmap = bitmap,
+                        left = x - 47f,
+                        top = groundY - 94f,
+                        width = 94f,
+                        kind = decoration.kind,
+                    )
+                }
             }
         }
     }
@@ -80,7 +91,6 @@ class BattlefieldView(context: Context) : View(context) {
     private var impactFrame = 0
     private var activeImpact: ImpactRenderState? = null
     private val projectileTrails = mutableMapOf<String, MutableList<Pair<Float, Float>>>()
-    private val projectileTrailTeams = mutableMapOf<String, String>()
     private val aimController = AimGestureController()
     private val camera = BattlefieldCameraController()
     private var pinchActive = false
@@ -117,7 +127,6 @@ class BattlefieldView(context: Context) : View(context) {
         drawTrajectoryPreview = ::drawTrajectoryPreview,
         drawProjectileTrails = ::drawProjectileTrails,
         drawAimGesture = ::drawAimGesture,
-        projectileAnchorOffset = ::projectileAnchorOffset,
     )
 
     fun render(newState: RenderState) {
@@ -381,7 +390,8 @@ class BattlefieldView(context: Context) : View(context) {
         val aim = aimController.state.aim ?: return
         if (!aim.directionValid || state.playerProjectileActive) return
 
-        val (physicsOriginX, physicsOriginY) = playerAimOriginWorld()
+        val physicsOriginX = state.blueCatapultAnchorX
+        val physicsOriginY = state.blueCatapultAnchorY
         val angleRadians = Math.toRadians(aim.angleDegrees.toDouble())
         var x = physicsOriginX
         var y = physicsOriginY
@@ -434,9 +444,7 @@ class BattlefieldView(context: Context) : View(context) {
             strokeWidth = 5f
             strokeCap = Paint.Cap.ROUND
         }
-        projectileTrails.forEach { (projectileId, trail) ->
-            val teamLabel = projectileTrailTeams[projectileId] ?: "BLUE"
-            val (offsetX, offsetY) = projectileAnchorOffset(teamLabel)
+        projectileTrails.values.forEach { trail ->
             for (index in 1 until trail.size) {
                 val alphaFraction = index / trail.size.toFloat()
                 trailPaint.color = Color.argb(
@@ -448,10 +456,10 @@ class BattlefieldView(context: Context) : View(context) {
                 val (x0, y0) = trail[index - 1]
                 val (x1, y1) = trail[index]
                 canvas.drawLine(
-                    worldToViewX(x0 + offsetX),
-                    worldToViewY(y0 + offsetY),
-                    worldToViewX(x1 + offsetX),
-                    worldToViewY(y1 + offsetY),
+                    worldToViewX(x0),
+                    worldToViewY(y0),
+                    worldToViewX(x1),
+                    worldToViewY(y1),
                     trailPaint,
                 )
             }
@@ -461,9 +469,7 @@ class BattlefieldView(context: Context) : View(context) {
     private fun updateProjectileTrails(newState: RenderState) {
         val activeProjectiles = newState.projectiles.map { it.projectileId }.toSet()
         projectileTrails.keys.retainAll(activeProjectiles)
-        projectileTrailTeams.keys.retainAll(activeProjectiles)
         newState.projectiles.forEach { projectile ->
-            projectileTrailTeams[projectile.projectileId] = projectile.teamLabel
             val trail = projectileTrails.getOrPut(projectile.projectileId) { mutableListOf() }
             val position = projectile.x to projectile.y
             if (trail.lastOrNull() != position) {
@@ -510,6 +516,30 @@ class BattlefieldView(context: Context) : View(context) {
         )
     }
 
+    private fun drawDebugAssetBounds(
+        canvas: Canvas,
+        bitmap: android.graphics.Bitmap,
+        left: Float,
+        top: Float,
+        width: Float,
+        kind: BattlefieldAssetKind,
+    ) {
+        val height = width * bitmap.height.toFloat() / bitmap.width.coerceAtLeast(1)
+        val paint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+            color = when (kind) {
+                BattlefieldAssetKind.TREE -> Color.rgb(70, 255, 120)
+                BattlefieldAssetKind.ROCK -> Color.rgb(190, 210, 255)
+                BattlefieldAssetKind.PROP -> Color.rgb(80, 230, 255)
+                BattlefieldAssetKind.RELIC -> Color.rgb(255, 100, 240)
+            }
+            style = Paint.Style.STROKE
+            strokeWidth = 3f
+        }
+        canvas.drawRect(left, top, left + width, top + height, paint)
+        canvas.drawLine(left + width / 2f, top + height - 8f, left + width / 2f, top + height + 8f, paint)
+        canvas.drawLine(left + width / 2f - 8f, top + height, left + width / 2f + 8f, top + height, paint)
+    }
+
     private fun worldToViewX(worldX: Float): Float = worldX / WORLD_WIDTH * width
 
     private fun worldToViewY(worldY: Float): Float = worldY / WORLD_HEIGHT * height
@@ -517,59 +547,8 @@ class BattlefieldView(context: Context) : View(context) {
     private fun catapultBaseline(worldY: Float, groundTop: Float): Float =
         minOf(groundTop + 6f, worldToViewY(worldY) + 10f)
 
-    private fun playerAimOriginWorld(): Pair<Float, Float> =
-        catapultAnchorView().let { (viewX, viewY) ->
-            viewX / width.coerceAtLeast(1) * WORLD_WIDTH to
-                viewY / height.coerceAtLeast(1) * WORLD_HEIGHT
-        }
-
-    private fun playerAimOriginView(): Pair<Float, Float> = catapultAnchorView()
-
-    private fun projectileAnchorOffset(teamLabel: String): Pair<Float, Float> {
-        val isBlue = teamLabel == "BLUE"
-        val anchor = catapultAnchorWorld(isBlue)
-        val catapultX = if (isBlue) state.blueCatapultX else state.redCatapultX
-        val catapultY = if (isBlue) state.blueCatapultY else state.redCatapultY
-        return anchor.first - catapultX to anchor.second - catapultY
-    }
-
-    private fun catapultAnchorWorld(isBlue: Boolean): Pair<Float, Float> =
-        catapultAnchorView(isBlue).let { (viewX, viewY) ->
-            viewX / width.coerceAtLeast(1) * WORLD_WIDTH to
-                viewY / height.coerceAtLeast(1) * WORLD_HEIGHT
-        }
-
-    private fun catapultAnchorView(isBlue: Boolean = true): Pair<Float, Float> {
-        val groundTop = height * 0.76f
-        val fortressBaseline = worldToViewY(
-            terrainHeightAt(
-                samples = state.terrainHeightSamples,
-                sampleSpacing = state.terrainSampleSpacing,
-                worldX = if (isBlue) FORTRESS_CENTER_MARGIN else WORLD_WIDTH - FORTRESS_CENTER_MARGIN,
-                fallbackWorldY = groundTop / height.coerceAtLeast(1) * WORLD_HEIGHT,
-            ),
-        ) + 4f
-        val baseline = fortressBaseline - FORTRESS_RENDER_HEIGHT * CATAPULT_PLATFORM_HEIGHT_RATIO
-        val catapult = if (isBlue) assets.blueCatapult else assets.redCatapult
-        val catapultHeight = CATAPULT_RENDER_WIDTH *
-            catapult.height.toFloat() / catapult.width.coerceAtLeast(1)
-        val catapultX = if (isBlue) state.blueCatapultX else state.redCatapultX
-        return worldToViewX(catapultX) to (baseline - catapultHeight / 2f)
-    }
-
-    private fun terrainHeightAt(
-        samples: List<Float>,
-        sampleSpacing: Float,
-        worldX: Float,
-        fallbackWorldY: Float,
-    ): Float {
-        if (samples.isEmpty() || sampleSpacing <= 0f) return fallbackWorldY
-        val position = (worldX / sampleSpacing).coerceIn(0f, (samples.size - 1).toFloat())
-        val lowerIndex = position.toInt()
-        val upperIndex = (lowerIndex + 1).coerceAtMost(samples.lastIndex)
-        val fraction = position - lowerIndex
-        return samples[lowerIndex] + (samples[upperIndex] - samples[lowerIndex]) * fraction
-    }
+    private fun playerAimOriginView(): Pair<Float, Float> =
+        worldToViewX(state.blueCatapultAnchorX) to worldToViewY(state.blueCatapultAnchorY)
 
     private fun drawTiledTexture(
         canvas: Canvas,
@@ -619,11 +598,8 @@ class BattlefieldView(context: Context) : View(context) {
         private const val RELOAD_INDICATOR_RADIUS = 30f
         private const val RELOAD_INDICATOR_DURATION = 5.5f
         private const val FORTRESS_RENDER_WIDTH = 280f
-        private const val FORTRESS_RENDER_HEIGHT = 210f
-        private const val CATAPULT_RENDER_WIDTH = 95f
         private const val FORTRESS_CENTER_MARGIN = 490f
         private const val RELOAD_INDICATOR_OFFSET = 72f
-        private const val CATAPULT_PLATFORM_HEIGHT_RATIO = 0.40f
         private const val PROJECTILE_SPEED_SCALE = 8f
         private const val GRAVITY_ACCELERATION_Y = 420f
         private const val WIND_ACCELERATION_SCALE = 260f

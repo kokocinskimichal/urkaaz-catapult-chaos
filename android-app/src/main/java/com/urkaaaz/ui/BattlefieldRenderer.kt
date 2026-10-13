@@ -15,7 +15,7 @@ import com.urkaaaz.contracts.WorldScale
 
 class BattlefieldRenderer(
     private val assets: BattlefieldAssetCatalog,
-    private val drawThemeDecorations: (Canvas, BattlefieldTheme, Float, (Float) -> Float) -> Unit,
+    private val drawThemeDecorations: (Canvas, BattlefieldTheme, Float, Boolean, (Float) -> Float) -> Unit,
     private val drawTiledTexture: (Canvas, Bitmap?, Float, Float, Float, Int) -> Unit,
     private val drawTexture: (Canvas, Bitmap?, Float, Float, Float) -> Unit,
     private val drawTextureAtBaseline: (Canvas, Bitmap?, Float, Float, Float) -> Unit,
@@ -23,7 +23,6 @@ class BattlefieldRenderer(
     private val drawTrajectoryPreview: (Canvas) -> Unit,
     private val drawProjectileTrails: (Canvas) -> Unit,
     private val drawAimGesture: (Canvas, Float) -> Unit,
-    private val projectileAnchorOffset: (String) -> Pair<Float, Float>,
 ) {
     private val backgroundPaint = Paint(Paint.ANTI_ALIAS_FLAG)
     private val bluePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
@@ -79,7 +78,7 @@ class BattlefieldRenderer(
             viewportHeight = viewportHeight,
             fallbackColor = theme.fallbackColor,
         )
-        drawThemeDecorations(canvas, theme, groundTop) { worldX ->
+        drawThemeDecorations(canvas, theme, groundTop, debugHitboxesVisible) { worldX ->
             terrainHeightAt(
                 samples = state.terrainHeightSamples,
                 sampleSpacing = state.terrainSampleSpacing,
@@ -87,7 +86,7 @@ class BattlefieldRenderer(
                 fallbackWorldY = groundTop / viewportHeight * WORLD_HEIGHT,
             )
         }
-        drawRelics(canvas, state, viewportWidth, viewportHeight)
+        drawRelics(canvas, state, viewportWidth, viewportHeight, debugHitboxesVisible)
 
         val blueFortressCenterX = worldToViewX(FORTRESS_CENTER_MARGIN, viewportWidth)
         val redFortressCenterX =
@@ -163,10 +162,9 @@ class BattlefieldRenderer(
         drawTrajectoryPreview(canvas)
         drawProjectileTrails(canvas)
         state.projectiles.forEach { projectile ->
-            val (offsetX, offsetY) = projectileAnchorOffset(projectile.teamLabel)
-            val projectileX = worldToViewX(projectile.x + offsetX, viewportWidth)
+            val projectileX = worldToViewX(projectile.x, viewportWidth)
                 .coerceIn(0f, viewportWidth)
-            val projectileY = worldToViewY(projectile.y + offsetY, viewportHeight)
+            val projectileY = worldToViewY(projectile.y, viewportHeight)
             val frames = assets.animationFor(projectile.ammunitionType).flightFrames
             val frame = frames.getOrNull(animationFrame % frames.size.coerceAtLeast(1))
             val projectileHeight = if (frame == null) {
@@ -234,6 +232,7 @@ class BattlefieldRenderer(
         state: RenderState,
         viewportWidth: Float,
         viewportHeight: Float,
+        debugHitboxesVisible: Boolean,
     ) {
         state.mapObjects
             .filter { it.relicSize == "SMALL" }
@@ -251,6 +250,17 @@ class BattlefieldRenderer(
                     centerY - size / 2f,
                     size,
                 )
+                if (debugHitboxesVisible) {
+                    drawDebugAssetBounds(
+                        canvas = canvas,
+                        bitmap = bitmap,
+                        left = centerX - size / 2f,
+                        top = centerY - size / 2f,
+                        width = size,
+                        kind = BattlefieldAssetKind.RELIC,
+                        rotationDegrees = relic.rotationDegrees,
+                    )
+                }
                 canvas.restore()
             }
     }
@@ -666,6 +676,26 @@ class BattlefieldRenderer(
         viewportWidth: Float,
         viewportHeight: Float,
     ) {
+        val terrainPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+            color = Color.argb(230, 255, 220, 70)
+            style = Paint.Style.STROKE
+            strokeWidth = 4f
+        }
+        if (state.terrainHeightSamples.isNotEmpty() && state.terrainSampleSpacing > 0f) {
+            val terrainPath = Path()
+            state.terrainHeightSamples.forEachIndexed { index, worldY ->
+                val worldX = index * state.terrainSampleSpacing
+                val x = worldToViewX(worldX, viewportWidth)
+                val y = worldToViewY(worldY, viewportHeight)
+                if (index == 0) {
+                    terrainPath.moveTo(x, y)
+                } else {
+                    terrainPath.lineTo(x, y)
+                }
+            }
+            canvas.drawPath(terrainPath, terrainPaint)
+        }
+
         val hitboxPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
             color = Color.argb(210, 255, 80, 80)
             style = Paint.Style.STROKE
@@ -707,6 +737,32 @@ class BattlefieldRenderer(
             val centerY = worldToViewY(projectile.y, viewportHeight)
             canvas.drawCircle(centerX, centerY, PROJECTILE_DEBUG_RADIUS, hitboxPaint)
         }
+    }
+
+    private fun drawDebugAssetBounds(
+        canvas: Canvas,
+        bitmap: Bitmap,
+        left: Float,
+        top: Float,
+        width: Float,
+        kind: BattlefieldAssetKind,
+        rotationDegrees: Float = 0f,
+    ) {
+        val height = width * bitmap.height.toFloat() / bitmap.width.coerceAtLeast(1)
+        val paint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+            color = when (kind) {
+                BattlefieldAssetKind.TREE -> Color.rgb(70, 255, 120)
+                BattlefieldAssetKind.ROCK -> Color.rgb(190, 210, 255)
+                BattlefieldAssetKind.PROP -> Color.rgb(80, 230, 255)
+                BattlefieldAssetKind.RELIC -> Color.rgb(255, 100, 240)
+            }
+            style = Paint.Style.STROKE
+            strokeWidth = 3f
+        }
+        canvas.save()
+        canvas.rotate(rotationDegrees, left + width / 2f, top + height / 2f)
+        canvas.drawRect(left, top, left + width, top + height, paint)
+        canvas.restore()
     }
 
     private fun drawFortressLabels(

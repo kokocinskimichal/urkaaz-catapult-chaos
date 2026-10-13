@@ -3,6 +3,7 @@ package com.urkaaaz.domain
 import com.urkaaaz.contracts.EntityId
 import com.urkaaaz.contracts.FortressHitboxProfile
 import com.urkaaaz.contracts.Team
+import com.urkaaaz.contracts.CatapultPresentationContract
 
 /**
  * A catapult participating in a match.
@@ -14,6 +15,9 @@ data class Catapult(
     val id: EntityId,
     val team: Team,
     val position: WorldPosition,
+    val anchorPosition: WorldPosition = position.copy(
+        y = position.y + CatapultPresentationContract.ANCHOR_VERTICAL_OFFSET_FROM_FOUNDATION,
+    ),
     val aim: Aim = Aim(directionDegrees = 45f, power = 50f),
     val health: Health = Health(maximum = 100),
 ) {

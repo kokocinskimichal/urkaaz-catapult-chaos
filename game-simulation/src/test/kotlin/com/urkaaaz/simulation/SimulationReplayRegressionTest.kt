@@ -72,7 +72,7 @@ class SimulationReplayRegressionTest {
         val simulation = DeterministicMatchSimulation(
             matchId = MatchId("empty-ammo-match"),
             config = SimulationConfig(
-                bounds = WorldBounds(width = 1_000f, height = 600f),
+                bounds = WorldBounds(width = 2_000f, height = 600f),
                 startingLimitedAmmunition = 0,
             ),
         )
@@ -96,11 +96,14 @@ class SimulationReplayRegressionTest {
         val snapshots = mutableListOf<MatchSnapshot>()
         events += simulation.start()
         snapshots += simulation.snapshot()
+        simulation.aim(EntityId("blue-catapult"), directionDegrees = 90f, power = 50f)
         events += simulation.fire(EntityId("blue-catapult"))
         snapshots += simulation.snapshot()
         events += simulation.advance(100)
         snapshots += simulation.snapshot()
-        events += simulation.advance(2_000)
+        repeat(40) {
+            events += simulation.advance(100)
+        }
         snapshots += simulation.snapshot()
         return Trace(snapshots, events)
     }

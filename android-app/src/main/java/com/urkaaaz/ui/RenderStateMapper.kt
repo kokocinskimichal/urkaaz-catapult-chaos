@@ -2,6 +2,7 @@ package com.urkaaaz.ui
 
 import com.urkaaaz.contracts.MatchEvent
 import com.urkaaaz.contracts.MatchSnapshot
+import com.urkaaaz.contracts.CatapultPresentationContract
 import com.urkaaaz.contracts.WorldDimensions
 
 /** Immutable presentation model derived from the public match snapshot. */
@@ -19,8 +20,12 @@ data class RenderState(
     val projectiles: List<ProjectileRenderState>,
     val blueCatapultX: Float,
     val blueCatapultY: Float,
+    val blueCatapultAnchorX: Float = blueCatapultX,
+    val blueCatapultAnchorY: Float = blueCatapultY,
     val redCatapultX: Float,
     val redCatapultY: Float,
+    val redCatapultAnchorX: Float = redCatapultX,
+    val redCatapultAnchorY: Float = redCatapultY,
     val playerAngleDegrees: Float,
     val playerPower: Float,
     val blueFortressHealth: Int,
@@ -142,8 +147,16 @@ object RenderStateMapper {
         },
         blueCatapultX = snapshot.catapults.firstOrNull { it.team.name == "BLUE" }?.x ?: 450f,
         blueCatapultY = snapshot.catapults.firstOrNull { it.team.name == "BLUE" }?.y ?: 3648f,
+        blueCatapultAnchorX = snapshot.catapults.firstOrNull { it.team.name == "BLUE" }?.anchorX
+            ?: 450f,
+        blueCatapultAnchorY = snapshot.catapults.firstOrNull { it.team.name == "BLUE" }?.anchorY
+            ?: CatapultPresentationContract.anchorY(3648f, WorldDimensions.HEIGHT),
         redCatapultX = snapshot.catapults.firstOrNull { it.team.name == "RED" }?.x ?: 6750f,
         redCatapultY = snapshot.catapults.firstOrNull { it.team.name == "RED" }?.y ?: 3648f,
+        redCatapultAnchorX = snapshot.catapults.firstOrNull { it.team.name == "RED" }?.anchorX
+            ?: 6750f,
+        redCatapultAnchorY = snapshot.catapults.firstOrNull { it.team.name == "RED" }?.anchorY
+            ?: CatapultPresentationContract.anchorY(3648f, WorldDimensions.HEIGHT),
         playerAngleDegrees = snapshot.catapults.firstOrNull { it.entityId.value == "blue-catapult" }
             ?.directionDegrees ?: 45f,
         playerPower = snapshot.catapults.firstOrNull { it.entityId.value == "blue-catapult" }

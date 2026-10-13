@@ -33,6 +33,8 @@ data class CatapultSnapshot(
     val team: Team,
     val x: Float,
     val y: Float,
+    val anchorX: Float = x,
+    val anchorY: Float = y,
     val directionDegrees: Float = 0f,
     val power: Float = 0f,
 )

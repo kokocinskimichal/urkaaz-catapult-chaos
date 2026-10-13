@@ -1,6 +1,7 @@
 package com.urkaaaz.simulation
 
 import com.urkaaaz.contracts.CatapultSnapshot
+import com.urkaaaz.contracts.CatapultPresentationContract
 import com.urkaaaz.contracts.EntityId
 import com.urkaaaz.contracts.EventId
 import com.urkaaaz.contracts.FortressSnapshot
@@ -154,7 +155,7 @@ class DeterministicMatchSimulation(
             id = EntityId("projectile-${sequence + 1}"),
             ammunition = ammunition,
             firedBy = catapult.team,
-            position = catapult.position,
+            position = catapult.anchorPosition,
             velocity = Velocity(
                 x = kotlin.math.cos(radians).toFloat() * speed * direction,
                 y = -kotlin.math.sin(radians).toFloat() * speed,
@@ -433,6 +434,8 @@ class DeterministicMatchSimulation(
                 team = it.team,
                 x = it.position.x,
                 y = it.position.y,
+                anchorX = it.anchorPosition.x,
+                anchorY = it.anchorPosition.y,
                 directionDegrees = it.aim.directionDegrees,
                 power = it.aim.power,
             )
@@ -1909,12 +1912,21 @@ class DeterministicMatchSimulation(
                 position = WorldPosition(
                     x = config.mapDefinition?.catapults
                         ?.firstOrNull { it.owner == team }?.x
-                        ?: if (team == Team.BLUE) catapultMarginFor(bounds.width) else {
-                            bounds.width - catapultMarginFor(bounds.width)
-                        },
+                        ?: CatapultPresentationContract.catapultCenterX(team, bounds.width),
                     y = config.mapDefinition?.catapults
                         ?.firstOrNull { it.owner == team }?.foundationHeight
                         ?: bounds.height * config.defaultCatapultHeightRatio,
+                ),
+                anchorPosition = WorldPosition(
+                    x = config.mapDefinition?.catapults
+                        ?.firstOrNull { it.owner == team }?.x
+                        ?: CatapultPresentationContract.catapultCenterX(team, bounds.width),
+                    y = CatapultPresentationContract.anchorY(
+                        foundationHeight = config.mapDefinition?.catapults
+                            ?.firstOrNull { it.owner == team }?.foundationHeight
+                            ?: bounds.height * config.defaultCatapultHeightRatio,
+                        worldHeight = bounds.height,
+                    ),
                 ),
                 aim = Aim(directionDegrees = 45f, power = 50f),
             )

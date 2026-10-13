@@ -194,13 +194,15 @@ Android layer only renders the current snapshot.
 The HUD is rendered as an overlay on the battlefield rather than as a separate
 black strip above the map.
 
-The match aiming presentation uses one catapult-center anchor for the
-pull-radius circle, trajectory preview and projectile rendering. The
-trajectory preview starts at that anchor and applies the same scaled
-projectile physics as the deterministic simulation. The simulation starts a
-projectile at `catapult.position`; the Android renderer translates the active
-projectile and its identity-keyed trail into the catapult-anchor space for
-consistent flight rendering. The pull-radius circle adapts to the visible
+The match aiming presentation uses the shared catapult presentation contract
+for the pull-radius circle, trajectory preview and projectile rendering. The
+horizontal catapult relation is stable across campaign maps; the vertical
+anchor is derived from the map's foundation height plus the contract's fixed
+world-space offset. The trajectory preview starts at that anchor and applies
+the same scaled projectile physics as the deterministic simulation. The
+simulation starts a projectile at `catapult.anchorPosition`; the Android
+renderer draws the active projectile, hitbox and trail at the raw snapshot
+position without a second render-space offset. The pull-radius circle adapts to the visible
 viewport and camera transform so it remains inside the screen. The preview is
 intentionally a short sequence of decreasing dots rather than a full-flight
 line. Active projectile sprites use a smaller world-space render size and
@@ -212,6 +214,11 @@ for fortress targets and active projectiles, and `SNAPSHOT`, which hides
 the HUD and ammunition controls and shows the complete normalized battlefield.
 Legacy AI-unit toggles are intentionally not copied because the new match
 does not yet expose runtime unit deployment or AI-unit commands.
+`Show hitboxes` also draws the rendered canvas bounds of terrain trees, rocks,
+props and relics. These are asset bounds, not gameplay collision shapes:
+transparent padding inside a bitmap can make the visible pixels appear offset
+from the frame. Tree, rock, prop and relic bounds use distinct debug colors,
+and tree bounds include a lower-anchor cross for checking terrain placement.
 
 Catapults are not damage targets. Projectile damage is resolved against the
 opposing fortress collision hitbox; the debug overlay therefore does not draw

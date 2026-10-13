@@ -76,14 +76,18 @@ class DeterministicMatchSimulationTest {
         val simulation = DeterministicMatchSimulation(
             MatchId("match-1"),
             SimulationConfig(
-                bounds = WorldBounds(width = 1_000f, height = 600f),
+                bounds = WorldBounds(width = 2_000f, height = 600f),
                 gravityAccelerationY = 1_000f,
             ),
         )
         simulation.start()
         simulation.fire(EntityId("blue-catapult"))
 
-        val events = simulation.advance(2_000)
+        val events = buildList {
+            repeat(40) {
+                addAll(simulation.advance(100))
+            }
+        }
 
         assertTrue(events.any { it is MatchEvent.ProjectileHitTerrain })
         assertTrue(events.any { it is MatchEvent.TerrainDeformed })
@@ -95,14 +99,18 @@ class DeterministicMatchSimulationTest {
         val simulation = DeterministicMatchSimulation(
             MatchId("plague-match"),
             SimulationConfig(
-                bounds = WorldBounds(width = 1_000f, height = 600f),
+                bounds = WorldBounds(width = 2_000f, height = 600f),
                 gravityAccelerationY = 1_000f,
             ),
         )
         simulation.start()
         simulation.fire(EntityId("blue-catapult"), AmmunitionType.PLAGUE_CAULDRON)
 
-        val events = simulation.advance(2_000)
+        val events = buildList {
+            repeat(40) {
+                addAll(simulation.advance(100))
+            }
+        }
 
         assertTrue(events.any { it is MatchEvent.ProjectileHitTerrain })
         assertEquals(0L, simulation.snapshot().terrain.revision)

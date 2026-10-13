@@ -10,9 +10,21 @@ data class BattlefieldTheme(
     val background: Bitmap?,
     val soil: Bitmap?,
     val cap: Bitmap?,
-    val decorations: List<Bitmap?>,
+    val decorations: List<TerrainDecoration>,
     val fallbackColor: Int,
 )
+
+data class TerrainDecoration(
+    val bitmap: Bitmap?,
+    val kind: BattlefieldAssetKind,
+)
+
+enum class BattlefieldAssetKind {
+    TREE,
+    ROCK,
+    PROP,
+    RELIC,
+}
 
 data class ProjectileAnimation(
     val flightFrames: List<Bitmap>,
@@ -49,7 +61,10 @@ class BattlefieldAssetCatalog(private val context: Context) {
             background = loadBitmap("background_green_frontier"),
             soil = terrainSoil,
             cap = loadBitmap("terrain_green_frontier_cap") ?: grassCap,
-            decorations = listOf(loadBitmap("terrain_tree_00"), loadBitmap("terrain_tree_01")),
+            decorations = listOf(
+                TerrainDecoration(loadBitmap("terrain_tree_00"), BattlefieldAssetKind.TREE),
+                TerrainDecoration(loadBitmap("terrain_tree_01"), BattlefieldAssetKind.TREE),
+            ),
             fallbackColor = Color.rgb(111, 145, 77),
         ),
         "FROSTBOUND" to BattlefieldTheme(
@@ -57,9 +72,9 @@ class BattlefieldAssetCatalog(private val context: Context) {
             soil = loadBitmap("terrain_frost_soil_fill_00"),
             cap = loadBitmap("terrain_frost_snow_cap"),
             decorations = listOf(
-                loadBitmap("terrain_frost_tree_00"),
-                loadBitmap("terrain_frost_tree_01"),
-                loadBitmap("terrain_frost_rock_00"),
+                TerrainDecoration(loadBitmap("terrain_frost_tree_00"), BattlefieldAssetKind.TREE),
+                TerrainDecoration(loadBitmap("terrain_frost_tree_01"), BattlefieldAssetKind.TREE),
+                TerrainDecoration(loadBitmap("terrain_frost_rock_00"), BattlefieldAssetKind.ROCK),
             ),
             fallbackColor = Color.rgb(169, 185, 193),
         ),
@@ -68,9 +83,9 @@ class BattlefieldAssetCatalog(private val context: Context) {
             soil = loadBitmap("terrain_copperwood_soil_fill_00"),
             cap = loadBitmap("terrain_copperwood_cap"),
             decorations = listOf(
-                loadBitmap("terrain_copperwood_tree_00"),
-                loadBitmap("terrain_copperwood_tree_01"),
-                loadBitmap("terrain_copperwood_rock_00"),
+                TerrainDecoration(loadBitmap("terrain_copperwood_tree_00"), BattlefieldAssetKind.TREE),
+                TerrainDecoration(loadBitmap("terrain_copperwood_tree_01"), BattlefieldAssetKind.TREE),
+                TerrainDecoration(loadBitmap("terrain_copperwood_rock_00"), BattlefieldAssetKind.ROCK),
             ),
             fallbackColor = Color.rgb(111, 75, 48),
         ),
@@ -79,9 +94,9 @@ class BattlefieldAssetCatalog(private val context: Context) {
             soil = loadBitmap("terrain_ashen_march_soil_fill_00"),
             cap = loadBitmap("terrain_ashen_march_cap"),
             decorations = listOf(
-                loadBitmap("terrain_ashen_march_tree_00"),
-                loadBitmap("terrain_ashen_march_tree_01"),
-                loadBitmap("terrain_ashen_march_rock_00"),
+                TerrainDecoration(loadBitmap("terrain_ashen_march_tree_00"), BattlefieldAssetKind.TREE),
+                TerrainDecoration(loadBitmap("terrain_ashen_march_tree_01"), BattlefieldAssetKind.TREE),
+                TerrainDecoration(loadBitmap("terrain_ashen_march_rock_00"), BattlefieldAssetKind.ROCK),
             ),
             fallbackColor = Color.rgb(81, 75, 68),
         ),
@@ -89,7 +104,10 @@ class BattlefieldAssetCatalog(private val context: Context) {
             background = loadBitmap("background_sunken_marshes"),
             soil = terrainSoil,
             cap = grassCap,
-            decorations = listOf(loadBitmap("terrain_prop_00"), loadBitmap("terrain_prop_01")),
+            decorations = listOf(
+                TerrainDecoration(loadBitmap("terrain_prop_00"), BattlefieldAssetKind.PROP),
+                TerrainDecoration(loadBitmap("terrain_prop_01"), BattlefieldAssetKind.PROP),
+            ),
             fallbackColor = Color.rgb(77, 98, 76),
         ),
     )
