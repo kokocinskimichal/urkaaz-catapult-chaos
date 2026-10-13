@@ -165,7 +165,6 @@ class BattlefieldRenderer(
             val projectileX = worldToViewX(projectile.x, viewportWidth)
                 .coerceIn(0f, viewportWidth)
             val projectileY = worldToViewY(projectile.y, viewportHeight)
-                .coerceIn(0f, groundTop)
             val frames = assets.animationFor(projectile.ammunitionType).flightFrames
             val frame = frames.getOrNull(animationFrame % frames.size.coerceAtLeast(1))
             drawTexture(
@@ -181,7 +180,7 @@ class BattlefieldRenderer(
             val frames = assets.animationFor(impact.ammunitionType).impactFrames
             val frame = frames.getOrNull(impactFrame % frames.size.coerceAtLeast(1))
             val impactX = worldToViewX(impact.x, viewportWidth).coerceIn(0f, viewportWidth)
-            val impactY = worldToViewY(impact.y, viewportHeight).coerceIn(0f, groundTop)
+            val impactY = worldToViewY(impact.y, viewportHeight)
             drawTexture(canvas, frame, impactX - 54f, impactY - 54f, 108f)
         }
         drawCombatFeedback(canvas, combatFeedback, viewportWidth, viewportHeight, groundTop)

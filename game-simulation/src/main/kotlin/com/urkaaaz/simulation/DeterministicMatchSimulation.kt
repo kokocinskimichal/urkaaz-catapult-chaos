@@ -316,13 +316,24 @@ class DeterministicMatchSimulation(
                 gravityResponse = projectile.gravityResponse,
                 drag = projectile.drag,
             )
-            val target = targetHitBy(advanced)
+            val terrainImpact = terrainImpactPosition(
+                previous = projectile,
+                deltaSeconds = deltaSeconds,
+                windAccelerationX = wind.accelerationX() * projectile.windResponse,
+                gravityAccelerationY = config.gravityAccelerationY *
+                    worldPhysicsScale *
+                    projectile.gravityResponse,
+            )
+            val impactProjectile = terrainImpact?.let {
+                advanced.copy(position = it)
+            } ?: advanced
+            val target = targetHitBy(impactProjectile)
             when {
                 target != null -> {
-                    resolveEntityImpact(advanced, target)
-                    if (!target.stopsProjectile) resolved += advanced
+                    resolveEntityImpact(impactProjectile, target)
+                    if (!target.stopsProjectile) resolved += impactProjectile
                 }
-                terrain.contains(advanced.position) -> resolveTerrainImpact(advanced)
+                terrainImpact != null -> resolveTerrainImpact(impactProjectile)
                 outsideBounds(advanced.position) ||
                     advanced.ageSeconds >= AmmunitionCatalog
                         .definition(advanced.ammunition)
@@ -339,6 +350,76 @@ class DeterministicMatchSimulation(
             phase = MatchPhase.PLAYER_TURN
         }
         return drainEvents()
+    }
+
+    /**
+     * Finds the first point where the projectile crosses the terrain during
+     * this simulation step. Checking only the advanced position allows a fast
+     * projectile to tunnel through the sampled surface.
+     */
+    private fun terrainImpactPosition(
+        previous: Projectile,
+        deltaSeconds: Float,
+        windAccelerationX: Float,
+        gravityAccelerationY: Float,
+    ): WorldPosition? {
+        val previousPosition = previous.position
+        if (previousPosition.x !in 0f..terrain.worldWidth) {
+            return null
+        }
+
+        fun clearance(position: WorldPosition): Float =
+            position.y - terrain.heightAt(position.x)
+
+        fun positionAt(timeSeconds: Float): WorldPosition = WorldPosition(
+            x = previousPosition.x +
+                (previous.velocity.x + windAccelerationX * timeSeconds) * timeSeconds,
+            y = previousPosition.y +
+                (previous.velocity.y + gravityAccelerationY * timeSeconds) * timeSeconds,
+        )
+
+        var intervalStart = previousPosition
+        var intervalStartClearance = clearance(intervalStart)
+        var hasBeenAboveTerrain = intervalStartClearance < 0f
+        if (!hasBeenAboveTerrain && previous.ageSeconds > 0f && previous.velocity.y >= 0f) {
+            return previousPosition
+        }
+
+        val sampleCount = maxOf(
+            1,
+            kotlin.math.ceil(deltaSeconds / TERRAIN_COLLISION_SAMPLE_SECONDS).toInt(),
+        )
+        for (sampleIndex in 1..sampleCount) {
+            val time = deltaSeconds * sampleIndex / sampleCount
+            val intervalEnd = positionAt(time)
+            if (intervalEnd.x !in 0f..terrain.worldWidth) break
+            val intervalEndClearance = clearance(intervalEnd)
+            if (!hasBeenAboveTerrain) {
+                hasBeenAboveTerrain = intervalEndClearance < 0f
+                intervalStart = intervalEnd
+                intervalStartClearance = intervalEndClearance
+                continue
+            }
+            if (intervalStartClearance < 0f && intervalEndClearance >= 0f) {
+                var above = intervalStart
+                var below = intervalEnd
+                repeat(TERRAIN_COLLISION_SEARCH_ITERATIONS) {
+                    val midpoint = WorldPosition(
+                        x = (above.x + below.x) * 0.5f,
+                        y = (above.y + below.y) * 0.5f,
+                    )
+                    if (clearance(midpoint) < 0f) {
+                        above = midpoint
+                    } else {
+                        below = midpoint
+                    }
+                }
+                return below
+            }
+            intervalStart = intervalEnd
+            intervalStartClearance = intervalEndClearance
+        }
+        return null
     }
 
     fun snapshot(): MatchSnapshot = MatchSnapshot(
@@ -1812,6 +1893,8 @@ class DeterministicMatchSimulation(
         // 140f fortress half-width plus 20% of the full 280f fortress width.
         private val FORTRESS_FLAT_HALF_WIDTH = WorldScale.FORTRESS_HALF_WIDTH
         private const val BASE_PHYSICS_WORLD_WIDTH = 1_600f
+        private const val TERRAIN_COLLISION_SEARCH_ITERATIONS = 12
+        private const val TERRAIN_COLLISION_SAMPLE_SECONDS = 1f / 60f
 
         private fun fortressMarginFor(worldWidth: Float): Float =
             if (worldWidth < 2_000f) 160f else FORTRESS_CENTER_MARGIN

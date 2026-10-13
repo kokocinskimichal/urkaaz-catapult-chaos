@@ -51,11 +51,10 @@ class AmmunitionPanelView(context: Context) : FrameLayout(context) {
     fun render(state: RenderState) {
         latestState = state
         val count = state.playerAmmunition[selectedAmmo]
-        val enabled = count == null || count > 0
         val reload = state.playerReloadByAmmunition[selectedAmmo]
             ?: state.playerReloadRemainingSeconds
-        selectorButton.isEnabled = enabled
-        selectorButton.alpha = if (enabled) 1f else 0.35f
+        selectorButton.isEnabled = true
+        selectorButton.alpha = 1f
         selectorButton.contentDescription =
             "Choose ammunition: $selectedAmmo, stock=${count ?: "unlimited"}, " +
                 "reload=${"%.1f".format(java.util.Locale.US, reload)} seconds"

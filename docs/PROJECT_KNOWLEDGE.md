@@ -276,6 +276,17 @@ must go through commands and domain/application boundaries.
   truth for the fired projectile.
 - Camera panning must be distinguished from aiming release so `ACTION_UP` fires
   only when the gesture was an aim gesture.
+- The ammunition selector remains clickable when the equipped limited
+  ammunition is depleted; only depleted entries inside the selection popup are
+  disabled so the player can switch to another ammunition type.
+- Terrain impact detection samples the projectile's full movement interval and
+  binary-searches the first terrain crossing, rather than checking only the
+  final position of a simulation tick. This also handles a projectile that
+  starts inside the sampled surface, exits it while rising and later returns.
+- Projectile and impact rendering must not clamp world Y to the fixed
+  `groundTop` screen line. Such clamping freezes falling projectiles at one
+  screen height and makes their remaining horizontal movement appear as
+  level flight.
 - System status bar and Back handling use modern AndroidX APIs.
 - The engine and simulation remain independent of Android.
 
