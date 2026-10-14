@@ -1947,9 +1947,9 @@ class DeterministicMatchSimulation(
                         ?: if (team == Team.BLUE) fortressMarginFor(bounds.width) else {
                             bounds.width - fortressMarginFor(bounds.width)
                         },
-                    y = config.mapDefinition?.fortresses
+                    y = (config.mapDefinition?.fortresses
                         ?.firstOrNull { it.owner == team }?.foundationHeight
-                        ?: bounds.height * 0.68f,
+                        ?: bounds.height * 0.68f) - WorldScale.FORTRESS_HEIGHT / 2f,
                 ),
                 maxHealth = if (team == Team.BLUE) {
                         config.blueFortressMaxHealth

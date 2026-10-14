@@ -4,6 +4,8 @@
 
 ### Changed
 
+- Rebuilt the fortress hitbox as one alpha-bounds rectangle shared by both
+  fortress sprites and removed fortress-name labels from the hitbox debug view.
 - Pinch zoom now anchors on the gesture focus, supports up to 4x zoom, and
   temporarily takes precedence over automatic camera tracking.
 - Soil tiles render at a base width of 256 view units in the Android game and

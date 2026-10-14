@@ -195,9 +195,10 @@ and tree bounds include a lower-anchor cross for checking terrain placement.
 
 Catapults are not damage targets. Projectile damage is resolved against the
 opposing fortress collision hitbox; the debug overlay therefore does not draw
-catapult hitboxes. The fortress hitbox is an alpha-derived approximation made
-of six rectangles covering the upper tower, body, lower wings and base. Direct
-hits and area damage use the same rectangle profile.
+catapult hitboxes. The fortress hitbox is one rectangle around the union of the
+opaque bounds in both left and right fortress sprites. It is scaled from the
+1024x768 source canvas and centered on the rendered fortress. Direct hits, area
+damage and the debug preview use the same rectangle.
 
 ## Data flow
 

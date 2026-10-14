@@ -109,7 +109,19 @@ class ContractsTest {
     @Test
     fun sharedMatchEntityScaleUsesCurrentGlobalRules() {
         assertEquals(0.70f, WorldScale.FORTRESS_SCALE)
+        assertEquals(196f, WorldScale.FORTRESS_WIDTH)
+        assertEquals(147f, WorldScale.FORTRESS_HEIGHT)
         assertEquals(137.2f, WorldScale.FORTRESS_HALF_WIDTH)
         assertEquals(3.0f, WorldScale.UNIT_SCALE)
+    }
+
+    @Test
+    fun fortressAlphaProfileUsesOneFullSilhouetteRectangle() {
+        val rectangle = FortressHitboxProfile.rectangles.single()
+
+        assertEquals(-82.30469f, rectangle.left)
+        assertEquals(-62.20703f, rectangle.top)
+        assertEquals(82.30469f, rectangle.right)
+        assertEquals(62.20703f, rectangle.bottom)
     }
 }

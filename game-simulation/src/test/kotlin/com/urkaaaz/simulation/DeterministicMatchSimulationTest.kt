@@ -8,6 +8,7 @@ import com.urkaaaz.contracts.MatchStatus
 import com.urkaaaz.contracts.Team
 import com.urkaaaz.domain.AmmunitionType
 import com.urkaaaz.domain.WorldBounds
+import kotlin.math.abs
 import kotlin.test.Test
 import kotlin.test.assertFailsWith
 import kotlin.test.assertEquals
@@ -92,6 +93,43 @@ class DeterministicMatchSimulationTest {
         assertTrue(events.any { it is MatchEvent.ProjectileHitTerrain })
         assertTrue(events.any { it is MatchEvent.TerrainDeformed })
         assertEquals(1L, simulation.snapshot().terrain.revision)
+    }
+
+    @Test
+    fun terrainImpactResolvesOnSurfaceForBothTeams() {
+        Team.entries.forEach { team ->
+            val simulation = DeterministicMatchSimulation(
+                MatchId("terrain-impact-${team.name.lowercase()}"),
+                SimulationConfig(
+                    bounds = WorldBounds(width = 2_000f, height = 600f),
+                    gravityAccelerationY = 1_000f,
+                    windAccelerationX = 0f,
+                ),
+            )
+            simulation.start()
+            val terrainSnapshotBeforeShot = simulation.snapshot().terrain
+            val terrainBeforeShot = TerrainState(
+                baselineHeight = terrainSnapshotBeforeShot.heightSamples.first(),
+                worldWidth = terrainSnapshotBeforeShot.worldWidth,
+                sampleSpacing = terrainSnapshotBeforeShot.sampleSpacing,
+                heightSamples = terrainSnapshotBeforeShot.heightSamples,
+            )
+            val catapultId = EntityId("${team.name.lowercase()}-catapult")
+            simulation.aim(catapultId, directionDegrees = 0f, power = 50f)
+            simulation.fire(catapultId)
+
+            val events = buildList {
+                repeat(10) {
+                    addAll(simulation.advance(100))
+                }
+            }
+            val impact = events.filterIsInstance<MatchEvent.TerrainDeformed>().single()
+
+            assertTrue(
+                abs(impact.centerY - terrainBeforeShot.heightAt(impact.centerX)) <= 1f,
+                "$team projectile impact should be on the terrain surface",
+            )
+        }
     }
 
     @Test

@@ -84,24 +84,22 @@ class BattlefieldRenderer(
         val blueFortressCenterX = worldToViewX(FORTRESS_CENTER_MARGIN, viewportWidth)
         val redFortressCenterX =
             worldToViewX(WORLD_WIDTH - FORTRESS_CENTER_MARGIN, viewportWidth)
-        val blueFortressBaseline = worldToViewY(
-            terrainHeightAt(
-                state.terrainHeightSamples,
-                state.terrainSampleSpacing,
-                FORTRESS_CENTER_MARGIN,
-                groundTop / viewportHeight * WORLD_HEIGHT,
-            ),
-            viewportHeight,
-        ) + 4f
-        val redFortressBaseline = worldToViewY(
-            terrainHeightAt(
-                state.terrainHeightSamples,
-                state.terrainSampleSpacing,
-                WORLD_WIDTH - FORTRESS_CENTER_MARGIN,
-                groundTop / viewportHeight * WORLD_HEIGHT,
-            ),
-            viewportHeight,
-        ) + 4f
+        val blueFortressGroundY = terrainHeightAt(
+            state.terrainHeightSamples,
+            state.terrainSampleSpacing,
+            FORTRESS_CENTER_MARGIN,
+            groundTop / viewportHeight * WORLD_HEIGHT,
+        )
+        val redFortressGroundY = terrainHeightAt(
+            state.terrainHeightSamples,
+            state.terrainSampleSpacing,
+            WORLD_WIDTH - FORTRESS_CENTER_MARGIN,
+            groundTop / viewportHeight * WORLD_HEIGHT,
+        )
+        val blueFortressBaseline = worldToViewY(blueFortressGroundY, viewportHeight) + 4f
+        val redFortressBaseline = worldToViewY(redFortressGroundY, viewportHeight) + 4f
+        val blueFortressCenterY = blueFortressBaseline - FORTRESS_RENDER_HEIGHT / 2f
+        val redFortressCenterY = redFortressBaseline - FORTRESS_RENDER_HEIGHT / 2f
         val fortressHealthBarWidth = FORTRESS_RENDER_WIDTH * FORTRESS_HEALTH_BAR_WIDTH_RATIO
         val blueHealthBarLeft = blueFortressCenterX - fortressHealthBarWidth / 2f
         val redHealthBarLeft = redFortressCenterX - fortressHealthBarWidth / 2f
@@ -217,7 +215,10 @@ class BattlefieldRenderer(
             drawDebugHitboxes(
                 canvas = canvas,
                 state = state,
-                groundTop = groundTop,
+                blueFortressCenterX = blueFortressCenterX,
+                blueFortressCenterY = blueFortressCenterY,
+                redFortressCenterX = redFortressCenterX,
+                redFortressCenterY = redFortressCenterY,
                 viewportWidth = viewportWidth,
                 viewportHeight = viewportHeight,
             )
@@ -699,7 +700,10 @@ class BattlefieldRenderer(
     private fun drawDebugHitboxes(
         canvas: Canvas,
         state: RenderState,
-        groundTop: Float,
+        blueFortressCenterX: Float,
+        blueFortressCenterY: Float,
+        redFortressCenterX: Float,
+        redFortressCenterY: Float,
         viewportWidth: Float,
         viewportHeight: Float,
     ) {
@@ -728,35 +732,21 @@ class BattlefieldRenderer(
             style = Paint.Style.STROKE
             strokeWidth = 3f
         }
-        val labelPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-            color = Color.WHITE
-            textSize = 20f
-            setShadowLayer(4f, 1f, 1f, Color.BLACK)
-        }
-        val fortressTop = groundTop - FORTRESS_RENDER_HEIGHT
-        listOf<Pair<String, Pair<Float, Float>>>(
-            "BLUE FORTRESS" to Pair(
-                FORTRESS_CENTER_MARGIN,
-                fortressTop + FORTRESS_RENDER_HEIGHT / 2f,
-            ),
-            "RED FORTRESS" to Pair(
-                WORLD_WIDTH - FORTRESS_CENTER_MARGIN,
-                fortressTop + FORTRESS_RENDER_HEIGHT / 2f,
-            ),
-        ).forEach { (label, center) ->
-            val centerX = worldToViewX(center.first, viewportWidth)
-            val centerY = center.second
-            val centerWorldY = centerY / viewportHeight * WORLD_HEIGHT
+        val fortressScaleX = FORTRESS_RENDER_WIDTH / WorldScale.FORTRESS_WIDTH
+        val fortressScaleY = FORTRESS_RENDER_HEIGHT / WorldScale.FORTRESS_HEIGHT
+        listOf(
+            blueFortressCenterX to blueFortressCenterY,
+            redFortressCenterX to redFortressCenterY,
+        ).forEach { (centerViewX, centerViewY) ->
             FortressHitboxProfile.rectangles.forEach { rectangle ->
                 canvas.drawRect(
-                    worldToViewX(center.first + rectangle.left, viewportWidth),
-                    worldToViewY(centerWorldY + rectangle.top, viewportHeight),
-                    worldToViewX(center.first + rectangle.right, viewportWidth),
-                    worldToViewY(centerWorldY + rectangle.bottom, viewportHeight),
+                    centerViewX + rectangle.left * fortressScaleX,
+                    centerViewY + rectangle.top * fortressScaleY,
+                    centerViewX + rectangle.right * fortressScaleX,
+                    centerViewY + rectangle.bottom * fortressScaleY,
                     hitboxPaint,
                 )
             }
-            canvas.drawText(label, centerX - 70f, centerY - 100f, labelPaint)
         }
 
         state.projectiles.forEach { projectile ->
@@ -865,12 +855,8 @@ class BattlefieldRenderer(
         private const val FORTRESS_LABEL_GAP = 6f
         private const val UNIT_HEALTH_BAR_WIDTH_WORLD = 46.2f
         private const val BOAR_SOURCE_CROP_HEIGHT_RATIO = 301f / 512f
-        private const val LEGACY_FORTRESS_RENDER_WIDTH = 280f
-        private const val LEGACY_FORTRESS_RENDER_HEIGHT = 210f
-        private val FORTRESS_RENDER_WIDTH =
-            LEGACY_FORTRESS_RENDER_WIDTH * WorldScale.FORTRESS_SCALE
-        private val FORTRESS_RENDER_HEIGHT =
-            LEGACY_FORTRESS_RENDER_HEIGHT * WorldScale.FORTRESS_SCALE
+        private const val FORTRESS_RENDER_WIDTH = WorldScale.FORTRESS_WIDTH
+        private const val FORTRESS_RENDER_HEIGHT = WorldScale.FORTRESS_HEIGHT
         private const val CATAPULT_RENDER_WIDTH = 95f
         private const val CATAPULT_PLATFORM_HEIGHT_RATIO = 0.40f
         private const val PROJECTILE_DEBUG_RADIUS = 30f

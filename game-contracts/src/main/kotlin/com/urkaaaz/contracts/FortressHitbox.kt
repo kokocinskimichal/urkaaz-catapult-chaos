@@ -26,26 +26,33 @@ data class FortressHitboxRectangle(
 }
 
 object FortressHitboxProfile {
-    /*
-     * Derived from the alpha silhouette of the 1024x768
-     * fortress_chapter_01 sprites: upper tower, upper body, center body,
-     * two lower wings and the base.
-     */
-    private val legacyRectangles = listOf(
-        FortressHitboxRectangle(-38f, -92f, 38f, -48f),
-        FortressHitboxRectangle(-68f, -58f, 68f, -18f),
-        FortressHitboxRectangle(-82f, -28f, 82f, 24f),
-        FortressHitboxRectangle(-96f, 8f, -18f, 62f),
-        FortressHitboxRectangle(18f, 8f, 96f, 62f),
-        FortressHitboxRectangle(-82f, 48f, 82f, 82f),
+    private const val SOURCE_WIDTH = 1024f
+    private const val SOURCE_HEIGHT = 768f
+
+    private data class AlphaBounds(
+        // Source-pixel bounds relative to the center of the full sprite canvas.
+        val left: Float,
+        val top: Float,
+        val right: Float,
+        val bottom: Float,
     )
 
-    val rectangles = legacyRectangles.map { rectangle ->
-        rectangle.copy(
-            left = rectangle.left * WorldScale.FORTRESS_SCALE,
-            top = rectangle.top * WorldScale.FORTRESS_SCALE,
-            right = rectangle.right * WorldScale.FORTRESS_SCALE,
-            bottom = rectangle.bottom * WorldScale.FORTRESS_SCALE,
-        )
-    }
+    private val fortressBounds = AlphaBounds(
+        left = -430f,
+        top = -325f,
+        right = 430f,
+        bottom = 325f,
+    )
+
+    private val sourceToWorldX = WorldScale.FORTRESS_WIDTH / SOURCE_WIDTH
+    private val sourceToWorldY = WorldScale.FORTRESS_HEIGHT / SOURCE_HEIGHT
+
+    val rectangles = listOf(
+        FortressHitboxRectangle(
+            left = fortressBounds.left * sourceToWorldX,
+            top = fortressBounds.top * sourceToWorldY,
+            right = fortressBounds.right * sourceToWorldX,
+            bottom = fortressBounds.bottom * sourceToWorldY,
+        ),
+    )
 }
