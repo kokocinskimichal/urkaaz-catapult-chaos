@@ -103,6 +103,7 @@ sealed interface MapValidationError {
 
 object MapDefinitionValidator {
     const val TERRAIN_SAMPLE_STEP = 40f
+    val SUPPORTED_TERRAIN_SAMPLE_STEPS = setOf(20f, TERRAIN_SAMPLE_STEP)
     const val MAX_TERRAIN_DELTA = 200f
     const val FOUNDATION_HEIGHT_TOLERANCE = 80f
     const val MIN_FOUNDATION_TRANSITION_SAMPLES = 3
@@ -142,17 +143,17 @@ object MapDefinitionValidator {
             )
             return
         }
-        if (definition.terrain.sampleStep != TERRAIN_SAMPLE_STEP) {
+        if (definition.terrain.sampleStep !in SUPPORTED_TERRAIN_SAMPLE_STEPS) {
             errors += MapValidationError.InvalidDefinition(
                 "terrain.sampleStep",
-                "sample step must be $TERRAIN_SAMPLE_STEP",
+                "sample step must be one of $SUPPORTED_TERRAIN_SAMPLE_STEPS",
             )
         }
         samples.zipWithNext().forEachIndexed { index, (left, right) ->
-            if (right.x - left.x != TERRAIN_SAMPLE_STEP) {
+            if (right.x - left.x != definition.terrain.sampleStep) {
                 errors += MapValidationError.InvalidDefinition(
                     "terrain.samples[$index]",
-                    "sample spacing must be $TERRAIN_SAMPLE_STEP",
+                    "sample spacing must be ${definition.terrain.sampleStep}",
                 )
             }
             val delta = abs(right.height - left.height)
@@ -268,21 +269,6 @@ object MapDefinitionValidator {
                 validateRelic(definition, objectPlacement, path, errors)
                 return@forEachIndexed
             }
-            if (objectPlacement.type == MapObjectType.DECORATION) {
-                if (definition.fortresses.any {
-                        abs(objectPlacement.x - it.x) <= it.halfWidth + DECORATION_MARGIN
-                    }) {
-                    errors += MapValidationError.DecorationOnFoundation(path)
-                }
-                if (definition.catapults.any {
-                        abs(objectPlacement.x - it.x) <= it.halfWidth + DECORATION_MARGIN
-                    }) {
-                    errors += MapValidationError.DecorationOnFoundation(path)
-                }
-                if (!isFlatTerrainAt(definition, objectPlacement.x)) {
-                    errors += MapValidationError.DecorationOnSteepSlope(path)
-                }
-            }
             if (objectPlacement.x !in 0f..definition.worldWidth ||
                 objectPlacement.y !in 0f..definition.worldHeight
             ) {
@@ -369,41 +355,6 @@ object MapDefinitionValidator {
                 "$path.footprint",
                 "relic footprint must be fully inside soil",
             )
-        }
-
-        if (definition.fortresses.any {
-                horizontalFootprintsOverlap(
-                    relic.x,
-                    rotatedHalfWidth,
-                    it.x,
-                    it.halfWidth + DECORATION_MARGIN,
-                )
-            }
-        ) {
-            errors += MapValidationError.DecorationOnFoundation(path)
-        }
-        if (definition.catapults.any {
-                horizontalFootprintsOverlap(
-                    relic.x,
-                    rotatedHalfWidth,
-                    it.x,
-                    it.halfWidth + DECORATION_MARGIN,
-                )
-            }
-        ) {
-            errors += MapValidationError.DecorationOnFoundation(path)
-        }
-        if (definition.protectedTerrainZones.any {
-                relic.leftEdge(rotatedHalfWidth) < it.maxX &&
-                    relic.rightEdge(rotatedHalfWidth) > it.minX
-            }
-        ) {
-            errors += MapValidationError.DecorationOnFoundation(path)
-        }
-
-        val slope = slopeAt(definition.terrain.samples, relic.x)
-        if (slope > MAX_TERRAIN_DELTA / TERRAIN_SAMPLE_STEP) {
-            errors += MapValidationError.DecorationOnSteepSlope(path)
         }
 
         definition.objects.filter { it.id != relic.id }.forEach { other ->

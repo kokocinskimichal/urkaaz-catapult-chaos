@@ -48,10 +48,9 @@ the same `MapObjectPlacement` list using their authored `x`, `y`, `scale` and
 rotation. `BattlefieldView` must not add a second hard-coded decoration layout;
 the terrain theme supplies only the bitmap candidates. The terrain cap is drawn
 after decorations and relics so it masks their buried lower edges.
-Every non-relic decoration must be placed on a locally flat terrain span: the
-interpolated heights one terrain sample step to the left, at the anchor and one
-step to the right may differ by at most `1f`. The campaign validator enforces
-this rule and the all-level audit test prevents slope placements from returning.
+Non-relic decorations may be authored on sloped terrain; the campaign validator
+does not reject a placement solely for being on a slope. Relics retain their
+separate footprint, soil, foundation, catapult, slope and overlap validation.
 
 Legacy relic bitmaps are copied into `android-app/src/main/res/drawable-nodpi`
 for Green Frontier, Frostbound, Copperwood and Ashen March. Sunken Marshes
@@ -59,14 +58,18 @@ explicitly reuses the Green Frontier relic set because no dedicated legacy
 Sunken Marshes set was available. Asset keys use the
 `relic.<biome>.small.<index>` namespace and remain presentation-only.
 
-The production map rules are: terrain samples every 40 world units, adjacent
-height delta no greater than 200 world units, at least three foundation
-transition samples, fortress foundation tolerance of ±80 world units,
-40-world-unit decoration margin, explicit protected terrain zones, neutral
-asset keys and deterministic seed/generator/authoring metadata. Each of the 100 campaign levels is stored in its own `ChapterXLevelY.kt` file
-as an explicit `LevelAuthoringRequest` with materialized terrain samples,
-placements and metadata. The files are grouped by chapter and exposed through
-the same campaign definition boundary. The standalone
+Production maps retain terrain samples every 40 world units, adjacent height
+delta no greater than 200 world units, at least three foundation transition
+samples, fortress foundation tolerance of ±80 world units, explicit protected
+terrain zones, neutral asset keys and deterministic seed/generator/authoring
+metadata. The desktop editor uses a finer 20-world-unit terrain tile and sample
+grid so local shaping is less coarse, while imported production maps keep their
+serialized sample spacing. Decoration placement is not rejected solely because
+it is on a slope; protected zones and other map validation remain independent
+constraints. Each of the 100 campaign levels is stored in its own
+`ChapterXLevelY.kt` file as an explicit `LevelAuthoringRequest` with
+materialized terrain samples, placements and metadata. The files are grouped by
+chapter and exposed through the same campaign definition boundary. The standalone
 `DemoLevelDefinitions.default` map uses the same LDS contracts and validator
 without being a campaign level.
 
@@ -282,6 +285,16 @@ must go through commands and domain/application boundaries.
 
 ## Known decisions
 
+- **Web map editor (unstable):** `map-editor-web` is a local React/Vite editor
+  for the one-dimensional terrain profile, using the shared versioned map JSON
+  contract. It supports profile editing, smoothing, flattening and undo/redo;
+  it does not introduce a brush radius or visible terrain-tile grid. The
+  Kotlin/Swing editor remains available as a separate compatibility workflow.
+- **Foundation height editing:** the web editor updates the selected fortress,
+  its associated catapult, protected zone and terrain samples together.
+  Fortress and catapult positions and foundation widths remain fixed. The
+  Kotlin/Swing `SetFoundationHeight` command is still incomplete and should not
+  be treated as an equivalent complete workflow.
 - The demo match duration is five minutes.
 - Wind uses low, medium and high visual indicators for left/right direction.
 - Projectile trails are keyed by projectile identity, not team label, so a new
@@ -354,12 +367,38 @@ gate and pushes `develop` using the configured project GitHub account.
 
 Map authoring decisions are documented in `docs/MAP_EDITOR_DESIGN.md`,
 `docs/MAP_EDITOR_RISKS.md` and
-`docs/MAP_EDITOR_IMPLEMENTATION_PROMPT.md`. The planned authoring tool is a
-separate Kotlin/JVM Compose Desktop application. It will use a shared
-`game-assets` source instead of maintaining an editor-only copy, keep JSON as
-the single map-definition source of truth, lock terrain before decoration
-placement, and export only validated versioned JSON. The current repository
-does not yet contain the editor implementation.
+`docs/MAP_EDITOR_IMPLEMENTATION_PROMPT.md`.
+
+The local React/Vite profile editor is available under `map-editor-web`. It
+shares the versioned `MapDefinition` JSON shape, keeps legacy `terrainTiles`
+for compatibility, stores drafts only in browser `localStorage`, and leaves
+the Swing editor available as a fallback. Run it with `npm install`,
+`npm run dev`, `npm run test`, or `npm run build` from that directory. The
+desktop editor continues to use the shared `game-assets` source, JSON as the
+single map-definition source of truth, terrain locking before decoration
+placement, and validated versioned exports.
+
+During terrain editing, the web editor displays draggable terrain contour
+nodes at roughly 200 world-unit intervals. Dragging a node applies a smooth,
+distance-weighted vertical displacement to nearby terrain over three node
+intervals in each direction, preserving the existing profile while reducing
+sharp local changes. A drag is one undoable operation. Nodes inside protected
+foundation zones are omitted, the influence does not cross those zones, and
+the denser serialized terrain samples remain the simulation-facing
+representation.
+
+The web editor's protected foundation ground runs from the outer world edge to
+the fortress approach on both sides: BLUE reaches `x=0`, RED reaches
+`worldWidth`, and each front edge extends at least 320 world units beyond the
+fortress footprint toward the battlefield center. Front edges are rounded
+outward to the terrain sample grid so the full protected span has flat samples;
+contour control points are omitted throughout both foundations. Legacy
+web-editor drafts are migrated once to this geometry and their new protected
+edge samples are flattened to the fortress foundation height.
+New web-editor maps start with a fully flat terrain profile at the fortress
+foundation height; untouched starter drafts from the previous sinusoidal
+default are migrated to that same flat profile without flattening authored
+terrain.
 
 Map decorations are authored only from map object data; the renderer no longer
 adds a second hard-coded decoration layout. Green Frontier tree, rock and prop
@@ -368,10 +407,27 @@ convention, and map decoration variants are selected deterministically from
 the map object ID. The terrain cap is drawn after map decorations and relics
 so it covers their buried lower edges.
 
-The campaign decoration audit removed all currently authored non-relic
-decorations that were not on locally flat terrain. `MapDefinitionValidator`
-enforces the same rule by comparing interpolated terrain heights one terrain
-sample step left, at the anchor and one step right, with a maximum height
-difference of `1f`. `DecorationPlacementAuditTest` covers all 100 campaign
-levels, and `MapDefinitionValidatorTest` includes a regression case for a
-decoration placed on a slope.
+`MapDefinitionValidator` permits non-relic decorations on sloped terrain.
+`DecorationPlacementAuditTest` includes a regression case for a sloped
+decoration; other validation rules, including protected zones, still apply.
+
+## Map editor vertical slice
+
+The repository now includes `game-assets`, `map-editor-domain`,
+`map-editor-format`, `map-editor-rendering`, `map-editor-assets` and
+`map-editor-desktop`. Map authoring uses the existing `MapDefinition` and
+`MapDefinitionValidator` contracts, adds shared terrain tile geometry and a
+stable biome field, and stores deterministic schema-1 JSON. Drafts are written
+as `<map>.draft.json` using an atomic replace and never overwrite final export.
+The desktop entry point is `com.urkaaaz.mapeditor.desktop.MapEditorMainKt` and
+runs with `./gradlew :map-editor-desktop:run`.
+
+The desktop editor exposes predefined terrain tiles from
+`map-editor-domain`'s `TerrainTileCatalog`: flat, slope-up, slope-down, ridge
+and valley. The selected preset is applied when placing a tile in the
+viewport, including its edge profiles and height samples.
+
+The desktop viewport now fits the canonical 7200 x 4800 game world, renders
+both fortress positions from the initial document, and supports dragging tile
+presets from the sidebar onto the map. After terrain locking it overlays the
+selected biome's shared background, soil and cap assets.

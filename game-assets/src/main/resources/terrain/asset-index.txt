@@ -1,0 +1,6 @@
+terrain_green_frontier_tree_00.png
+terrain_green_frontier_rock_00.png
+terrain_green_frontier_prop_00.png
+terrain_frost_tree_00.png
+terrain_copperwood_tree_00.png
+terrain_ashen_march_tree_00.png

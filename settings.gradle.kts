@@ -23,4 +23,10 @@ include(
     ":game-ai",
     ":game-application",
     ":android-app",
+    ":game-assets",
+    ":map-editor-domain",
+    ":map-editor-format",
+    ":map-editor-rendering",
+    ":map-editor-assets",
+    ":map-editor-desktop",
 )

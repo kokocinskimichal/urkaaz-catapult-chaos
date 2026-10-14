@@ -28,6 +28,8 @@ zapisywać w tym katalogu jako pliki Markdown.
 | [`m10-report.md`](m10-report.md) | raport implementacji i walidacji M10 | zaakceptowany |
 | [`m11-comparison.md`](m11-comparison.md) | macierz porównania regresyjnego | gotowy do odbioru |
 | [`m11-report.md`](m11-report.md) | raport implementacji i walidacji M11 | gotowy do odbioru |
+| [`MAP_JSON_CAMPAIGN_MIGRATION_PLAN.md`](MAP_JSON_CAMPAIGN_MIGRATION_PLAN.md) | plan zastąpienia Kotlinowych map kampanii plikami JSON | zaakceptowany plan |
+| [`MAP_JSON_CAMPAIGN_IMPLEMENTATION_PROMPT.md`](MAP_JSON_CAMPAIGN_IMPLEMENTATION_PROMPT.md) | prompt do pełnej implementacji migracji kampanii na JSON | gotowy |
 
 ## Zasady
 

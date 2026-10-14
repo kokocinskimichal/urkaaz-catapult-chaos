@@ -36,7 +36,7 @@ class MapDefinitionValidatorTest {
     }
 
     @Test
-    fun environmentalDecorationOnSlopeIsRejected() {
+    fun environmentalDecorationOnSlopeIsAllowed() {
         val decorationX = chapter1Level1MapDefinition.worldWidth / 2f
         val decorationY = 3_700f
         val invalid = chapter1Level1MapDefinition.copy(
@@ -58,7 +58,7 @@ class MapDefinitionValidatorTest {
 
         val result = MapDefinitionValidator.validate(invalid)
 
-        assertTrue(result.errors.any { it is MapValidationError.DecorationOnSteepSlope })
+        assertTrue(result.errors.none { it is MapValidationError.DecorationOnSteepSlope })
     }
 
     @Test
@@ -110,7 +110,7 @@ class MapDefinitionValidatorTest {
     }
 
     @Test
-    fun relicCannotOverlapCatapultFoundation() {
+    fun relicMayOverlapCatapultFoundation() {
         val relic = chapter1Level1MapDefinition.objects.first { it.relicSize == RelicSize.SMALL }
         val invalid = chapter1Level1MapDefinition.copy(
             objects = chapter1Level1MapDefinition.objects.map {
@@ -129,6 +129,6 @@ class MapDefinitionValidatorTest {
 
         val result = MapDefinitionValidator.validate(invalid)
 
-        assertTrue(result.errors.any { it is MapValidationError.DecorationOnFoundation })
+        assertTrue(result.errors.none { it is MapValidationError.DecorationOnFoundation })
     }
 }

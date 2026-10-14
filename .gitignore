@@ -5,3 +5,6 @@ local.properties
 .idea/
 *.iml
 .DS_Store
+map-editor-web/node_modules/
+map-editor-web/dist/
+map-editor-web/public/assets/

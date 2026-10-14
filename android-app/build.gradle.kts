@@ -23,6 +23,7 @@ android {
 }
 
 dependencies {
+    implementation(project(":game-assets"))
     implementation(project(":game-application"))
     implementation(project(":game-campaign"))
     implementation(project(":game-ai"))

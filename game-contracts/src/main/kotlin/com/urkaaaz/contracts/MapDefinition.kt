@@ -12,6 +12,8 @@ data class MapDefinition(
     val objects: List<MapObjectPlacement>,
     val initialCameraAnchor: InitialCameraAnchor,
     val generationMetadata: MapGenerationMetadata,
+    val biome: String = "green_frontier",
+    val terrainTiles: List<TerrainTilePlacement> = emptyList(),
 ) {
     init {
         require(levelId.isNotBlank())
@@ -19,6 +21,30 @@ data class MapDefinition(
         require(worldWidth > 0f)
         require(worldHeight > 0f)
     }
+
+}
+
+data class TerrainTilePlacement(
+    val tileId: String,
+    val gridX: Int,
+    val gridY: Int,
+    val geometry: TerrainTileGeometry,
+)
+
+data class TerrainTileGeometry(
+    val widthWorldUnits: Float,
+    val heightWorldUnits: Float,
+    val leftProfile: EdgeProfile,
+    val rightProfile: EdgeProfile,
+    val heightSamples: List<Float>,
+)
+
+enum class EdgeProfile {
+    FLAT,
+    SLOPE_UP,
+    SLOPE_DOWN,
+    RIDGE,
+    VALLEY,
 }
 
 data class TerrainProfile(

@@ -2,6 +2,11 @@
 
 ## Cel
 
+> **Web migration:** The primary new authoring workflow is now the local
+> `map-editor-web` React/Vite application. The desktop/Swing tile workflow is
+> retained for compatibility and fallback; the web UI edits a terrain profile
+> and only carries legacy tile placements through JSON.
+
 Osobna aplikacja desktopowa służąca do ręcznego tworzenia map Urkaaaz.
 Autor składa teren z kafelków konkretnego biomu, ustala fundamenty fortec,
 zatwierdza geometrię, a następnie rozmieszcza assety tego samego biomu.
@@ -402,3 +407,34 @@ Migracje muszą mieć testy dla każdej obsługiwanej wersji.
 - synchronizacja z chmurą;
 - automatyczne migracje nazw assetów;
 - eksport do innych formatów.
+
+## Stan implementacji
+
+Repozytorium zawiera teraz wspólny moduł `game-assets` z katalogiem nazw
+`terrain_<biome>_<category>_<variant>.png` oraz moduły `map-editor-domain`,
+`map-editor-format`, `map-editor-rendering`, `map-editor-assets` i
+`map-editor-desktop`. Domena korzysta bezpośrednio z `MapDefinition`,
+`MapDefinitionValidator` i kontraktów geometrii kafelków. Format JSON jest
+wersjonowany (schema 1), deterministycznie formatowany i zapisywany atomowo;
+szkic ma osobny plik `.draft.json`.
+
+Pierwszy desktopowy vertical slice uruchamia się przez
+`./gradlew :map-editor-desktop:run`: tworzy/otwiera mapę, układa kafelki
+kliknięciem, wygładza teren, blokuje teren, dodaje dekoracje, waliduje,
+zapisuje szkic i eksportuje finalny JSON. Renderowanie jest niezależne od
+Androida i używa modelu viewportu oraz warstw mapy. Docelowa migracja pełnego
+katalogu PNG do wspólnego modułu oraz natywne Compose Desktop pozostają
+następnymi krokami; obecny interfejs desktopowy używa standardowego Swing,
+aby zachować kompilowalność obecnego repozytorium bez zmiany wersji Kotlin.
+
+Kafelki terenu są dostępne z katalogu `TerrainTileCatalog`, a nie generowane
+wyłącznie jako płaski kafelek przy kliknięciu mapy. Katalog zawiera bazowe
+profile `Flat`, `Slope up`, `Slope down`, `Ridge` i `Valley`; wariant można
+wybrać albo przeciągnąć bezpośrednio na viewport. Wybrany profil zapisuje się
+w `TerrainTileGeometry`.
+
+Viewport desktopowy używa kanonicznego świata `WorldDimensions` (7200 x
+4800), automatycznie dopasowuje zoom do dostępnego obszaru i po utworzeniu
+mapy pokazuje pozycje obu fortec. Po `Lock terrain` włącza podgląd tła,
+warstwy soil i terrain cap wybranego biomu, aby edycja przypominała wygląd
+rzeczywistej mapy w grze.
