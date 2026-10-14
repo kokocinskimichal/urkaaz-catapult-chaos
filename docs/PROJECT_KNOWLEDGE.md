@@ -267,6 +267,12 @@ must go through commands and domain/application boundaries.
   of truth for the fired projectile.
 - Camera panning must be distinguished from aiming release so `ACTION_UP` fires
   only when the gesture was an aim gesture.
+- Pinch zoom anchors the same battlefield point beneath the gesture focus
+  (`ScaleGestureDetector.focusX/Y`), pauses automatic camera tracking after a
+  manual zoom until the phase changes, and is capped at a 4x view scale.
+- Soil textures repeat at a base tile width of 256 view units in both the
+  Android battlefield and web map preview. Android tiles preserve the source
+  aspect ratio and repeat vertically rather than stretching to the soil depth.
 - The ammunition selector remains clickable when the equipped limited
   ammunition is depleted; only depleted entries inside the selection popup are
   disabled so the player can switch to another ammunition type.

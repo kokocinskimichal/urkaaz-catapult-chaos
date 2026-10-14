@@ -512,16 +512,20 @@ class BattlefieldView(context: Context) : View(context) {
             return
         }
 
-        val tileHeight = tileWidth * bitmap.height / bitmap.width.coerceAtLeast(1)
-        var left = 0f
-        while (left < width) {
-            canvas.drawBitmap(
-                bitmap,
-                null,
-                android.graphics.RectF(left, top, left + tileWidth, top + tileHeight.coerceAtLeast(bottom - top)),
-                null,
-            )
-            left += tileWidth
+        val tileHeight = (tileWidth * bitmap.height / bitmap.width.coerceAtLeast(1)).coerceAtLeast(1f)
+        var tileTop = top
+        while (tileTop < bottom) {
+            var left = 0f
+            while (left < width) {
+                canvas.drawBitmap(
+                    bitmap,
+                    null,
+                    android.graphics.RectF(left, tileTop, left + tileWidth, tileTop + tileHeight),
+                    null,
+                )
+                left += tileWidth
+            }
+            tileTop += tileHeight
         }
     }
 

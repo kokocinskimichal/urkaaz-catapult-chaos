@@ -359,7 +359,7 @@ class BattlefieldRenderer(
                 bitmap,
                 textureTop,
                 textureBottom,
-                128f,
+                SOIL_TILE_WIDTH,
                 fallbackColor,
             )
             return
@@ -382,7 +382,7 @@ class BattlefieldRenderer(
         }
         canvas.save()
         canvas.clipPath(surface)
-        drawTiledTexture(canvas, bitmap, textureTop, textureBottom, 128f, fallbackColor)
+        drawTiledTexture(canvas, bitmap, textureTop, textureBottom, SOIL_TILE_WIDTH, fallbackColor)
         canvas.restore()
     }
 
@@ -874,6 +874,7 @@ class BattlefieldRenderer(
     companion object {
         private const val WORLD_WIDTH = WorldDimensions.WIDTH
         private const val WORLD_HEIGHT = WorldDimensions.HEIGHT
+        private const val SOIL_TILE_WIDTH = 256f
         private const val FORTRESS_CENTER_MARGIN = 490f
         private const val UNIT_HEALTH_BAR_WIDTH_WORLD = 46.2f
         private const val LEGACY_FORTRESS_RENDER_WIDTH = 280f

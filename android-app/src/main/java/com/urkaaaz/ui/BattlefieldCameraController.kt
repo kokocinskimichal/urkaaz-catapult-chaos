@@ -52,7 +52,11 @@ class BattlefieldCameraController(
             return
         }
 
-        val trackedProjectile = state.projectiles.firstOrNull { it.teamLabel == "BLUE" }
+        val trackedProjectile = if (manualPanActive) {
+            null
+        } else {
+            state.projectiles.firstOrNull { it.teamLabel == "BLUE" }
+        }
         if (trackedProjectile != null) {
             manualPanActive = false
             if (!wasFollowingProjectile) {
@@ -114,6 +118,8 @@ class BattlefieldCameraController(
         if (!scaleFactor.isFinite() || scaleFactor <= 0f) return
         val oldScale = transform.scale
         val newScale = (oldScale * scaleFactor).coerceIn(MIN_MAP_SCALE, MAX_MAP_SCALE)
+        if (newScale == oldScale) return
+
         val contentX = (focusX - transform.offsetX) / oldScale
         val contentY = (focusY - transform.offsetY) / oldScale
         transform = CameraTransform(
@@ -121,6 +127,10 @@ class BattlefieldCameraController(
             offsetX = focusX - contentX * newScale,
             offsetY = focusY - contentY * newScale,
         )
+        manualPanActive = true
+        wasFollowingProjectile = false
+        postImpactHoldSeconds = 0f
+        cameraReturnActive = false
         clampOffset(viewportWidth, viewportHeight)
     }
 
@@ -269,7 +279,7 @@ class BattlefieldCameraController(
         private const val LEGACY_LEFT_MARGIN = 280f
         private const val LEGACY_BOTTOM_MARGIN = 96f
         private const val MIN_MAP_SCALE = 1f
-        private const val MAX_MAP_SCALE = 2.5f
+        private const val MAX_MAP_SCALE = 4f
         private const val AUTO_TRACK_SCALE = 1.25f
         private const val POST_IMPACT_HOLD_SECONDS = 0.4f
         private const val RENDER_STEP_SECONDS = 0.033f

@@ -2,6 +2,7 @@ import { EditorDocument, SampleJson, terrainControlPoints } from "../domain/map"
 import { terrainAssetPath } from "../domain/assets";
 import { Viewport, worldToScreen } from "./transform";
 const imageCache = new Map<string, HTMLImageElement>();
+const SOIL_TILE_WIDTH = 256;
 
 function image(path: string, redraw: () => void): HTMLImageElement | undefined {
   const cached = imageCache.get(path);
@@ -39,7 +40,12 @@ export function renderMap(
    c.save();
    c.clip();
    const pattern = c.createPattern(soil, "repeat");
-   if (pattern) { c.fillStyle = pattern; c.fill(); }
+   if (pattern) {
+     const scale = (SOIL_TILE_WIDTH * view.zoom) / soil.width;
+     pattern.setTransform(new DOMMatrix([scale, 0, 0, scale, 0, 0]));
+     c.fillStyle = pattern;
+     c.fill();
+   }
    c.restore();
  }
  c.beginPath();samples.forEach((s,i)=>{const q=p(s.x,s.height);i?c.lineTo(q.x,q.y):c.moveTo(q.x,q.y)});c.strokeStyle="#d4bd83";c.lineWidth=4;c.stroke();
