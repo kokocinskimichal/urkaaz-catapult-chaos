@@ -26,6 +26,11 @@ The target branch is `develop`. The target repository is
    - no unrelated or accidental files.
 4. Before creating the commit, update the relevant project knowledge Markdown
    files with the changes being pushed:
+   - `CHANGELOG.md` with a concise, user-visible summary under a
+     `## YYYY-MM-DD` heading for the current date. Group entries under
+     `### Added`, `### Changed`, `### Fixed` or `### Removed` as appropriate.
+     Reuse the current date heading if it already exists; do not add empty
+     categories or generic progress notes.
    - `AGENTS.md` for durable agent workflow or repository rules;
    - `docs/PROJECT_KNOWLEDGE.md` for current architecture, screen structure,
      behavior, important files or known limitations;

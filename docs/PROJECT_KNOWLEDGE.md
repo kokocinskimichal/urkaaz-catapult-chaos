@@ -129,9 +129,9 @@ RED team's supply, followed by `SendWave` after three recruited units finish
 entering the garrison. The AI now also randomizes its match temperament,
 uses defensive SAPPER counter-selection, and varies the wave threshold
 (`1/2/3`) like legacy instead of limiting the opponent to projectile fire.
-- The match renderer draws a legacy-style HP bar above every unit. The bar is
-green above 60% health, orange from 30% through 60%, red below 30%, and keeps
-a dark rounded background with a gray empty state.
+- Fortress and unit HP bars share one renderer style: a rounded dark track,
+8-unit height, and green above 60% health, orange from 30% through 60%, or
+red below 30%. Zero health leaves the dark track unfilled.
 - Enemy units are constrained by an allied-unit debug selector in `DEBUG
 TOOLS`. The selector updates the AI's allowed unit definitions at runtime and
 requires at least one enabled type. Allied units in the same wave keep a
@@ -273,6 +273,13 @@ must go through commands and domain/application boundaries.
 - Soil textures repeat at a base tile width of 256 view units in both the
   Android battlefield and web map preview. Android tiles preserve the source
   aspect ratio and repeat vertically rather than stretching to the soil depth.
+- Fortress and unit health bars share the same rounded track, 8-unit height and
+  health-ratio colors; fortress bars are narrower than the fortress canvas, and
+  compact reload indicators sit beside the bar instead of over the fortress.
+- Raging Boar world sprites use one shared 368x301 crop across all animation
+  frames and both facing directions. Their render height compensates for the
+  crop so visible size is preserved while the alpha-bounded feet meet the
+  ground baseline.
 - The ammunition selector remains clickable when the equipped limited
   ammunition is depleted; only depleted entries inside the selection popup are
   disabled so the player can switch to another ammunition type.

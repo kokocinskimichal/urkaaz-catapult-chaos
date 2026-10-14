@@ -24,12 +24,6 @@ class BattlefieldRenderer(
     private val drawAimGesture: (Canvas, Float) -> Unit,
 ) {
     private val backgroundPaint = Paint(Paint.ANTI_ALIAS_FLAG)
-    private val bluePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-        color = Color.rgb(55, 105, 190)
-    }
-    private val redPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-        color = Color.rgb(190, 65, 55)
-    }
     private val spritePaint = Paint(Paint.ANTI_ALIAS_FLAG or Paint.FILTER_BITMAP_FLAG)
 
     fun render(
@@ -108,6 +102,13 @@ class BattlefieldRenderer(
             ),
             viewportHeight,
         ) + 4f
+        val fortressHealthBarWidth = FORTRESS_RENDER_WIDTH * FORTRESS_HEALTH_BAR_WIDTH_RATIO
+        val blueHealthBarLeft = blueFortressCenterX - fortressHealthBarWidth / 2f
+        val redHealthBarLeft = redFortressCenterX - fortressHealthBarWidth / 2f
+        val blueHealthBarTop =
+            blueFortressBaseline - FORTRESS_RENDER_HEIGHT - FORTRESS_HEALTH_BAR_TOP_OFFSET
+        val redHealthBarTop =
+            redFortressBaseline - FORTRESS_RENDER_HEIGHT - FORTRESS_HEALTH_BAR_TOP_OFFSET
         drawTextureAtBaseline(
             canvas,
             assets.blueFortress,
@@ -145,15 +146,15 @@ class BattlefieldRenderer(
         )
         drawReloadIndicator(
             canvas,
-            blueCatapultCenterX,
-            catapultBaseline - RELOAD_INDICATOR_OFFSET,
+            blueHealthBarLeft + fortressHealthBarWidth + FORTRESS_RELOAD_BADGE_GAP,
+            blueHealthBarTop + HEALTH_BAR_HEIGHT / 2f,
             state.playerReloadRemainingSeconds,
             state.playerProjectileActive,
         )
         drawReloadIndicator(
             canvas,
-            redCatapultCenterX,
-            redCatapultBaseline - RELOAD_INDICATOR_OFFSET,
+            redHealthBarLeft - FORTRESS_RELOAD_BADGE_GAP,
+            redHealthBarTop + HEALTH_BAR_HEIGHT / 2f,
             state.enemyReloadRemainingSeconds,
             state.projectiles.any { it.teamLabel == "RED" },
         )
@@ -191,26 +192,26 @@ class BattlefieldRenderer(
 
         drawHealthBar(
             canvas,
-            blueFortressCenterX - FORTRESS_RENDER_WIDTH / 2f,
-            blueFortressBaseline - FORTRESS_RENDER_HEIGHT - 18f,
+            blueFortressCenterX,
+            blueHealthBarTop + HEALTH_BAR_HEIGHT / 2f,
+            fortressHealthBarWidth,
             state.blueFortressHealth,
             state.blueFortressMaxHealth,
-            bluePaint,
         )
         drawHealthBar(
             canvas,
-            redFortressCenterX - FORTRESS_RENDER_WIDTH / 2f,
-            redFortressBaseline - FORTRESS_RENDER_HEIGHT - 18f,
+            redFortressCenterX,
+            redHealthBarTop + HEALTH_BAR_HEIGHT / 2f,
+            fortressHealthBarWidth,
             state.redFortressHealth,
             state.redFortressMaxHealth,
-            redPaint,
         )
         drawFortressLabels(
             canvas,
-            blueFortressCenterX,
-            redFortressCenterX,
-            blueFortressBaseline,
-            redFortressBaseline,
+            blueHealthBarLeft,
+            redHealthBarLeft + fortressHealthBarWidth,
+            blueHealthBarTop,
+            redHealthBarTop,
         )
         if (debugHitboxesVisible) {
             drawDebugHitboxes(
@@ -469,20 +470,42 @@ class BattlefieldRenderer(
 
     private fun drawHealthBar(
         canvas: Canvas,
-        left: Float,
-        top: Float,
+        centerX: Float,
+        centerY: Float,
+        width: Float,
         health: Int,
         maxHealth: Int,
-        color: Paint,
     ) {
-        val background = Paint(Paint.ANTI_ALIAS_FLAG).apply { this.color = Color.DKGRAY }
-        canvas.drawRect(left, top, left + FORTRESS_RENDER_WIDTH, top + 16f, background)
-        val ratio = if (maxHealth > 0) {
+        val fraction = if (maxHealth > 0) {
             (health.toFloat() / maxHealth).coerceIn(0f, 1f)
         } else {
             0f
         }
-        canvas.drawRect(left, top, left + FORTRESS_RENDER_WIDTH * ratio, top + 16f, color)
+        val left = centerX - width / 2f
+        val top = centerY - HEALTH_BAR_HEIGHT / 2f
+        val bounds = RectF(left, top, left + width, top + HEALTH_BAR_HEIGHT)
+        val background = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+            color = Color.argb(220, 25, 20, 16)
+        }
+        canvas.drawRoundRect(bounds, HEALTH_BAR_CORNER_RADIUS, HEALTH_BAR_CORNER_RADIUS, background)
+        if (fraction > 0f) {
+            val fill = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+                color = when {
+                    fraction <= 0.3f -> Color.rgb(235, 70, 50)
+                    fraction <= 0.6f -> Color.rgb(245, 170, 45)
+                    else -> Color.rgb(85, 205, 90)
+                }
+            }
+            canvas.save()
+            canvas.clipRect(left, top, left + width * fraction, top + HEALTH_BAR_HEIGHT)
+            canvas.drawRoundRect(
+                bounds,
+                HEALTH_BAR_CORNER_RADIUS,
+                HEALTH_BAR_CORNER_RADIUS,
+                fill,
+            )
+            canvas.restore()
+        }
     }
 
     private fun drawUnits(
@@ -538,7 +561,7 @@ class BattlefieldRenderer(
             if (bitmap != null) {
                 val spriteHeightWorld = when (unit.unitType) {
                     "SAPPER" -> 144f
-                    "RAGING_BOAR" -> 220f * 1.6f
+                    "RAGING_BOAR" -> 220f * 1.6f * BOAR_SOURCE_CROP_HEIGHT_RATIO
                     "SLINGMASTER" -> 170f
                     else -> 150f
                 } * 0.96f * 0.308f * WorldScale.UNIT_SCALE
@@ -555,7 +578,7 @@ class BattlefieldRenderer(
                     ),
                     spritePaint,
                 )
-                drawUnitHealthBar(
+                drawHealthBar(
                     canvas = canvas,
                     centerX = centerX,
                     centerY = baselineY - spriteHeight - 14f * worldToViewportScale,
@@ -585,7 +608,7 @@ class BattlefieldRenderer(
                     18f * WorldScale.UNIT_SCALE * worldToViewportScale,
                     unitPaint,
                 )
-                drawUnitHealthBar(
+                drawHealthBar(
                     canvas = canvas,
                     centerX = centerX,
                     centerY = baselineY - 48f * WorldScale.UNIT_SCALE *
@@ -597,50 +620,6 @@ class BattlefieldRenderer(
                 )
             }
         }
-    }
-
-    private fun drawUnitHealthBar(
-        canvas: Canvas,
-        centerX: Float,
-        centerY: Float,
-        width: Float,
-        health: Int,
-        maxHealth: Int,
-    ) {
-        val fraction = if (maxHealth > 0) {
-            (health.toFloat() / maxHealth).coerceIn(0f, 1f)
-        } else {
-            0f
-        }
-
-        val background = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-            color = Color.argb(220, 25, 20, 16)
-        }
-        canvas.drawRoundRect(
-            RectF(centerX - width / 2f, centerY - 4f, centerX + width / 2f, centerY + 4f),
-            3f,
-            3f,
-            background,
-        )
-        val fill = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-            color = when {
-                fraction <= 0f -> Color.rgb(100, 100, 100)
-                fraction <= 0.3f -> Color.rgb(235, 70, 50)
-                fraction <= 0.6f -> Color.rgb(245, 170, 45)
-                else -> Color.rgb(85, 205, 90)
-            }
-        }
-        canvas.drawRoundRect(
-            RectF(
-                centerX - width / 2f,
-                centerY - 4f,
-                centerX - width / 2f + width * fraction,
-                centerY + 4f,
-            ),
-            3f,
-            3f,
-            fill,
-        )
     }
 
     private fun drawCombatFeedback(
@@ -815,27 +794,29 @@ class BattlefieldRenderer(
 
     private fun drawFortressLabels(
         canvas: Canvas,
-        blueCenterX: Float,
-        redCenterX: Float,
-        blueBaseline: Float,
-        redBaseline: Float,
+        blueBarLeft: Float,
+        redBarRight: Float,
+        blueBarTop: Float,
+        redBarTop: Float,
     ) {
         val paint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
             color = Color.WHITE
-            textSize = 18f
+            textSize = 14f
             typeface = Typeface.DEFAULT_BOLD
             setShadowLayer(4f, 1f, 1f, Color.BLACK)
         }
+        paint.textAlign = Paint.Align.LEFT
         canvas.drawText(
             "YOU",
-            blueCenterX - FORTRESS_RENDER_WIDTH / 2f,
-            blueBaseline - FORTRESS_RENDER_HEIGHT - 25f,
+            blueBarLeft,
+            blueBarTop - FORTRESS_LABEL_GAP,
             paint,
         )
+        paint.textAlign = Paint.Align.RIGHT
         canvas.drawText(
             "ENEMY",
-            redCenterX - FORTRESS_RENDER_WIDTH / 2f,
-            redBaseline - FORTRESS_RENDER_HEIGHT - 25f,
+            redBarRight,
+            redBarTop - FORTRESS_LABEL_GAP,
             paint,
         )
     }
@@ -876,7 +857,14 @@ class BattlefieldRenderer(
         private const val WORLD_HEIGHT = WorldDimensions.HEIGHT
         private const val SOIL_TILE_WIDTH = 256f
         private const val FORTRESS_CENTER_MARGIN = 490f
+        private const val HEALTH_BAR_HEIGHT = 8f
+        private const val HEALTH_BAR_CORNER_RADIUS = 3f
+        private const val FORTRESS_HEALTH_BAR_WIDTH_RATIO = 0.68f
+        private const val FORTRESS_HEALTH_BAR_TOP_OFFSET = 18f
+        private const val FORTRESS_RELOAD_BADGE_GAP = 24f
+        private const val FORTRESS_LABEL_GAP = 6f
         private const val UNIT_HEALTH_BAR_WIDTH_WORLD = 46.2f
+        private const val BOAR_SOURCE_CROP_HEIGHT_RATIO = 301f / 512f
         private const val LEGACY_FORTRESS_RENDER_WIDTH = 280f
         private const val LEGACY_FORTRESS_RENDER_HEIGHT = 210f
         private val FORTRESS_RENDER_WIDTH =
@@ -884,7 +872,6 @@ class BattlefieldRenderer(
         private val FORTRESS_RENDER_HEIGHT =
             LEGACY_FORTRESS_RENDER_HEIGHT * WorldScale.FORTRESS_SCALE
         private const val CATAPULT_RENDER_WIDTH = 95f
-        private const val RELOAD_INDICATOR_OFFSET = 72f
         private const val CATAPULT_PLATFORM_HEIGHT_RATIO = 0.40f
         private const val PROJECTILE_DEBUG_RADIUS = 30f
         private const val PROJECTILE_RENDER_SIZE = 36f

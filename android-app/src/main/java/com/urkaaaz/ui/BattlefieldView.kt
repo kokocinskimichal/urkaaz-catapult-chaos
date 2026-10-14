@@ -318,12 +318,12 @@ class BattlefieldView(context: Context) : View(context) {
             color = Color.argb(205, 25, 22, 18)
             style = Paint.Style.FILL
         }
-        canvas.drawCircle(centerX, centerY, radius + 5f, backgroundPaint)
+        canvas.drawCircle(centerX, centerY, radius + 3f, backgroundPaint)
 
         val ringPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
             color = if (ready) Color.rgb(95, 220, 105) else Color.rgb(235, 65, 55)
             style = Paint.Style.STROKE
-            strokeWidth = 7f
+            strokeWidth = 4f
             strokeCap = Paint.Cap.ROUND
         }
         val sweep = if (ready) {
@@ -347,13 +347,13 @@ class BattlefieldView(context: Context) : View(context) {
         val textPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
             color = Color.WHITE
             textAlign = Paint.Align.CENTER
-            textSize = 17f
+            textSize = 10f
             typeface = Typeface.DEFAULT_BOLD
         }
         canvas.drawText(
             if (ready) "OK" else kotlin.math.ceil(remainingSeconds).toInt().coerceAtLeast(1).toString(),
             centerX,
-            centerY + 7f,
+            centerY + 4f,
             textPaint,
         )
     }
@@ -547,11 +547,10 @@ class BattlefieldView(context: Context) : View(context) {
 
     companion object {
         private const val VISUAL_MAX_PULL_DISTANCE = 96f
-        private const val RELOAD_INDICATOR_RADIUS = 30f
+        private const val RELOAD_INDICATOR_RADIUS = 12f
         private const val RELOAD_INDICATOR_DURATION = 5.5f
         private const val FORTRESS_RENDER_WIDTH = 280f
         private const val FORTRESS_CENTER_MARGIN = 490f
-        private const val RELOAD_INDICATOR_OFFSET = 72f
         private const val PROJECTILE_SPEED_SCALE = 8f
         private const val GRAVITY_ACCELERATION_Y = 420f
         private const val WIND_ACCELERATION_SCALE = 260f
