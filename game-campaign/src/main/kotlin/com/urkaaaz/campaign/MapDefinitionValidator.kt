@@ -1,517 +1,254 @@
 package com.urkaaaz.campaign
 
-import com.urkaaaz.contracts.CatapultPlacement
-import com.urkaaaz.contracts.FortressPlacement
-import com.urkaaaz.contracts.InitialCameraAnchor
+import com.urkaaaz.assets.AssetCatalog
 import com.urkaaaz.contracts.MapDefinition
-import com.urkaaaz.contracts.MapObjectPlacement
-import com.urkaaaz.contracts.MapObjectType
-import com.urkaaaz.contracts.ObjectCollision
+import com.urkaaaz.contracts.MapDecoration
 import com.urkaaaz.contracts.RelicSize
-import com.urkaaaz.contracts.TerrainSample
 import com.urkaaaz.contracts.Team
+import com.urkaaaz.contracts.TerrainBiome
+import com.urkaaaz.contracts.WorldDimensions
 import kotlin.math.abs
 import kotlin.math.cos
 import kotlin.math.sin
 
-data class MapValidationResult(
-    val errors: List<MapValidationError>,
-) {
-    val isValid: Boolean
-        get() = errors.isEmpty()
+data class MapValidationResult(val errors: List<MapValidationError>) {
+    val isValid: Boolean get() = errors.isEmpty()
 }
 
-sealed interface MapValidationError {
-    val path: String
-    val message: String
-
-    data class TerrainSlopeExceeded(
-        override val path: String,
-        val left: TerrainSample,
-        val right: TerrainSample,
-        val maximumDelta: Float,
-    ) : MapValidationError {
-        override val message = "terrain slope exceeds $maximumDelta world units"
-    }
-
-    data class FoundationNotFlat(
-        override val path: String,
-        val minimumHeight: Float,
-        val maximumHeight: Float,
-    ) : MapValidationError {
-        override val message = "foundation transition is not flat"
-    }
-
-    data class FoundationOutsideAllowedHeight(
-        override val path: String,
-        val foundationHeight: Float,
-        val minimumAllowed: Float,
-        val maximumAllowed: Float,
-    ) : MapValidationError {
-        override val message = "foundation height is outside the allowed range"
-    }
-
-    data class FoundationTransitionTooShort(
-        override val path: String,
-        val sampleCount: Int,
-    ) : MapValidationError {
-        override val message = "foundation transition needs at least three samples"
-    }
-
-    data class DecorationOnFoundation(
-        override val path: String,
-    ) : MapValidationError {
-        override val message = "decoration overlaps a foundation or its margin"
-    }
-
-    data class DecorationOnSteepSlope(
-        override val path: String,
-    ) : MapValidationError {
-        override val message = "decoration is placed on a steep slope"
-    }
-
-    data class ObjectOverlapsAnotherObject(
-        override val path: String,
-        val otherId: String,
-    ) : MapValidationError {
-        override val message = "object overlaps another object: $otherId"
-    }
-
-    data class MissingAssetKey(
-        override val path: String,
-    ) : MapValidationError {
-        override val message = "asset key must not be blank"
-    }
-
-    data class CatapultOutsideFoundation(
-        override val path: String,
-    ) : MapValidationError {
-        override val message = "catapult is outside its foundation"
-    }
-
-    data class InvalidInitialCameraAnchor(
-        override val path: String,
-    ) : MapValidationError {
-        override val message = "initial camera anchor cannot be resolved"
-    }
-
-    data class InvalidDefinition(
-        override val path: String,
-        override val message: String,
-    ) : MapValidationError
-}
+data class MapValidationError(val path: String, val message: String)
 
 object MapDefinitionValidator {
     const val TERRAIN_SAMPLE_STEP = 40f
-    val SUPPORTED_TERRAIN_SAMPLE_STEPS = setOf(20f, TERRAIN_SAMPLE_STEP)
     const val MAX_TERRAIN_DELTA = 200f
     const val FOUNDATION_HEIGHT_TOLERANCE = 80f
-    const val MIN_FOUNDATION_TRANSITION_SAMPLES = 3
-    const val DECORATION_MARGIN = 40f
     const val FLAT_TERRAIN_HEIGHT_TOLERANCE = 1f
+    private val assetCatalog = AssetCatalog()
 
     fun validate(definition: MapDefinition): MapValidationResult {
-        val errors = buildList {
-            validateTerrain(definition, this)
-            validateProtectedZones(definition, this)
-            validateFortresses(definition, this)
-            validateCatapults(definition, this)
-            validateObjects(definition, this)
-            validateCamera(definition, this)
-            validateDuplicateIds(definition, this)
+        val errors = mutableListOf<MapValidationError>()
+        if (definition.schemaVersion != 1) {
+            errors += MapValidationError("schemaVersion", "only schema version 1 is supported")
         }
+        if (definition.mapId.isBlank()) errors += MapValidationError("mapId", "map id must not be blank")
+        if (TerrainBiome.fromMapId(definition.biome) == null) {
+            errors += MapValidationError("biome", "unsupported biome '${definition.biome}'")
+        } else if (definition.biome !in assetCatalog.availableBiomes()) {
+            errors += MapValidationError("biome", "no bundled terrain assets are registered for '${definition.biome}'")
+        }
+        if (definition.world.width.toFloat() != WorldDimensions.WIDTH) {
+            errors += MapValidationError("world.width", "must be ${WorldDimensions.WIDTH.toInt()}")
+        }
+        if (definition.world.height.toFloat() != WorldDimensions.HEIGHT) {
+            errors += MapValidationError("world.height", "must be ${WorldDimensions.HEIGHT.toInt()}")
+        }
+        validateTerrain(definition, errors)
+        validateZones(definition, errors)
+        validateFortresses(definition, errors)
+        validateDecorations(definition, errors)
         return MapValidationResult(errors)
     }
 
     fun requireValid(definition: MapDefinition): MapDefinition {
         val result = validate(definition)
-        require(result.isValid) {
-            result.errors.joinToString("; ") { "${it.path}: ${it.message}" }
-        }
+        require(result.isValid) { result.errors.joinToString("; ") { "${it.path}: ${it.message}" } }
         return definition
     }
 
-    private fun validateTerrain(
-        definition: MapDefinition,
-        errors: MutableList<MapValidationError>,
-    ) {
+    private fun validateTerrain(definition: MapDefinition, errors: MutableList<MapValidationError>) {
         val samples = definition.terrain.samples
+        if (definition.terrain.sampleStep !in setOf(20f, TERRAIN_SAMPLE_STEP)) {
+            errors += MapValidationError("terrain.sampleStep", "must be 20 or $TERRAIN_SAMPLE_STEP")
+        }
         if (samples.isEmpty()) {
-            errors += MapValidationError.InvalidDefinition(
-                "terrain.samples",
-                "terrain profile must contain samples",
-            )
+            errors += MapValidationError("terrain.heightSamples", "must contain terrain samples")
             return
         }
-        if (definition.terrain.sampleStep !in SUPPORTED_TERRAIN_SAMPLE_STEPS) {
-            errors += MapValidationError.InvalidDefinition(
-                "terrain.sampleStep",
-                "sample step must be one of $SUPPORTED_TERRAIN_SAMPLE_STEPS",
-            )
+        samples.forEachIndexed { index, sample ->
+            if (!sample.x.isFinite() || !sample.height.isFinite()) {
+                errors += MapValidationError("terrain.heightSamples[$index]", "coordinates must be finite")
+            }
         }
         samples.zipWithNext().forEachIndexed { index, (left, right) ->
             if (right.x - left.x != definition.terrain.sampleStep) {
-                errors += MapValidationError.InvalidDefinition(
-                    "terrain.samples[$index]",
+                errors += MapValidationError(
+                    "terrain.heightSamples[${index + 1}].x",
                     "sample spacing must be ${definition.terrain.sampleStep}",
                 )
             }
-            val delta = abs(right.height - left.height)
-            if (delta > MAX_TERRAIN_DELTA) {
-                errors += MapValidationError.TerrainSlopeExceeded(
-                    path = "terrain.samples[$index]",
-                    left = left,
-                    right = right,
-                    maximumDelta = MAX_TERRAIN_DELTA,
+            if (abs(right.height - left.height) > MAX_TERRAIN_DELTA) {
+                errors += MapValidationError(
+                    "terrain.heightSamples[${index + 1}].height",
+                    "terrain slope exceeds $MAX_TERRAIN_DELTA world units",
                 )
             }
         }
-        if (samples.first().x != 0f || samples.last().x != definition.worldWidth) {
-            errors += MapValidationError.InvalidDefinition(
-                "terrain.samples",
-                "terrain profile must cover the complete world width",
-            )
+        if (samples.first().x != 0f || samples.last().x != definition.world.width.toFloat()) {
+            errors += MapValidationError("terrain.heightSamples", "must cover x=0 through x=${definition.world.width}")
+        }
+        if (samples.any { it.x !in 0f..definition.world.width.toFloat() || it.height !in 0f..definition.world.height.toFloat() }) {
+            errors += MapValidationError("terrain.heightSamples", "all samples must be inside world bounds")
         }
     }
 
-    private fun validateProtectedZones(
-        definition: MapDefinition,
-        errors: MutableList<MapValidationError>,
-    ) {
+    private fun validateZones(definition: MapDefinition, errors: MutableList<MapValidationError>) {
+        val zoneIds = definition.protectedTerrainZones.map { it.id }
+        if (zoneIds.size != zoneIds.toSet().size) {
+            errors += MapValidationError("protectedZones", "zone ids must be unique")
+        }
         definition.protectedTerrainZones.forEachIndexed { index, zone ->
-            if (zone.minX < 0f || zone.maxX > definition.worldWidth) {
-                errors += MapValidationError.InvalidDefinition(
-                    "protectedTerrainZones[$index]",
-                    "protected zone must be inside world bounds",
-                )
+            val path = "protectedZones[$index]"
+            if (zone.id.isBlank()) errors += MapValidationError("$path.id", "must not be blank")
+            if (zone.minX < 0f || zone.maxX > definition.world.width || zone.minX >= zone.maxX ||
+                zone.minHeight < 0f || zone.maxHeight > definition.world.height || zone.minHeight > zone.maxHeight
+            ) {
+                errors += MapValidationError(path, "protected zone bounds are invalid")
             }
         }
     }
 
-    private fun validateFortresses(
-        definition: MapDefinition,
-        errors: MutableList<MapValidationError>,
-    ) {
+    private fun validateFortresses(definition: MapDefinition, errors: MutableList<MapValidationError>) {
         if (definition.fortresses.size != 2 ||
             definition.fortresses.map { it.owner }.toSet() != setOf(Team.BLUE, Team.RED)
         ) {
-            errors += MapValidationError.InvalidDefinition(
-                "fortresses",
-                "exactly one fortress per team is required",
-            )
+            errors += MapValidationError("fortresses", "exactly one fortress per team is required")
         }
+        val zoneIds = definition.protectedTerrainZones.map { it.id }.toSet()
         definition.fortresses.forEachIndexed { index, fortress ->
-            validateAsset(fortress.assetKey, "fortresses[$index]", errors)
-            validateWorldPosition(fortress.x, fortress.foundationHeight, "fortresses[$index]", definition, errors)
-            validateFoundation(
-                placement = fortress,
-                path = "fortresses[$index]",
-                definition = definition,
-                errors = errors,
-            )
-        }
-    }
-
-    private fun validateCatapults(
-        definition: MapDefinition,
-        errors: MutableList<MapValidationError>,
-    ) {
-        if (definition.catapults.map { it.owner }.toSet().size != 2) {
-            errors += MapValidationError.InvalidDefinition(
-                "catapults",
-                "exactly one catapult per team is required",
-            )
-        }
-        definition.catapults.forEachIndexed { index, catapult ->
-            validateAsset(catapult.assetKey, "catapults[$index]", errors)
-            val foundation = definition.fortresses.firstOrNull { it.owner == catapult.owner }
-            if (foundation == null ||
-                catapult.x !in (foundation.x - foundation.halfWidth)..(foundation.x + foundation.halfWidth) ||
-                abs(catapult.foundationHeight - foundation.foundationHeight) > FOUNDATION_HEIGHT_TOLERANCE
+            val path = "fortresses[$index]"
+            if (fortress.assetKey != "fortress.${fortress.owner.name.lowercase()}") {
+                errors += MapValidationError("$path.assetKey", "must match the fortress owner")
+            }
+            if (fortress.hitboxProfile.isBlank()) errors += MapValidationError("$path.hitboxProfile", "must not be blank")
+            if (!fortress.x.isFinite() || fortress.x !in 0f..definition.world.width.toFloat() ||
+                !fortress.foundationHeight.isFinite() ||
+                fortress.foundationHeight !in 0f..definition.world.height.toFloat() ||
+                !fortress.halfWidth.isFinite() || fortress.halfWidth <= 0f
             ) {
-                errors += MapValidationError.CatapultOutsideFoundation(
-                    "catapults[$index]",
-                )
+                errors += MapValidationError(path, "fortress placement is outside world bounds")
             }
-            val protectedZone = catapult.protectedZoneId?.let { id ->
-                definition.protectedTerrainZones.firstOrNull { zone ->
-                    zone.id == id &&
-                        zone.minX <= catapult.x - catapult.halfWidth &&
-                        zone.maxX >= catapult.x + catapult.halfWidth &&
-                        catapult.foundationHeight in zone.minHeight..zone.maxHeight
-                }
+            if (fortress.protectedZoneId !in zoneIds) {
+                errors += MapValidationError("$path.protectedZoneId", "must reference an existing protected zone")
             }
-            if (catapult.protectedZoneId != null && protectedZone == null) {
-                errors += MapValidationError.InvalidDefinition(
-                    "catapults[$index].protectedZoneId",
-                    "catapult must have a covering protected terrain zone",
-                )
-            }
-            validateWorldPosition(catapult.x, catapult.foundationHeight, "catapults[$index]", definition, errors)
-        }
-    }
-
-    private fun validateObjects(
-        definition: MapDefinition,
-        errors: MutableList<MapValidationError>,
-    ) {
-        val largeRelicCount = definition.objects.count { it.relicSize == RelicSize.LARGE }
-        if (largeRelicCount > 1) {
-            errors += MapValidationError.InvalidDefinition(
-                "objects",
-                "at most one LARGE relic is allowed per map",
-            )
-        }
-        definition.objects.forEachIndexed { index, objectPlacement ->
-            val path = "objects[$index]"
-            validateAsset(objectPlacement.assetKey, path, errors)
-            if (objectPlacement.relicSize != null) {
-                validateRelic(definition, objectPlacement, path, errors)
-                return@forEachIndexed
-            }
-            if (objectPlacement.x !in 0f..definition.worldWidth ||
-                objectPlacement.y !in 0f..definition.worldHeight
+            val zone = definition.protectedTerrainZones.firstOrNull { it.id == fortress.protectedZoneId }
+            if (zone != null &&
+                (zone.minX > fortress.x - fortress.halfWidth || zone.maxX < fortress.x + fortress.halfWidth ||
+                    fortress.foundationHeight !in zone.minHeight..zone.maxHeight)
             ) {
-                errors += MapValidationError.InvalidDefinition(
-                    "$path.position",
-                    "object must be inside world bounds",
-                )
+                errors += MapValidationError("$path.protectedZoneId", "zone must cover fortress foundation")
             }
-            val terrainHeight = terrainHeightAt(definition, objectPlacement.x)
-            if (abs(objectPlacement.y - terrainHeight) > 1.5f) {
-                errors += MapValidationError.InvalidDefinition(
-                    "$path.y",
-                    "object bottom anchor must match terrain height",
-                )
-            }
-            definition.objects.drop(index + 1).forEach { other ->
-                if (!objectPlacement.allowOverlap &&
-                    !other.allowOverlap &&
-                    abs(objectPlacement.x - other.x) < 40f
-                ) {
-                    errors += MapValidationError.ObjectOverlapsAnotherObject(
-                        path,
-                        other.id,
-                    )
-                }
-            }
-            if (objectPlacement.collision != ObjectCollision.NONE &&
-                objectPlacement.type == MapObjectType.DECORATION
-            ) {
-                // Explicit collision is allowed; this branch documents that it
-                // must be intentional rather than the default.
-            }
-        }
-    }
-
-    private fun validateRelic(
-        definition: MapDefinition,
-        relic: MapObjectPlacement,
-        path: String,
-        errors: MutableList<MapValidationError>,
-    ) {
-        val size = relic.relicSize ?: return
-        if (relic.type != MapObjectType.DECORATION) {
-            errors += MapValidationError.InvalidDefinition(
-                "$path.type",
-                "relics must be decorations",
-            )
-        }
-        if (relic.collision != ObjectCollision.NONE) {
-            errors += MapValidationError.InvalidDefinition(
-                "$path.collision",
-                "decorative relics cannot have gameplay collision",
-            )
-        }
-        if (!relic.assetKey.startsWith("relic.")) {
-            errors += MapValidationError.InvalidDefinition(
-                "$path.assetKey",
-                "relic asset keys must use the relic. namespace",
-            )
-        }
-
-        val rotationRadians = Math.toRadians(relic.rotationDegrees.toDouble())
-        val rotatedHalfWidth =
-            abs(size.halfWidth * relic.scale * cos(rotationRadians).toFloat()) +
-                abs(size.halfHeight * relic.scale * sin(rotationRadians).toFloat())
-        val rotatedHalfHeight =
-            abs(size.halfWidth * relic.scale * sin(rotationRadians).toFloat()) +
-                abs(size.halfHeight * relic.scale * cos(rotationRadians).toFloat())
-        val left = relic.x - rotatedHalfWidth
-        val right = relic.x + rotatedHalfWidth
-        val top = relic.y - rotatedHalfHeight
-        val bottom = relic.y + rotatedHalfHeight
-
-        if (left < 0f || right > definition.worldWidth || top < 0f || bottom > definition.worldHeight) {
-            errors += MapValidationError.InvalidDefinition(
-                "$path.footprint",
-                "relic footprint must stay inside world bounds",
-            )
-        }
-
-        val soilSurface = maxTerrainHeightInRange(definition, left, right)
-        if (top < soilSurface) {
-            errors += MapValidationError.InvalidDefinition(
-                "$path.footprint",
-                "relic footprint must be fully inside soil",
-            )
-        }
-
-        definition.objects.filter { it.id != relic.id }.forEach { other ->
-            val otherHalfWidth = other.relicSize?.halfWidth?.times(other.scale) ?: 40f
-            if (!relic.allowOverlap &&
-                !other.allowOverlap &&
-                horizontalFootprintsOverlap(relic.x, rotatedHalfWidth, other.x, otherHalfWidth)
-            ) {
-                errors += MapValidationError.ObjectOverlapsAnotherObject(path, other.id)
-            }
-        }
-    }
-
-    private fun horizontalFootprintsOverlap(
-        leftCenter: Float,
-        leftHalfWidth: Float,
-        rightCenter: Float,
-        rightHalfWidth: Float,
-    ): Boolean = abs(leftCenter - rightCenter) < leftHalfWidth + rightHalfWidth
-
-    private fun MapObjectPlacement.leftEdge(halfWidth: Float): Float = x - halfWidth
-
-    private fun MapObjectPlacement.rightEdge(halfWidth: Float): Float = x + halfWidth
-
-    private fun maxTerrainHeightInRange(
-        definition: MapDefinition,
-        minX: Float,
-        maxX: Float,
-    ): Float = definition.terrain.samples
-        .filter { it.x in minX..maxX }
-        .map { it.height }
-        .plus(terrainHeightAt(definition, minX))
-        .plus(terrainHeightAt(definition, maxX))
-        .maxOrNull()
-        ?: terrainHeightAt(definition, minX)
-
-    private fun validateCamera(
-        definition: MapDefinition,
-        errors: MutableList<MapValidationError>,
-    ) {
-        val canResolve = when (definition.initialCameraAnchor) {
-            InitialCameraAnchor.CENTER -> true
-            InitialCameraAnchor.PLAYER_FORTRESS ->
-                definition.fortresses.any { it.owner == Team.BLUE }
-            InitialCameraAnchor.ENEMY_FORTRESS ->
-                definition.fortresses.any { it.owner == Team.RED }
-        }
-        if (!canResolve) {
-            errors += MapValidationError.InvalidInitialCameraAnchor("initialCameraAnchor")
-        }
-    }
-
-    private fun validateDuplicateIds(
-        definition: MapDefinition,
-        errors: MutableList<MapValidationError>,
-    ) {
-        val ids = definition.objects.map { it.id }
-        if (ids.size != ids.toSet().size) {
-            errors += MapValidationError.InvalidDefinition(
-                "objects",
-                "object identifiers must be unique",
-            )
+            validateFoundation(definition, fortress.x, fortress.foundationHeight, path, errors)
         }
     }
 
     private fun validateFoundation(
-        placement: FortressPlacement,
-        path: String,
         definition: MapDefinition,
+        x: Float,
+        foundationHeight: Float,
+        path: String,
         errors: MutableList<MapValidationError>,
     ) {
         val samples = definition.terrain.samples.filter {
-            it.x in (placement.x - FOUNDATION_HEIGHT_TOLERANCE)..(
-                placement.x + FOUNDATION_HEIGHT_TOLERANCE
-            )
+            it.x in (x - FOUNDATION_HEIGHT_TOLERANCE)..(x + FOUNDATION_HEIGHT_TOLERANCE)
         }
-        if (samples.size < MIN_FOUNDATION_TRANSITION_SAMPLES) {
-            errors += MapValidationError.FoundationTransitionTooShort(path, samples.size)
+        if (samples.size < 3) {
+            errors += MapValidationError(path, "foundation transition needs at least three terrain samples")
             return
         }
-        val minimum = samples.minOf { it.height }
-        val maximum = samples.maxOf { it.height }
-        if (maximum - minimum > FOUNDATION_HEIGHT_TOLERANCE) {
-            errors += MapValidationError.FoundationNotFlat(path, minimum, maximum)
+        val min = samples.minOf { it.height }
+        val max = samples.maxOf { it.height }
+        if (max - min > FOUNDATION_HEIGHT_TOLERANCE) {
+            errors += MapValidationError(path, "foundation terrain must be flat")
         }
-        if (placement.foundationHeight !in (minimum - FOUNDATION_HEIGHT_TOLERANCE)..(
-                maximum + FOUNDATION_HEIGHT_TOLERANCE
-            )
-        ) {
-            errors += MapValidationError.FoundationOutsideAllowedHeight(
-                path,
-                placement.foundationHeight,
-                minimum - FOUNDATION_HEIGHT_TOLERANCE,
-                maximum + FOUNDATION_HEIGHT_TOLERANCE,
-            )
-        }
-        val zone = definition.protectedTerrainZones.firstOrNull {
-            it.id == placement.protectedZoneId &&
-                it.minX <= placement.x - placement.halfWidth &&
-            it.maxX >= placement.x + placement.halfWidth &&
-            placement.foundationHeight in it.minHeight..it.maxHeight
-        }
-        if (zone == null) {
-            errors += MapValidationError.InvalidDefinition(
-                "$path.protectedZoneId",
-                "foundation must have a covering protected terrain zone",
-            )
+        if (foundationHeight !in (min - FOUNDATION_HEIGHT_TOLERANCE)..(max + FOUNDATION_HEIGHT_TOLERANCE)) {
+            errors += MapValidationError("$path.foundationHeight", "foundation height is outside the allowed range")
         }
     }
 
-    private fun validateAsset(
-        assetKey: String,
-        path: String,
-        errors: MutableList<MapValidationError>,
-    ) {
-        if (assetKey.isBlank()) errors += MapValidationError.MissingAssetKey(path)
+    private fun validateDecorations(definition: MapDefinition, errors: MutableList<MapValidationError>) {
+        val ids = definition.decorations.map { it.id }
+        if (ids.size != ids.toSet().size) errors += MapValidationError("decorations", "decoration ids must be unique")
+        if (definition.decorations.count { it.relicSize == RelicSize.LARGE } > 1) {
+            errors += MapValidationError("decorations", "at most one LARGE relic is allowed per map")
+        }
+        definition.decorations.forEachIndexed { index, decoration ->
+            val path = "decorations[$index]"
+            validateDecoration(definition, decoration, path, errors)
+        }
     }
 
-    private fun validateWorldPosition(
-        x: Float,
-        height: Float,
-        path: String,
+    private fun validateDecoration(
         definition: MapDefinition,
+        decoration: MapDecoration,
+        path: String,
         errors: MutableList<MapValidationError>,
     ) {
-        if (x !in 0f..definition.worldWidth || height !in 0f..definition.worldHeight) {
-            errors += MapValidationError.InvalidDefinition(
-                "$path.position",
-                "placement must be inside world bounds",
-            )
+        if (decoration.id.isBlank()) errors += MapValidationError("$path.id", "must not be blank")
+        if (!assetCatalog.isKnownMapDecoration(decoration.assetKey, definition.biome)) {
+            errors += MapValidationError("$path.assetKey", "unknown decoration asset '${decoration.assetKey}' for ${definition.biome}")
         }
+        if (!decoration.x.isFinite() || !decoration.y.isFinite() ||
+            !decoration.scale.isFinite() || decoration.scale <= 0f ||
+            !decoration.rotationDegrees.isFinite()
+        ) {
+            errors += MapValidationError(path, "position and transform values must be finite and scale must be positive")
+            return
+        }
+        if (decoration.relicSize == null) {
+            if (decoration.x !in 0f..definition.world.width.toFloat() ||
+                decoration.y !in 0f..definition.world.height.toFloat()
+            ) errors += MapValidationError("$path.position", "decoration must be inside world bounds")
+            val surface = terrainHeightAt(definition, decoration.x)
+            if (abs(decoration.y - surface) > 1.5f) {
+                errors += MapValidationError("$path.y", "grounded decoration bottom anchor must match terrain")
+            }
+            val left = terrainHeightAt(definition, decoration.x - TERRAIN_SAMPLE_STEP)
+            val right = terrainHeightAt(definition, decoration.x + TERRAIN_SAMPLE_STEP)
+            if (abs(left - surface) > FLAT_TERRAIN_HEIGHT_TOLERANCE ||
+                abs(right - surface) > FLAT_TERRAIN_HEIGHT_TOLERANCE
+            ) errors += MapValidationError("$path.position", "grounded decoration must be on flat terrain")
+            return
+        }
+        validateRelic(definition, decoration, path, errors)
     }
 
-    private fun slopeAt(samples: List<TerrainSample>, x: Float): Float {
-        val nearest = samples.minBy { abs(it.x - x) }
-        val next = samples.firstOrNull { it.x > nearest.x } ?: nearest
-        return if (next.x == nearest.x) 0f else {
-            abs(next.height - nearest.height) / (next.x - nearest.x)
+    private fun validateRelic(
+        definition: MapDefinition,
+        relic: MapDecoration,
+        path: String,
+        errors: MutableList<MapValidationError>,
+    ) {
+        if (!relic.assetKey.startsWith("relic.${definition.biome}.small.")) {
+            errors += MapValidationError("$path.assetKey", "relic asset must belong to its biome and size")
         }
-    }
-
-    private fun isFlatTerrainAt(definition: MapDefinition, x: Float): Boolean {
-        val left = terrainHeightAt(definition, x - TERRAIN_SAMPLE_STEP)
-        val center = terrainHeightAt(definition, x)
-        val right = terrainHeightAt(definition, x + TERRAIN_SAMPLE_STEP)
-        return abs(left - center) <= FLAT_TERRAIN_HEIGHT_TOLERANCE &&
-            abs(center - right) <= FLAT_TERRAIN_HEIGHT_TOLERANCE
+        val size = relic.relicSize ?: return
+        val radians = Math.toRadians(relic.rotationDegrees.toDouble())
+        val halfWidth = abs(size.halfWidth * relic.scale * cos(radians).toFloat()) +
+            abs(size.halfHeight * relic.scale * sin(radians).toFloat())
+        val halfHeight = abs(size.halfWidth * relic.scale * sin(radians).toFloat()) +
+            abs(size.halfHeight * relic.scale * cos(radians).toFloat())
+        val left = relic.x - halfWidth
+        val right = relic.x + halfWidth
+        val top = relic.y - halfHeight
+        val bottom = relic.y + halfHeight
+        if (left < 0f || right > definition.world.width || top < 0f || bottom > definition.world.height) {
+            errors += MapValidationError("$path.footprint", "relic footprint must stay inside world bounds")
+        }
+        if (top < maxTerrainHeightInRange(definition, left, right)) {
+            errors += MapValidationError("$path.footprint", "relic footprint must be fully inside soil")
+        }
     }
 
     private fun terrainHeightAt(definition: MapDefinition, x: Float): Float {
         val samples = definition.terrain.samples
-        val clampedX = x.coerceIn(samples.first().x, samples.last().x)
-        val leftIndex = samples.indexOfLast { it.x <= clampedX }.coerceAtLeast(0)
-        val left = samples[leftIndex]
-        val right = samples.getOrNull(leftIndex + 1) ?: left
+        val clamped = x.coerceIn(samples.first().x, samples.last().x)
+        val index = samples.indexOfLast { it.x <= clamped }.coerceAtLeast(0)
+        val left = samples[index]
+        val right = samples.getOrNull(index + 1) ?: left
         if (left.x == right.x) return left.height
-        val progress = (clampedX - left.x) / (right.x - left.x)
-        return left.height + (right.height - left.height) * progress
+        return left.height + (right.height - left.height) * ((clamped - left.x) / (right.x - left.x))
     }
+
+    private fun maxTerrainHeightInRange(definition: MapDefinition, minX: Float, maxX: Float): Float =
+        definition.terrain.samples.filter { it.x in minX..maxX }.maxOfOrNull { it.height }
+            ?: maxOf(terrainHeightAt(definition, minX), terrainHeightAt(definition, maxX))
 }

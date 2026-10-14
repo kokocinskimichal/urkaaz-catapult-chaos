@@ -1,5 +1,9 @@
 # Prompt implementacyjny: mapy kampanii JSON
 
+> Status: implementacja tego promptu znajduje się w repozytorium. Wynik i
+> aktualne przypisanie map opisano w
+> [`MAP_JSON_CAMPAIGN_MIGRATION_PLAN.md`](MAP_JSON_CAMPAIGN_MIGRATION_PLAN.md).
+
 Skopiuj cały prompt z następnej linii do agenta implementującego. Ma on
 zrealizować plan z
 [`MAP_JSON_CAMPAIGN_MIGRATION_PLAN.md`](MAP_JSON_CAMPAIGN_MIGRATION_PLAN.md).

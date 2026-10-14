@@ -1,5 +1,7 @@
 package com.urkaaaz.contracts
 
+import kotlinx.serialization.Serializable
+
 @JvmInline
 value class MatchId(val value: String)
 
@@ -15,6 +17,7 @@ value class CommandId(val value: String)
 @JvmInline
 value class EventId(val value: String)
 
+@Serializable
 enum class Team {
     BLUE,
     RED,

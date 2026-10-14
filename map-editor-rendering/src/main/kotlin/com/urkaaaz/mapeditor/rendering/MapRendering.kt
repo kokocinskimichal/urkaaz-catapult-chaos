@@ -1,6 +1,7 @@
 package com.urkaaaz.mapeditor.rendering
 
 import com.urkaaaz.contracts.MapDefinition
+import com.urkaaaz.contracts.CatapultPresentationContract
 import com.urkaaaz.contracts.WorldDimensions
 import com.urkaaaz.contracts.WorldScale
 import com.urkaaaz.mapeditor.domain.EditorDocument
@@ -59,26 +60,14 @@ object MapRenderer {
     ) {
         val map = document.map
         val (left, top) = transform.worldToScreen(0f, 0f)
-        val width = map.worldWidth * transform.zoom
-        val height = map.worldHeight * transform.zoom
+        val width = map.world.width * transform.zoom
+        val height = map.world.height * transform.zoom
         graphics.color = java.awt.Color(40, 45, 52)
         graphics.fillRect(left.toInt(), top.toInt(), width.toInt(), height.toInt())
         if (document.phase != com.urkaaaz.mapeditor.domain.EditorPhase.TERRAIN_EDITING) {
             visuals?.background?.let {
                 graphics.drawImage(it, left.toInt(), top.toInt(), width.toInt(), height.toInt(), null)
             }
-        }
-        map.terrainTiles.forEach { tile ->
-            val x = tile.gridX * tile.geometry.widthWorldUnits
-            val y = tile.gridY * tile.geometry.heightWorldUnits
-            val p = transform.worldToScreen(x, y)
-            graphics.color = java.awt.Color(95, 125, 65, 90)
-            graphics.fillRect(
-                p.first.toInt(),
-                p.second.toInt(),
-                (tile.geometry.widthWorldUnits * transform.zoom).toInt(),
-                (tile.geometry.heightWorldUnits * transform.zoom).toInt(),
-            )
         }
         if (document.phase != com.urkaaaz.mapeditor.domain.EditorPhase.TERRAIN_EDITING) {
             drawSoil(graphics, map, transform, visuals?.soil)
@@ -104,7 +93,7 @@ object MapRenderer {
         if (showGrid) {
             graphics.color = java.awt.Color(255, 255, 255, 25)
             var x = 0f
-            while (x <= map.worldWidth) {
+            while (x <= map.world.width) {
                 val p = transform.worldToScreen(x, 0f)
                 graphics.drawLine(p.first.toInt(), top.toInt(), p.first.toInt(), (top + height).toInt())
                 x += map.terrain.sampleStep
@@ -116,7 +105,7 @@ object MapRenderer {
             val p2 = transform.worldToScreen(it.maxX, it.maxHeight)
             graphics.drawRect(p1.first.toInt(), p1.second.toInt(), (p2.first - p1.first).toInt(), (p2.second - p1.second).toInt())
         }
-        map.objects.forEach {
+        map.decorations.forEach {
             val p = transform.worldToScreen(it.x, it.y)
             graphics.color = java.awt.Color(90, 210, 120)
             graphics.fillOval((p.first - 8).toInt(), (p.second - 8).toInt(), 16, 16)
@@ -133,10 +122,10 @@ object MapRenderer {
             val point = transform.worldToScreen(it.x, it.height)
             polygon.addPoint(point.first.toInt(), point.second.toInt())
         }
-        polygon.addPoint(transform.worldToScreen(map.worldWidth, map.worldHeight).first.toInt(),
-            transform.worldToScreen(map.worldWidth, map.worldHeight).second.toInt())
-        polygon.addPoint(transform.worldToScreen(0f, map.worldHeight).first.toInt(),
-            transform.worldToScreen(0f, map.worldHeight).second.toInt())
+        polygon.addPoint(transform.worldToScreen(map.world.width.toFloat(), map.world.height.toFloat()).first.toInt(),
+            transform.worldToScreen(map.world.width.toFloat(), map.world.height.toFloat()).second.toInt())
+        polygon.addPoint(transform.worldToScreen(0f, map.world.height.toFloat()).first.toInt(),
+            transform.worldToScreen(0f, map.world.height.toFloat()).second.toInt())
         if (soil == null) {
             graphics.color = java.awt.Color(125, 88, 52)
             graphics.fillPolygon(polygon)
@@ -145,8 +134,8 @@ object MapRenderer {
         val clip = graphics.clip
         graphics.clip = polygon
         val left = transform.worldToScreen(0f, 0f)
-        val width = (map.worldWidth * transform.zoom).toInt()
-        val height = (map.worldHeight * transform.zoom).toInt()
+        val width = (map.world.width * transform.zoom).toInt()
+        val height = (map.world.height * transform.zoom).toInt()
         graphics.drawImage(soil, left.first.toInt(), left.second.toInt(), width, height, null)
         graphics.clip = clip
     }
@@ -189,11 +178,16 @@ object MapRenderer {
                 graphics.fillRect(center.first.toInt() - width / 2, center.second.toInt() - height, width, height)
             }
         }
-        map.catapults.forEach { catapult ->
-            val image = if (catapult.owner == com.urkaaaz.contracts.Team.BLUE) leftCatapult else rightCatapult
+        map.fortresses.forEach { fortress ->
+            val isBlue = fortress.owner == com.urkaaaz.contracts.Team.BLUE
+            val image = if (isBlue) leftCatapult else rightCatapult
             val baseline = transform.worldToScreen(
-                catapult.x,
-                catapult.foundationHeight - CATAPULT_BASELINE_OFFSET_WORLD,
+                fortress.x + if (isBlue) {
+                    -CatapultPresentationContract.CATAPULT_CENTER_OFFSET_FROM_FORTRESS
+                } else {
+                    CatapultPresentationContract.CATAPULT_CENTER_OFFSET_FROM_FORTRESS
+                },
+                fortress.foundationHeight - CATAPULT_BASELINE_OFFSET_WORLD,
             )
             val width = (CATAPULT_WORLD_WIDTH * transform.zoom).toInt()
             val height = if (image == null) {
@@ -204,7 +198,7 @@ object MapRenderer {
             if (image != null) {
                 graphics.drawImage(image, baseline.first.toInt() - width / 2, baseline.second.toInt() - height, width, height, null)
             } else {
-                graphics.color = if (catapult.owner == com.urkaaaz.contracts.Team.BLUE) java.awt.Color(50, 90, 150) else java.awt.Color(150, 50, 50)
+                graphics.color = if (isBlue) java.awt.Color(50, 90, 150) else java.awt.Color(150, 50, 50)
                 graphics.fillRect(baseline.first.toInt() - width / 2, baseline.second.toInt() - height, width, height)
             }
         }

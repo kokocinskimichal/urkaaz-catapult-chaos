@@ -1,9 +1,9 @@
 package com.urkaaaz.simulation
 
 import com.urkaaaz.contracts.MatchId
-import com.urkaaaz.contracts.InitialCameraAnchor
 import com.urkaaaz.contracts.MapDefinition
 import com.urkaaaz.contracts.MapGenerationMetadata
+import com.urkaaaz.contracts.MapWorldDimensions
 import com.urkaaaz.contracts.TerrainProfile
 import com.urkaaaz.contracts.TerrainSample
 import com.urkaaaz.domain.WorldBounds
@@ -19,27 +19,22 @@ class MapDefinitionSimulationTest {
                 bounds = WorldBounds(7_200f, 4_800f),
                 terrainBiome = "GREEN_FRONTIER",
                 mapDefinition = MapDefinition(
-                    levelId = "simulation-test-map",
                     schemaVersion = 1,
-                    worldWidth = 80f,
-                    worldHeight = 100f,
+                    mapId = "simulation-test-map",
+                    biome = "green_frontier",
+                    world = MapWorldDimensions(7_200, 4_800),
                     terrain = TerrainProfile(
-                        samples = listOf(
-                            TerrainSample(0f, 3_650f),
-                            TerrainSample(40f, 3_660f),
-                            TerrainSample(80f, 3_670f),
-                        ),
+                        sampleStep = 40f,
+                        samples = (0..7_200 step 40).map {
+                            TerrainSample(it.toFloat(), 3_650f + it / 720f)
+                        },
                     ),
                     protectedTerrainZones = emptyList(),
                     fortresses = emptyList(),
-                    catapults = emptyList(),
-                    objects = emptyList(),
-                    initialCameraAnchor = InitialCameraAnchor.CENTER,
+                    decorations = emptyList(),
                     generationMetadata = MapGenerationMetadata(
                         seed = 7L,
                         generatorVersion = "test",
-                        authoringVersion = "test",
-                        source = "simulation-test",
                     ),
                 ),
             ),

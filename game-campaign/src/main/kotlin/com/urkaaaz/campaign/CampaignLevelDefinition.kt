@@ -3,6 +3,7 @@ package com.urkaaaz.campaign
 import com.urkaaaz.contracts.BattlefieldConfig
 import com.urkaaaz.contracts.EntityId
 import com.urkaaaz.contracts.MatchScenario
+import com.urkaaaz.contracts.MapDefinition
 import com.urkaaaz.contracts.PlayerConfig
 import com.urkaaaz.contracts.PlayerId
 import com.urkaaaz.contracts.ResourceSnapshot
@@ -10,19 +11,11 @@ import com.urkaaaz.contracts.Team
 import com.urkaaaz.contracts.UnitConfig
 import com.urkaaaz.contracts.VictoryRulesConfig
 import com.urkaaaz.contracts.WindSnapshot
+import com.urkaaaz.contracts.WorldDimensions
 import com.urkaaaz.domain.AmmunitionType
 import com.urkaaaz.domain.SpellType
 import com.urkaaaz.domain.UnitDefinition
 import com.urkaaaz.domain.UnitFactory
-
-/** Biome selected by a campaign level; Android rendering maps it to theme assets. */
-enum class TerrainBiome {
-    GREEN_FRONTIER,
-    FROSTBOUND,
-    COPPERWOOD,
-    ASHEN_MARCH,
-    SUNKEN_MARSHES,
-}
 
 /** Campaign-only difficulty tier consumed by the future AI module. */
 enum class CampaignAiDifficulty {
@@ -30,13 +23,6 @@ enum class CampaignAiDifficulty {
     MEDIUM,
     HARD,
 }
-
-/** Terrain parameters that are meaningful to simulation but not to rendering. */
-data class TerrainVariant(
-    val biome: TerrainBiome,
-    val width: Int = 1_600,
-    val height: Int = 900,
-)
 
 /** Tutorial instructions are data and do not contain Android views or resource IDs. */
 data class TutorialParameters(
@@ -70,7 +56,6 @@ data class EnemyConfiguration(
  */
 data class CampaignLevelDefinition(
     val level: Int,
-    val terrain: TerrainVariant,
     val enemy: EnemyConfiguration,
     val availableUnits: Set<UnitDefinition>,
     val availableAmmunition: Set<AmmunitionType>,
@@ -78,8 +63,7 @@ data class CampaignLevelDefinition(
     val startingAmmunition: Int,
     val initialWind: WindSnapshot = WindSnapshot(),
     val tutorial: TutorialParameters = TutorialParameters(enabled = false),
-    val mapDefinition: com.urkaaaz.contracts.MapDefinition =
-        CampaignMapDefinitions.forLevel(level),
+    val mapDefinition: MapDefinition,
 ) {
     init {
         require(level in 1..MAX_LEVELS) { "level must be between 1 and $MAX_LEVELS" }
@@ -92,8 +76,8 @@ data class CampaignLevelDefinition(
     ): MatchScenario = MatchScenario(
         scenarioId = "campaign-$level",
         battlefield = BattlefieldConfig(
-            mapDefinition.worldWidth.toInt(),
-            mapDefinition.worldHeight.toInt(),
+            WorldDimensions.WIDTH.toInt(),
+            WorldDimensions.HEIGHT.toInt(),
         ),
         players = listOf(
             PlayerConfig(playerId, Team.BLUE),
@@ -119,12 +103,14 @@ data class CampaignLevelDefinition(
     companion object {
         const val MAX_LEVELS = 100
 
-        fun forLevel(level: Int): CampaignLevelDefinition {
+        fun forLevel(
+            level: Int,
+            mapRepository: MapDefinitionRepository = MapDefinitionRepository.bundled,
+        ): CampaignLevelDefinition {
             val safeLevel = level.coerceIn(1, MAX_LEVELS)
             val milestone = (safeLevel - 1) / 10
             return CampaignLevelDefinition(
                 level = safeLevel,
-                terrain = TerrainVariant(biome = biomeFor(safeLevel)),
                 enemy = EnemyConfiguration(
                     difficulty = difficultyFor(safeLevel),
                     aimErrorScale = when (safeLevel) {
@@ -197,16 +183,8 @@ data class CampaignLevelDefinition(
                         emptyList()
                     },
                 ),
-                mapDefinition = CampaignMapDefinitions.forLevel(safeLevel),
+                mapDefinition = mapRepository.require("demo-map"),
             )
-        }
-
-        private fun biomeFor(level: Int): TerrainBiome = when (level) {
-            in 11..20 -> TerrainBiome.FROSTBOUND
-            in 21..30 -> TerrainBiome.COPPERWOOD
-            in 31..40 -> TerrainBiome.ASHEN_MARCH
-            in 41..50 -> TerrainBiome.SUNKEN_MARSHES
-            else -> TerrainBiome.GREEN_FRONTIER
         }
 
         private fun difficultyFor(level: Int): CampaignAiDifficulty = when {

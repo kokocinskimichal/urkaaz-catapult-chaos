@@ -14,7 +14,7 @@ class CampaignLevelDefinitionTest {
     fun earlyLevelExposesOnlyEarlyGameplayOptions() {
         val level = CampaignLevelDefinition.forLevel(1)
 
-        assertEquals(TerrainBiome.GREEN_FRONTIER, level.terrain.biome)
+        assertEquals("green_frontier", level.mapDefinition.biome)
         assertTrue(level.availableUnits.any { it.id == UnitFactory.defender().id })
         assertFalse(level.availableUnits.any { it.id == UnitFactory.sapper().id })
         assertFalse(AmmunitionType.POWDER_BARREL in level.availableAmmunition)
@@ -23,10 +23,11 @@ class CampaignLevelDefinitionTest {
     }
 
     @Test
-    fun milestoneUnlocksAndBiomeScheduleAreDeterministic() {
+    fun milestoneUnlocksRemainDeterministicWhileMapAssignmentIsTemporary() {
         val level = CampaignLevelDefinition.forLevel(41)
 
-        assertEquals(TerrainBiome.SUNKEN_MARSHES, level.terrain.biome)
+        assertEquals("demo-map", level.mapDefinition.mapId)
+        assertEquals("green_frontier", level.mapDefinition.biome)
         assertTrue(level.availableUnits.any { it.id == UnitFactory.slingmaster().id })
         assertTrue(AmmunitionType.PLAGUE_CAULDRON in level.availableAmmunition)
         assertTrue(SpellType.RUNIC_BASTION in level.availableSpells)

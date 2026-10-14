@@ -104,7 +104,7 @@ data class TerrainState(
         fun fromMapDefinition(definition: MapDefinition): TerrainState =
             TerrainState(
                 baselineHeight = definition.terrain.samples.first().height,
-                worldWidth = definition.worldWidth,
+                worldWidth = WorldDimensions.WIDTH,
                 sampleSpacing = definition.terrain.sampleStep,
                 heightSamples = definition.terrain.samples.map { it.height },
                 protectedRanges = definition.protectedTerrainZones.map {

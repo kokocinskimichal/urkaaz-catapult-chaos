@@ -77,13 +77,14 @@ class ContractsTest {
     }
 
     @Test
-    fun mapDefinitionCarriesImmutableTypedAuthoringData() {
+    fun mapDefinitionCarriesTheSharedJsonContract() {
         val definition = MapDefinition(
-            levelId = "test-map",
             schemaVersion = 1,
-            worldWidth = 80f,
-            worldHeight = 100f,
+            mapId = "test-map",
+            biome = "green_frontier",
+            world = MapWorldDimensions(80, 100),
             terrain = TerrainProfile(
+                sampleStep = 40f,
                 samples = listOf(
                     TerrainSample(0f, 50f),
                     TerrainSample(40f, 55f),
@@ -92,20 +93,17 @@ class ContractsTest {
             ),
             protectedTerrainZones = emptyList(),
             fortresses = emptyList(),
-            catapults = emptyList(),
-            objects = emptyList(),
-            initialCameraAnchor = InitialCameraAnchor.CENTER,
+            decorations = emptyList(),
             generationMetadata = MapGenerationMetadata(
                 seed = 1L,
                 generatorVersion = "test",
-                authoringVersion = "test",
-                source = "contracts-test",
             ),
         )
 
-        assertEquals(InitialCameraAnchor.CENTER, definition.initialCameraAnchor)
+        assertEquals("test-map", definition.mapId)
+        assertEquals("green_frontier", definition.biome)
         assertEquals(40f, definition.terrain.sampleStep)
-        assertEquals(1L, definition.generationMetadata.seed)
+        assertEquals(1L, definition.generationMetadata?.seed)
     }
 
     @Test

@@ -14,14 +14,12 @@ import java.awt.Graphics
 import java.awt.GridLayout
 import java.awt.event.*
 import java.awt.image.BufferedImage
-import java.awt.datatransfer.StringSelection
 import java.nio.file.Path
 import javax.imageio.ImageIO
 import javax.swing.*
 import kotlin.random.Random
 import kotlin.io.path.Path
 import kotlin.math.abs
-import kotlin.math.roundToInt
 
 fun main() {
     SwingUtilities.invokeLater { MapEditorFrame().isVisible = true }
@@ -32,13 +30,12 @@ private class MapEditorFrame : JFrame("Edytor map Urkaaaz") {
     private var currentPath: Path? = null
     private var selectedObjectId: String? = null
     private var selectedAssetKey: String? = null
+    private var selectedRelicSize: RelicSize? = null
     private val assetCatalog = AssetCatalog()
     private val visualCatalog = BiomeVisualCatalog()
     private val canvas = MapCanvas()
     private val status = JLabel()
     private val biomeSelector = JComboBox<String>()
-    private val tilePresetSelector = JComboBox<TerrainTilePreset>()
-    private val tilePalette = JPanel()
     private val assetPalette = JPanel()
     private val propertiesPanel = JPanel()
     private var updatingBiome = false
@@ -71,8 +68,8 @@ private class MapEditorFrame : JFrame("Edytor map Urkaaaz") {
         biomeSelector.addActionListener {
             if (!updatingBiome && biomeSelector.selectedItem is String) {
                 val biome = biomeSelector.selectedItem as String
-                if (biome != history.current.map.biome && history.current.map.objects.isEmpty()) {
-                    history = EditorHistory(EditorDocumentFactory.newMap(history.current.map.levelId, biome))
+                if (biome != history.current.map.biome && history.current.map.decorations.isEmpty()) {
+                    history = EditorHistory(EditorDocumentFactory.newMap(history.current.map.mapId, biome))
                     autosave()
                     refresh()
                 }
@@ -112,11 +109,6 @@ private class MapEditorFrame : JFrame("Edytor map Urkaaaz") {
         controls.add(button("Generuj losowo") {
             execute(EditorCommand.GenerateRandomTerrain(Random.nextLong()))
         })
-        controls.add(JLabel("Predefiniowane kafelki terenu:"))
-        tilePresetSelector.preferredSize = Dimension(250, 28)
-        controls.add(tilePresetSelector)
-        tilePalette.layout = GridLayout(0, 1, 2, 2)
-        controls.add(tilePalette)
         controls.add(JLabel("Dekoracje (wybierz i kliknij mapę):"))
         assetPalette.layout = GridLayout(0, 1, 2, 2)
         controls.add(assetPalette)
@@ -128,7 +120,7 @@ private class MapEditorFrame : JFrame("Edytor map Urkaaaz") {
             isEditable = false
             lineWrap = true
             wrapStyleWord = true
-            text = "Przebieg pracy:\n1. Wybierz biom i edytuj teren\n2. Zablokuj teren\n3. Przeciągnij kafelek na mapę lub wybierz dekorację i kliknij mapę\n4. Edytuj właściwości zaznaczonego obiektu\n5. Waliduj i eksportuj\n\nAutosave: ${autosavePath()}"
+            text = "Przebieg pracy:\n1. Wybierz biom i wygeneruj lub wygładź profil terenu\n2. Zablokuj teren\n3. Wybierz dekorację i kliknij mapę\n4. Edytuj właściwości zaznaczonej dekoracji\n5. Waliduj i eksportuj\n\nAutosave: ${autosavePath()}"
             border = BorderFactory.createEmptyBorder(8, 8, 8, 8)
         }, BorderLayout.CENTER)
     }
@@ -203,7 +195,7 @@ private class MapEditorFrame : JFrame("Edytor map Urkaaaz") {
     private fun execute(command: EditorCommand) {
         val result = history.execute(command)
         if (result is EditorResult.Success && command is EditorCommand.PlaceMapObject) {
-            selectedObjectId = result.document.map.objects.lastOrNull()?.id
+            selectedObjectId = result.document.map.decorations.lastOrNull()?.id
             selectedAssetKey = null
         }
         showResult(result)
@@ -225,13 +217,7 @@ private class MapEditorFrame : JFrame("Edytor map Urkaaaz") {
         available.forEach(biomeSelector::addItem)
         biomeSelector.selectedItem = history.current.map.biome
         updatingBiome = false
-        biomeSelector.isEnabled = history.current.map.objects.isEmpty() && history.current.phase == EditorPhase.TERRAIN_EDITING
-        tilePresetSelector.isEnabled = history.current.phase == EditorPhase.TERRAIN_EDITING
-        val selectedTilePresetId = (tilePresetSelector.selectedItem as? TerrainTilePreset)?.id ?: "flat"
-        tilePresetSelector.removeAllItems()
-        TerrainTileCatalog.presets.forEach(tilePresetSelector::addItem)
-        tilePresetSelector.selectedItem = TerrainTileCatalog.byId(selectedTilePresetId)
-        rebuildTilePalette()
+        biomeSelector.isEnabled = history.current.map.decorations.isEmpty() && history.current.phase == EditorPhase.TERRAIN_EDITING
         rebuildPalette()
         rebuildProperties()
         canvas.repaint()
@@ -245,41 +231,18 @@ private class MapEditorFrame : JFrame("Edytor map Urkaaaz") {
         if (assets.isEmpty()) assetPalette.add(JLabel("Brak assetów dla tego biomu"))
         assets.forEach { asset ->
             assetPalette.add(button(asset.fileName) {
-                selectedAssetKey = asset.fileName
-                status.text = "Wybrano asset: ${asset.fileName}"
+                selectedAssetKey = asset.stableKey
+                selectedRelicSize = if (asset.category == AssetCategory.RELIC) RelicSize.SMALL else null
+                status.text = "Wybrano asset: ${asset.stableKey}"
             })
         }
         assetPalette.revalidate()
         assetPalette.repaint()
     }
 
-    private fun rebuildTilePalette() {
-        tilePalette.removeAll()
-        TerrainTileCatalog.presets.forEach { preset ->
-            val tileButton = JButton(preset.displayName)
-            tileButton.toolTipText = "Przeciągnij ${preset.displayName} na mapę"
-            tileButton.addActionListener {
-                tilePresetSelector.selectedItem = preset
-                status.text = "Wybrano kafelek: ${preset.displayName}"
-            }
-            tileButton.transferHandler = object : TransferHandler() {
-                override fun createTransferable(component: JComponent) = StringSelection(preset.id)
-                override fun getSourceActions(component: JComponent) = COPY
-            }
-            tileButton.addMouseMotionListener(object : MouseMotionAdapter() {
-                override fun mouseDragged(event: MouseEvent) {
-                    tileButton.transferHandler.exportAsDrag(tileButton, event, TransferHandler.COPY)
-                }
-            })
-            tilePalette.add(tileButton)
-        }
-        tilePalette.revalidate()
-        tilePalette.repaint()
-    }
-
     private fun rebuildProperties() {
         propertiesPanel.removeAll()
-        val selected = history.current.map.objects.firstOrNull { it.id == selectedObjectId }
+        val selected = history.current.map.decorations.firstOrNull { it.id == selectedObjectId }
         if (selected == null) {
             propertiesPanel.add(JLabel("Nie wybrano obiektu"), BorderLayout.NORTH)
         } else {
@@ -317,13 +280,13 @@ private class MapEditorFrame : JFrame("Edytor map Urkaaaz") {
         System.getProperty("user.home"),
         ".urkaaz",
         "map-editor",
-        "${history.current.map.levelId}.draft.json",
+        "${history.current.map.mapId}.draft.json",
     )
 
     private fun recoverAutosave() {
         val path = autosavePath()
         if (!java.nio.file.Files.exists(path)) return
-        val recover = JOptionPane.showConfirmDialog(this, "Odzyskać autosave mapy ${history.current.map.levelId}?", "Edytor map", JOptionPane.YES_NO_OPTION)
+        val recover = JOptionPane.showConfirmDialog(this, "Odzyskać autosave mapy ${history.current.map.mapId}?", "Edytor map", JOptionPane.YES_NO_OPTION)
         if (recover == JOptionPane.YES_OPTION) {
             runCatching { history = EditorHistory(MapDocumentCodec.read(path)); refresh() }
                 .onFailure { showError("Odzyskiwanie autosave nie powiodło się: ${it.message}") }
@@ -334,7 +297,7 @@ private class MapEditorFrame : JFrame("Edytor map Urkaaaz") {
 
     private fun biomeLabel(biome: String): String = when (biome) {
         "green_frontier" -> "Zielona Granica"
-        "frost" -> "Mroźna Przełęcz"
+        "frostbound" -> "Mroźna Przełęcz"
         "copperwood" -> "Miedziany Las"
         "ashen_march" -> "Popielne Marchie"
         else -> biome
@@ -361,21 +324,6 @@ private class MapEditorFrame : JFrame("Edytor map Urkaaaz") {
 
         init {
             background = java.awt.Color(30, 32, 36)
-            transferHandler = object : TransferHandler() {
-                override fun canImport(support: TransferSupport): Boolean =
-                    support.isDrop && support.isDataFlavorSupported(java.awt.datatransfer.DataFlavor.stringFlavor)
-
-                override fun importData(support: TransferSupport): Boolean {
-                    if (!canImport(support)) return false
-                    val presetId = support.transferable.getTransferData(
-                        java.awt.datatransfer.DataFlavor.stringFlavor,
-                    ) as String
-                    val point = support.dropLocation as? TransferHandler.DropLocation ?: return false
-                    val world = transform.screenToWorld(point.dropPoint.x.toDouble(), point.dropPoint.y.toDouble())
-                    placeTile(world.first, world.second, presetId)
-                    return true
-                }
-            }
             val listener = object : MouseAdapter() {
                 override fun mousePressed(event: MouseEvent) {
                     val world = transform.screenToWorld(event.x.toDouble(), event.y.toDouble())
@@ -403,10 +351,22 @@ private class MapEditorFrame : JFrame("Edytor map Urkaaaz") {
                 override fun mouseClicked(event: MouseEvent) {
                     if (event.button != MouseEvent.BUTTON1) return
                     val world = transform.screenToWorld(event.x.toDouble(), event.y.toDouble())
-                    if (history.current.phase == EditorPhase.TERRAIN_EDITING) {
-                        placeTile(world.first, world.second, (tilePresetSelector.selectedItem as? TerrainTilePreset)?.id ?: "flat")
-                    } else if (selectedObjectId == null && selectedAssetKey != null) {
-                        execute(EditorCommand.PlaceMapObject(selectedAssetKey!!, world.first, terrainHeightAt(world.first)))
+                    if (history.current.phase != EditorPhase.TERRAIN_EDITING &&
+                        selectedObjectId == null && selectedAssetKey != null
+                    ) {
+                        val y = if (selectedRelicSize == null) {
+                            terrainHeightAt(world.first)
+                        } else {
+                            terrainHeightAt(world.first) + 100f
+                        }
+                        execute(EditorCommand.PlaceMapObject(
+                            selectedAssetKey!!,
+                            world.first,
+                            y,
+                            relicSize = selectedRelicSize,
+                        ))
+                        selectedAssetKey = null
+                        selectedRelicSize = null
                     } else {
                         selectedObjectId = hitObject(world.first, world.second)
                         refresh()
@@ -419,7 +379,12 @@ private class MapEditorFrame : JFrame("Edytor map Urkaaaz") {
 
         override fun paintComponent(graphics: Graphics) {
             super.paintComponent(graphics)
-            transform.fitTo(width, height, history.current.map.worldWidth, history.current.map.worldHeight)
+            transform.fitTo(
+                width,
+                height,
+                history.current.map.world.width.toFloat(),
+                history.current.map.world.height.toFloat(),
+            )
             MapRenderer.render(
                 graphics as java.awt.Graphics2D,
                 history.current,
@@ -428,28 +393,8 @@ private class MapEditorFrame : JFrame("Edytor map Urkaaaz") {
             )
         }
 
-        private fun placeTile(worldX: Float, worldY: Float, presetId: String) {
-            val tileSize = TerrainTilePreset.DEFAULT_TILE_SIZE
-            val x = (worldX / tileSize).roundToInt().coerceIn(
-                0,
-                (history.current.map.worldWidth / tileSize).toInt() - 1,
-            )
-            val terrainY = terrainHeightAt(x * tileSize)
-            val y = (terrainY / tileSize).roundToInt()
-            val preset = TerrainTileCatalog.byId(presetId)
-            val tile = TerrainTilePlacement(
-                tileId = "terrain-${history.current.map.biome}-${preset.id}-$x-$y",
-                gridX = x,
-                gridY = y,
-                geometry = preset.geometry().copy(
-                    heightSamples = preset.heightSamples.map { terrainY + it * tileSize },
-                ),
-            )
-            execute(EditorCommand.PlaceTerrainTile(tile))
-        }
-
         private fun hitObject(x: Float, y: Float): String? =
-            history.current.map.objects.firstOrNull { abs(it.x - x) <= 100f && abs(it.y - y) <= 160f }?.id
+            history.current.map.decorations.firstOrNull { abs(it.x - x) <= 100f && abs(it.y - y) <= 160f }?.id
     }
 
     private class BiomeVisualCatalog(
@@ -458,7 +403,7 @@ private class MapEditorFrame : JFrame("Edytor map Urkaaaz") {
         fun visualsFor(biome: String): BiomeVisuals {
             val names = when (biome) {
                 "green_frontier" -> VisualNames("background_green_frontier", "terrain_green_frontier_soil_00", "terrain_green_frontier_cap_00")
-                "frost" -> VisualNames("background_frostbound_pass", "terrain_frostbound_soil_00", "terrain_frostbound_cap_00")
+                "frostbound" -> VisualNames("background_frostbound_pass", "terrain_frostbound_soil_00", "terrain_frostbound_cap_00")
                 "copperwood" -> VisualNames("background_copperwood", "terrain_copperwood_soil_00", "terrain_copperwood_cap_00")
                 "ashen_march" -> VisualNames("background_ashen_march", "terrain_ashen_march_soil_00", "terrain_ashen_march_cap_00")
                 else -> VisualNames("background_green_frontier", "terrain_green_frontier_soil_00", "terrain_green_frontier_cap_00")

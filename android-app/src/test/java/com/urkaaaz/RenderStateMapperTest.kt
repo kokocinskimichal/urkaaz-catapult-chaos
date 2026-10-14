@@ -4,11 +4,10 @@ import com.urkaaaz.contracts.MatchPhase
 import com.urkaaaz.contracts.MatchSnapshot
 import com.urkaaaz.contracts.MatchStatus
 import com.urkaaaz.contracts.EntityId
-import com.urkaaaz.contracts.InitialCameraAnchor
 import com.urkaaaz.contracts.MapDefinition
+import com.urkaaaz.contracts.MapDecoration
 import com.urkaaaz.contracts.MapGenerationMetadata
-import com.urkaaaz.contracts.MapObjectPlacement
-import com.urkaaaz.contracts.MapObjectType
+import com.urkaaaz.contracts.MapWorldDimensions
 import com.urkaaaz.contracts.TerrainProfile
 import com.urkaaaz.contracts.TerrainSample
 import com.urkaaaz.contracts.ProjectileSnapshot
@@ -121,55 +120,52 @@ class RenderStateMapperTest {
     }
 
     @Test
-    fun mapperExposesTypedMapObjectsAndCameraAnchor() {
+    fun mapperExposesTypedVisualMapDecorations() {
         val snapshot = MatchSnapshot(
             mapDefinition = MapDefinition(
-                levelId = "render-map",
                 schemaVersion = 1,
-                worldWidth = 80f,
-                worldHeight = 100f,
+                mapId = "render-map",
+                biome = "green_frontier",
+                world = MapWorldDimensions(7_200, 4_800),
                 terrain = TerrainProfile(
+                    sampleStep = 40f,
                     samples = listOf(
                         TerrainSample(0f, 50f),
                         TerrainSample(40f, 55f),
-                        TerrainSample(80f, 60f),
+                        TerrainSample(7_200f, 60f),
                     ),
                 ),
                 protectedTerrainZones = emptyList(),
                 fortresses = emptyList(),
-                catapults = emptyList(),
-                objects = listOf(
-                    MapObjectPlacement(
+                decorations = listOf(
+                    MapDecoration(
                         id = "tree-1",
-                        type = MapObjectType.DECORATION,
                         x = 40f,
                         y = 55f,
-                        assetKey = "decoration.test.tree",
+                        assetKey = "terrain_green_frontier_tree_00",
+                        scale = 1f,
+                        rotationDegrees = 0f,
                     ),
-                    MapObjectPlacement(
+                    MapDecoration(
                         id = "relic-1",
-                        type = MapObjectType.DECORATION,
                         x = 60f,
                         y = 100f,
                         assetKey = "relic.green_frontier.small.1",
+                        scale = 1f,
+                        rotationDegrees = 0f,
                         relicSize = RelicSize.SMALL,
                     ),
                 ),
-                initialCameraAnchor = InitialCameraAnchor.CENTER,
                 generationMetadata = MapGenerationMetadata(
                     seed = 3L,
                     generatorVersion = "test",
-                    authoringVersion = "test",
-                    source = "render-test",
                 ),
             ),
         )
 
         val state = RenderStateMapper.map(snapshot)
 
-        assertEquals("CENTER", state.initialCameraAnchor)
-        assertEquals("decoration.test.tree", state.mapObjects.first().assetKey)
-        assertEquals(false, state.mapObjects.first().collisionEnabled)
+        assertEquals("terrain_green_frontier_tree_00", state.mapObjects.first().assetKey)
         assertEquals("SMALL", state.mapObjects[1].relicSize)
         assertEquals(76f, state.mapObjects[1].relicRenderSize)
     }

@@ -1,4 +1,5 @@
 import { EditorDocument, SampleJson, terrainControlPoints } from "../domain/map";
+import { terrainAssetPath } from "../domain/assets";
 import { Viewport, worldToScreen } from "./transform";
 const imageCache = new Map<string, HTMLImageElement>();
 
@@ -74,7 +75,7 @@ export function renderMap(
  }
  for(const o of doc.map.objects){
    const q=p(o.x,o.y);c.save();c.translate(q.x,q.y);c.rotate(o.rotationDegrees*Math.PI/180);c.scale(o.scale,o.scale);
-   const assetPath = `/assets/terrain/${biome}/terrain_${biome}_${o.assetKey.includes("rock") ? "rock" : "tree"}_00.png`;
+   const assetPath = terrainAssetPath(doc.map.biome, o.assetKey);
    const sprite = image(assetPath, () => renderMap(canvas, doc, view, debug, controlPreview));
    if (sprite) c.drawImage(sprite, -42, -84, 84, 84);
    else { c.fillStyle="#8dc26b";c.fillRect(-24,-24,48,48); }

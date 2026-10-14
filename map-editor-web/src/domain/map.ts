@@ -2,9 +2,8 @@ export const WORLD_WIDTH = 7200;
 export const WORLD_HEIGHT = 4800;
 export type Team = "BLUE" | "RED";
 export type Facing = "LEFT" | "RIGHT";
-export type MapObjectType = "DECORATION" | "GAMEPLAY";
+export type MapObjectType = "DECORATION";
 export type EditorPhase = "TERRAIN_EDITING" | "TERRAIN_LOCKED" | "DECORATION_EDITING" | "READY_TO_EXPORT";
-export type Category = "tree" | "rock" | "prop" | "relic" | "ambient";
 
 export interface SampleJson { x: number; height: number }
 export interface TerrainJson { sampleStep: number; samples: SampleJson[] }
@@ -12,23 +11,46 @@ export interface ProtectedZoneJson { id: string; minX: number; maxX: number; min
 export interface FortressJson { owner: Team; x: number; foundationHeight: number; halfWidth: number; assetKey: string; hitboxProfile: string; protectedZoneId: string }
 export interface CatapultJson { owner: Team; x: number; foundationHeight: number; facing: Facing; halfWidth: number; assetKey: string; protectedZoneId?: string | null }
 export interface ObjectJson { id: string; type: MapObjectType; x: number; y: number; scale: number; rotationDegrees: number; assetKey: string; collision: "NONE" | "SOLID"; allowOverlap: boolean; relicSize?: "SMALL" | "MEDIUM" | "LARGE" | null }
-export interface MetadataJson { seed: number; generatorVersion: string; authoringVersion: string; source: string; author?: string; fingerprint?: string | null }
+export interface MetadataJson { seed: number; generatorVersion: string }
 export interface MapDocumentJson {
   schemaVersion: number; mapId: string; biome: string;
   world: { width: number; height: number };
   terrain: TerrainJson; protectedTerrainZones: ProtectedZoneJson[];
   fortresses: FortressJson[]; catapults: CatapultJson[]; objects: ObjectJson[];
-  initialCameraAnchor: "PLAYER_FORTRESS" | "ENEMY_FORTRESS" | "CENTER";
-  generationMetadata: MetadataJson; terrainTiles?: unknown[]; authoringPhase?: EditorPhase;
+  generationMetadata: MetadataJson;
 }
 export interface EditorDocument { map: MapDocumentJson; phase: EditorPhase; selectedId?: string; revision: number }
 export interface ValidationIssue { severity: "error" | "warning"; path: string; message: string; world?: { x: number; y: number } }
-export interface AssetDescriptor { key: string; biome: string; category: Category; path?: string; label: string }
 
 export const foundationExtension = 320;
-export const CURRENT_AUTHORING_VERSION = "map-editor-web/0.4";
 export const DEFAULT_TERRAIN_SAMPLE_STEP = 40;
 export const TERRAIN_CONTROL_SPACING = 200;
+
+export function catapultsForFortresses(fortresses: FortressJson[]): CatapultJson[] {
+  return fortresses.map(fortress => ({
+    owner: fortress.owner,
+    x: fortress.x + (fortress.owner === "BLUE" ? -40 : 40),
+    foundationHeight: fortress.foundationHeight,
+    facing: fortress.owner === "BLUE" ? "RIGHT" : "LEFT",
+    halfWidth: 72,
+    assetKey: `catapult.${fortress.owner.toLowerCase()}`,
+    protectedZoneId: fortress.protectedZoneId,
+  }));
+}
+
+export function terrainHeightAt(map: MapDocumentJson, x: number): number | undefined {
+  const samples = map.terrain.samples;
+  if (samples.length === 0) return undefined;
+  const clampedX = Math.max(samples[0].x, Math.min(samples[samples.length - 1].x, x));
+  const rightIndex = samples.findIndex(sample => sample.x >= clampedX);
+  if (rightIndex <= 0) return samples[0].height;
+  const left = samples[rightIndex - 1];
+  const right = samples[rightIndex];
+  if (right.x === left.x) return left.height;
+  const fraction = (clampedX - left.x) / (right.x - left.x);
+  return left.height + (right.height - left.height) * fraction;
+}
+
 export function sampleXs(step: number, width = WORLD_WIDTH): number[] {
   const xs: number[] = []; for (let x = 0; x <= width; x += step) xs.push(Math.min(x, width));
   if (xs[xs.length - 1] !== width) xs.push(width); return xs;
@@ -66,20 +88,17 @@ export function defaultMap(id = "web-map", biome = "green_frontier"): MapDocumen
   foundationZones.forEach(zone => samples.forEach(sample => {
     if (sample.x >= zone.minX && sample.x <= zone.maxX) sample.height = zone.minHeight;
   }));
+  const fortresses: FortressJson[] = [
+    { owner: "BLUE", x: 490, foundationHeight: 3180, halfWidth: 240, assetKey: "fortress.blue", hitboxProfile: "fortress.default", protectedZoneId: "blue-foundation" },
+    { owner: "RED", x: 6710, foundationHeight: 3180, halfWidth: 240, assetKey: "fortress.red", hitboxProfile: "fortress.default", protectedZoneId: "red-foundation" }
+  ];
   return {
     schemaVersion: 1, mapId: id, biome, world: { width: WORLD_WIDTH, height: WORLD_HEIGHT },
     terrain: { sampleStep: DEFAULT_TERRAIN_SAMPLE_STEP, samples },
     protectedTerrainZones: foundationZones,
-    fortresses: [
-      { owner: "BLUE", x: 490, foundationHeight: 3180, halfWidth: 240, assetKey: "fortress.blue", hitboxProfile: "fortress.default", protectedZoneId: "blue-foundation" },
-      { owner: "RED", x: 6710, foundationHeight: 3180, halfWidth: 240, assetKey: "fortress.red", hitboxProfile: "fortress.default", protectedZoneId: "red-foundation" }
-    ],
-    catapults: [
-      { owner: "BLUE", x: 450, foundationHeight: 3180, facing: "RIGHT", halfWidth: 72, assetKey: "catapult.blue", protectedZoneId: "blue-foundation" },
-      { owner: "RED", x: 6750, foundationHeight: 3180, facing: "LEFT", halfWidth: 72, assetKey: "catapult.red", protectedZoneId: "red-foundation" }
-    ],
-    objects: [], initialCameraAnchor: "CENTER",
-    generationMetadata: { seed: 1, generatorVersion: "web", authoringVersion: CURRENT_AUTHORING_VERSION, source: "map-editor-web", author: "Urkaaaz" },
-    terrainTiles: []
+    fortresses,
+    catapults: catapultsForFortresses(fortresses),
+    objects: [],
+    generationMetadata: { seed: 1, generatorVersion: "web" }
   };
 }

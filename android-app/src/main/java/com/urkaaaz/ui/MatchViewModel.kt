@@ -3,6 +3,7 @@ package com.urkaaaz.ui
 import com.urkaaaz.campaign.CampaignLevelDefinition
 import com.urkaaaz.campaign.DemoLevelDefinition
 import com.urkaaaz.campaign.DemoLevelDefinitions
+import com.urkaaaz.campaign.MapDefinitionRepository
 import com.urkaaaz.application.LocalMatchGateway
 import com.urkaaaz.ai.AiAgent
 import com.urkaaaz.ai.AiConfiguration
@@ -13,6 +14,7 @@ import com.urkaaaz.contracts.MatchCommand
 import com.urkaaaz.contracts.MatchId
 import com.urkaaaz.contracts.MatchSnapshot
 import com.urkaaaz.contracts.PlayerId
+import com.urkaaaz.contracts.TerrainBiome
 import com.urkaaaz.simulation.CombatLogSink
 import com.urkaaaz.simulation.NoOpCombatLogSink
 import com.urkaaaz.simulation.AmmunitionLogSink
@@ -27,12 +29,13 @@ import com.urkaaaz.simulation.NoOpAmmunitionLogSink
 class MatchViewModel(
     campaignLevel: Int = 1,
     demoMode: Boolean = false,
+    mapRepository: MapDefinitionRepository = MapDefinitionRepository.bundled,
     private val combatLogSink: CombatLogSink = NoOpCombatLogSink,
     private val ammunitionLogSink: AmmunitionLogSink = NoOpAmmunitionLogSink,
     private val gateway: LocalMatchGateway = LocalMatchGateway(
-        selectedDefinition(campaignLevel, demoMode).biome.name,
-        selectedDefinition(campaignLevel, demoMode).initialWind,
-        mapDefinition = selectedDefinition(campaignLevel, demoMode).mapDefinition,
+        loadSelectedDefinition(campaignLevel, demoMode, mapRepository).biome.name,
+        loadSelectedDefinition(campaignLevel, demoMode, mapRepository).initialWind,
+        mapDefinition = loadSelectedDefinition(campaignLevel, demoMode, mapRepository).mapDefinition,
         blueFortressMaxHealth = if (demoMode) DEMO_BLUE_FORTRESS_MAX_HEALTH else DEFAULT_FORTRESS_MAX_HEALTH,
         combatLogSink = combatLogSink,
         ammunitionLogSink = ammunitionLogSink,
@@ -62,21 +65,6 @@ class MatchViewModel(
         aiAgent.setAllowedUnitIds(unitIds)
     }
 
-    private fun selectedDefinition(
-        campaignLevel: Int,
-        demoMode: Boolean,
-    ): DemoLevelDefinition =
-        if (demoMode) {
-            DemoLevelDefinitions.default
-        } else {
-            val campaign = CampaignLevelDefinition.forLevel(campaignLevel)
-            DemoLevelDefinition(
-                mapDefinition = campaign.mapDefinition,
-                biome = campaign.terrain.biome,
-                initialWind = campaign.initialWind,
-            )
-        }
-
     fun aiAllowedUnitIds(): Set<String> =
         aiAgent.allowedUnitIds()
 
@@ -90,6 +78,7 @@ class MatchViewModel(
         ) {
             return renderState
         }
+
         val snapshot = gateway.dispatch(
             MatchCommand.DeployUnit(
                 commandId = CommandId("debug-ai-${++commandSequence}-deploy"),
@@ -256,17 +245,19 @@ class MatchViewModel(
     }
 }
 
-private fun selectedDefinition(
+private fun loadSelectedDefinition(
     campaignLevel: Int,
     demoMode: Boolean,
+    repository: MapDefinitionRepository,
 ): DemoLevelDefinition =
     if (demoMode) {
-        DemoLevelDefinitions.default
+        DemoLevelDefinitions.fromRepository(repository)
     } else {
-        val campaign = CampaignLevelDefinition.forLevel(campaignLevel)
+        val campaign = CampaignLevelDefinition.forLevel(campaignLevel, repository)
         DemoLevelDefinition(
             mapDefinition = campaign.mapDefinition,
-            biome = campaign.terrain.biome,
+            biome = TerrainBiome.fromMapId(campaign.mapDefinition.biome)
+                ?: error("Campaign map has unsupported biome '${campaign.mapDefinition.biome}'"),
             initialWind = campaign.initialWind,
         )
     }

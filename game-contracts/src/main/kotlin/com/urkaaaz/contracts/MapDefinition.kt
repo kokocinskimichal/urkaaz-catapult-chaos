@@ -1,138 +1,79 @@
 package com.urkaaaz.contracts
 
+import kotlinx.serialization.SerialName
+import kotlinx.serialization.Serializable
+
+@Serializable
 data class MapDefinition(
-    val levelId: String,
     val schemaVersion: Int,
-    val worldWidth: Float,
-    val worldHeight: Float,
+    val mapId: String,
+    val biome: String,
+    val world: MapWorldDimensions,
     val terrain: TerrainProfile,
+    @SerialName("protectedZones")
     val protectedTerrainZones: List<ProtectedTerrainZone>,
     val fortresses: List<FortressPlacement>,
-    val catapults: List<CatapultPlacement>,
-    val objects: List<MapObjectPlacement>,
-    val initialCameraAnchor: InitialCameraAnchor,
-    val generationMetadata: MapGenerationMetadata,
-    val biome: String = "green_frontier",
-    val terrainTiles: List<TerrainTilePlacement> = emptyList(),
-) {
-    init {
-        require(levelId.isNotBlank())
-        require(schemaVersion > 0)
-        require(worldWidth > 0f)
-        require(worldHeight > 0f)
-    }
-
-}
-
-data class TerrainTilePlacement(
-    val tileId: String,
-    val gridX: Int,
-    val gridY: Int,
-    val geometry: TerrainTileGeometry,
+    val decorations: List<MapDecoration>,
+    val generationMetadata: MapGenerationMetadata? = null,
 )
 
-data class TerrainTileGeometry(
-    val widthWorldUnits: Float,
-    val heightWorldUnits: Float,
-    val leftProfile: EdgeProfile,
-    val rightProfile: EdgeProfile,
-    val heightSamples: List<Float>,
+@Serializable
+data class MapWorldDimensions(
+    val width: Int,
+    val height: Int,
 )
 
-enum class EdgeProfile {
-    FLAT,
-    SLOPE_UP,
-    SLOPE_DOWN,
-    RIDGE,
-    VALLEY,
-}
-
+@Serializable
 data class TerrainProfile(
-    val sampleStep: Float = 40f,
+    val sampleStep: Float,
+    @SerialName("heightSamples")
     val samples: List<TerrainSample>,
-) {
-    init {
-        require(sampleStep > 0f)
-        require(samples.isNotEmpty())
-    }
-}
+)
 
+@Serializable
 data class TerrainSample(
     val x: Float,
     val height: Float,
 )
 
+@Serializable
 data class ProtectedTerrainZone(
     val id: String,
     val minX: Float,
     val maxX: Float,
     val minHeight: Float,
     val maxHeight: Float,
-    val craterPolicy: CraterPolicy = CraterPolicy.PRESERVE_FOUNDATION,
-) {
-    init {
-        require(id.isNotBlank())
-        require(minX <= maxX)
-        require(minHeight <= maxHeight)
-    }
-}
+    val craterPolicy: CraterPolicy,
+)
 
+@Serializable
 enum class CraterPolicy {
     PRESERVE_FOUNDATION,
 }
 
+@Serializable
 data class FortressPlacement(
     val owner: Team,
     val x: Float,
     val foundationHeight: Float,
-    val halfWidth: Float = WorldScale.FORTRESS_HALF_WIDTH,
+    val halfWidth: Float,
     val assetKey: String,
-    val hitboxProfile: String = "fortress.default",
+    val hitboxProfile: String,
     val protectedZoneId: String,
-) {
-    init {
-        require(halfWidth > 0f)
-    }
-}
+)
 
-data class CatapultPlacement(
-    val owner: Team,
-    val x: Float,
-    val foundationHeight: Float,
-    val facing: Facing,
-    val halfWidth: Float = 72f,
-    val assetKey: String,
-    val protectedZoneId: String? = null,
-) {
-    init {
-        require(halfWidth > 0f)
-    }
-}
-
-enum class Facing {
-    LEFT,
-    RIGHT,
-}
-
-data class MapObjectPlacement(
+@Serializable
+data class MapDecoration(
     val id: String,
-    val type: MapObjectType,
+    val assetKey: String,
     val x: Float,
     val y: Float,
-    val scale: Float = 1f,
-    val rotationDegrees: Float = 0f,
-    val assetKey: String,
-    val collision: ObjectCollision = ObjectCollision.NONE,
-    val allowOverlap: Boolean = false,
+    val scale: Float,
+    val rotationDegrees: Float,
     val relicSize: RelicSize? = null,
-) {
-    init {
-        require(id.isNotBlank())
-        require(scale > 0f)
-        require(type == MapObjectType.DECORATION || relicSize == null)
-    }
-}
+)
 
+@Serializable
 enum class RelicSize(
     val halfWidth: Float,
     val halfHeight: Float,
@@ -143,33 +84,8 @@ enum class RelicSize(
     LARGE(160f, 120f, 176f),
 }
 
-enum class MapObjectType {
-    DECORATION,
-    GAMEPLAY,
-}
-
-enum class ObjectCollision {
-    NONE,
-    SOLID,
-}
-
-enum class InitialCameraAnchor {
-    PLAYER_FORTRESS,
-    ENEMY_FORTRESS,
-    CENTER,
-}
-
+@Serializable
 data class MapGenerationMetadata(
     val seed: Long,
     val generatorVersion: String,
-    val authoringVersion: String,
-    val source: String,
-    val author: String = "Urkaaaz",
-    val fingerprint: String? = null,
-) {
-    init {
-        require(generatorVersion.isNotBlank())
-        require(authoringVersion.isNotBlank())
-        require(source.isNotBlank())
-    }
-}
+)

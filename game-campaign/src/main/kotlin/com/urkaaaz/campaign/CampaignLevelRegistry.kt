@@ -5,7 +5,8 @@ import com.urkaaaz.contracts.MatchScenario
 import com.urkaaaz.contracts.PlayerId
 
 class CampaignLevelRegistry(
-    private val levels: Map<Int, CampaignLevelDefinition> = defaultLevels(),
+    private val levels: Map<Int, CampaignLevelDefinition> =
+        defaultLevels(MapDefinitionRepository.bundled),
 ) {
     fun level(levelNumber: Int): CampaignLevelDefinition =
         levels[levelNumber] ?: error("unknown campaign level: $levelNumber")
@@ -23,9 +24,12 @@ class CampaignLevelRegistry(
     companion object {
         fun default(): CampaignLevelRegistry = CampaignLevelRegistry()
 
-        private fun defaultLevels(): Map<Int, CampaignLevelDefinition> =
+        fun using(repository: MapDefinitionRepository): CampaignLevelRegistry =
+            CampaignLevelRegistry(defaultLevels(repository))
+
+        private fun defaultLevels(repository: MapDefinitionRepository): Map<Int, CampaignLevelDefinition> =
             (1..CampaignLevelDefinition.MAX_LEVELS).associateWith { level ->
-                CampaignLevelDefinition.forLevel(level).also {
+                CampaignLevelDefinition.forLevel(level, repository).also {
                     MapDefinitionValidator.requireValid(it.mapDefinition)
                 }
             }

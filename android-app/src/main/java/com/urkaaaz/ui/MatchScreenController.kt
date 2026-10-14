@@ -15,6 +15,7 @@ import android.widget.LinearLayout
 import android.widget.CheckBox
 import android.widget.ScrollView
 import android.widget.TextView
+import com.urkaaaz.campaign.MapDefinitionRepository
 
 class MatchScreenController(
     private val activity: Activity,
@@ -26,6 +27,7 @@ class MatchScreenController(
     private val viewModel = MatchViewModel(
         campaignLevel = campaignLevel,
         demoMode = demoMode,
+        mapRepository = MapDefinitionRepository { path -> activity.assets.open(path) },
         combatLogSink = AndroidCombatLogSink(),
         ammunitionLogSink = AndroidAmmunitionLogSink(),
     )

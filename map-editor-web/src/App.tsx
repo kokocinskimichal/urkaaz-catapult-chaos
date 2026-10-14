@@ -1,10 +1,12 @@
 import React, { useEffect, useRef, useState } from "react";
 import { decode, encode } from "./format/codec";
+import { firstAssetKeyForBiome, parseAssetIndex } from "./domain/assets";
 import {
   defaultMap,
   EditorDocument,
   SampleJson,
   terrainControlPoints,
+  terrainHeightAt,
   WORLD_HEIGHT,
   WORLD_WIDTH,
 } from "./domain/map";
@@ -33,7 +35,9 @@ function findControlAt(
 }
 
 export default function App() {
-  const { state, operation, undo, redo, load } = useEditorStore();
+  const [registeredAssetKeys, setRegisteredAssetKeys] = useState<ReadonlySet<string>>();
+  const [assetCatalogError, setAssetCatalogError] = useState<string>();
+  const { state, operation, undo, redo, load } = useEditorStore(registeredAssetKeys);
   const canvas = useRef<HTMLCanvasElement>(null);
   const [view, setView] = useState({ zoom: 1, panX: 0, panY: 0 });
   const [tool, setTool] = useState<Tool>("draw");
@@ -46,13 +50,34 @@ export default function App() {
   const restored = useRef(false);
 
   useEffect(() => {
+    let cancelled = false;
+    fetch("/assets/terrain/asset-index.txt")
+      .then(response => {
+        if (!response.ok) throw new Error(`Asset index request failed (${response.status})`);
+        return response.text();
+      })
+      .then(parseAssetIndex)
+      .then(assetKeys => {
+        if (!cancelled) setRegisteredAssetKeys(assetKeys);
+      })
+      .catch(error => {
+        if (!cancelled) {
+          setAssetCatalogError(error instanceof Error ? error.message : String(error));
+        }
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  useEffect(() => {
     if (restored.current) return;
     restored.current = true;
     const saved = localStorage.getItem(AUTOSAVE);
     if (!saved) return;
     try {
       const map = decode(saved);
-      load({ map, phase: map.authoringPhase ?? "TERRAIN_EDITING", revision: 0 });
+      load({ map, phase: "TERRAIN_EDITING", revision: 0 });
       setStatus("Restored local draft");
     } catch (error) {
       setStatus(error instanceof Error ? `Autosave could not be restored: ${error.message}` : String(error));
@@ -66,7 +91,7 @@ export default function App() {
           type: "MOVE_TERRAIN_CONTROL_POINT",
           x: controlDrag.x,
           height: controlDrag.height,
-        })
+        }, registeredAssetKeys)
         : state.present;
       renderMap(
         canvas.current,
@@ -76,11 +101,11 @@ export default function App() {
         controlDrag ? { x: controlDrag.x, height: controlDrag.height } : undefined,
       );
     }
-    const validation = validate(state.present);
+    const validation = validate(state.present, registeredAssetKeys);
     setIssues(validation);
     localStorage.setItem(AUTOSAVE, encode(state.present));
     setStatus("Autosaved");
-  }, [state.present, view, controlDrag]);
+  }, [state.present, view, controlDrag, registeredAssetKeys]);
 
   useEffect(() => {
     const key = (event: KeyboardEvent) => {
@@ -114,14 +139,14 @@ export default function App() {
     file.text()
       .then(text => {
         const map = decode(text);
-        load({ map, phase: map.authoringPhase ?? "TERRAIN_EDITING", revision: 0 });
+        load({ map, phase: "TERRAIN_EDITING", revision: 0 });
       })
       .catch(error => setStatus(error instanceof Error ? error.message : String(error)));
     event.target.value = "";
   };
 
   const exportFile = (final = false) => {
-    if (final && issues.some(issue => issue.severity === "error")) {
+    if (final && validate(state.present, registeredAssetKeys).some(issue => issue.severity === "error")) {
       setStatus("Fix validation errors before export");
       return;
     }
@@ -134,6 +159,10 @@ export default function App() {
     URL.revokeObjectURL(anchor.href);
     setStatus(final ? "Exported" : "Draft downloaded");
   };
+
+  const treeAssetKey = registeredAssetKeys
+    ? firstAssetKeyForBiome(registeredAssetKeys, state.present.map.biome, "tree")
+    : undefined;
 
   const pointer = (event: React.PointerEvent<HTMLCanvasElement>) => {
     const element = canvas.current;
@@ -160,22 +189,6 @@ export default function App() {
           item => Math.abs(item.x - world.x) < 120 && Math.abs(item.y - world.y) < 180,
         );
         setStatus(object ? `Selected ${object.id}` : "No object selected");
-      } else {
-        const id = `decoration-${Date.now()}`;
-        operation({
-          type: "PLACE_OBJECT",
-          object: {
-            id,
-            type: "DECORATION",
-            x: world.x,
-            y: world.y,
-            scale: 1,
-            rotationDegrees: 0,
-            assetKey: "tree.default",
-            collision: "NONE",
-            allowOverlap: false,
-          },
-        });
       }
       return;
     }
@@ -274,7 +287,7 @@ export default function App() {
           >
             Ready to export
           </button>
-          <button onClick={() => setIssues(validate(state.present))}>Validate</button>
+          <button onClick={() => setIssues(validate(state.present, registeredAssetKeys))}>Validate</button>
           <h3>Foundation</h3>
           <select
             value={selectedTeam}
@@ -323,24 +336,32 @@ export default function App() {
           )}
           <h3>Assets</h3>
           <p>Biome: {state.present.map.biome}</p>
+          {assetCatalogError && <p className="error">Asset catalogue unavailable: {assetCatalogError}</p>}
+          {!assetCatalogError && !registeredAssetKeys && <p>Loading asset catalogue…</p>}
+          {registeredAssetKeys && !treeAssetKey && <p>No registered tree asset for this biome.</p>}
           <button
-            disabled={!["TERRAIN_LOCKED", "DECORATION_EDITING"].includes(state.present.phase)}
-            onClick={() =>
+            disabled={!["TERRAIN_LOCKED", "DECORATION_EDITING"].includes(state.present.phase) || !treeAssetKey}
+            onClick={() => {
+              const y = terrainHeightAt(state.present.map, 3600);
+              if (!treeAssetKey || y === undefined) {
+                setStatus("Cannot place a tree without a registered asset and terrain profile");
+                return;
+              }
               operation({
                 type: "PLACE_OBJECT",
                 object: {
                   id: `tree-${Date.now()}`,
                   type: "DECORATION",
                   x: 3600,
-                  y: 2800,
+                  y,
                   scale: 1,
                   rotationDegrees: 0,
-                  assetKey: "tree.default",
+                  assetKey: treeAssetKey,
                   collision: "NONE",
                   allowOverlap: false,
                 },
-              })
-            }
+              });
+            }}
           >
             Add tree
           </button>

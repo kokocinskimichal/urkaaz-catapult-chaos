@@ -1905,31 +1905,33 @@ class DeterministicMatchSimulation(
         private fun catapultMarginFor(worldWidth: Float): Float =
             if (worldWidth < 2_000f) 120f else CATAPULT_CENTER_MARGIN
 
-        private fun defaultCatapult(team: Team, bounds: WorldBounds, config: SimulationConfig): Catapult =
-            Catapult(
+        private fun defaultCatapult(team: Team, bounds: WorldBounds, config: SimulationConfig): Catapult {
+            val fortress = config.mapDefinition?.fortresses?.firstOrNull { it.owner == team }
+            val foundationHeight = fortress?.foundationHeight ?: bounds.height * config.defaultCatapultHeightRatio
+            val catapultX = fortress?.let {
+                it.x + if (team == Team.BLUE) {
+                    -CatapultPresentationContract.CATAPULT_CENTER_OFFSET_FROM_FORTRESS
+                } else {
+                    CatapultPresentationContract.CATAPULT_CENTER_OFFSET_FROM_FORTRESS
+                }
+            } ?: CatapultPresentationContract.catapultCenterX(team, bounds.width)
+            return Catapult(
                 id = EntityId("${team.name.lowercase()}-catapult"),
                 team = team,
                 position = WorldPosition(
-                    x = config.mapDefinition?.catapults
-                        ?.firstOrNull { it.owner == team }?.x
-                        ?: CatapultPresentationContract.catapultCenterX(team, bounds.width),
-                    y = config.mapDefinition?.catapults
-                        ?.firstOrNull { it.owner == team }?.foundationHeight
-                        ?: bounds.height * config.defaultCatapultHeightRatio,
+                    x = catapultX,
+                    y = foundationHeight,
                 ),
                 anchorPosition = WorldPosition(
-                    x = config.mapDefinition?.catapults
-                        ?.firstOrNull { it.owner == team }?.x
-                        ?: CatapultPresentationContract.catapultCenterX(team, bounds.width),
+                    x = catapultX,
                     y = CatapultPresentationContract.anchorY(
-                        foundationHeight = config.mapDefinition?.catapults
-                            ?.firstOrNull { it.owner == team }?.foundationHeight
-                            ?: bounds.height * config.defaultCatapultHeightRatio,
+                        foundationHeight = foundationHeight,
                         worldHeight = bounds.height,
                     ),
                 ),
                 aim = Aim(directionDegrees = 45f, power = 50f),
             )
+        }
 
         private fun defaultFortress(
             team: Team,

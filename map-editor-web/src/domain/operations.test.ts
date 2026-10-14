@@ -6,6 +6,8 @@ import {
   terrainControlPoints,
 } from "./map";
 import { applyOperation, validate } from "./operations";
+import { parseAssetIndex } from "./assets";
+import { decode, encode } from "../format/codec";
 
 describe("map operations", () => {
   it("changes foundation height atomically", () => {
@@ -115,5 +117,36 @@ describe("map operations", () => {
     expect(document.map.terrain.samples.at(-1)?.x).toBe(7200);
     expect(document.map.terrain.samples.every(sample => sample.height === 3180)).toBe(true);
     expect(validate(document).some(issue => issue.severity === "error")).toBe(false);
+  });
+
+  it("keeps imported maps valid and checks registered decoration assets", () => {
+    const map = decode(encode(defaultMap()));
+    expect(map.catapults.map(catapult => catapult.x)).toEqual([450, 6750]);
+    const document = { map, phase: "TERRAIN_EDITING" as const, revision: 0 };
+    expect(validate(document, new Set())).toEqual([]);
+
+    map.objects.push({
+      id: "tree-1",
+      type: "DECORATION",
+      x: 3600,
+      y: 3180,
+      scale: 1,
+      rotationDegrees: 0,
+      assetKey: "terrain_green_frontier_tree_00",
+      collision: "NONE",
+      allowOverlap: false,
+    });
+    const assetKeys = parseAssetIndex("terrain_green_frontier_tree_00.png");
+    expect(validate(document, assetKeys)).toEqual([]);
+    expect(validate(document, new Set()).some(issue => issue.path === "objects.tree-1.assetKey")).toBe(true);
+    expect(() => applyOperation(
+      { ...document, phase: "TERRAIN_LOCKED" },
+      { type: "MARK_READY_TO_EXPORT" },
+    )).toThrow("Fix validation errors");
+    expect(applyOperation(
+      { ...document, phase: "TERRAIN_LOCKED" },
+      { type: "MARK_READY_TO_EXPORT" },
+      assetKeys,
+    ).phase).toBe("READY_TO_EXPORT");
   });
 });

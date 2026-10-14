@@ -273,12 +273,10 @@ class BattlefieldRenderer(
         debugHitboxesVisible: Boolean,
     ) {
         state.mapObjects
-            .filter { it.type == "DECORATION" && it.relicSize == null }
+            .filter { it.relicSize == null }
             .forEach { decoration ->
                 val resolved = assets.mapDecoration(
                     assetKey = decoration.assetKey,
-                    variationKey = decoration.id,
-                    theme = theme,
                 ) ?: return@forEach
                 val centerX = worldToViewX(decoration.x, viewportWidth)
                 val baselineY = worldToViewY(decoration.y, viewportHeight) +

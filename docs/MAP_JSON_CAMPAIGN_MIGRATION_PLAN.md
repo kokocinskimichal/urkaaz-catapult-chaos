@@ -2,10 +2,18 @@
 
 ## Status
 
-Zaakceptowany plan implementacji. Ten dokument nie oznacza rozpoczęcia
-migracji. Pierwszą mapą demo będzie istniejący eksport webowego edytora
-`~/Downloads/web-map.json`; plik zostanie sprawdzony i dopasowany do
-zaakceptowanego kontraktu przed dołączeniem do aplikacji.
+Migracja została zaimplementowana. Znormalizowany
+`game-campaign/src/main/resources/maps/demo-map.json` pochodzi z
+`~/Downloads/web-map.json`; oryginalny plik pozostaje nietknięty. Android
+dołącza tę samą mapę offline w
+`android-app/src/main/assets/maps/demo-map.json`. Wszystkie 100 poziomów ma
+jawne, tymczasowe przypisanie do `demo-map`; konfiguracja gameplayowa kampanii
+pozostaje w Kotlinie. Stare Kotlinowe geometrie kampanii zostały usunięte.
+
+Jeden kontrakt `MapDefinition`, ścisły `MapDefinitionRepository` i
+`MapDefinitionValidator` obsługują runtime. Eksport webowy i Kotlinowy codec
+edytora zapisują uzgodniony schemat JSON. Katapulty są wyprowadzane z fortec,
+a rozmiar symulacji pochodzi ze stałych `WorldDimensions`.
 
 ## Cel
 

@@ -209,7 +209,7 @@ class BattlefieldAssetCatalog(private val context: Context) {
     }
 
     fun themeFor(biome: String): BattlefieldTheme =
-        themes[biome] ?: themes.getValue("GREEN_FRONTIER")
+        themes[biome] ?: error("No battlefield theme is registered for biome '$biome'")
 
     fun relicBitmap(assetKey: String): Bitmap? {
         val resourceName = RELIC_ASSET_RESOURCES[assetKey] ?: return null
@@ -218,24 +218,15 @@ class BattlefieldAssetCatalog(private val context: Context) {
 
     fun mapDecoration(
         assetKey: String,
-        variationKey: String,
-        theme: BattlefieldTheme,
     ): ResolvedMapDecoration? {
         val kind = when {
-            assetKey.endsWith(".tree") -> BattlefieldAssetKind.TREE
-            assetKey.endsWith(".rock") -> BattlefieldAssetKind.ROCK
-            assetKey.endsWith(".bush") || assetKey.endsWith(".ruin") ->
-                BattlefieldAssetKind.PROP
+            "_tree_" in assetKey -> BattlefieldAssetKind.TREE
+            "_rock_" in assetKey -> BattlefieldAssetKind.ROCK
+            "_prop_" in assetKey -> BattlefieldAssetKind.PROP
             else -> return null
         }
-        val candidates = theme.decorations.filter { it.kind == kind && it.bitmap != null }
-        val preferred = candidates
-            .getOrNull(
-                Math.floorMod(variationKey.hashCode(), candidates.size.coerceAtLeast(1)),
-            )
-            ?.bitmap
-        val fallback = theme.decorations.firstOrNull { it.bitmap != null }?.bitmap
-        return (preferred ?: fallback)?.let { ResolvedMapDecoration(it, kind) }
+        val bitmap = loadBitmap(assetKey) ?: error("Missing map decoration drawable '$assetKey'")
+        return ResolvedMapDecoration(bitmap, kind)
     }
 
     fun animationFor(ammunitionType: String): ProjectileAnimation =

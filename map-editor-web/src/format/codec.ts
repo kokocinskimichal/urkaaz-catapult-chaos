@@ -1,121 +1,217 @@
 import {
-  CURRENT_AUTHORING_VERSION,
-  defaultMap,
   EditorDocument,
   MapDocumentJson,
+  Team,
   WORLD_HEIGHT,
   WORLD_WIDTH,
-  foundationExtension,
+  catapultsForFortresses,
+  defaultMap,
 } from "../domain/map";
-export const CURRENT_SCHEMA_VERSION = 1;
-export function normalizeMap(input: unknown): MapDocumentJson {
-  if (!input || typeof input !== "object") throw new Error("Map document must be an object");
-  const raw = input as Record<string, unknown>;
-  if (typeof raw.schemaVersion !== "number" || raw.schemaVersion > CURRENT_SCHEMA_VERSION) throw new Error(`Unsupported schemaVersion: ${String(raw.schemaVersion)}`);
-  const world = raw.world as Record<string, unknown> | undefined;
-  if (!world || typeof world.width !== "number" || typeof world.height !== "number") throw new Error("world.width and world.height are required");
-  if (world.width !== WORLD_WIDTH || world.height !== WORLD_HEIGHT) throw new Error(`World must be ${WORLD_WIDTH} × ${WORLD_HEIGHT}`);
-  const terrain = raw.terrain as Record<string, unknown> | undefined;
-  const rawSamples = Array.isArray(terrain?.samples) ? terrain.samples : terrain?.heightSamples;
-  if (!terrain || !Array.isArray(rawSamples)) throw new Error("terrain.samples/terrain.heightSamples is required");
-  const samples = rawSamples.map((s) => {
-    const v = s as Record<string, unknown>;
-    if (typeof v.x !== "number" || typeof v.height !== "number") throw new Error("Invalid terrain sample");
-    return { x: v.x, height: v.height };
-  }).sort((a, b) => a.x - b.x);
-  const normalized: MapDocumentJson = {
-    ...(raw as unknown as MapDocumentJson), schemaVersion: raw.schemaVersion as number, mapId: String(raw.mapId ?? "imported-map"),
-    biome: String(raw.biome ?? "green_frontier"), world: { width: world.width, height: world.height },
-    terrain: { sampleStep: Number(terrain.sampleStep ?? 40), samples },
-    protectedTerrainZones: Array.isArray(raw.protectedTerrainZones)
-      ? raw.protectedTerrainZones as MapDocumentJson["protectedTerrainZones"]
-      : Array.isArray(raw.protectedZones)
-        ? raw.protectedZones as MapDocumentJson["protectedTerrainZones"]
-        : [],
-    fortresses: Array.isArray(raw.fortresses) ? raw.fortresses as MapDocumentJson["fortresses"] : [],
-    catapults: Array.isArray(raw.catapults) ? raw.catapults as MapDocumentJson["catapults"] : [],
-    objects: Array.isArray(raw.objects) ? raw.objects as MapDocumentJson["objects"] : [],
-    initialCameraAnchor: (raw.initialCameraAnchor ?? "CENTER") as MapDocumentJson["initialCameraAnchor"],
-    generationMetadata: (raw.generationMetadata ?? raw.metadata ?? {
-      seed: 0,
-      generatorVersion: "imported",
-      authoringVersion: "map-editor-web",
-      source: "import",
-    }) as MapDocumentJson["generationMetadata"],
-    terrainTiles: Array.isArray(raw.terrainTiles) ? raw.terrainTiles : Array.isArray(terrain.tiles) ? terrain.tiles : [],
-    authoringPhase: typeof (raw.metadata as Record<string, unknown> | undefined)?.phase === "string"
-      ? (raw.metadata as Record<string, unknown>).phase as MapDocumentJson["authoringPhase"]
-      : undefined,
-  };
-  if (normalized.generationMetadata.authoringVersion === CURRENT_AUTHORING_VERSION) return normalized;
-  const hasUntouchedDefaultTerrain = normalized.mapId === "web-map" &&
-    normalized.generationMetadata.source === "map-editor-web" &&
-    normalized.terrain.samples.every(sample => {
-      const inLegacyFoundation = normalized.protectedTerrainZones.some(
-        zone => sample.x >= zone.minX && sample.x <= zone.maxX,
-      );
-      const expected = inLegacyFoundation
-        ? normalized.fortresses[0]?.foundationHeight
-        : 3300 + 180 * Math.sin(sample.x / 560);
-      return expected !== undefined && Math.abs(sample.height - expected) < 0.01;
-    });
 
-  normalized.fortresses.forEach(fortress => {
-    const zone = normalized.protectedTerrainZones.find(candidate => candidate.id === fortress.protectedZoneId);
-    if (!zone) return;
-    const step = normalized.terrain.sampleStep;
-    if (fortress.owner === "BLUE") {
-      zone.minX = 0;
-      zone.maxX = Math.min(
-        normalized.world.width,
-        Math.ceil((fortress.x + fortress.halfWidth + foundationExtension) / step) * step,
-      );
-    } else {
-      zone.minX = Math.max(
-        0,
-        Math.floor((fortress.x - fortress.halfWidth - foundationExtension) / step) * step,
-      );
-      zone.maxX = normalized.world.width;
-    }
-    zone.minHeight = fortress.foundationHeight;
-    zone.maxHeight = fortress.foundationHeight;
-    const catapult = normalized.catapults.find(candidate => candidate.owner === fortress.owner);
-    if (catapult) catapult.foundationHeight = fortress.foundationHeight;
-    normalized.terrain.samples.forEach(sample => {
-      if (sample.x >= zone.minX && sample.x <= zone.maxX) sample.height = fortress.foundationHeight;
-    });
-  });
-  if (hasUntouchedDefaultTerrain && normalized.fortresses.length > 0) {
-    const initialHeight = normalized.fortresses[0].foundationHeight;
-    normalized.terrain.samples.forEach(sample => { sample.height = initialHeight; });
+export const CURRENT_SCHEMA_VERSION = 1;
+
+type JsonObject = Record<string, unknown>;
+
+function object(value: unknown, path: string): JsonObject {
+  if (value === null || typeof value !== "object" || Array.isArray(value)) {
+    throw new Error(`${path} must be an object`);
   }
-  normalized.generationMetadata.authoringVersion = CURRENT_AUTHORING_VERSION;
-  return normalized;
+  return value as JsonObject;
 }
+
+function keys(value: JsonObject, allowed: string[], required: string[], path: string): void {
+  for (const key of Object.keys(value)) {
+    if (!allowed.includes(key)) throw new Error(`${path}.${key} is not supported`);
+  }
+  for (const key of required) {
+    if (!(key in value)) throw new Error(`${path}.${key} is required`);
+  }
+}
+
+function number(value: unknown, path: string): number {
+  if (typeof value !== "number" || !Number.isFinite(value)) throw new Error(`${path} must be a finite number`);
+  return value;
+}
+
+function string(value: unknown, path: string): string {
+  if (typeof value !== "string" || !value.trim()) throw new Error(`${path} must be a non-empty string`);
+  return value;
+}
+
+export function normalizeMap(input: unknown): MapDocumentJson {
+  const raw = object(input, "map");
+  keys(
+    raw,
+    ["schemaVersion", "mapId", "biome", "world", "terrain", "protectedZones", "fortresses", "decorations", "generationMetadata"],
+    ["schemaVersion", "mapId", "biome", "world", "terrain", "protectedZones", "fortresses", "decorations"],
+    "map",
+  );
+  if (raw.schemaVersion !== CURRENT_SCHEMA_VERSION) {
+    throw new Error(`Unsupported schemaVersion: ${String(raw.schemaVersion)}`);
+  }
+  const mapId = string(raw.mapId, "map.mapId");
+  const biome = string(raw.biome, "map.biome");
+  if (!["green_frontier", "frostbound", "copperwood", "ashen_march", "sunken_marshes"].includes(biome)) {
+    throw new Error(`map.biome is unsupported: ${biome}`);
+  }
+  const world = object(raw.world, "world");
+  keys(world, ["width", "height"], ["width", "height"], "world");
+  const worldWidth = number(world.width, "world.width");
+  const worldHeight = number(world.height, "world.height");
+  if (worldWidth !== WORLD_WIDTH || worldHeight !== WORLD_HEIGHT) {
+    throw new Error(`World must be ${WORLD_WIDTH} × ${WORLD_HEIGHT}`);
+  }
+
+  const terrain = object(raw.terrain, "terrain");
+  keys(terrain, ["sampleStep", "heightSamples"], ["sampleStep", "heightSamples"], "terrain");
+  if (!Array.isArray(terrain.heightSamples)) throw new Error("terrain.heightSamples must be an array");
+  const sampleStep = number(terrain.sampleStep, "terrain.sampleStep");
+  const samples = terrain.heightSamples.map((sample, index) => {
+    const item = object(sample, `terrain.heightSamples[${index}]`);
+    keys(item, ["x", "height"], ["x", "height"], `terrain.heightSamples[${index}]`);
+    return {
+      x: number(item.x, `terrain.heightSamples[${index}].x`),
+      height: number(item.height, `terrain.heightSamples[${index}].height`),
+    };
+  });
+
+  if (!Array.isArray(raw.protectedZones) || !Array.isArray(raw.fortresses) || !Array.isArray(raw.decorations)) {
+    throw new Error("protectedZones, fortresses, and decorations must be arrays");
+  }
+  const protectedTerrainZones = raw.protectedZones.map((entry, index) => {
+    const path = `protectedZones[${index}]`;
+    const zone = object(entry, path);
+    keys(zone, ["id", "minX", "maxX", "minHeight", "maxHeight", "craterPolicy"],
+      ["id", "minX", "maxX", "minHeight", "maxHeight", "craterPolicy"], path);
+    if (zone.craterPolicy !== "PRESERVE_FOUNDATION") throw new Error(`${path}.craterPolicy is unsupported`);
+    return {
+      id: string(zone.id, `${path}.id`),
+      minX: number(zone.minX, `${path}.minX`),
+      maxX: number(zone.maxX, `${path}.maxX`),
+      minHeight: number(zone.minHeight, `${path}.minHeight`),
+      maxHeight: number(zone.maxHeight, `${path}.maxHeight`),
+      craterPolicy: "PRESERVE_FOUNDATION" as const,
+    };
+  });
+  const fortresses = raw.fortresses.map((entry, index) => {
+    const path = `fortresses[${index}]`;
+    const fortress = object(entry, path);
+    keys(fortress, ["owner", "x", "foundationHeight", "halfWidth", "assetKey", "hitboxProfile", "protectedZoneId"],
+      ["owner", "x", "foundationHeight", "halfWidth", "assetKey", "hitboxProfile", "protectedZoneId"], path);
+    if (fortress.owner !== "BLUE" && fortress.owner !== "RED") throw new Error(`${path}.owner is unsupported`);
+    const owner = fortress.owner as Team;
+    return {
+      owner,
+      x: number(fortress.x, `${path}.x`),
+      foundationHeight: number(fortress.foundationHeight, `${path}.foundationHeight`),
+      halfWidth: number(fortress.halfWidth, `${path}.halfWidth`),
+      assetKey: string(fortress.assetKey, `${path}.assetKey`),
+      hitboxProfile: string(fortress.hitboxProfile, `${path}.hitboxProfile`),
+      protectedZoneId: string(fortress.protectedZoneId, `${path}.protectedZoneId`),
+    };
+  });
+  const objects = raw.decorations.map((entry, index) => {
+    const path = `decorations[${index}]`;
+    const decoration = object(entry, path);
+    keys(decoration, ["id", "assetKey", "x", "y", "scale", "rotationDegrees", "relicSize"],
+      ["id", "assetKey", "x", "y", "scale", "rotationDegrees"], path);
+    const relicSize = decoration.relicSize;
+    if (relicSize !== undefined && relicSize !== null &&
+      relicSize !== "SMALL" && relicSize !== "MEDIUM" && relicSize !== "LARGE") {
+      throw new Error(`${path}.relicSize is unsupported`);
+    }
+    return {
+      id: string(decoration.id, `${path}.id`),
+      type: "DECORATION" as const,
+      x: number(decoration.x, `${path}.x`),
+      y: number(decoration.y, `${path}.y`),
+      scale: number(decoration.scale, `${path}.scale`),
+      rotationDegrees: number(decoration.rotationDegrees, `${path}.rotationDegrees`),
+      assetKey: string(decoration.assetKey, `${path}.assetKey`),
+      collision: "NONE" as const,
+      allowOverlap: false,
+      relicSize: relicSize as "SMALL" | "MEDIUM" | "LARGE" | null | undefined,
+    };
+  });
+
+  let generationMetadata: MapDocumentJson["generationMetadata"] = {
+    seed: 0,
+    generatorVersion: "imported",
+  };
+  if (raw.generationMetadata !== undefined && raw.generationMetadata !== null) {
+    const metadata = object(raw.generationMetadata, "generationMetadata");
+    keys(metadata, ["seed", "generatorVersion"], ["seed", "generatorVersion"], "generationMetadata");
+    generationMetadata = {
+      seed: number(metadata.seed, "generationMetadata.seed"),
+      generatorVersion: string(metadata.generatorVersion, "generationMetadata.generatorVersion"),
+    };
+  }
+
+  return {
+    schemaVersion: CURRENT_SCHEMA_VERSION,
+    mapId,
+    biome,
+    world: { width: worldWidth, height: worldHeight },
+    terrain: { sampleStep, samples },
+    protectedTerrainZones,
+    fortresses,
+    catapults: catapultsForFortresses(fortresses),
+    objects,
+    generationMetadata,
+  };
+}
+
 export function encode(document: EditorDocument | MapDocumentJson): string {
   const map = "map" in document ? document.map : document;
-  const phase = "phase" in document ? document.phase : "READY_TO_EXPORT";
-  const sorted = {
-    schemaVersion: map.schemaVersion,
+  const objects = map.objects.map((decoration, index) => {
+    if (decoration.collision !== "NONE") {
+      throw new Error(`objects[${index}] is not a visual-only decoration`);
+    }
+    return {
+      id: decoration.id,
+      assetKey: decoration.assetKey,
+      x: decoration.x,
+      y: decoration.y,
+      scale: decoration.scale,
+      rotationDegrees: decoration.rotationDegrees,
+      ...(decoration.relicSize ? { relicSize: decoration.relicSize } : {}),
+    };
+  });
+  const output = {
+    schemaVersion: CURRENT_SCHEMA_VERSION,
     mapId: map.mapId,
     biome: map.biome,
-    world: { ...map.world, tileSize: map.terrain.sampleStep },
+    world: { width: map.world.width, height: map.world.height },
     terrain: {
       sampleStep: map.terrain.sampleStep,
-      heightSamples: [...map.terrain.samples].sort((a,b)=>a.x-b.x),
-      tiles: map.terrainTiles ?? [],
+      heightSamples: [...map.terrain.samples].sort((a, b) => a.x - b.x),
     },
+    protectedZones: [...map.protectedTerrainZones]
+      .sort((a, b) => a.id.localeCompare(b.id))
+      .map(({ id, minX, maxX, minHeight, maxHeight, craterPolicy }) => ({
+        id, minX, maxX, minHeight, maxHeight, craterPolicy: craterPolicy ?? "PRESERVE_FOUNDATION",
+      })),
     fortresses: map.fortresses,
-    catapults: map.catapults,
-    protectedZones: [...map.protectedTerrainZones].sort((a,b)=>a.id.localeCompare(b.id)),
-    objects: [...map.objects].sort((a,b)=>a.id.localeCompare(b.id)),
-    metadata: {
-      phase,
-      terrainLocked: phase !== "TERRAIN_EDITING",
-      ...map.generationMetadata,
-    },
+    decorations: objects.sort((a, b) => a.id.localeCompare(b.id)),
+    ...(map.generationMetadata ? {
+      generationMetadata: {
+        seed: map.generationMetadata.seed,
+        generatorVersion: map.generationMetadata.generatorVersion,
+      },
+    } : {}),
   };
-  return JSON.stringify(sorted, null, 2) + "\n";
+  return JSON.stringify(output, null, 2) + "\n";
 }
-export function decode(text: string): MapDocumentJson { try { return normalizeMap(JSON.parse(text)); } catch (e) { throw new Error(`Invalid map JSON: ${e instanceof Error ? e.message : String(e)}`); } }
-export function newDocument(): EditorDocument { return { map: defaultMap(), phase: "TERRAIN_EDITING", revision: 0 }; }
+
+export function decode(text: string): MapDocumentJson {
+  try {
+    return normalizeMap(JSON.parse(text) as unknown);
+  } catch (error) {
+    throw new Error(`Invalid map JSON: ${error instanceof Error ? error.message : String(error)}`);
+  }
+}
+
+export function newDocument(): EditorDocument {
+  const map = normalizeMap(JSON.parse(encode(defaultMap())));
+  return { map, phase: "TERRAIN_EDITING", revision: 0 };
+}

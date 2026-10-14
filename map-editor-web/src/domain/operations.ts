@@ -7,6 +7,7 @@ import {
   WORLD_WIDTH,
   terrainControlPoints,
 } from "./map";
+import { isKnownMapDecoration } from "./assets";
 export type Operation =
  | { type: "DRAW_TERRAIN_PROFILE"; points: {x:number;height:number}[] }
  | { type: "MOVE_TERRAIN_CONTROL_POINT"; x:number; height:number }
@@ -17,19 +18,23 @@ export type Operation =
  | { type: "PLACE_OBJECT"; object: {id:string;type:MapObjectType;x:number;y:number;scale:number;rotationDegrees:number;assetKey:string;collision:"NONE"|"SOLID";allowOverlap:boolean} }
  | { type: "MOVE_OBJECT"; id:string;x:number;y:number } | { type:"ROTATE_OBJECT";id:string;rotationDegrees:number }
  | { type:"SCALE_OBJECT";id:string;scale:number } | { type:"REMOVE_OBJECT";id:string };
-export function applyOperation(doc: EditorDocument, op: Operation): EditorDocument {
+export function applyOperation(
+  doc: EditorDocument,
+  op: Operation,
+  assetKeys?: ReadonlySet<string>,
+): EditorDocument {
   const terrainPhase = doc.phase === "TERRAIN_EDITING";
   if (["DRAW_TERRAIN_PROFILE","MOVE_TERRAIN_CONTROL_POINT","SMOOTH_TERRAIN_RANGE","FLATTEN_TERRAIN_RANGE","CHANGE_FOUNDATION_HEIGHT"].includes(op.type) && !terrainPhase) throw new Error("Terrain is locked");
   const map = structuredClone(doc.map);
   if (op.type === "LOCK_TERRAIN") {
     if (!terrainPhase) throw new Error("Terrain is already locked");
-    const issues = validate({ ...doc, map });
+    const issues = validate({ ...doc, map }, assetKeys);
     if (issues.some(issue => issue.severity === "error")) throw new Error("Fix validation errors before locking terrain");
     return { ...doc, map, phase: "TERRAIN_LOCKED", revision: doc.revision + 1 };
   }
   if (op.type === "MARK_READY_TO_EXPORT") {
     if (!["TERRAIN_LOCKED", "DECORATION_EDITING"].includes(doc.phase)) throw new Error("Lock terrain before export");
-    const issues = validate({ ...doc, map });
+    const issues = validate({ ...doc, map }, assetKeys);
     if (issues.some(issue => issue.severity === "error")) throw new Error("Fix validation errors before export");
     return { ...doc, map, phase: "READY_TO_EXPORT", revision: doc.revision + 1 };
   }
@@ -97,13 +102,18 @@ export function applyOperation(doc: EditorDocument, op: Operation): EditorDocume
   return {...doc,map,phase: doc.phase === "TERRAIN_LOCKED" && map.objects.length > 0 ? "DECORATION_EDITING" : doc.phase,revision:doc.revision+1};
 }
 
-export function validate(doc: EditorDocument) {
+export function validate(doc: EditorDocument, assetKeys?: ReadonlySet<string>) {
   const issues: import("./map").ValidationIssue[] = []; const m=doc.map; const samples=m.terrain.samples;
   if (m.world.width!==WORLD_WIDTH||m.world.height!==WORLD_HEIGHT) issues.push({severity:"error",path:"world",message:"World must be 7200 × 4800"});
   if (!samples.length||samples[0].x!==0) issues.push({severity:"error",path:"terrain.samples[0]",message:"Profile must start at x=0",world:{x:0,y:0}});
   if (!samples.length||samples[samples.length-1].x!==m.world.width) issues.push({severity:"error",path:`terrain.samples[${samples.length-1}]`,message:"Profile must end at world width",world:{x:m.world.width,y:0}});
   for(let i=1;i<samples.length;i++) if(Math.abs(samples[i].height-samples[i-1].height)>400) issues.push({severity:"error",path:`terrain.samples[${i}]`,message:"Adjacent slope exceeds limit",world:{x:samples[i].x,y:samples[i].height}});
   for(const f of m.fortresses){const c=m.catapults.find(x=>x.owner===f.owner);if(!c||c.foundationHeight!==f.foundationHeight) issues.push({severity:"error",path:`fortresses.${f.owner}`,message:"Catapult is not synchronized",world:{x:f.x,y:f.foundationHeight}})}
-  const ids=new Set<string>(); for(const o of m.objects){if(ids.has(o.id))issues.push({severity:"error",path:`objects.${o.id}`,message:"Duplicate object id",world:{x:o.x,y:o.y}});ids.add(o.id)}
+  const ids=new Set<string>(); for(const o of m.objects){
+    if(ids.has(o.id))issues.push({severity:"error",path:`objects.${o.id}`,message:"Duplicate object id",world:{x:o.x,y:o.y}});
+    if (!assetKeys) issues.push({severity:"error",path:`objects.${o.id}.assetKey`,message:"Asset catalogue is not loaded"});
+    else if (!isKnownMapDecoration(o.assetKey, m.biome, assetKeys)) issues.push({severity:"error",path:`objects.${o.id}.assetKey`,message:`Unknown decoration asset '${o.assetKey}' for ${m.biome}`});
+    ids.add(o.id);
+  }
   return issues;
 }

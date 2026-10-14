@@ -17,4 +17,5 @@ async function copyTree(from, to) {
 }
 
 await copyTree(source, destination);
+await cp(join(source, "asset-index.txt"), join(destination, "asset-index.txt"));
 console.log(`Synced web assets from ${relative(root, source).split(sep).join("/")} to ${relative(root, destination).split(sep).join("/")}`);
