@@ -22,7 +22,6 @@ object MapDefinitionValidator {
     const val TERRAIN_SAMPLE_STEP = 40f
     const val MAX_TERRAIN_DELTA = 200f
     const val FOUNDATION_HEIGHT_TOLERANCE = 80f
-    const val FLAT_TERRAIN_HEIGHT_TOLERANCE = 1f
     private val assetCatalog = AssetCatalog()
 
     fun validate(definition: MapDefinition): MapValidationResult {
@@ -224,15 +223,6 @@ object MapDefinitionValidator {
             if (decoration.x !in 0f..definition.world.width.toFloat() ||
                 decoration.y !in 0f..definition.world.height.toFloat()
             ) errors += MapValidationError("$path.position", "decoration must be inside world bounds")
-            val surface = terrainHeightAt(definition, decoration.x)
-            if (abs(decoration.y - surface) > 1.5f) {
-                errors += MapValidationError("$path.y", "grounded decoration bottom anchor must match terrain")
-            }
-            val left = terrainHeightAt(definition, decoration.x - TERRAIN_SAMPLE_STEP)
-            val right = terrainHeightAt(definition, decoration.x + TERRAIN_SAMPLE_STEP)
-            if (abs(left - surface) > FLAT_TERRAIN_HEIGHT_TOLERANCE ||
-                abs(right - surface) > FLAT_TERRAIN_HEIGHT_TOLERANCE
-            ) errors += MapValidationError("$path.position", "grounded decoration must be on flat terrain")
             return
         }
         validateRelic(definition, decoration, path, errors)

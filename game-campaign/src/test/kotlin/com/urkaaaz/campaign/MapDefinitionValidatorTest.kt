@@ -1,6 +1,7 @@
 package com.urkaaaz.campaign
 
 import com.urkaaaz.contracts.InitialCameraAnchor
+import com.urkaaaz.contracts.MapDecoration
 import com.urkaaaz.contracts.MapWorldDimensions
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -14,7 +15,9 @@ class MapDefinitionValidatorTest {
     fun bundledDemoMapIsValidAndCoversTheFixedWorld() {
         val definition = DemoLevelDefinitions.default.mapDefinition
 
-        assertTrue(MapDefinitionValidator.validate(definition).isValid)
+        val result = MapDefinitionValidator.validate(definition)
+
+        assertTrue(result.isValid, result.errors.joinToString())
         assertEquals(181, definition.terrain.samples.size)
         assertEquals(0f, definition.terrain.samples.first().x)
         assertEquals(7_200f, definition.terrain.samples.last().x)
@@ -40,6 +43,56 @@ class MapDefinitionValidatorTest {
         assertEquals("map-editor-web/0.1.0", definition.generationMetadata?.authoringVersion)
         assertEquals("PLAYER_FORTRESS", definition.initialCameraAnchor.name)
         assertEquals(1.3f, definition.initialCameraZoom)
+    }
+
+    @Test
+    fun importedChapterOneLevelFourMapIsValidAndPreservesAuthoredTerrainAndRelics() {
+        val definition = CampaignLevelDefinition.forLevel(4).mapDefinition
+        val relics = definition.decorations.filter { it.relicSize != null }
+
+        assertTrue(MapDefinitionValidator.validate(definition).isValid)
+        assertEquals("chapter1-level4", definition.mapId)
+        assertEquals("green_frontier", definition.biome)
+        assertEquals(181, definition.terrain.samples.size)
+        assertEquals(2_870f, definition.terrain.samples.first().height)
+        assertEquals(3_390f, definition.terrain.samples.last().height)
+        assertEquals(2_870f, definition.fortresses.single { it.owner.name == "BLUE" }.foundationHeight)
+        assertEquals(3_390f, definition.fortresses.single { it.owner.name == "RED" }.foundationHeight)
+        assertEquals(8, definition.decorations.size)
+        assertEquals(3, relics.size)
+        assertEquals(setOf(2_200f, 2_850f, 3_900f), relics.map { it.x }.toSet())
+        assertEquals(1L, definition.generationMetadata?.seed)
+        assertEquals("web", definition.generationMetadata?.generatorVersion)
+        assertEquals("map-editor-web/0.1.0", definition.generationMetadata?.authoringVersion)
+        assertEquals("PLAYER_FORTRESS", definition.initialCameraAnchor.name)
+        assertEquals(1f, definition.initialCameraZoom)
+    }
+
+    @Test
+    fun groundedDecorationsMayBeOffsetFromTerrainAndPlacedOnSlopes() {
+        val source = DemoLevelDefinitions.default.mapDefinition
+        val terrain = source.terrain.copy(
+            samples = source.terrain.samples.map { sample ->
+                if (sample.x == 3_560f) sample.copy(height = 2_880f) else sample
+            },
+        )
+        val definition = source.copy(
+            terrain = terrain,
+            decorations = listOf(
+                MapDecoration(
+                    id = "tree-on-slope",
+                    assetKey = "terrain_green_frontier_tree_00",
+                    x = 3_600f,
+                    y = 3_000f,
+                    scale = 1f,
+                    rotationDegrees = 0f,
+                ),
+            ),
+        )
+
+        val result = MapDefinitionValidator.validate(definition)
+
+        assertTrue(result.isValid, result.errors.joinToString())
     }
 
     @Test
@@ -95,12 +148,13 @@ class MapDefinitionValidatorTest {
     }
 
     @Test
-    fun onlyChapterOneLevelThreeUsesTheImportedMap() {
+    fun chapterOneLevelsThreeAndFourUseTheirImportedMaps() {
         val registry = CampaignLevelRegistry.default()
         val levels = (1..CampaignLevelDefinition.MAX_LEVELS).map(registry::level)
 
         assertEquals("chapter1-level3", levels[2].mapDefinition.mapId)
-        assertTrue(levels.filterIndexed { index, _ -> index != 2 }
+        assertEquals("chapter1-level4", levels[3].mapDefinition.mapId)
+        assertTrue(levels.filterIndexed { index, _ -> index != 2 && index != 3 }
             .all { it.mapDefinition.mapId == "demo-map" })
         assertNotEquals(levels[0].availableUnits, levels[99].availableUnits)
         assertEquals(levels[0].mapDefinition.terrain.samples, levels[1].mapDefinition.terrain.samples)

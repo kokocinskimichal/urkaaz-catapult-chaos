@@ -6,9 +6,11 @@ Migracja została zaimplementowana. Znormalizowany
 `game-campaign/src/main/resources/maps/demo-map.json` pochodzi z
 `~/Downloads/web-map.json`; oryginalny plik pozostaje nietknięty. Android
 dołącza tę samą mapę offline w
-`android-app/src/main/assets/maps/demo-map.json`. Wszystkie 100 poziomów ma
-jawne, tymczasowe przypisanie do `demo-map`; konfiguracja gameplayowa kampanii
-pozostaje w Kotlinie. Stare Kotlinowe geometrie kampanii zostały usunięte.
+`android-app/src/main/assets/maps/demo-map.json`. Wszystkie poziomy poza
+Chapter 1, Levels 3 i 4 mają jawne, tymczasowe przypisanie do `demo-map`;
+poziomy 3 i 4 używają swoich importowanych map w obu lokalizacjach zasobów.
+Konfiguracja gameplayowa kampanii pozostaje w Kotlinie. Stare Kotlinowe
+geometrie kampanii zostały usunięte.
 
 Jeden kontrakt `MapDefinition`, ścisły `MapDefinitionRepository` i
 `MapDefinitionValidator` obsługują runtime. Eksport webowy i Kotlinowy codec
@@ -110,9 +112,11 @@ Pojedyncza dekoracja zawiera:
 - `scale` i `rotationDegrees`;
 - opcjonalne `relicSize` dla zakopanego Relic.
 
-Dla drzewa, skały lub propsa `y` jest kotwicą podstawy na powierzchni terenu.
-Dla zakopanego Relic `y` oznacza jego pozycję wewnątrz ziemi. Przypisanie
-assetu do biomu nie zmienia definicji ani fizyki mapy.
+Dla drzewa, skały lub propsa `x` i `y` określają pozycję wizualną obiektu;
+walidator wymaga, by ta pozycja mieściła się w granicach świata, ale nie
+wymaga kontaktu z powierzchnią terenu ani płaskiego podłoża. Dla zakopanego
+Relic `y` oznacza jego pozycję wewnątrz ziemi, a jego obrys musi mieścić się w
+soil. Przypisanie assetu do biomu nie zmienia definicji ani fizyki mapy.
 
 ### Dane poza mapą
 
@@ -177,8 +181,8 @@ kontraktu.
   `sampleStep` oraz poprawnego pokrycia szerokości `0..7200`.
 - Zachować walidację nachyleń, fundamentów i stref ochronnych.
 - Walidować dwie fortecy, ich assety, pozycje i referencje do chronionych stref.
-- Walidować dekoracje, ich assety i kotwice; Relics muszą mieścić się pod
-  powierzchnią zgodnie z rozmiarem.
+- Walidować dekoracje, ich assety, granice świata i transformacje; Relics muszą
+  mieścić się pod powierzchnią zgodnie z rozmiarem.
 - Jawnie zgłaszać nieznany biom, brak assetu, nieobsługiwaną wersję schematu
   i uszkodzony JSON.
 - Uruchamiać autorytatywną walidację po wczytaniu mapy. Walidacja w edytorze

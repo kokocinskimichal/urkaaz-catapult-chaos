@@ -133,8 +133,9 @@ mechanizmów walidacji. Użyj istniejących typów i kontraktów. Nie kopiuj
 - Zachowaj stałe pozycje X fundamentów Demo; nie przesuwaj ich zależnie od
   losowania lub rendererowego heurystycznego dopasowania.
 - Lewa i prawa forteca mogą mieć różne wysokości.
-- Różnica wysokości fundamentów musi mieścić się w zakresie `±80 world units`
-  względem obowiązującego standardu i sprawdzanego przejścia.
+- Nie ograniczaj wysokości fundamentów względem jednej wspólnej wartości
+  bazowej. Waliduj każdy fundament względem lokalnego profilu terenu i
+  poprawności przejścia.
 - Każdy fundament musi mieć minimum trzy próbki przejścia do terenu:
   próbkę przed, pod środkiem i za fundamentem.
 - Fundament musi być wystarczająco płaski; walidator odrzuca zbyt strome lub
@@ -162,13 +163,11 @@ z użyciem istniejących typów.
 Każdy placement dekoracji musi:
 
 - mieć neutralny `assetKey`;
-- mieć dolną kotwicę dopasowaną do terenu;
-- nie wisieć nad terenem;
-- nie zapadać się w teren;
+- mieć jawne world-space `x` i `y` w granicach mapy; pozycja nie musi
+  odpowiadać wysokości terenu ani płaskiemu podłożu;
 - nie nakładać się na fundament, fortecę, katapultę ani inny obiekt;
 - znajdować się poza fundamentem i poza marginesem **40 world units** od
   fundamentu;
-- nie znajdować się na niedozwolonym stromym zboczu.
 
 Nie naprawiaj błędnego placementu przez przesunięcie w UI. Błędna definicja ma
 zostać odrzucona przez `MapDefinitionValidator`.
@@ -410,10 +409,10 @@ Dodaj testy:
 - jawnego profilu co 40 world units;
 - odrzucenia różnicy próbek większej niż 20;
 - różnych wysokości fortec;
-- limitu ±80 world units;
+- lokalnej tolerancji ±80 world units wokół fundamentu;
 - minimum trzech próbek przejścia;
 - odporności fundamentów na kratery;
-- dopasowania dolnej kotwicy obiektu do terenu;
+- akceptacji dekoracji poza powierzchnią terenu i na zboczu;
 - zakazu niedozwolonych nakładań;
 - braku mutacji `MapDefinition`;
 - deterministycznej inicjalizacji.
@@ -439,9 +438,10 @@ Podgląd musi używać tej samej definicji, która trafi do
 Przed akceptacją sprawdź:
 
 - fundamenty nie wiszą i nie zapadają się;
-- lewa i prawa forteca mogą mieć różne wysokości w dozwolonym zakresie;
+- lewa i prawa forteca mogą mieć różne wysokości, dopasowane do lokalnego
+  profilu terenu;
 - przejścia fundamentów mają co najmniej trzy próbki;
-- dekoracje nie leżą na fundamentach, stromych zboczach ani w marginesie 40;
+- dekoracje nie leżą na fundamentach ani w marginesie 40;
 - placementy nie nakładają się;
 - asset keys są obecne i rozwiązywalne;
 - anchor kamery pokazuje właściwy fragment mapy;

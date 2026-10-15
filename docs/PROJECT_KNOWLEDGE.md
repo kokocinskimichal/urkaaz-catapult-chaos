@@ -31,19 +31,21 @@ an initial camera anchor and zoom, and generation metadata. Catapults, terrain
 tiles, editor state and gameplay objects are excluded. `MapDefinitionRepository`
 strictly decodes bundled JSON and reports explicit load failures;
 `MapDefinitionValidator` checks schema, fixed world dimensions, known biome and
-assets, terrain, protected zones, fortress placements, decoration anchors and
-camera framing.
+assets, terrain, protected zones, fortress placements, decoration bounds and
+transforms, relic soil footprints, and camera framing. Ordinary decorations
+may be placed at any height within the map and on slopes.
 
 The normalized `game-campaign/src/main/resources/maps/demo-map.json` came from
 the supplied `~/Downloads/web-map.json`; the source file was not modified.
 Android also bundles the same file at
 `android-app/src/main/assets/maps/demo-map.json` for offline loading. All 100
 campaign levels used `demo-map` temporarily while retaining their Kotlin
-gameplay configuration. Chapter 1, Level 3 now uses the imported
-`chapter1-level3` map in both resource locations; other levels continue to use
-`demo-map`. This is a transition mapping, not the final one-map-per-level
-arrangement. The former Kotlin campaign map definitions and map authoring
-builder have been removed.
+gameplay configuration. Chapter 1, Levels 3 and 4 use their imported maps in
+both resource locations; other levels continue to use `demo-map`. Level 4
+preserves the authored 2870/3390 foundation heights and has three relics moved
+to validated, non-overlapping soil placements. This is a transition mapping,
+not the final one-map-per-level arrangement. The former Kotlin campaign map
+definitions and map authoring builder have been removed.
 
 Catapult positions are derived from fortress positions by
 `CatapultPresentationContract`, and simulation dimensions always come from
@@ -59,6 +61,23 @@ shared terrain asset index for decoration-key validation, and keeps those
 editor-only catapults out of exported JSON. The Android camera consumes
 authored framing data without changing simulation state. Both campaign and
 editor maps are available offline.
+
+The shared terrain catalog now indexes the complete legacy decoration sets:
+Green Frontier (6 trees, 6 rocks, 6 props), Frostbound (6, 6, 12), Copperwood
+(8, 6, 6), and Ashen March (6, 6, 8). Sunken Marshes intentionally shares the
+Green Frontier assets; that alias is recognized by both the editor and
+`AssetCatalog`, so its palette choices also pass campaign map validation.
+Before locking terrain, the editor can change either foundation height. The
+associated fortress and catapult move together, the protected samples remain
+flat at the new height, and adjacent samples use the same smooth falloff as a
+manually moved terrain control point.
+The editor can also raise or lower the complete map scene relative to its
+fixed background. Terrain, fortresses, derived catapults, protected zones,
+decorations and Relics move together in one undoable operation; world bounds
+prevent moving authored coordinates or Relic footprints out of the map.
+Selected map decorations and Relics display corner handles: radial dragging
+scales around the visual center while angular dragging rotates; the selected
+object panel remains available for precise numeric transforms.
 
 The current match HUD displays:
 
@@ -416,8 +435,10 @@ the map object ID. The terrain cap is drawn after map decorations and relics
 so it covers their buried lower edges.
 
 `MapDefinitionValidator` is the single semantic map validator used by the
-repository before a match starts. It rejects non-flat grounded decoration
-anchors; editor feedback does not replace this runtime gate.
+repository before a match starts. It validates ordinary decoration bounds and
+transforms without requiring contact with the terrain or flat terrain beneath
+them; Relics remain constrained to the soil. Editor feedback does not replace
+this runtime gate.
 
 ## Map editor vertical slice
 

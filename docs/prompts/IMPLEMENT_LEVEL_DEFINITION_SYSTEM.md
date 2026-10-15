@@ -193,11 +193,11 @@ Domyślne zasady:
 - obiekt jest dekoracyjny;
 - kolizja jest wyłączona, dopóki nie zostanie jawnie włączona;
 - typ obiektu, pozycja, warstwa, skala, obrót i `assetKey` są jawne;
-- kotwica obiektu jest dopasowana do wysokości terenu;
+- pozycja wizualna jest jawna i mieści się w granicach świata; nie musi
+  odpowiadać wysokości terenu ani płaskiemu podłożu;
 - obiekt nie może nakładać się na fundament, fortecę, katapultę ani inny
   obiekt, chyba że kontrakt jawnie zezwala na takie nakładanie;
 - dekoracja nie może znajdować się w marginesie 40 world units od fundamentu;
-- dekoracja nie może być ustawiona na zbyt stromym odcinku;
 - obiekt z kolizją musi mieć jawny profil kolizji.
 
 Nie dodawaj specjalnych wyjątków w `BattlefieldView`, aby ukryć błędny

@@ -8,20 +8,49 @@ import {
   maximumTerrainHeightInRange,
   SampleJson,
   terrainControlPoints,
-  terrainHeightAt,
   WORLD_HEIGHT,
   WORLD_WIDTH,
 } from "./domain/map";
 import { applyOperation, validate } from "./domain/operations";
 import { useEditorStore } from "./state/store";
-import { renderMap } from "./rendering/canvas";
-import { screenToWorld, worldToScreen } from "./rendering/transform";
+import {
+  MAP_DECORATION_GROUND_SINK,
+  mapDecorationAspectRatio,
+  mapDecorationRenderSize,
+  renderMap,
+} from "./rendering/canvas";
+import {
+  rotatedRectangleCorners,
+  screenToWorld,
+  transformFromCornerDrag,
+  worldToScreen,
+} from "./rendering/transform";
 import "./ui/styles.css";
 
 const AUTOSAVE = "urkaaz-map-editor-autosave";
 type WorldPoint = { x: number; y: number };
 type CursorPosition = WorldPoint & { screenX: number; screenY: number };
 type ControlDrag = { x: number; originalHeight: number; height: number };
+type ObjectDrag = {
+  id: string;
+  pointerOffsetX: number;
+  pointerOffsetY: number;
+  x: number;
+  y: number;
+};
+type CornerDrag = {
+  id: string;
+  centerX: number;
+  centerY: number;
+  pointerX: number;
+  pointerY: number;
+  initialScale: number;
+  initialRotationDegrees: number;
+  initialY: number;
+  scale: number;
+  rotationDegrees: number;
+  y: number;
+};
 const ASSET_PALETTE_GROUPS = [
   { category: "tree", label: "Trees" },
   { category: "rock", label: "Rocks" },
@@ -42,6 +71,74 @@ function findControlAt(
   });
 }
 
+function findObjectAt(
+  point: WorldPoint,
+  document: EditorDocument,
+  view: { zoom: number; panX: number; panY: number },
+  width: number,
+  height: number,
+): EditorDocument["map"]["objects"][number] | undefined {
+  const relics = document.map.objects.filter(object => object.relicSize != null).reverse();
+  const decorations = document.map.objects.filter(object => object.relicSize == null).reverse();
+  return [...relics, ...decorations].find(object => {
+    const geometry = objectScreenGeometry(object, document, view, width, height);
+    const radians = -object.rotationDegrees * Math.PI / 180;
+    const dx = point.x - geometry.centerX;
+    const dy = point.y - geometry.centerY;
+    const localX = dx * Math.cos(radians) - dy * Math.sin(radians);
+    const localY = dx * Math.sin(radians) + dy * Math.cos(radians);
+    return Math.abs(localX) <= geometry.width / 2 + 6 &&
+      Math.abs(localY) <= geometry.height / 2 + 6;
+  });
+}
+
+function objectScreenGeometry(
+  object: EditorDocument["map"]["objects"][number],
+  document: EditorDocument,
+  view: { zoom: number; panX: number; panY: number },
+  width: number,
+  height: number,
+) {
+  const anchor = worldToScreen(object.x, object.y, view, width, height);
+  if (object.relicSize) {
+    const relicSize = ({ SMALL: 76, MEDIUM: 112, LARGE: 176 }[object.relicSize]) * object.scale;
+    const worldScale = Math.min(width / WORLD_WIDTH, height / WORLD_HEIGHT) * view.zoom;
+    const size = relicSize * worldScale;
+    return { centerX: anchor.x, centerY: anchor.y, width: size, height: size };
+  }
+
+  const aspectRatio = mapDecorationAspectRatio(document.map.biome, object.assetKey) ?? 1;
+  const size = mapDecorationRenderSize(
+    object.scale,
+    view.zoom,
+    aspectRatio,
+    window.devicePixelRatio || 1,
+  );
+  return {
+    centerX: anchor.x,
+    centerY: anchor.y + MAP_DECORATION_GROUND_SINK * view.zoom / (window.devicePixelRatio || 1) - size.height / 2,
+    width: size.width,
+    height: size.height,
+  };
+}
+
+function findTransformHandleAt(
+  point: WorldPoint,
+  object: EditorDocument["map"]["objects"][number],
+  document: EditorDocument,
+  view: { zoom: number; panX: number; panY: number },
+  width: number,
+  height: number,
+): boolean {
+  const geometry = objectScreenGeometry(object, document, view, width, height);
+  return rotatedRectangleCorners(
+    { x: geometry.centerX, y: geometry.centerY },
+    geometry.width,
+    geometry.height,
+    object.rotationDegrees,
+  ).some(corner => Math.hypot(corner.x - point.x, corner.y - point.y) <= 10);
+}
+
 export default function App() {
   const [registeredAssetKeys, setRegisteredAssetKeys] = useState<ReadonlySet<string>>();
   const [assetCatalogError, setAssetCatalogError] = useState<string>();
@@ -50,8 +147,12 @@ export default function App() {
   const [view, setView] = useState({ zoom: 1, panX: 0, panY: 0 });
   const [issues, setIssues] = useState(validate(state.present));
   const [controlDrag, setControlDrag] = useState<ControlDrag | null>(null);
+  const [objectDrag, setObjectDrag] = useState<ObjectDrag | null>(null);
+  const [cornerDrag, setCornerDrag] = useState<CornerDrag | null>(null);
+  const [selectedObjectId, setSelectedObjectId] = useState<string>();
   const [showCursorCoordinates, setShowCursorCoordinates] = useState(false);
   const [cursorPosition, setCursorPosition] = useState<CursorPosition | null>(null);
+  const [sceneShiftAmount, setSceneShiftAmount] = useState(40);
   const [status, setStatus] = useState("Unsaved");
   const nextObjectId = useRef(0);
   const restored = useRef(false);
@@ -93,13 +194,31 @@ export default function App() {
 
   useEffect(() => {
     if (canvas.current) {
-      const displayDocument = controlDrag
-        ? applyOperation(state.present, {
+      let displayDocument = state.present;
+      if (controlDrag) {
+        displayDocument = applyOperation(state.present, {
           type: "MOVE_TERRAIN_CONTROL_POINT",
           x: controlDrag.x,
           height: controlDrag.height,
-        }, registeredAssetKeys)
-        : state.present;
+        }, registeredAssetKeys);
+      } else if (cornerDrag) {
+        const map = structuredClone(state.present.map);
+        const object = map.objects.find(item => item.id === cornerDrag.id);
+        if (object) {
+          object.scale = cornerDrag.scale;
+          object.rotationDegrees = cornerDrag.rotationDegrees;
+          object.y = cornerDrag.y;
+          displayDocument = { ...state.present, map };
+        }
+      } else if (objectDrag) {
+        const map = structuredClone(state.present.map);
+        const object = map.objects.find(item => item.id === objectDrag.id);
+        if (object) {
+          object.x = objectDrag.x;
+          object.y = objectDrag.y;
+          displayDocument = { ...state.present, map };
+        }
+      }
       renderMap(
         canvas.current,
         displayDocument,
@@ -107,13 +226,14 @@ export default function App() {
         true,
         controlDrag ? { x: controlDrag.x, height: controlDrag.height } : undefined,
         registeredAssetKeys,
+        selectedObjectId,
       );
     }
     const validation = validate(state.present, registeredAssetKeys);
     setIssues(validation);
     localStorage.setItem(AUTOSAVE, encode(state.present));
     setStatus("Autosaved");
-  }, [state.present, view, controlDrag, registeredAssetKeys]);
+  }, [state.present, view, controlDrag, objectDrag, cornerDrag, registeredAssetKeys, selectedObjectId]);
 
   useEffect(() => {
     const key = (event: KeyboardEvent) => {
@@ -121,13 +241,20 @@ export default function App() {
         event.preventDefault();
         event.shiftKey ? redo() : undo();
       }
-      if (event.key === "Escape") setControlDrag(null);
+      if (event.key === "Escape") {
+        setControlDrag(null);
+        setObjectDrag(null);
+        setCornerDrag(null);
+      }
     };
     window.addEventListener("keydown", key);
     return () => window.removeEventListener("keydown", key);
   }, [redo, undo]);
 
-  const newMap = () => load({ map: defaultMap(), phase: "TERRAIN_EDITING", revision: 0 });
+  const newMap = () => {
+    load({ map: defaultMap(), phase: "TERRAIN_EDITING", revision: 0 });
+    setSelectedObjectId(undefined);
+  };
   const resetMap = () => {
     if (!window.confirm("Reset the entire map to a new empty map? This cannot be undone.")) return;
     load({
@@ -135,6 +262,7 @@ export default function App() {
       phase: "TERRAIN_EDITING",
       revision: 0,
     });
+    setSelectedObjectId(undefined);
     setStatus("Map reset");
   };
 
@@ -145,6 +273,7 @@ export default function App() {
       .then(text => {
         const map = decode(text);
         load({ map, phase: "TERRAIN_EDITING", revision: 0 });
+        setSelectedObjectId(undefined);
       })
       .catch(error => setStatus(error instanceof Error ? error.message : String(error)));
     event.target.value = "";
@@ -181,6 +310,14 @@ export default function App() {
       ),
     }
     : undefined;
+  const selectedObject = state.present.map.objects.find(object => object.id === selectedObjectId);
+  const shiftWholeMap = (direction: -1 | 1) => {
+    if (!Number.isFinite(sceneShiftAmount) || sceneShiftAmount <= 0) return;
+    operation({
+      type: "SHIFT_SCENE_VERTICALLY",
+      deltaY: direction * sceneShiftAmount,
+    });
+  };
 
   const pointer = (event: React.PointerEvent<HTMLCanvasElement>) => {
     const element = canvas.current;
@@ -198,21 +335,134 @@ export default function App() {
         screenX: screen.x,
         screenY: screen.y,
       });
+      if (cornerDrag) {
+        const object = state.present.map.objects.find(item => item.id === cornerDrag.id);
+        if (object) {
+          const transform = transformFromCornerDrag(
+            { x: cornerDrag.pointerX, y: cornerDrag.pointerY },
+            screen,
+            { x: cornerDrag.centerX, y: cornerDrag.centerY },
+            cornerDrag.initialScale,
+            cornerDrag.initialRotationDegrees,
+          );
+          let y = cornerDrag.y;
+          if (!object.relicSize) {
+            const aspectRatio = mapDecorationAspectRatio(state.present.map.biome, object.assetKey) ?? 1;
+            const size = mapDecorationRenderSize(
+              transform.scale,
+              view.zoom,
+              aspectRatio,
+              window.devicePixelRatio || 1,
+            );
+            const baselineScreenY = cornerDrag.centerY -
+              MAP_DECORATION_GROUND_SINK * view.zoom / (window.devicePixelRatio || 1) +
+              size.height / 2;
+            y = screenToWorld(
+              cornerDrag.centerX,
+              baselineScreenY,
+              view,
+              rect.width,
+              rect.height,
+            ).y;
+          }
+          setCornerDrag({ ...cornerDrag, ...transform, y });
+        }
+        return;
+      }
       if (controlDrag) {
         setControlDrag({
           ...controlDrag,
           height: Math.max(0, Math.min(WORLD_HEIGHT, world.y)),
         });
       }
+      if (objectDrag) {
+        const object = state.present.map.objects.find(item => item.id === objectDrag.id);
+        if (object) {
+          const x = Math.max(
+            0,
+            Math.min(WORLD_WIDTH, world.x - objectDrag.pointerOffsetX),
+          );
+          const y = Math.max(
+            0,
+            Math.min(WORLD_HEIGHT, world.y - objectDrag.pointerOffsetY),
+          );
+          setObjectDrag({ ...objectDrag, x, y });
+        }
+      }
       return;
     }
     if (event.type === "pointerdown") {
-      if (state.present.phase !== "TERRAIN_EDITING") return;
-      const control = findControlAt(screen, state.present, view, rect.width, rect.height);
-      if (control) {
-        element.setPointerCapture(event.pointerId);
-        setControlDrag({ x: control.x, originalHeight: control.height, height: control.height });
+      if (state.present.phase === "TERRAIN_EDITING") {
+        const control = findControlAt(screen, state.present, view, rect.width, rect.height);
+        if (control) {
+          element.setPointerCapture(event.pointerId);
+          setControlDrag({ x: control.x, originalHeight: control.height, height: control.height });
+        }
+        return;
       }
+      const selected = state.present.map.objects.find(item => item.id === selectedObjectId);
+      if (selected && canPlaceAssets &&
+        findTransformHandleAt(screen, selected, state.present, view, rect.width, rect.height)) {
+        const geometry = objectScreenGeometry(selected, state.present, view, rect.width, rect.height);
+        element.setPointerCapture(event.pointerId);
+        setCornerDrag({
+          id: selected.id,
+          centerX: geometry.centerX,
+          centerY: geometry.centerY,
+          pointerX: screen.x,
+          pointerY: screen.y,
+          initialScale: selected.scale,
+          initialRotationDegrees: selected.rotationDegrees,
+          initialY: selected.y,
+          scale: selected.scale,
+          rotationDegrees: selected.rotationDegrees,
+          y: selected.y,
+        });
+        return;
+      }
+      const object = findObjectAt(screen, state.present, view, rect.width, rect.height);
+      setSelectedObjectId(object?.id);
+      if (object && canPlaceAssets) {
+        element.setPointerCapture(event.pointerId);
+        setObjectDrag({
+          id: object.id,
+          pointerOffsetX: world.x - object.x,
+          pointerOffsetY: world.y - object.y,
+          x: object.x,
+          y: object.y,
+        });
+      }
+      return;
+    }
+    if (event.type === "pointerup" && cornerDrag) {
+      const changed = cornerDrag.scale !== cornerDrag.initialScale ||
+        cornerDrag.rotationDegrees !== cornerDrag.initialRotationDegrees ||
+        cornerDrag.y !== cornerDrag.initialY;
+      if (changed) {
+        operation({
+          type: "TRANSFORM_OBJECT",
+          id: cornerDrag.id,
+          scale: cornerDrag.scale,
+          rotationDegrees: cornerDrag.rotationDegrees,
+          y: cornerDrag.y,
+        });
+      }
+      setCornerDrag(null);
+      if (element.hasPointerCapture(event.pointerId)) element.releasePointerCapture(event.pointerId);
+      return;
+    }
+    if (event.type === "pointerup" && objectDrag) {
+      if (objectDrag.x !== state.present.map.objects.find(item => item.id === objectDrag.id)?.x ||
+        objectDrag.y !== state.present.map.objects.find(item => item.id === objectDrag.id)?.y) {
+        operation({
+          type: "MOVE_OBJECT",
+          id: objectDrag.id,
+          x: objectDrag.x,
+          y: objectDrag.y,
+        });
+      }
+      setObjectDrag(null);
+      if (element.hasPointerCapture(event.pointerId)) element.releasePointerCapture(event.pointerId);
       return;
     }
     if (event.type === "pointerup" && controlDrag) {
@@ -254,7 +504,7 @@ export default function App() {
       return;
     }
 
-    let y: number;
+    let y = world.y;
     if (asset.relicSize) {
       const halfWidth = 56;
       const halfHeight = 40;
@@ -272,25 +522,13 @@ export default function App() {
         setStatus("Relic must fit completely inside the soil");
         return;
       }
-    } else {
-      const surface = terrainHeightAt(map, world.x);
-      const left = terrainHeightAt(map, world.x - map.terrain.sampleStep);
-      const right = terrainHeightAt(map, world.x + map.terrain.sampleStep);
-      if (surface === undefined || left === undefined || right === undefined) {
-        setStatus("Cannot place an asset without a terrain profile");
-        return;
-      }
-      if (Math.abs(left - surface) > 1 || Math.abs(right - surface) > 1) {
-        setStatus("Trees, rocks, and props can only be placed on flat terrain");
-        return;
-      }
-      y = surface;
     }
 
+    const objectId = `map-asset-${Date.now()}-${nextObjectId.current++}`;
     operation({
       type: "PLACE_OBJECT",
       object: {
-        id: `map-asset-${Date.now()}-${nextObjectId.current++}`,
+        id: objectId,
         type: "DECORATION",
         x: world.x,
         y,
@@ -302,6 +540,7 @@ export default function App() {
         ...(asset.relicSize ? { relicSize: asset.relicSize } : {}),
       },
     });
+    setSelectedObjectId(objectId);
   };
 
   const wheel = (event: React.WheelEvent) => {
@@ -345,6 +584,61 @@ export default function App() {
             ))}
           </select>
           <p>Fortress and catapult sprites are shared between biomes.</p>
+          <section className="foundation-controls">
+            <h3>Foundation height</h3>
+            <p>Fortress and catapult move together; nearby terrain follows smoothly.</p>
+            {state.present.map.fortresses.map(fortress => (
+              <label key={fortress.owner}>
+                {fortress.owner} · Y {Math.round(fortress.foundationHeight)}
+                <input
+                  aria-label={`${fortress.owner} foundation height`}
+                  type="range"
+                  min="0"
+                  max={WORLD_HEIGHT}
+                  step="10"
+                  value={fortress.foundationHeight}
+                  disabled={state.present.phase !== "TERRAIN_EDITING"}
+                  onChange={event => operation({
+                    type: "CHANGE_FOUNDATION_HEIGHT",
+                    owner: fortress.owner,
+                    height: Number(event.currentTarget.value),
+                  })}
+                />
+              </label>
+            ))}
+          </section>
+          <section className="scene-position-controls">
+            <h3>Whole map position</h3>
+            <p>Raise or lower terrain, fortresses, catapults, and assets together. The background stays fixed.</p>
+            <label>
+              Move by (world units)
+              <input
+                aria-label="Whole map movement step"
+                type="number"
+                min="1"
+                max={WORLD_HEIGHT}
+                step="10"
+                value={sceneShiftAmount}
+                onChange={event => setSceneShiftAmount(Number(event.currentTarget.value))}
+              />
+            </label>
+            <div className="scene-position-actions">
+              <button
+                aria-label="Raise whole map"
+                disabled={!Number.isFinite(sceneShiftAmount) || sceneShiftAmount <= 0}
+                onClick={() => shiftWholeMap(-1)}
+              >
+                Raise
+              </button>
+              <button
+                aria-label="Lower whole map"
+                disabled={!Number.isFinite(sceneShiftAmount) || sceneShiftAmount <= 0}
+                onClick={() => shiftWholeMap(1)}
+              >
+                Lower
+              </button>
+            </div>
+          </section>
           <h3>Debug</h3>
           <button
             className={showCursorCoordinates ? "active" : ""}
@@ -367,7 +661,11 @@ export default function App() {
             onPointerDown={pointer}
             onPointerMove={pointer}
             onPointerUp={pointer}
-            onPointerCancel={() => setControlDrag(null)}
+            onPointerCancel={() => {
+              setControlDrag(null);
+              setObjectDrag(null);
+              setCornerDrag(null);
+            }}
             onPointerLeave={() => setCursorPosition(null)}
             onDragOver={event => {
               if (!canPlaceAssets) return;
@@ -385,6 +683,9 @@ export default function App() {
           {controlDrag && (
             <div className="hint">Adjusting contour point · release to commit</div>
           )}
+          {cornerDrag && (
+            <div className="hint">Drag a corner to resize and rotate · release to commit</div>
+          )}
         </div>
         <aside>
           <h3>Validation</h3>
@@ -399,11 +700,65 @@ export default function App() {
               ))}
             </ul>
           )}
+          {selectedObject && (
+            <section className="object-controls">
+              <h3>Selected decoration</h3>
+              <p>{selectedObject.assetKey}</p>
+              <p>Drag it to move it; drag a corner to scale and rotate around its center.</p>
+              <label>
+                Scale ({selectedObject.scale.toFixed(2)}×)
+                <input
+                  aria-label="Decoration scale"
+                  type="number"
+                  min="0.1"
+                  step="0.1"
+                  value={selectedObject.scale}
+                  onChange={event => {
+                    const scale = Number(event.currentTarget.value);
+                    if (Number.isFinite(scale) && scale > 0) {
+                      operation({ type: "SCALE_OBJECT", id: selectedObject.id, scale });
+                    }
+                  }}
+                />
+              </label>
+              <label>
+                Rotation (°)
+                <input
+                  aria-label="Decoration rotation"
+                  type="number"
+                  step="1"
+                  value={selectedObject.rotationDegrees}
+                  onChange={event => {
+                    const rotationDegrees = Number(event.currentTarget.value);
+                    if (Number.isFinite(rotationDegrees)) {
+                      operation({
+                        type: "ROTATE_OBJECT",
+                        id: selectedObject.id,
+                        rotationDegrees,
+                      });
+                    }
+                  }}
+                />
+              </label>
+              <button
+                onClick={() => {
+                  operation({ type: "REMOVE_OBJECT", id: selectedObject.id });
+                  setSelectedObjectId(undefined);
+                }}
+              >
+                Remove decoration
+              </button>
+            </section>
+          )}
           <h3>Assets</h3>
           <p>Biome: {state.present.map.biome}</p>
           {assetCatalogError && <p className="error">Asset catalogue unavailable: {assetCatalogError}</p>}
           {!assetCatalogError && !registeredAssetKeys && <p>Loading asset catalogue…</p>}
-          <p>{canPlaceAssets ? "Drag an asset onto the map." : "Lock terrain before placing assets."}</p>
+          <p>
+            {canPlaceAssets
+              ? "Drag an asset onto the map. Click and drag a placed decoration to move it."
+              : "Lock terrain before placing assets."}
+          </p>
           {ASSET_PALETTE_GROUPS.map(group => (
             <section className="asset-category" key={group.category}>
               <h4>{group.label}</h4>

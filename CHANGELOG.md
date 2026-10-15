@@ -9,13 +9,28 @@
   Android offline loading.
 - The web map editor now provides a graphical Trees, Rocks, Props and Relics
   palette that can place assets after terrain is locked.
+- Chapter 1, Level 4 now uses its imported Green Frontier map, bundled for
+  Android offline loading with its authored terrain, foundations and relics.
+- The map editor palette now includes every imported legacy tree, rock and
+  prop variant across Green Frontier, Frostbound, Copperwood and Ashen March;
+  Sunken Marshes shares Green Frontier's decoration set.
+- Selected map objects can be moved directly on the canvas, and corner
+  handles scale and rotate decorations and Relics around their centers.
 
 ### Changed
 
 - Campaign maps preserve an initial camera anchor and zoom; Level 3 opens on
   the player fortress at 1.3× while other maps retain their current framing.
-- The map editor layers grounded decorations below the terrain cap and buried
-  Relics above it, with placement validation for flat ground and soil.
+- The map editor layers regular decorations below the terrain cap and buried
+  Relics above it; regular decorations may be positioned freely within map
+  bounds, while Relics remain constrained to the soil.
+- Map-editor decoration previews now preserve source-image proportions and use
+  the same 94-pixel base width as the Android renderer.
+- Map-editor foundation controls raise or lower each fortress and catapult
+  together, smoothly adjusting adjacent terrain samples.
+- The map editor can raise or lower the whole authored scene relative to its
+  fixed background, moving terrain, foundations, protected zones and assets as
+  one undoable operation.
 - Rebuilt the fortress hitbox as one alpha-bounds rectangle shared by both
   fortress sprites and removed fortress-name labels from the hitbox debug view.
 - Pinch zoom now anchors on the gesture focus, supports up to 4x zoom, and

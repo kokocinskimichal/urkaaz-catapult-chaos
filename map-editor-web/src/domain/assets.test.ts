@@ -75,4 +75,21 @@ describe("terrain asset index", () => {
     expect(relicAssetPath("copperwood", "relic.copperwood.small.1", keys))
       .toBe("/assets/terrain/copperwood/terrain_copperwood_detail_01_copper_coin.png");
   });
+
+  it("includes every registered decoration variant in the biome palette", () => {
+    const keys = parseAssetIndex([
+      ...Array.from({ length: 6 }, (_, index) =>
+        `terrain_green_frontier_tree_${String(index).padStart(2, "0")}.png`),
+      ...Array.from({ length: 6 }, (_, index) =>
+        `terrain_green_frontier_rock_${String(index).padStart(2, "0")}.png`),
+      ...Array.from({ length: 6 }, (_, index) =>
+        `terrain_green_frontier_prop_${String(index).padStart(2, "0")}.png`),
+    ].join("\n"));
+
+    const palette = paletteAssetsForBiome(keys, "sunken_marshes");
+    expect(palette.tree).toHaveLength(6);
+    expect(palette.rock).toHaveLength(6);
+    expect(palette.prop).toHaveLength(6);
+    expect(palette.tree[5].assetKey).toBe("terrain_green_frontier_tree_05");
+  });
 });

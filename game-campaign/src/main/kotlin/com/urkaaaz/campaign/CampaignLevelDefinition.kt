@@ -184,10 +184,10 @@ data class CampaignLevelDefinition(
                     },
                 ),
                 mapDefinition = mapRepository.require(
-                    if (safeLevel == CHAPTER_ONE_LEVEL_THREE) {
-                        CHAPTER_ONE_LEVEL_THREE_MAP_ID
-                    } else {
-                        "demo-map"
+                    when (safeLevel) {
+                        CHAPTER_ONE_LEVEL_THREE -> CHAPTER_ONE_LEVEL_THREE_MAP_ID
+                        CHAPTER_ONE_LEVEL_FOUR -> CHAPTER_ONE_LEVEL_FOUR_MAP_ID
+                        else -> "demo-map"
                     },
                 ),
             )
@@ -203,5 +203,7 @@ data class CampaignLevelDefinition(
 
         private const val CHAPTER_ONE_LEVEL_THREE = 3
         private const val CHAPTER_ONE_LEVEL_THREE_MAP_ID = "chapter1-level3"
+        private const val CHAPTER_ONE_LEVEL_FOUR = 4
+        private const val CHAPTER_ONE_LEVEL_FOUR_MAP_ID = "chapter1-level4"
     }
 }

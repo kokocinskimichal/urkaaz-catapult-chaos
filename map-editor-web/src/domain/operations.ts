@@ -8,7 +8,6 @@ import {
   TERRAIN_CONTROL_SPACING,
   WORLD_HEIGHT,
   WORLD_WIDTH,
-  terrainHeightAt,
   terrainControlPoints,
 } from "./map";
 import { isKnownMapDecoration } from "./assets";
@@ -19,10 +18,12 @@ export type Operation =
  | { type: "SMOOTH_TERRAIN_RANGE"; minX:number; maxX:number }
  | { type: "FLATTEN_TERRAIN_RANGE"; minX:number; maxX:number; height?:number }
  | { type: "CHANGE_FOUNDATION_HEIGHT"; owner:Team; height:number }
+ | { type: "SHIFT_SCENE_VERTICALLY"; deltaY:number }
  | { type: "LOCK_TERRAIN" } | { type: "MARK_READY_TO_EXPORT" }
  | { type: "PLACE_OBJECT"; object: {id:string;type:MapObjectType;x:number;y:number;scale:number;rotationDegrees:number;assetKey:string;collision:"NONE"|"SOLID";allowOverlap:boolean;relicSize?:"SMALL"|"MEDIUM"|"LARGE" | null} }
  | { type: "MOVE_OBJECT"; id:string;x:number;y:number } | { type:"ROTATE_OBJECT";id:string;rotationDegrees:number }
- | { type:"SCALE_OBJECT";id:string;scale:number } | { type:"REMOVE_OBJECT";id:string };
+ | { type:"SCALE_OBJECT";id:string;scale:number } | { type:"REMOVE_OBJECT";id:string }
+ | { type:"TRANSFORM_OBJECT";id:string;scale:number;rotationDegrees:number;y:number };
 export function applyOperation(
   doc: EditorDocument,
   op: Operation,
@@ -68,11 +69,7 @@ export function applyOperation(
     if (controlIndex < 0) throw new Error("Control point is not editable");
     const originalHeight = controls[controlIndex].height;
     const displacement = op.height - originalHeight;
-    const controlSpacing = Math.max(
-      map.terrain.sampleStep,
-      Math.round(TERRAIN_CONTROL_SPACING / map.terrain.sampleStep) * map.terrain.sampleStep,
-    );
-    const influenceRadius = controlSpacing * 3;
+    const influenceRadius = terrainInfluenceRadius(map);
     map.terrain.samples = map.terrain.samples.map(sample => {
       if (map.protectedTerrainZones.some(zone => sample.x >= zone.minX && sample.x <= zone.maxX)) return sample;
       const distance = Math.abs(sample.x - op.x);
@@ -82,7 +79,7 @@ export function applyOperation(
       );
       if (crossesFoundation) return sample;
       const ratio = distance / influenceRadius;
-      const falloff = 1 - (3 * ratio * ratio - 2 * ratio * ratio * ratio);
+      const falloff = smoothTerrainFalloff(ratio);
       return { ...sample, height: sample.height + displacement * falloff };
     });
   } else if (op.type === "SMOOTH_TERRAIN_RANGE" || op.type === "FLATTEN_TERRAIN_RANGE") {
@@ -91,11 +88,65 @@ export function applyOperation(
     const h = op.type === "FLATTEN_TERRAIN_RANGE" ? (op.height ?? inside.reduce((a,b)=>a+b.height,0)/Math.max(1,inside.length)) : undefined;
     map.terrain.samples = map.terrain.samples.map((s,i,a) => s.x < op.minX || s.x > op.maxX ? s : { ...s, height: h ?? (a[Math.max(0,i-1)].height+a[Math.min(a.length-1,i+1)].height)/2 });
   } else if (op.type === "CHANGE_FOUNDATION_HEIGHT") {
-    const fortress = map.fortresses.find(f=>f.owner===op.owner); const zone = fortress && map.protectedTerrainZones.find(z=>z.id===fortress.protectedZoneId);
-    if (!fortress || !zone) throw new Error("Foundation contract is incomplete");
-    fortress.foundationHeight = op.height; zone.minHeight = op.height; zone.maxHeight = op.height;
-    map.terrain.samples = map.terrain.samples.map(s=>s.x>=zone.minX&&s.x<=zone.maxX?{...s,height:op.height}:s);
-    const catapult = map.catapults.find(c=>c.owner===op.owner); if(catapult) catapult.foundationHeight=op.height;
+    if (!Number.isFinite(op.height) || op.height < 0 || op.height > WORLD_HEIGHT) {
+      throw new Error("Foundation height is outside the world");
+    }
+    const fortress = map.fortresses.find(item => item.owner === op.owner);
+    const zone = fortress && map.protectedTerrainZones.find(item => item.id === fortress.protectedZoneId);
+    const catapult = map.catapults.find(item => item.owner === op.owner);
+    if (!fortress || !zone || !catapult) throw new Error("Foundation contract is incomplete");
+
+    const displacement = op.height - fortress.foundationHeight;
+    const influenceRadius = terrainInfluenceRadius(map);
+    map.terrain.samples = map.terrain.samples.map(sample => {
+      if (sample.x >= zone.minX && sample.x <= zone.maxX) {
+        return { ...sample, height: op.height };
+      }
+      if (map.protectedTerrainZones.some(other =>
+        sample.x >= other.minX && sample.x <= other.maxX,
+      )) {
+        return sample;
+      }
+      const distance = sample.x < zone.minX
+        ? zone.minX - sample.x
+        : sample.x - zone.maxX;
+      if (distance >= influenceRadius) return sample;
+      const falloff = smoothTerrainFalloff(distance / influenceRadius);
+      return { ...sample, height: sample.height + displacement * falloff };
+    });
+    fortress.foundationHeight = op.height;
+    zone.minHeight = op.height;
+    zone.maxHeight = op.height;
+    catapult.foundationHeight = op.height;
+  } else if (op.type === "SHIFT_SCENE_VERTICALLY") {
+    if (!Number.isFinite(op.deltaY)) throw new Error("Whole-map vertical shift must be finite");
+    if (op.deltaY === 0) return doc;
+    const bounds = wholeSceneVerticalBounds(map);
+    if (bounds.minY + op.deltaY < 0 || bounds.maxY + op.deltaY > WORLD_HEIGHT) {
+      throw new Error("Whole-map vertical shift would move content outside the world");
+    }
+    map.terrain.samples = map.terrain.samples.map(sample => ({
+      ...sample,
+      height: sample.height + op.deltaY,
+    }));
+    map.protectedTerrainZones = map.protectedTerrainZones.map(zone => ({
+      ...zone,
+      minHeight: zone.minHeight + op.deltaY,
+      maxHeight: zone.maxHeight + op.deltaY,
+    }));
+    map.fortresses = map.fortresses.map(fortress => ({
+      ...fortress,
+      foundationHeight: fortress.foundationHeight + op.deltaY,
+    }));
+    map.catapults = map.catapults.map(catapult => ({
+      ...catapult,
+      foundationHeight: catapult.foundationHeight + op.deltaY,
+    }));
+    map.objects = map.objects.map(object => ({
+      ...object,
+      y: object.y + op.deltaY,
+    }));
+    return { ...doc, map, revision: doc.revision + 1 };
   } else if (op.type === "PLACE_OBJECT") {
     if (!["TERRAIN_LOCKED", "DECORATION_EDITING"].includes(doc.phase)) throw new Error("Lock terrain before placing decorations");
     if (map.objects.some(object => object.id === op.object.id)) throw new Error(`Object id is already used: ${op.object.id}`);
@@ -111,8 +162,75 @@ export function applyOperation(
     if(op.type==="MOVE_OBJECT"){object.x=op.x;object.y=op.y}
     if(op.type==="ROTATE_OBJECT") object.rotationDegrees=op.rotationDegrees
     if(op.type==="SCALE_OBJECT"){if(op.scale<=0) throw new Error("Scale must be positive");object.scale=op.scale}
+    if(op.type==="TRANSFORM_OBJECT"){
+      if(!Number.isFinite(op.scale)||op.scale<=0) throw new Error("Scale must be positive");
+      if(!Number.isFinite(op.rotationDegrees)||!Number.isFinite(op.y)) throw new Error("Transform values must be finite");
+      object.scale=op.scale;object.rotationDegrees=op.rotationDegrees;object.y=op.y;
+    }
+    const placementIssue = validate({ ...doc, map }, assetKeys)
+      .find(issue => issue.severity === "error" && issue.path.startsWith(`objects.${op.id}`));
+    if (placementIssue) throw new Error(`Invalid placement: ${placementIssue.message}`);
   }
   return {...doc,map,phase: doc.phase === "TERRAIN_LOCKED" && map.objects.length > 0 ? "DECORATION_EDITING" : doc.phase,revision:doc.revision+1};
+}
+
+function terrainInfluenceRadius(map: EditorDocument["map"]): number {
+  const controlSpacing = Math.max(
+    map.terrain.sampleStep,
+    Math.round(TERRAIN_CONTROL_SPACING / map.terrain.sampleStep) * map.terrain.sampleStep,
+  );
+  return controlSpacing * 3;
+}
+
+function smoothTerrainFalloff(ratio: number): number {
+  return 1 - (3 * ratio * ratio - 2 * ratio * ratio * ratio);
+}
+
+function wholeSceneVerticalBounds(map: EditorDocument["map"]): { minY: number; maxY: number } {
+  let minY = Number.POSITIVE_INFINITY;
+  let maxY = Number.NEGATIVE_INFINITY;
+  const include = (y: number) => {
+    if (!Number.isFinite(y)) throw new Error("Cannot move a map with non-finite vertical coordinates");
+    minY = Math.min(minY, y);
+    maxY = Math.max(maxY, y);
+  };
+
+  map.terrain.samples.forEach(sample => include(sample.height));
+  map.protectedTerrainZones.forEach(zone => {
+    include(zone.minHeight);
+    include(zone.maxHeight);
+  });
+  map.fortresses.forEach(fortress => include(fortress.foundationHeight));
+  map.catapults.forEach(catapult => include(catapult.foundationHeight));
+  map.objects.forEach(object => {
+    const footprint = relicWorldFootprint(object);
+    include(footprint?.top ?? object.y);
+    include(footprint?.bottom ?? object.y);
+  });
+  if (!Number.isFinite(minY) || !Number.isFinite(maxY)) {
+    throw new Error("Cannot move a map without vertical content");
+  }
+  return { minY, maxY };
+}
+
+function relicWorldFootprint(object: EditorDocument["map"]["objects"][number]) {
+  if (!object.relicSize) return undefined;
+  const dimensions = {
+    SMALL: { halfWidth: 56, halfHeight: 40 },
+    MEDIUM: { halfWidth: 96, halfHeight: 72 },
+    LARGE: { halfWidth: 160, halfHeight: 120 },
+  }[object.relicSize];
+  const radians = object.rotationDegrees * Math.PI / 180;
+  const halfWidth = Math.abs(dimensions.halfWidth * object.scale * Math.cos(radians)) +
+    Math.abs(dimensions.halfHeight * object.scale * Math.sin(radians));
+  const halfHeight = Math.abs(dimensions.halfWidth * object.scale * Math.sin(radians)) +
+    Math.abs(dimensions.halfHeight * object.scale * Math.cos(radians));
+  return {
+    left: object.x - halfWidth,
+    right: object.x + halfWidth,
+    top: object.y - halfHeight,
+    bottom: object.y + halfHeight,
+  };
 }
 
 export function validate(doc: EditorDocument, assetKeys?: ReadonlySet<string>) {
@@ -150,34 +268,19 @@ export function validate(doc: EditorDocument, assetKeys?: ReadonlySet<string>) {
     if (object.relicSize) {
       validateRelicPlacement(m, object, path, issues);
     } else {
-      validateGroundedPlacement(m, object, path, issues);
+      validateGroundedPlacement(object, path, issues);
     }
   }
   return issues;
 }
 
 function validateGroundedPlacement(
-  map: EditorDocument["map"],
   object: EditorDocument["map"]["objects"][number],
   path: string,
   issues: import("./map").ValidationIssue[],
 ) {
   if (object.x < 0 || object.x > WORLD_WIDTH || object.y < 0 || object.y > WORLD_HEIGHT) {
     issues.push({ severity: "error", path: `${path}.position`, message: "Decoration must be inside world bounds" });
-    return;
-  }
-  const surface = terrainHeightAt(map, object.x);
-  const left = terrainHeightAt(map, object.x - map.terrain.sampleStep);
-  const right = terrainHeightAt(map, object.x + map.terrain.sampleStep);
-  if (surface === undefined || left === undefined || right === undefined) {
-    issues.push({ severity: "error", path: `${path}.position`, message: "Terrain profile is unavailable" });
-    return;
-  }
-  if (Math.abs(object.y - surface) > 1.5) {
-    issues.push({ severity: "error", path: `${path}.y`, message: "Grounded decoration bottom anchor must match terrain" });
-  }
-  if (Math.abs(left - surface) > 1 || Math.abs(right - surface) > 1) {
-    issues.push({ severity: "error", path: `${path}.position`, message: "Grounded decoration must be on flat terrain" });
   }
 }
 
@@ -187,21 +290,9 @@ function validateRelicPlacement(
   path: string,
   issues: import("./map").ValidationIssue[],
 ) {
-  if (!object.relicSize) return;
-  const dimensions = {
-    SMALL: { halfWidth: 56, halfHeight: 40 },
-    MEDIUM: { halfWidth: 96, halfHeight: 72 },
-    LARGE: { halfWidth: 160, halfHeight: 120 },
-  }[object.relicSize];
-  const radians = object.rotationDegrees * Math.PI / 180;
-  const halfWidth = Math.abs(dimensions.halfWidth * object.scale * Math.cos(radians)) +
-    Math.abs(dimensions.halfHeight * object.scale * Math.sin(radians));
-  const halfHeight = Math.abs(dimensions.halfWidth * object.scale * Math.sin(radians)) +
-    Math.abs(dimensions.halfHeight * object.scale * Math.cos(radians));
-  const left = object.x - halfWidth;
-  const right = object.x + halfWidth;
-  const top = object.y - halfHeight;
-  const bottom = object.y + halfHeight;
+  const footprint = relicWorldFootprint(object);
+  if (!footprint) return;
+  const { left, right, top, bottom } = footprint;
   if (left < 0 || right > WORLD_WIDTH || top < 0 || bottom > WORLD_HEIGHT) {
     issues.push({ severity: "error", path: `${path}.footprint`, message: "Relic footprint must stay inside world bounds" });
     return;

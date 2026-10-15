@@ -7,6 +7,41 @@ const FORTRESS_VERTICAL_OFFSET = 35;
 const CATAPULT_VERTICAL_OFFSET = -200;
 const CAP_SLICE_COUNT = 96;
 const CAP_TILE_WORLD_WIDTH = 450;
+export const MAP_DECORATION_RENDER_WIDTH = 94;
+export const MAP_DECORATION_GROUND_SINK = 12;
+
+export function mapDecorationRenderSize(
+  scale: number,
+  zoom: number,
+  aspectRatio: number,
+  pixelRatio = 1,
+) {
+  const width = MAP_DECORATION_RENDER_WIDTH * scale * zoom / pixelRatio;
+  return { width, height: width * aspectRatio };
+}
+
+export function mapDecorationAspectRatio(biome: string, assetKey: string): number | undefined {
+  const sprite = imageCache.get(terrainAssetPath(biome, assetKey));
+  return sprite?.complete && sprite.naturalWidth > 0
+    ? sprite.naturalHeight / sprite.naturalWidth
+    : undefined;
+}
+
+function drawTransformFrame(c: CanvasRenderingContext2D, width: number, height: number) {
+  const handleSize = 8;
+  c.strokeStyle = "#fff2a8";
+  c.lineWidth = 2;
+  c.strokeRect(-width / 2 - 3, -height / 2 - 3, width + 6, height + 6);
+  c.fillStyle = "#fff2a8";
+  c.strokeStyle = "#26384c";
+  c.lineWidth = 1.5;
+  for (const x of [-width / 2, width / 2]) {
+    for (const y of [-height / 2, height / 2]) {
+      c.fillRect(x - handleSize / 2, y - handleSize / 2, handleSize, handleSize);
+      c.strokeRect(x - handleSize / 2, y - handleSize / 2, handleSize, handleSize);
+    }
+  }
+}
 
 function image(path: string, redraw: () => void): HTMLImageElement | undefined {
   const cached = imageCache.get(path);
@@ -61,6 +96,7 @@ export function renderMap(
  debug=true,
  controlPreview?: SampleJson,
  assetKeys?: ReadonlySet<string>,
+ selectedObjectId?: string,
 ){
  const dpr=window.devicePixelRatio||1, rect=canvas.getBoundingClientRect(); canvas.width=rect.width*dpr;canvas.height=rect.height*dpr;
  const c=canvas.getContext("2d")!;c.setTransform(dpr,0,0,dpr,0,0);const w=rect.width,h=rect.height;
@@ -93,33 +129,47 @@ export function renderMap(
  for(const cat of doc.map.catapults){
    const q=p(cat.x,cat.foundationHeight+FORTRESS_VERTICAL_OFFSET+CATAPULT_VERTICAL_OFFSET);
    const path = cat.owner === "BLUE" ? "/assets/terrain/catapult_left.png" : "/assets/terrain/catapult_right.png";
-   const sprite = image(path, () => renderMap(canvas, doc, view, debug, controlPreview, assetKeys));
+   const sprite = image(path, () => renderMap(canvas, doc, view, debug, controlPreview, assetKeys, selectedObjectId));
    if (sprite) c.drawImage(sprite, q.x - 44 * view.zoom, q.y - 56 * view.zoom, 88 * view.zoom, 56 * view.zoom);
    else { c.fillStyle=cat.owner==="BLUE"?"#82caff":"#ff9ca5";c.fillRect(q.x-14.4,q.y-44,28.8,44); }
  }
  for(const f of doc.map.fortresses){
    const q=p(f.x,f.foundationHeight+FORTRESS_VERTICAL_OFFSET);
    const path = f.owner === "BLUE" ? "/assets/terrain/fortress_chapter_01_left.png" : "/assets/terrain/fortress_chapter_01_right.png";
-   const sprite = image(path, () => renderMap(canvas, doc, view, debug, controlPreview, assetKeys));
+   const sprite = image(path, () => renderMap(canvas, doc, view, debug, controlPreview, assetKeys, selectedObjectId));
    if (sprite) c.drawImage(sprite, q.x - 110 * view.zoom, q.y - 150 * view.zoom, 220 * view.zoom, 165 * view.zoom);
    else { c.fillStyle=f.owner==="BLUE"?"#4ba7ff":"#ef6170";c.fillRect(q.x-45,q.y-90,90,90); }
    c.fillStyle="#fff";c.fillText(f.owner,q.x-20,q.y-100);
  }
+ let selectedTransformFrame:
+   | { centerX: number; centerY: number; width: number; height: number; rotationDegrees: number }
+   | undefined;
  for (const object of doc.map.objects.filter(item => item.relicSize == null)) {
    const assetPath = terrainAssetPath(doc.map.biome, object.assetKey);
-   const sprite = image(assetPath, () => renderMap(canvas, doc, view, debug, controlPreview, assetKeys));
+   const sprite = image(assetPath, () => renderMap(canvas, doc, view, debug, controlPreview, assetKeys, selectedObjectId));
    if (!sprite) continue;
-   const baselineY = object.y + 12;
-   const center = p(object.x, baselineY);
-   const halfWidth = 94 * object.scale / 2;
-   const left = p(object.x - halfWidth, baselineY);
-   const right = p(object.x + halfWidth, baselineY);
-   const renderWidth = right.x - left.x;
-   const renderHeight = renderWidth * sprite.height / Math.max(1, sprite.width);
+   const baseline = p(object.x, object.y);
+   const size = mapDecorationRenderSize(
+     object.scale,
+     view.zoom,
+     sprite.height / Math.max(1, sprite.width),
+     dpr,
+   );
+   const centerX = baseline.x;
+   const centerY = baseline.y + MAP_DECORATION_GROUND_SINK * view.zoom / dpr - size.height / 2;
    c.save();
-   c.translate(center.x, center.y - renderHeight / 2);
+   c.translate(centerX, centerY);
    c.rotate(object.rotationDegrees * Math.PI / 180);
-   c.drawImage(sprite, -renderWidth / 2, -renderHeight / 2, renderWidth, renderHeight);
+   c.drawImage(sprite, -size.width / 2, -size.height / 2, size.width, size.height);
+   if (object.id === selectedObjectId) {
+     selectedTransformFrame = {
+       centerX,
+       centerY,
+       width: size.width,
+       height: size.height,
+       rotationDegrees: object.rotationDegrees,
+     };
+   }
    c.restore();
  }
  if (cap && doc.phase !== "TERRAIN_EDITING") drawDeformedCap(c, cap, doc, view, w, h);
@@ -140,7 +190,7 @@ export function renderMap(
  for (const relic of doc.map.objects.filter(item => item.relicSize != null)) {
    const assetPath = relicAssetPath(doc.map.biome, relic.assetKey, assetKeys ?? new Set());
    if (!assetPath) continue;
-   const sprite = image(assetPath, () => renderMap(canvas, doc, view, debug, controlPreview, assetKeys));
+   const sprite = image(assetPath, () => renderMap(canvas, doc, view, debug, controlPreview, assetKeys, selectedObjectId));
    if (!sprite) continue;
    const size = ({ SMALL: 76, MEDIUM: 112, LARGE: 176 }[relic.relicSize ?? "SMALL"]) * relic.scale;
    const center = p(relic.x, relic.y);
@@ -151,6 +201,22 @@ export function renderMap(
    c.translate(center.x, center.y);
    c.rotate(relic.rotationDegrees * Math.PI / 180);
    c.drawImage(sprite, -renderSize / 2, -renderSize / 2, renderSize, renderSize);
+   if (relic.id === selectedObjectId) {
+     selectedTransformFrame = {
+       centerX: center.x,
+       centerY: center.y,
+       width: renderSize,
+       height: renderSize,
+       rotationDegrees: relic.rotationDegrees,
+     };
+   }
+   c.restore();
+ }
+ if (selectedTransformFrame) {
+   c.save();
+   c.translate(selectedTransformFrame.centerX, selectedTransformFrame.centerY);
+   c.rotate(selectedTransformFrame.rotationDegrees * Math.PI / 180);
+   drawTransformFrame(c, selectedTransformFrame.width, selectedTransformFrame.height);
    c.restore();
  }
  if(debug){c.fillStyle="#fff";c.font="12px sans-serif";c.fillText(`${doc.map.mapId} · ${doc.phase} · ${Math.round(view.zoom*100)}%`,12,20)}

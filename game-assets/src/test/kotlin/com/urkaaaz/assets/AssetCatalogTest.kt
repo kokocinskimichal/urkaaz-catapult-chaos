@@ -27,4 +27,50 @@ class AssetCatalogTest {
         assertTrue("green_frontier" in catalog.availableBiomes())
         assertTrue(catalog.assetsForBiome("green_frontier").any { it.category == AssetCategory.TREE })
     }
+
+    @Test
+    fun indexesAllImportedDecorationVariantsAndTheirResources() {
+        val catalog = AssetCatalog()
+        val expectedCounts = mapOf(
+            "green_frontier" to mapOf(
+                AssetCategory.TREE to 6,
+                AssetCategory.ROCK to 6,
+                AssetCategory.PROP to 6,
+            ),
+            "frostbound" to mapOf(
+                AssetCategory.TREE to 6,
+                AssetCategory.ROCK to 6,
+                AssetCategory.PROP to 12,
+            ),
+            "copperwood" to mapOf(
+                AssetCategory.TREE to 8,
+                AssetCategory.ROCK to 6,
+                AssetCategory.PROP to 6,
+            ),
+            "ashen_march" to mapOf(
+                AssetCategory.TREE to 6,
+                AssetCategory.ROCK to 6,
+                AssetCategory.PROP to 8,
+            ),
+            "sunken_marshes" to mapOf(
+                AssetCategory.TREE to 6,
+                AssetCategory.ROCK to 6,
+                AssetCategory.PROP to 6,
+            ),
+        )
+
+        expectedCounts.forEach { (biome, counts) ->
+            val assets = catalog.assetsForBiome(biome)
+            counts.forEach { (category, expected) ->
+                assertEquals(expected, assets.count { it.category == category }, "$biome $category")
+            }
+            assets.forEach { asset ->
+                assertTrue(
+                    catalog.open(asset)?.use { true } == true,
+                    "Missing resource for ${asset.fileName}",
+                )
+            }
+        }
+        assertTrue("sunken_marshes" in catalog.availableBiomes())
+    }
 }

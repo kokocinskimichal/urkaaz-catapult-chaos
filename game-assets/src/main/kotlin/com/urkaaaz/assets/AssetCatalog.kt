@@ -62,8 +62,11 @@ class AssetCatalog(
         }
     }
 
-    private fun assetDirectoryBiome(biome: String): String =
-        if (biome == TerrainBiome.FROSTBOUND.mapId) "frost" else biome
+    private fun assetDirectoryBiome(biome: String): String = when (biome) {
+        TerrainBiome.FROSTBOUND.mapId -> "frost"
+        TerrainBiome.SUNKEN_MARSHES.mapId -> TerrainBiome.GREEN_FRONTIER.mapId
+        else -> biome
+    }
 
     private companion object {
         val RELIC_KEY = Regex("""relic\.([a-z_]+)\.small\.(\d+)""")
