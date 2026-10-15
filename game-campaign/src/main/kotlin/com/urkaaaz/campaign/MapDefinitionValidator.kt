@@ -234,7 +234,13 @@ object MapDefinitionValidator {
         path: String,
         errors: MutableList<MapValidationError>,
     ) {
-        if (!relic.assetKey.startsWith("relic.${definition.biome}.small.")) {
+        val hasMatchingSizeKey = when (relic.relicSize) {
+            RelicSize.SMALL -> relic.assetKey.startsWith("relic.${definition.biome}.small.")
+            RelicSize.MEDIUM -> relic.assetKey.startsWith("relic.shared.medium.")
+            RelicSize.LARGE -> relic.assetKey.startsWith("relic.${definition.biome}.small.")
+            null -> false
+        }
+        if (!hasMatchingSizeKey) {
             errors += MapValidationError("$path.assetKey", "relic asset must belong to its biome and size")
         }
         val size = relic.relicSize ?: return

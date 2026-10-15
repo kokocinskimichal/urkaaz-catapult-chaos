@@ -248,7 +248,10 @@ export function validate(doc: EditorDocument, assetKeys?: ReadonlySet<string>) {
     }
     if (!assetKeys) {
       issues.push({ severity: "error", path: `${path}.assetKey`, message: "Asset catalogue is not loaded" });
-    } else if (!isKnownMapDecoration(object.assetKey, m.biome, assetKeys)) {
+    } else if (!isKnownMapDecoration(object.assetKey, m.biome, assetKeys) ||
+      (object.relicSize === "SMALL" && !/^relic\.[a-z_]+\.small\.\d+$/.test(object.assetKey)) ||
+      (object.relicSize === "MEDIUM" && !/^relic\.shared\.medium\.[a-z0-9_]+$/.test(object.assetKey)) ||
+      (object.relicSize === "LARGE" && !/^relic\.[a-z_]+\.small\.\d+$/.test(object.assetKey))) {
       issues.push({
         severity: "error",
         path: `${path}.assetKey`,

@@ -80,3 +80,13 @@ terrain_green_frontier_tree_02.png
 terrain_green_frontier_tree_03.png
 terrain_green_frontier_tree_04.png
 terrain_green_frontier_tree_05.png
+relic_medium_broken_orc_statue.png
+relic_medium_cart_wheel_axle.png
+relic_medium_carved_stone_marker.png
+relic_medium_empty_orc_armor.png
+relic_medium_giant_ceramic_urn.png
+relic_medium_great_battle_shield.png
+relic_medium_large_loot_chest.png
+relic_medium_orc_warrior_skeleton.png
+relic_medium_torn_war_banner.png
+relic_medium_war_drum.png

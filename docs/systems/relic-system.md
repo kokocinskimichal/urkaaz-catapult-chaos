@@ -18,7 +18,7 @@ rezerwować dla nich zachowania w obecnym runtime ani dodawać ich efektów do
 `MapObjectPlacement`.
 
 Dokument opisuje architekturę, granice odpowiedzialności i wymagania
-walidacyjne oraz stan aktualnej implementacji reliktów `SMALL`.
+walidacyjne oraz aktualnie dostępne assety reliktów `SMALL` i `MEDIUM`.
 
 ## 2. Klasyfikacja reliktów
 
@@ -33,12 +33,16 @@ collision = ObjectCollision.NONE
 ```
 
 Relikt jest rozpoznawany przez niepusty `relicSize` oraz stabilny `assetKey`
-w katalogu zasobów, np.
-przestrzeń nazw:
+w katalogu zasobów. Relikty `SMALL` są biomowe, a dostępne relikty `MEDIUM`
+mają wspólny zestaw dla wszystkich biomów:
 
 ```text
-relic.<biome>.<name>
+relic.<biome>.small.<index>
+relic.shared.medium.<name>
 ```
+
+Wspólny zestaw zawiera 10 assetów dostarczonych w częściowym archiwum z
+`Downloads`; brakujące pozycje z jego README nie są zastępowane placeholderami.
 
 `assetKey` identyfikuje wygląd, ale sam w sobie nie jest regułą gameplayową.
 Pozycja, skala i obrót pozostają danymi authoringu mapy.
@@ -154,6 +158,8 @@ W rozdziałach 1–5 każdy z 50 materializowanych poziomów ma obecnie trzy
 deterministyczne placementy `RelicSize.SMALL`. Nie są losowane podczas startu
 meczu. Rozdział 5 (`SUNKEN_MARSHES`) korzysta jawnie z zestawu Green Frontier,
 ponieważ legacy nie zawierało osobnego zestawu assetów dla tego biomu.
+Wspólne assety `MEDIUM` są dostępne w katalogu i edytorze dla każdego biomu;
+ich dodanie nie zmienia placementów istniejących poziomów.
 
 ## 5. Kontrakt danych
 
@@ -166,7 +172,8 @@ Relikt dekoracyjny korzysta z `MapObjectPlacement`, który zapewnia:
 - pozycję świata `x`, `y`;
 - `scale`;
 - `rotationDegrees`;
-- stabilny `assetKey`;
+- stabilny `assetKey` (`relic.<biome>.small.<index>` albo
+  `relic.shared.medium.<name>`);
 - jawne `collision = ObjectCollision.NONE`;
 - informację o dopuszczalnym nakładaniu przez `allowOverlap`;
 - deterministyczny footprint wynikający z `RelicSize` i `scale`.
@@ -277,7 +284,8 @@ W runtime:
 - `MapDefinition` dostarcza placementy;
 - snapshot może ujawniać je jako dane odczytowe;
 - `RenderStateMapper` przekształca je do `MapObjectRenderState`;
-- renderer rysuje je w world-space z użyciem transformacji kamery;
+- renderer rysuje relikty `SMALL` i `MEDIUM` w world-space z użyciem
+transformacji kamery;
 - dekoracja nie emituje eventów i nie przyjmuje komend.
 
 Renderowanie nie może naprawiać błędnego placementu przez przycinanie,

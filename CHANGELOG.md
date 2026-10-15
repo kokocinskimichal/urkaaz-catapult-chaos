@@ -16,6 +16,8 @@
   Sunken Marshes shares Green Frontier's decoration set.
 - Selected map objects can be moved directly on the canvas, and corner
   handles scale and rotate decorations and Relics around their centers.
+- Ten transparent medium Relic assets are shared across all biomes and are
+  available in the map editor and Android battlefield renderer.
 
 ### Changed
 

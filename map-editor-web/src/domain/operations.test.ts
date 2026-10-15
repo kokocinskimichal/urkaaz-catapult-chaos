@@ -379,4 +379,40 @@ describe("map operations", () => {
       object: { ...relic, id: "buried-too-shallow", y: 3200 },
     }, relicCatalog)).toThrow("Relic footprint must be fully inside soil");
   });
+
+  it("places shared medium relics with the medium soil footprint", () => {
+    const relicCatalog = parseAssetIndex("relic_medium_broken_orc_statue.png");
+    const document = {
+      map: defaultMap(),
+      phase: "TERRAIN_LOCKED" as const,
+      revision: 0,
+    };
+    const relic = {
+      id: "medium-relic-1",
+      type: "DECORATION" as const,
+      x: 3600,
+      y: 3300,
+      scale: 1,
+      rotationDegrees: 0,
+      assetKey: "relic.shared.medium.broken_orc_statue",
+      collision: "NONE" as const,
+      allowOverlap: false,
+      relicSize: "MEDIUM" as const,
+    };
+
+    const updated = applyOperation(document, {
+      type: "PLACE_OBJECT",
+      object: relic,
+    }, relicCatalog);
+
+    expect(updated.map.objects).toContainEqual(relic);
+    expect(validate(updated, relicCatalog)).toEqual([]);
+    expect(validate({
+      ...updated,
+      map: {
+        ...updated.map,
+        objects: [{ ...relic, relicSize: "SMALL" }],
+      },
+    }, relicCatalog).some(issue => issue.path === "objects.medium-relic-1.assetKey")).toBe(true);
+  });
 });

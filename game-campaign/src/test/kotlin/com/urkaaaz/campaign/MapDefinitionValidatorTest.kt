@@ -3,6 +3,7 @@ package com.urkaaaz.campaign
 import com.urkaaaz.contracts.InitialCameraAnchor
 import com.urkaaaz.contracts.MapDecoration
 import com.urkaaaz.contracts.MapWorldDimensions
+import com.urkaaaz.contracts.RelicSize
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
@@ -86,6 +87,29 @@ class MapDefinitionValidatorTest {
                     y = 3_000f,
                     scale = 1f,
                     rotationDegrees = 0f,
+                ),
+            ),
+        )
+
+        val result = MapDefinitionValidator.validate(definition)
+
+        assertTrue(result.isValid, result.errors.joinToString())
+    }
+
+    @Test
+    fun acceptsSharedMediumRelicsForAnyBiome() {
+        val source = DemoLevelDefinitions.default.mapDefinition
+        val definition = source.copy(
+            biome = "frostbound",
+            decorations = listOf(
+                MapDecoration(
+                    id = "shared-medium-relic",
+                    assetKey = "relic.shared.medium.broken_orc_statue",
+                    x = 3_600f,
+                    y = 3_300f,
+                    scale = 1f,
+                    rotationDegrees = 0f,
+                    relicSize = RelicSize.MEDIUM,
                 ),
             ),
         )

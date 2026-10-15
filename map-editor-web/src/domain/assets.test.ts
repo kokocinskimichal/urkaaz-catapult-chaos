@@ -59,6 +59,8 @@ describe("terrain asset index", () => {
       "terrain_green_frontier_prop_00.png",
       "terrain_green_frontier_relic_01_cracked_watering_can.png",
       "terrain_copperwood_detail_01_copper_coin.png",
+      "relic_medium_broken_orc_statue.png",
+      "relic_medium_war_drum.png",
     ].join("\n"));
     const palette = paletteAssetsForBiome(keys, "green_frontier");
     expect(palette.tree[0].thumbnailPath)
@@ -74,6 +76,19 @@ describe("terrain asset index", () => {
       .toBe(palette.relic[0].thumbnailPath);
     expect(relicAssetPath("copperwood", "relic.copperwood.small.1", keys))
       .toBe("/assets/terrain/copperwood/terrain_copperwood_detail_01_copper_coin.png");
+    expect(palette.relic).toContainEqual({
+      assetKey: "relic.shared.medium.broken_orc_statue",
+      category: "relic",
+      label: "broken orc statue",
+      thumbnailPath: "/assets/terrain/shared/relic_medium_broken_orc_statue.png",
+      relicSize: "MEDIUM",
+    });
+    expect(relicAssetPath("green_frontier", "relic.shared.medium.broken_orc_statue", keys))
+      .toBe("/assets/terrain/shared/relic_medium_broken_orc_statue.png");
+    expect(relicAssetPath("copperwood", "relic.shared.medium.war_drum", keys))
+      .toBe("/assets/terrain/shared/relic_medium_war_drum.png");
+    expect(isKnownMapDecoration("relic.shared.medium.broken_orc_statue", "frostbound", keys)).toBe(true);
+    expect(isKnownMapDecoration("relic.shared.medium.unknown", "frostbound", keys)).toBe(false);
   });
 
   it("includes every registered decoration variant in the biome palette", () => {

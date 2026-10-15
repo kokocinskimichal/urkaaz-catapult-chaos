@@ -506,8 +506,8 @@ export default function App() {
 
     let y = world.y;
     if (asset.relicSize) {
-      const halfWidth = 56;
-      const halfHeight = 40;
+      const halfWidth = asset.relicSize === "MEDIUM" ? 96 : 56;
+      const halfHeight = asset.relicSize === "MEDIUM" ? 72 : 40;
       if (world.x - halfWidth < 0 || world.x + halfWidth > WORLD_WIDTH) {
         setStatus("Relic must fit inside the map bounds");
         return;

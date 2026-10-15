@@ -23,10 +23,12 @@ const assetNames = new Set((await readFile(join(source, "asset-index.txt"), "utf
   .map(name => name.trim())
   .filter(Boolean));
 const relicAssetPattern = /^terrain_(green_frontier|frost|copperwood|ashen_march)_(relic|detail)_(\d{2})_[^.]+\.png$/;
+const sharedMediumRelicPattern = /^relic_medium_[a-z0-9_]+\.png$/;
 for (const fileName of await readdir(androidDrawableSource)) {
   const match = relicAssetPattern.exec(fileName);
-  if (!match) continue;
-  const assetDirectory = join(destination, match[1]);
+  const isSharedMediumRelic = sharedMediumRelicPattern.test(fileName);
+  if (!match && !isSharedMediumRelic) continue;
+  const assetDirectory = join(destination, isSharedMediumRelic ? "shared" : match[1]);
   await mkdir(assetDirectory, { recursive: true });
   await cp(join(androidDrawableSource, fileName), join(assetDirectory, fileName));
   assetNames.add(fileName);

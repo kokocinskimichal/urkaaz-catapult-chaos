@@ -51,7 +51,9 @@ Catapult positions are derived from fortress positions by
 `CatapultPresentationContract`, and simulation dimensions always come from
 `WorldDimensions`. The map's biome is the rendering-theme source. Decorations
 use stable asset keys and remain visual-only; buried Relics use
-`relic.<biome>.small.<index>` and validate their soil footprint.
+`relic.<biome>.small.<index>` or shared `relic.shared.medium.<name>` keys and
+validate their size-specific soil footprint. The shared medium set is
+available to every biome.
 
 The web and Kotlin editor codecs read and write the same strict schema-1 JSON.
 Editor phase and selection remain editor-only; production JSON contains no

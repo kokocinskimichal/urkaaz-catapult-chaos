@@ -232,7 +232,7 @@ class BattlefieldRenderer(
         debugHitboxesVisible: Boolean,
     ) {
         state.mapObjects
-            .filter { it.relicSize == "SMALL" }
+            .filter { it.relicSize == "SMALL" || it.relicSize == "MEDIUM" }
             .forEach { relic ->
                 val bitmap = assets.relicBitmap(relic.assetKey) ?: return@forEach
                 val centerX = worldToViewX(relic.x, viewportWidth)

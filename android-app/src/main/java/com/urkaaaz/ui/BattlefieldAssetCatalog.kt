@@ -212,7 +212,12 @@ class BattlefieldAssetCatalog(private val context: Context) {
         themes[biome] ?: error("No battlefield theme is registered for biome '$biome'")
 
     fun relicBitmap(assetKey: String): Bitmap? {
-        val resourceName = RELIC_ASSET_RESOURCES[assetKey] ?: return null
+        val resourceName = RELIC_ASSET_RESOURCES[assetKey]
+            ?: SHARED_MEDIUM_RELIC_KEY.matchEntire(assetKey)
+                ?.groupValues
+                ?.get(1)
+                ?.let { "relic_medium_$it" }
+            ?: return null
         return loadBitmap(resourceName)
     }
 
@@ -333,5 +338,6 @@ class BattlefieldAssetCatalog(private val context: Context) {
                 }
             }
         }
+        val SHARED_MEDIUM_RELIC_KEY = Regex("""relic\.shared\.medium\.([a-z0-9_]+)""")
     }
 }

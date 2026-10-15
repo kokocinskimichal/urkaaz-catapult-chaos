@@ -7,7 +7,7 @@ export interface EditorPaletteAsset {
   category: EditorPaletteCategory;
   label: string;
   thumbnailPath: string;
-  relicSize?: "SMALL";
+  relicSize?: "SMALL" | "MEDIUM";
 }
 
 function assetBiomeForMapBiome(biome: string): string {
@@ -96,6 +96,21 @@ export function paletteAssetsForBiome(
         relicSize: "SMALL" as const,
       }];
     });
+  palette.relic.push(
+    ...[...assetKeys]
+      .filter(key => /^relic_medium_[a-z0-9_]+$/.test(key))
+      .sort()
+      .map(assetName => {
+        const name = assetName.slice("relic_medium_".length);
+        return {
+          assetKey: `relic.shared.medium.${name}`,
+          category: "relic" as const,
+          label: name.replaceAll("_", " "),
+          thumbnailPath: `/assets/terrain/shared/${assetName}.png`,
+          relicSize: "MEDIUM" as const,
+        };
+      }),
+  );
 
   return palette;
 }
@@ -105,7 +120,8 @@ export function parseAssetIndex(contents: string): ReadonlySet<string> {
   for (const line of contents.split(/\r?\n/)) {
     const fileName = line.trim();
     if (!fileName) continue;
-    if (!/^terrain_([^_]+(?:_[^_]+)*)_(tree|rock|prop|relic|detail|cap|tile|soil)_([^.]+)\.png$/.test(fileName)) {
+    if (!/^terrain_([^_]+(?:_[^_]+)*)_(tree|rock|prop|relic|detail|cap|tile|soil)_([^.]+)\.png$/.test(fileName) &&
+      !/^relic_medium_[a-z0-9_]+\.png$/.test(fileName)) {
       throw new Error(`Unsupported terrain asset index entry: ${fileName}`);
     }
     keys.add(fileName.slice(0, -4));
@@ -118,6 +134,11 @@ export function relicAssetPath(
   assetKey: string,
   assetKeys: ReadonlySet<string>,
 ): string | undefined {
+  const sharedMediumRelic = /^relic\.shared\.medium\.([a-z0-9_]+)$/.exec(assetKey);
+  if (sharedMediumRelic) {
+    const fileKey = `relic_medium_${sharedMediumRelic[1]}`;
+    return assetKeys.has(fileKey) ? `/assets/terrain/shared/${fileKey}.png` : undefined;
+  }
   const relic = /^relic\.([a-z_]+)\.small\.(\d+)$/.exec(assetKey);
   if (!relic || relic[1] !== biome) return undefined;
   const index = Number(relic[2]);
@@ -144,6 +165,10 @@ export function isKnownMapDecoration(
   assetKeys: ReadonlySet<string>,
 ): boolean {
   const assetBiome = assetBiomeForMapBiome(biome);
+  const sharedMediumRelic = /^relic\.shared\.medium\.([a-z0-9_]+)$/.exec(assetKey);
+  if (sharedMediumRelic) {
+    return assetKeys.has(`relic_medium_${sharedMediumRelic[1]}`);
+  }
   const relic = /^relic\.([a-z_]+)\.small\.(\d+)$/.exec(assetKey);
   if (relic?.[1] === biome && Number(relic[2]) >= 1 && Number(relic[2]) <= 10) {
     const category = biome === "copperwood" ? "detail" : "relic";

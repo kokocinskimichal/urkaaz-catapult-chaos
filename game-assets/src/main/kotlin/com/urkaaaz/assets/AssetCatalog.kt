@@ -11,17 +11,39 @@ data class AssetKey(
     val variant: String,
     val fileName: String,
 ) {
-    val stableKey: String get() = "terrain_${biome}_${category.name.lowercase()}_$variant"
+    val stableKey: String
+        get() = if (biome == SHARED_BIOME && category == AssetCategory.RELIC &&
+            variant.startsWith(MEDIUM_RELIC_VARIANT_PREFIX)
+        ) {
+            "relic.$SHARED_BIOME.medium.${variant.removePrefix(MEDIUM_RELIC_VARIANT_PREFIX)}"
+        } else {
+            "terrain_${biome}_${category.name.lowercase()}_$variant"
+        }
+
+    private companion object {
+        const val SHARED_BIOME = "shared"
+        const val MEDIUM_RELIC_VARIANT_PREFIX = "medium_"
+    }
 }
 
 object TerrainAssetNaming {
     private val pattern = Regex("""terrain_([^_]+(?:_[^_]+)*)_(tree|rock|prop|relic|cap|tile|soil)_([^.]+)\.png""")
+    private val sharedMediumRelicPattern = Regex("""relic_medium_([a-z0-9_]+)\.png""")
 
     fun parse(fileName: String): AssetKey? {
-        val match = pattern.matchEntire(fileName) ?: return null
-        val biome = match.groupValues[1]
-        val category = AssetCategory.valueOf(match.groupValues[2].uppercase())
-        return AssetKey(biome, category, match.groupValues[3], fileName)
+        val match = pattern.matchEntire(fileName)
+        if (match != null) {
+            val biome = match.groupValues[1]
+            val category = AssetCategory.valueOf(match.groupValues[2].uppercase())
+            return AssetKey(biome, category, match.groupValues[3], fileName)
+        }
+        val sharedMediumRelic = sharedMediumRelicPattern.matchEntire(fileName) ?: return null
+        return AssetKey(
+            biome = "shared",
+            category = AssetCategory.RELIC,
+            variant = "medium_${sharedMediumRelic.groupValues[1]}",
+            fileName = fileName,
+        )
     }
 }
 
@@ -30,7 +52,10 @@ class AssetCatalog(
     private val classLoader: ClassLoader = AssetCatalog::class.java.classLoader,
 ) {
     fun assetsForBiome(biome: String): List<AssetKey> =
-        index().filter { it.biome == assetDirectoryBiome(biome) }.sortedWith(compareBy({ it.category }, { it.variant }))
+        index().filter {
+            it.biome == assetDirectoryBiome(biome) ||
+                (it.biome == SHARED_BIOME && it.category == AssetCategory.RELIC)
+        }.sortedWith(compareBy({ it.category }, { it.variant }))
 
     fun find(fileName: String): AssetKey? = TerrainAssetNaming.parse(fileName)
 
@@ -70,5 +95,6 @@ class AssetCatalog(
 
     private companion object {
         val RELIC_KEY = Regex("""relic\.([a-z_]+)\.small\.(\d+)""")
+        const val SHARED_BIOME = "shared"
     }
 }
