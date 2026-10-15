@@ -204,7 +204,7 @@ object MapRenderer {
         }
     }
 
-    private const val CATAPULT_RENDER_WIDTH = 95f
+    private const val CATAPULT_RENDER_WIDTH = WorldScale.CATAPULT_RENDER_WIDTH
     private const val CATAPULT_RENDER_HEIGHT = 95f
     private val CATAPULT_WORLD_WIDTH = CATAPULT_RENDER_WIDTH / LEGACY_VIEWPORT_WIDTH * WorldDimensions.WIDTH
     private val CATAPULT_WORLD_HEIGHT = CATAPULT_RENDER_HEIGHT / LEGACY_VIEWPORT_HEIGHT * WorldDimensions.HEIGHT

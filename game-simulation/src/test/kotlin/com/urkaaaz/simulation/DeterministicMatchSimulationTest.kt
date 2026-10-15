@@ -238,7 +238,7 @@ class DeterministicMatchSimulationTest {
         assertTrue(before.units[0].moving)
         assertTrue(before.units[1].moving)
         assertTrue(before.units.last().moving)
-        assertEquals(230f, before.units.last().x)
+        assertEquals(420f, before.units.last().x)
 
         simulation.advance(1_000)
         val after = simulation.snapshot()
@@ -258,7 +258,7 @@ class DeterministicMatchSimulationTest {
 
         val before = simulation.snapshot()
         assertTrue(before.units.filter { it.team == Team.RED }.all { it.moving })
-        assertEquals(config.bounds.width - 230f, before.units.last().x)
+        assertEquals(config.bounds.width - 420f, before.units.last().x)
 
         simulation.advance(1_000)
         val after = simulation.snapshot()
@@ -279,13 +279,13 @@ class DeterministicMatchSimulationTest {
 
         val deployed = simulation.snapshot().units.first { it.unitType == "SAPPER" }
         assertEquals("GARRISONED", deployed.actionState)
-        assertTrue(deployed.x < 250f)
+        assertEquals(420f, deployed.x)
 
         simulation.advance(1_000)
 
         val after = simulation.snapshot().units.first { it.unitType == "SAPPER" }
         assertTrue(after.x > deployed.x)
-        assertTrue(after.x < 300f)
+        assertTrue(after.x < 460f)
     }
 
     @Test
@@ -304,9 +304,9 @@ class DeterministicMatchSimulationTest {
         val garrisonedSapper = blueUnits.first { it.unitType == "SAPPER" }
         val garrisonedSlingmaster = blueUnits.first { it.unitType == "SLINGMASTER" }
 
-        assertTrue(activeDefender.x > 250f, "blue unit positions: $blueUnits")
-        assertEquals(230f, garrisonedSapper.x, "blue unit positions: $blueUnits")
-        assertEquals(230f, garrisonedSlingmaster.x, "blue unit positions: $blueUnits")
+        assertTrue(activeDefender.x > 440f, "blue unit positions: $blueUnits")
+        assertEquals(420f, garrisonedSapper.x, "blue unit positions: $blueUnits")
+        assertEquals(420f, garrisonedSlingmaster.x, "blue unit positions: $blueUnits")
 
         simulation.advance(1_000)
 
@@ -314,7 +314,35 @@ class DeterministicMatchSimulationTest {
         val afterSapper = after.first { it.unitType == "SAPPER" }
         val afterSlingmaster = after.first { it.unitType == "SLINGMASTER" }
         assertTrue(afterSapper.x > afterSlingmaster.x)
-        assertTrue(afterSlingmaster.x > 230f)
+        assertTrue(afterSlingmaster.x > 420f)
+    }
+
+    @Test
+    fun garrisonSlotsMoveTowardCenterAndUseSeventyUnitSpacingForBothTeams() {
+        Team.entries.forEach { team ->
+            val simulation = DeterministicMatchSimulation(
+                MatchId("garrison-spacing-${team.name.lowercase()}"),
+                config.copy(bounds = WorldBounds(width = 7_200f, height = 4_800f)),
+            )
+            simulation.start()
+            repeat(3) {
+                simulation.deployUnit(com.urkaaaz.domain.UnitFactory.defender(), team)
+            }
+            simulation.advance(20_000)
+
+            val positions = simulation.snapshot().units
+                .filter { it.team == team }
+                .map { it.x }
+            val expectedPositions = if (team == Team.BLUE) {
+                listOf(830f, 760f, 690f)
+            } else {
+                listOf(6_370f, 6_440f, 6_510f)
+            }
+
+            expectedPositions.zip(positions).forEach { (expected, actual) ->
+                assertEquals(expected, actual, 0.5f)
+            }
+        }
     }
 
     @Test
@@ -382,7 +410,10 @@ class DeterministicMatchSimulationTest {
 
     @Test
     fun rearUnitsJoinTheFrontUnitsAttackGroupInsteadOfRemainingIdle() {
-        val simulation = DeterministicMatchSimulation(MatchId("rear-group-match"), config)
+        val simulation = DeterministicMatchSimulation(
+            MatchId("rear-group-match"),
+            config.copy(bounds = WorldBounds(width = 1_900f, height = 600f)),
+        )
         simulation.start()
         repeat(3) {
             simulation.deployUnit(com.urkaaaz.domain.UnitFactory.defender(), Team.BLUE)

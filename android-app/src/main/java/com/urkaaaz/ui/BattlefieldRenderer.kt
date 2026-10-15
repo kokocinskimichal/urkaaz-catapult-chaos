@@ -855,7 +855,7 @@ class BattlefieldRenderer(
         private const val FORTRESS_LABEL_GAP = 6f
         private const val UNIT_HEALTH_BAR_WIDTH_WORLD = 46.2f
         private const val BOAR_SOURCE_CROP_HEIGHT_RATIO = 301f / 512f
-        private const val CATAPULT_RENDER_WIDTH = 95f
+        private const val CATAPULT_RENDER_WIDTH = WorldScale.CATAPULT_RENDER_WIDTH
         private const val PROJECTILE_DEBUG_RADIUS = 30f
         private const val PROJECTILE_RENDER_SIZE = 36f
         private const val DECORATION_RENDER_SIZE = 94f

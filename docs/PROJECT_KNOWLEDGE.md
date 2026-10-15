@@ -106,10 +106,13 @@ The current match HUD displays:
    creates the dedicated class from a configuration or command identifier, so
    balance tuning does not require editing unit classes.
 - Newly recruited units occupy the fortress-side garrison slot while older
-  units walk outward into the next slot instead of overlapping. Garrison
-repositioning uses `40` world-unit spacing and a slower `0.22` movement scale,
-also multiplied by the global `2.0` movement rule; walk animation frames
-advance at half the previous cadence. Unit
+  units walk outward into the next slot instead of overlapping. The first slot
+  is `690` world units from the world edge on full-size maps (`worldWidth - 690`
+  for RED), with `70` world-unit spacing. Maps narrower than `2000` world units
+  clamp that first-slot distance to leave `60` units to the midpoint.
+  Garrison repositioning uses a slower `0.22`
+  movement scale, also multiplied by the global `2.0` movement rule; walk
+  animation frames advance at half the previous cadence. Unit
 sprites use a `0.308` presentation multiplier after the additional 20% size
 reduction.
 - A newly recruited unit spawns behind the existing garrison line and walks
@@ -201,8 +204,12 @@ opaque bounds in both left and right fortress sprites. It is scaled from the
 damage and the debug preview use the same rectangle.
 
 Fortress presentation and collision share `WorldScale`: the current fortress
-dimensions are 280x210 world units, with a 196-unit half-width for protected
-terrain. Simulation `FortressSnapshot` values carry each fortress center X and
+dimensions are 672x504 world units, with a 470.4-unit half-width for protected
+terrain. Demo-map protected foundations cover that full half-width.
+Catapult sprites use the same 2.4 presentation scale in both the match and map
+editor, with their render width centralized at 228; positions and firing anchors
+remain governed by `CatapultPresentationContract`.
+Simulation `FortressSnapshot` values carry each fortress center X and
 foundation Y; `RenderStateMapper` forwards them, and the Android renderer maps
 the sprite and alpha-bounds hitbox through the same world-to-view transform.
 Mapless fortress foundations use the same configured height as their catapults.

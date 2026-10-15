@@ -76,8 +76,8 @@ class DomainModelsTest {
 
         assertTrue(fortress.contains(WorldPosition(500f, 340f)))
         assertTrue(fortress.contains(WorldPosition(435f, 440f)))
-        assertFalse(fortress.contains(WorldPosition(500f, 240f)))
-        assertFalse(fortress.contains(WorldPosition(300f, 400f)))
+        assertFalse(fortress.contains(WorldPosition(500f, 120f)))
+        assertFalse(fortress.contains(WorldPosition(150f, 400f)))
     }
 
     @Test

@@ -758,7 +758,7 @@
       "owner": "BLUE",
       "x": 490,
       "foundationHeight": 3180,
-      "halfWidth": 240,
+      "halfWidth": 470.4,
       "assetKey": "fortress.blue",
       "hitboxProfile": "fortress.default",
       "protectedZoneId": "blue-foundation"
@@ -767,7 +767,7 @@
       "owner": "RED",
       "x": 6710,
       "foundationHeight": 3180,
-      "halfWidth": 240,
+      "halfWidth": 470.4,
       "assetKey": "fortress.red",
       "hitboxProfile": "fortress.default",
       "protectedZoneId": "red-foundation"

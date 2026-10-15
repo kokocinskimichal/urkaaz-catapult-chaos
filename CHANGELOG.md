@@ -13,8 +13,12 @@
   the texture vertically.
 - Fortress and unit HP bars share one visual style, with the fortress bar
   constrained to its sprite and reload indicators reduced and moved beside it.
-- Fortress world dimensions are restored to 280x210 units; simulation snapshots
-  now provide fortress positions and foundations so sprites and hitbox previews
-  use the same world-space geometry as collision.
+- Fortress world dimensions are now 672x504 units, 20% larger than the doubled
+  560x420 size; sprite, collision and protected foundation geometry stay linked.
+- Catapult sprites now scale with the fortresses, preserving their relative
+  size in both the match screen and map editor.
+- On full-size maps, the first garrison slot is now 690 world units from each
+  edge (up from 250) and slots use 70-unit spacing (up from 40); compact maps
+  clamp the first slot to keep it clear of the midpoint.
 - Cropped all blue- and red-facing Raging Boar animation sprites to one shared
   ground-aligned canvas while preserving their visible render size.

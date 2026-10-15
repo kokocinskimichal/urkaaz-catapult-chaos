@@ -87,7 +87,7 @@ class SimulationReplayRegressionTest {
         val simulation = DeterministicMatchSimulation(
             matchId = MatchId("regression-match"),
             config = SimulationConfig(
-                bounds = WorldBounds(width = 1_000f, height = 600f),
+                bounds = WorldBounds(width = 7_200f, height = 600f),
                 gravityAccelerationY = 1_000f,
                 windAccelerationX = 2f,
             ),

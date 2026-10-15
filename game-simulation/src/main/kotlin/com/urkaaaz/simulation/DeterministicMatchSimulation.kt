@@ -223,7 +223,12 @@ class DeterministicMatchSimulation(
             "only one active Sapper is allowed per team"
         }
         resources[team] = wallet.spendSupply(type.supplyCost)
-        val spawnX = if (team == Team.BLUE) 250f else config.bounds.width - 250f
+        val firstGarrisonSlot = garrisonFirstSlotFromScreenEdge(config.bounds.width)
+        val spawnX = if (team == Team.BLUE) {
+            firstGarrisonSlot
+        } else {
+            config.bounds.width - firstGarrisonSlot
+        }
         val direction = if (team == Team.BLUE) 1f else -1f
         val existingTeamUnits = units.filter { it.team == team && it.inGarrison }
         units = units.map { existing ->
@@ -1888,7 +1893,8 @@ class DeterministicMatchSimulation(
         private const val UNIT_MOVEMENT_SPEED_MULTIPLIER = 2f
         private const val UNIT_MOVEMENT_SPEED_SCALE = 0.45f * UNIT_MOVEMENT_SPEED_MULTIPLIER
         private const val GARRISON_MOVEMENT_SPEED_SCALE = 0.22f * UNIT_MOVEMENT_SPEED_MULTIPLIER
-        private const val GARRISON_SPACING = 40f
+        private const val GARRISON_FIRST_SLOT_FROM_SCREEN_EDGE = 690f
+        private const val GARRISON_SPACING = 70f
         private const val NEW_UNIT_REAR_OFFSET = 20f
         private const val UNIT_INTERACTION_RANGE = 260f
         private const val FORTRESS_ATTACK_RANGE = 82f
@@ -1900,7 +1906,7 @@ class DeterministicMatchSimulation(
         private const val ATTACK_FORMATION_SPACING = 42f
         private const val FORTRESS_CENTER_MARGIN = 490f
         private const val CATAPULT_CENTER_MARGIN = 450f
-        // 140f fortress half-width plus 20% of the full 280f fortress width.
+        // Keep default foundations wide enough for the scaled fortress footprint.
         private val FORTRESS_FLAT_HALF_WIDTH = WorldScale.FORTRESS_HALF_WIDTH
         private const val BASE_PHYSICS_WORLD_WIDTH = 1_600f
         private const val TERRAIN_COLLISION_SEARCH_ITERATIONS = 12
@@ -1911,6 +1917,13 @@ class DeterministicMatchSimulation(
 
         private fun catapultMarginFor(worldWidth: Float): Float =
             if (worldWidth < 2_000f) 120f else CATAPULT_CENTER_MARGIN
+
+        private fun garrisonFirstSlotFromScreenEdge(worldWidth: Float): Float =
+            if (worldWidth < 2_000f) {
+                minOf(GARRISON_FIRST_SLOT_FROM_SCREEN_EDGE, worldWidth / 2f - 60f)
+            } else {
+                GARRISON_FIRST_SLOT_FROM_SCREEN_EDGE
+            }
 
         private fun defaultCatapult(team: Team, bounds: WorldBounds, config: SimulationConfig): Catapult {
             val fortress = config.mapDefinition?.fortresses?.firstOrNull { it.owner == team }
