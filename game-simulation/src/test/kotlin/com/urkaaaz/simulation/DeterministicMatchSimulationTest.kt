@@ -35,6 +35,24 @@ class DeterministicMatchSimulationTest {
     }
 
     @Test
+    fun snapshotExposesFortressWorldPositionsAndDefaultFoundation() {
+        val simulation = DeterministicMatchSimulation(
+            MatchId("fortress-render-state"),
+            SimulationConfig(bounds = WorldBounds(width = 7_200f, height = 4_800f)),
+        )
+        simulation.start()
+
+        val snapshot = simulation.snapshot()
+        val blueFortress = snapshot.fortresses.first { it.team == Team.BLUE }
+        val redFortress = snapshot.fortresses.first { it.team == Team.RED }
+
+        assertEquals(490f, blueFortress.x)
+        assertEquals(6_710f, redFortress.x)
+        assertEquals(3_456f, blueFortress.foundationY ?: error("Missing blue foundation"), 0.01f)
+        assertEquals(3_456f, redFortress.foundationY ?: error("Missing red foundation"), 0.01f)
+    }
+
+    @Test
     fun projectileAdvancesWithWindAndCanBeInspectedInSnapshot() {
         val simulation = DeterministicMatchSimulation(MatchId("match-1"), config)
         simulation.start()

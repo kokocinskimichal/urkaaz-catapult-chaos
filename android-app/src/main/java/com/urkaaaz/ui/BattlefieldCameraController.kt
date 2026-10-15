@@ -1,6 +1,7 @@
 package com.urkaaaz.ui
 
 import com.urkaaaz.contracts.WorldDimensions
+import com.urkaaaz.contracts.WorldScale
 import kotlin.math.abs
 import kotlin.math.hypot
 
@@ -44,7 +45,8 @@ class BattlefieldCameraController(
             return
         }
         if (!initialLevelFramingApplied && state.statusLabel == "RUNNING") {
-            positionAtLevelStart(viewportWidth, viewportHeight)
+            if (viewportWidth <= 0f || viewportHeight <= 0f) return
+            positionAtLevelStart(state, viewportWidth, viewportHeight)
             initialLevelFramingApplied = true
             lastPhaseLabel = state.phaseLabel
             lastFramedTeamLabel = "BLUE"
@@ -195,30 +197,24 @@ class BattlefieldCameraController(
         centerOnWorld(x, y, viewportWidth, viewportHeight)
     }
 
-    /**
-     * Opens a match on the player's fortress, matching the legacy level-start framing.
-     *
-     * The presentation world uses the legacy 7200x4800 gameplay coordinates.
-     */
-    private fun positionAtLevelStart(viewportWidth: Float, viewportHeight: Float) {
-        if (viewportWidth <= 0f || viewportHeight <= 0f) return
-
-        val scale = LEGACY_START_SCALE.coerceIn(MIN_MAP_SCALE, MAX_MAP_SCALE)
-        val fortressLeft = BLUE_FORTRESS_CENTER_X - FORTRESS_WIDTH / 2f
-        val fortressFoundationY = GROUND_Y
-        val leftMargin = LEGACY_LEFT_MARGIN / LEGACY_VIEWPORT_WIDTH * WORLD_WIDTH
-        val bottomMargin = LEGACY_BOTTOM_MARGIN / LEGACY_VIEWPORT_HEIGHT * WORLD_HEIGHT
+    /** Opens on the player's fortress using the same world dimensions as the simulation. */
+    private fun positionAtLevelStart(
+        state: RenderState,
+        viewportWidth: Float,
+        viewportHeight: Float,
+    ) {
+        val scale = INITIAL_MATCH_SCALE.coerceIn(MIN_MAP_SCALE, MAX_MAP_SCALE)
+        val fortressLeft = state.blueFortressX - FORTRESS_WIDTH / 2f
+        val fortressFoundationY = state.blueFortressFoundationY
+        val leftMargin = LEGACY_LEFT_MARGIN / LEGACY_VIEWPORT_WIDTH * viewportWidth
+        val bottomMargin = LEGACY_BOTTOM_MARGIN / LEGACY_VIEWPORT_HEIGHT * viewportHeight
 
         transform = CameraTransform(
             scale = scale,
-            offsetX = (
-                leftMargin / WORLD_WIDTH * viewportWidth * scale -
-                    fortressLeft / WORLD_WIDTH * viewportWidth * scale
-                ),
+            offsetX = leftMargin - fortressLeft / worldWidth * viewportWidth * scale,
             offsetY = (
-                viewportHeight -
-                    bottomMargin / WORLD_HEIGHT * viewportHeight * scale -
-                    fortressFoundationY / WORLD_HEIGHT * viewportHeight * scale
+                viewportHeight - bottomMargin -
+                    fortressFoundationY / worldHeight * viewportHeight * scale
                 ).coerceAtMost(0f),
         )
     }
@@ -270,10 +266,8 @@ class BattlefieldCameraController(
     companion object {
         private const val WORLD_WIDTH = WorldDimensions.WIDTH
         private const val WORLD_HEIGHT = WorldDimensions.HEIGHT
-        private const val BLUE_FORTRESS_CENTER_X = 490f
-        private const val FORTRESS_WIDTH = 280f
-        private const val GROUND_Y = 3_452f
-        private const val LEGACY_START_SCALE = 1f
+        private const val FORTRESS_WIDTH = WorldScale.FORTRESS_WIDTH
+        private const val INITIAL_MATCH_SCALE = 1f
         private const val LEGACY_VIEWPORT_WIDTH = 4_800f
         private const val LEGACY_VIEWPORT_HEIGHT = 2_400f
         private const val LEGACY_LEFT_MARGIN = 280f

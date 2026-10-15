@@ -44,6 +44,8 @@ data class FortressSnapshot(
     val team: Team,
     val health: Int,
     val maxHealth: Int,
+    val x: Float? = null,
+    val foundationY: Float? = null,
 )
 
 data class UnitSnapshot(

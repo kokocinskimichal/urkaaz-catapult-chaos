@@ -441,7 +441,14 @@ class DeterministicMatchSimulation(
             )
         },
         fortresses = listOf(currentBlueFortress, currentRedFortress).map {
-            FortressSnapshot(it.id, it.team, it.health.current, it.maxHealth)
+            FortressSnapshot(
+                entityId = it.id,
+                team = it.team,
+                health = it.health.current,
+                maxHealth = it.maxHealth,
+                x = it.center.x,
+                foundationY = it.center.y + WorldScale.FORTRESS_HEIGHT / 2f,
+            )
         },
         units = (units + defeatedUnits.map { it.unit }).map {
             com.urkaaaz.contracts.UnitSnapshot(
@@ -1949,7 +1956,8 @@ class DeterministicMatchSimulation(
                         },
                     y = (config.mapDefinition?.fortresses
                         ?.firstOrNull { it.owner == team }?.foundationHeight
-                        ?: bounds.height * 0.68f) - WorldScale.FORTRESS_HEIGHT / 2f,
+                        ?: bounds.height * config.defaultCatapultHeightRatio) -
+                        WorldScale.FORTRESS_HEIGHT / 2f,
                 ),
                 maxHealth = if (team == Team.BLUE) {
                         config.blueFortressMaxHealth

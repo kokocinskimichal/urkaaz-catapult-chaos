@@ -3,6 +3,7 @@ package com.urkaaaz.ui
 import com.urkaaaz.contracts.MatchEvent
 import com.urkaaaz.contracts.MatchSnapshot
 import com.urkaaaz.contracts.CatapultPresentationContract
+import com.urkaaaz.contracts.Team
 import com.urkaaaz.contracts.WorldDimensions
 
 /** Immutable presentation model derived from the public match snapshot. */
@@ -26,6 +27,11 @@ data class RenderState(
     val redCatapultY: Float,
     val redCatapultAnchorX: Float = redCatapultX,
     val redCatapultAnchorY: Float = redCatapultY,
+    val blueFortressX: Float = CatapultPresentationContract.FORTRESS_CENTER_MARGIN,
+    val blueFortressFoundationY: Float = blueCatapultY,
+    val redFortressX: Float = WorldDimensions.WIDTH -
+        CatapultPresentationContract.FORTRESS_CENTER_MARGIN,
+    val redFortressFoundationY: Float = redCatapultY,
     val playerAngleDegrees: Float,
     val playerPower: Float,
     val blueFortressHealth: Int,
@@ -120,7 +126,27 @@ data class UnitRenderState(
 )
 
 object RenderStateMapper {
-    fun map(snapshot: MatchSnapshot, events: List<MatchEvent> = emptyList()): RenderState = RenderState(
+    fun map(snapshot: MatchSnapshot, events: List<MatchEvent> = emptyList()): RenderState {
+        val blueFortressSnapshot = snapshot.fortresses.firstOrNull { it.team == Team.BLUE }
+        val redFortressSnapshot = snapshot.fortresses.firstOrNull { it.team == Team.RED }
+        val blueFortress = snapshot.mapDefinition?.fortresses?.firstOrNull {
+            it.owner == Team.BLUE
+        }
+        val redFortress = snapshot.mapDefinition?.fortresses?.firstOrNull {
+            it.owner == Team.RED
+        }
+        val blueFortressX = blueFortressSnapshot?.x ?: blueFortress?.x
+            ?: CatapultPresentationContract.FORTRESS_CENTER_MARGIN
+        val redFortressX = redFortressSnapshot?.x ?: redFortress?.x
+            ?: snapshot.terrain.worldWidth - CatapultPresentationContract.FORTRESS_CENTER_MARGIN
+        val blueFortressFoundationY = blueFortressSnapshot?.foundationY ?: blueFortress?.foundationHeight
+            ?: snapshot.catapults.firstOrNull { it.team == Team.BLUE }?.y
+            ?: 3648f
+        val redFortressFoundationY = redFortressSnapshot?.foundationY ?: redFortress?.foundationHeight
+            ?: snapshot.catapults.firstOrNull { it.team == Team.RED }?.y
+            ?: 3648f
+
+        return RenderState(
         statusLabel = snapshot.status.name,
         phaseLabel = snapshot.phase.name,
         activeTeamLabel = snapshot.activeTeam?.name ?: "NONE",
@@ -154,6 +180,10 @@ object RenderStateMapper {
             ?: 6750f,
         redCatapultAnchorY = snapshot.catapults.firstOrNull { it.team.name == "RED" }?.anchorY
             ?: CatapultPresentationContract.anchorY(3648f, WorldDimensions.HEIGHT),
+        blueFortressX = blueFortressX,
+        blueFortressFoundationY = blueFortressFoundationY,
+        redFortressX = redFortressX,
+        redFortressFoundationY = redFortressFoundationY,
         playerAngleDegrees = snapshot.catapults.firstOrNull { it.entityId.value == "blue-catapult" }
             ?.directionDegrees ?: 45f,
         playerPower = snapshot.catapults.firstOrNull { it.entityId.value == "blue-catapult" }
@@ -174,8 +204,12 @@ object RenderStateMapper {
                     )
                     is MatchEvent.ProjectileHitEntity -> ImpactRenderState(
                         event.eventId.value,
-                        if (event.targetId.value.startsWith("blue")) 490f else 6710f,
-                        3600f,
+                        if (event.targetId.value.startsWith("blue")) blueFortressX else redFortressX,
+                        if (event.targetId.value.startsWith("blue")) {
+                            blueFortressFoundationY
+                        } else {
+                            redFortressFoundationY
+                        },
                         event.ammunitionType,
                     )
                     else -> null
@@ -233,7 +267,7 @@ object RenderStateMapper {
                     CombatFeedbackRenderState(
                         eventId = event.eventId.value,
                         kind = CombatFeedbackRenderState.Kind.DAMAGE,
-                        x = target?.x ?: fortressX(event.targetId.value),
+                        x = target?.x ?: fortressX(event.targetId.value, blueFortressX, redFortressX),
                         y = target?.y ?: 470f,
                         amount = event.finalDamage,
                         label = if (event.synergyCount > 1) {
@@ -257,7 +291,7 @@ object RenderStateMapper {
                     CombatFeedbackRenderState(
                         eventId = event.eventId.value,
                         kind = CombatFeedbackRenderState.Kind.DAMAGE,
-                        x = target?.x ?: fortressX(event.targetId.value),
+                        x = target?.x ?: fortressX(event.targetId.value, blueFortressX, redFortressX),
                         y = target?.y ?: 470f,
                         amount = event.amount,
                     )
@@ -287,8 +321,9 @@ object RenderStateMapper {
                 relicRenderSize = it.relicSize?.renderSize,
             )
         } ?: emptyList(),
-    )
+        )
+    }
 
-    private fun fortressX(id: String): Float =
-        if (id.startsWith("blue")) 490f else 6710f
+    private fun fortressX(id: String, blueX: Float, redX: Float): Float =
+        if (id.startsWith("blue")) blueX else redX
 }

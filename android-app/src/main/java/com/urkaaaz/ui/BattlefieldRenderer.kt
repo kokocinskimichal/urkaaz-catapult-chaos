@@ -18,6 +18,7 @@ class BattlefieldRenderer(
     private val drawTiledTexture: (Canvas, Bitmap?, Float, Float, Float, Int) -> Unit,
     private val drawTexture: (Canvas, Bitmap?, Float, Float, Float) -> Unit,
     private val drawTextureAtBaseline: (Canvas, Bitmap?, Float, Float, Float) -> Unit,
+    private val drawTextureAtWorldSize: (Canvas, Bitmap?, Float, Float, Float, Float) -> Unit,
     private val drawReloadIndicator: (Canvas, Float, Float, Float, Boolean) -> Unit,
     private val drawTrajectoryPreview: (Canvas) -> Unit,
     private val drawProjectileTrails: (Canvas) -> Unit,
@@ -81,66 +82,60 @@ class BattlefieldRenderer(
             fallbackColor = theme.fallbackColor,
         )
 
-        val blueFortressCenterX = worldToViewX(FORTRESS_CENTER_MARGIN, viewportWidth)
-        val redFortressCenterX =
-            worldToViewX(WORLD_WIDTH - FORTRESS_CENTER_MARGIN, viewportWidth)
-        val blueFortressGroundY = terrainHeightAt(
-            state.terrainHeightSamples,
-            state.terrainSampleSpacing,
-            FORTRESS_CENTER_MARGIN,
-            groundTop / viewportHeight * WORLD_HEIGHT,
-        )
-        val redFortressGroundY = terrainHeightAt(
-            state.terrainHeightSamples,
-            state.terrainSampleSpacing,
-            WORLD_WIDTH - FORTRESS_CENTER_MARGIN,
-            groundTop / viewportHeight * WORLD_HEIGHT,
-        )
-        val blueFortressBaseline = worldToViewY(blueFortressGroundY, viewportHeight) + 4f
-        val redFortressBaseline = worldToViewY(redFortressGroundY, viewportHeight) + 4f
-        val blueFortressCenterY = blueFortressBaseline - FORTRESS_RENDER_HEIGHT / 2f
-        val redFortressCenterY = redFortressBaseline - FORTRESS_RENDER_HEIGHT / 2f
-        val fortressHealthBarWidth = FORTRESS_RENDER_WIDTH * FORTRESS_HEALTH_BAR_WIDTH_RATIO
+        val fortressRenderWidth = worldToViewWidth(WorldScale.FORTRESS_WIDTH, viewportWidth)
+        val fortressRenderHeight = worldToViewHeight(WorldScale.FORTRESS_HEIGHT, viewportHeight)
+        val blueFortressCenterX = worldToViewX(state.blueFortressX, viewportWidth)
+        val redFortressCenterX = worldToViewX(state.redFortressX, viewportWidth)
+        val blueFortressGroundY = state.blueFortressFoundationY
+        val redFortressGroundY = state.redFortressFoundationY
+        val blueFortressBaseline = worldToViewY(blueFortressGroundY, viewportHeight)
+        val redFortressBaseline = worldToViewY(redFortressGroundY, viewportHeight)
+        val blueFortressCenterY = blueFortressBaseline - fortressRenderHeight / 2f
+        val redFortressCenterY = redFortressBaseline - fortressRenderHeight / 2f
+        val fortressHealthBarWidth = fortressRenderWidth * FORTRESS_HEALTH_BAR_WIDTH_RATIO
         val blueHealthBarLeft = blueFortressCenterX - fortressHealthBarWidth / 2f
         val redHealthBarLeft = redFortressCenterX - fortressHealthBarWidth / 2f
         val blueHealthBarTop =
-            blueFortressBaseline - FORTRESS_RENDER_HEIGHT - FORTRESS_HEALTH_BAR_TOP_OFFSET
+            blueFortressBaseline - fortressRenderHeight -
+                worldToViewHeight(FORTRESS_HEALTH_BAR_TOP_OFFSET, viewportHeight)
         val redHealthBarTop =
-            redFortressBaseline - FORTRESS_RENDER_HEIGHT - FORTRESS_HEALTH_BAR_TOP_OFFSET
-        drawTextureAtBaseline(
+            redFortressBaseline - fortressRenderHeight -
+                worldToViewHeight(FORTRESS_HEALTH_BAR_TOP_OFFSET, viewportHeight)
+        drawTextureAtWorldSize(
             canvas,
             assets.blueFortress,
             blueFortressCenterX,
             blueFortressBaseline,
-            FORTRESS_RENDER_WIDTH,
+            fortressRenderWidth,
+            fortressRenderHeight,
         )
-        drawTextureAtBaseline(
+        drawTextureAtWorldSize(
             canvas,
             assets.redFortress,
             redFortressCenterX,
             redFortressBaseline,
-            FORTRESS_RENDER_WIDTH,
+            fortressRenderWidth,
+            fortressRenderHeight,
         )
 
         val blueCatapultCenterX = worldToViewX(state.blueCatapultX, viewportWidth)
         val redCatapultCenterX = worldToViewX(state.redCatapultX, viewportWidth)
-        val catapultBaseline =
-            blueFortressBaseline - FORTRESS_RENDER_HEIGHT * CATAPULT_PLATFORM_HEIGHT_RATIO
-        val redCatapultBaseline =
-            redFortressBaseline - FORTRESS_RENDER_HEIGHT * CATAPULT_PLATFORM_HEIGHT_RATIO
+        val catapultRenderWidth = worldToViewWidth(CATAPULT_RENDER_WIDTH, viewportWidth)
+        val catapultBaseline = worldToViewY(state.blueCatapultY, viewportHeight)
+        val redCatapultBaseline = worldToViewY(state.redCatapultY, viewportHeight)
         drawTextureAtBaseline(
             canvas,
             assets.blueCatapult,
             blueCatapultCenterX,
             catapultBaseline,
-            CATAPULT_RENDER_WIDTH,
+            catapultRenderWidth,
         )
         drawTextureAtBaseline(
             canvas,
             assets.redCatapult,
             redCatapultCenterX,
             redCatapultBaseline,
-            CATAPULT_RENDER_WIDTH,
+            catapultRenderWidth,
         )
         drawReloadIndicator(
             canvas,
@@ -732,8 +727,8 @@ class BattlefieldRenderer(
             style = Paint.Style.STROKE
             strokeWidth = 3f
         }
-        val fortressScaleX = FORTRESS_RENDER_WIDTH / WorldScale.FORTRESS_WIDTH
-        val fortressScaleY = FORTRESS_RENDER_HEIGHT / WorldScale.FORTRESS_HEIGHT
+        val fortressScaleX = viewportWidth / WORLD_WIDTH
+        val fortressScaleY = viewportHeight / WORLD_HEIGHT
         listOf(
             blueFortressCenterX to blueFortressCenterY,
             redFortressCenterX to redFortressCenterY,
@@ -842,11 +837,16 @@ class BattlefieldRenderer(
     private fun worldToViewY(worldY: Float, viewportHeight: Float): Float =
         worldY / WORLD_HEIGHT * viewportHeight
 
+    private fun worldToViewWidth(worldWidth: Float, viewportWidth: Float): Float =
+        worldWidth / WORLD_WIDTH * viewportWidth
+
+    private fun worldToViewHeight(worldHeight: Float, viewportHeight: Float): Float =
+        worldHeight / WORLD_HEIGHT * viewportHeight
+
     companion object {
         private const val WORLD_WIDTH = WorldDimensions.WIDTH
         private const val WORLD_HEIGHT = WorldDimensions.HEIGHT
         private const val SOIL_TILE_WIDTH = 256f
-        private const val FORTRESS_CENTER_MARGIN = 490f
         private const val HEALTH_BAR_HEIGHT = 8f
         private const val HEALTH_BAR_CORNER_RADIUS = 3f
         private const val FORTRESS_HEALTH_BAR_WIDTH_RATIO = 0.68f
@@ -855,10 +855,7 @@ class BattlefieldRenderer(
         private const val FORTRESS_LABEL_GAP = 6f
         private const val UNIT_HEALTH_BAR_WIDTH_WORLD = 46.2f
         private const val BOAR_SOURCE_CROP_HEIGHT_RATIO = 301f / 512f
-        private const val FORTRESS_RENDER_WIDTH = WorldScale.FORTRESS_WIDTH
-        private const val FORTRESS_RENDER_HEIGHT = WorldScale.FORTRESS_HEIGHT
         private const val CATAPULT_RENDER_WIDTH = 95f
-        private const val CATAPULT_PLATFORM_HEIGHT_RATIO = 0.40f
         private const val PROJECTILE_DEBUG_RADIUS = 30f
         private const val PROJECTILE_RENDER_SIZE = 36f
         private const val DECORATION_RENDER_SIZE = 94f

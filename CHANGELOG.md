@@ -13,5 +13,8 @@
   the texture vertically.
 - Fortress and unit HP bars share one visual style, with the fortress bar
   constrained to its sprite and reload indicators reduced and moved beside it.
+- Fortress world dimensions are restored to 280x210 units; simulation snapshots
+  now provide fortress positions and foundations so sprites and hitbox previews
+  use the same world-space geometry as collision.
 - Cropped all blue- and red-facing Raging Boar animation sprites to one shared
   ground-aligned canvas while preserving their visible render size.

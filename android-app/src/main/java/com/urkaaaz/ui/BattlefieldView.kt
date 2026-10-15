@@ -95,6 +95,7 @@ class BattlefieldView(context: Context) : View(context) {
         drawTiledTexture = ::drawTiledTexture,
         drawTexture = ::drawTexture,
         drawTextureAtBaseline = ::drawTextureAtBaseline,
+        drawTextureAtWorldSize = ::drawTextureAtWorldSize,
         drawReloadIndicator = ::drawReloadIndicator,
         drawTrajectoryPreview = ::drawTrajectoryPreview,
         drawProjectileTrails = ::drawProjectileTrails,
@@ -133,6 +134,11 @@ class BattlefieldView(context: Context) : View(context) {
             debugHitboxesVisible = debugHitboxesVisible,
             combatFeedback = state.combatFeedback,
         )
+    }
+
+    override fun onSizeChanged(width: Int, height: Int, oldWidth: Int, oldHeight: Int) {
+        super.onSizeChanged(width, height, oldWidth, oldHeight)
+        camera.update(state, width.toFloat(), height.toFloat())
     }
 
     override fun onTouchEvent(event: MotionEvent): Boolean {
@@ -475,6 +481,28 @@ class BattlefieldView(context: Context) : View(context) {
         if (bitmap == null) return
         val aspectRatio = bitmap.width.toFloat() / bitmap.height.coerceAtLeast(1)
         val height = width / aspectRatio
+        canvas.drawBitmap(
+            bitmap,
+            null,
+            RectF(
+                centerX - width / 2f,
+                baselineY - height,
+                centerX + width / 2f,
+                baselineY,
+            ),
+            null,
+        )
+    }
+
+    private fun drawTextureAtWorldSize(
+        canvas: Canvas,
+        bitmap: android.graphics.Bitmap?,
+        centerX: Float,
+        baselineY: Float,
+        width: Float,
+        height: Float,
+    ) {
+        if (bitmap == null) return
         canvas.drawBitmap(
             bitmap,
             null,

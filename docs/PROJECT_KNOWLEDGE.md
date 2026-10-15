@@ -200,6 +200,14 @@ opaque bounds in both left and right fortress sprites. It is scaled from the
 1024x768 source canvas and centered on the rendered fortress. Direct hits, area
 damage and the debug preview use the same rectangle.
 
+Fortress presentation and collision share `WorldScale`: the current fortress
+dimensions are 280x210 world units, with a 196-unit half-width for protected
+terrain. Simulation `FortressSnapshot` values carry each fortress center X and
+foundation Y; `RenderStateMapper` forwards them, and the Android renderer maps
+the sprite and alpha-bounds hitbox through the same world-to-view transform.
+Mapless fortress foundations use the same configured height as their catapults.
+Initial battlefield framing remains at 1x and waits for a non-zero viewport.
+
 ## Data flow
 
 ```text

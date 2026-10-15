@@ -4,6 +4,8 @@ import com.urkaaaz.contracts.MatchPhase
 import com.urkaaaz.contracts.MatchSnapshot
 import com.urkaaaz.contracts.MatchStatus
 import com.urkaaaz.contracts.EntityId
+import com.urkaaaz.contracts.FortressSnapshot
+import com.urkaaaz.contracts.FortressPlacement
 import com.urkaaaz.contracts.MapDefinition
 import com.urkaaaz.contracts.MapDecoration
 import com.urkaaaz.contracts.MapGenerationMetadata
@@ -80,6 +82,37 @@ class RenderStateMapperTest {
     }
 
     @Test
+    fun mapperUsesFortressCoordinatesFromSimulationSnapshot() {
+        val state = RenderStateMapper.map(
+            MatchSnapshot(
+                fortresses = listOf(
+                    FortressSnapshot(
+                        EntityId("blue-fortress"),
+                        Team.BLUE,
+                        health = 500,
+                        maxHealth = 500,
+                        x = 160f,
+                        foundationY = 432f,
+                    ),
+                    FortressSnapshot(
+                        EntityId("red-fortress"),
+                        Team.RED,
+                        health = 500,
+                        maxHealth = 500,
+                        x = 840f,
+                        foundationY = 432f,
+                    ),
+                ),
+            ),
+        )
+
+        assertEquals(160f, state.blueFortressX)
+        assertEquals(840f, state.redFortressX)
+        assertEquals(432f, state.blueFortressFoundationY)
+        assertEquals(432f, state.redFortressFoundationY)
+    }
+
+    @Test
     fun mapperExposesCombatFeedbackFromAttackEvents() {
         val attacker = EntityId("blue-defender-1")
         val target = EntityId("red-defender-1")
@@ -136,7 +169,26 @@ class RenderStateMapperTest {
                     ),
                 ),
                 protectedTerrainZones = emptyList(),
-                fortresses = emptyList(),
+                fortresses = listOf(
+                    FortressPlacement(
+                        owner = Team.BLUE,
+                        x = 520f,
+                        foundationHeight = 3_180f,
+                        halfWidth = 98f,
+                        assetKey = "fortress_blue",
+                        hitboxProfile = "alpha_bounds",
+                        protectedZoneId = "blue-foundation",
+                    ),
+                    FortressPlacement(
+                        owner = Team.RED,
+                        x = 6_680f,
+                        foundationHeight = 3_180f,
+                        halfWidth = 98f,
+                        assetKey = "fortress_red",
+                        hitboxProfile = "alpha_bounds",
+                        protectedZoneId = "red-foundation",
+                    ),
+                ),
                 decorations = listOf(
                     MapDecoration(
                         id = "tree-1",
@@ -168,5 +220,9 @@ class RenderStateMapperTest {
         assertEquals("terrain_green_frontier_tree_00", state.mapObjects.first().assetKey)
         assertEquals("SMALL", state.mapObjects[1].relicSize)
         assertEquals(76f, state.mapObjects[1].relicRenderSize)
+        assertEquals(520f, state.blueFortressX)
+        assertEquals(3_180f, state.blueFortressFoundationY)
+        assertEquals(6_680f, state.redFortressX)
+        assertEquals(3_180f, state.redFortressFoundationY)
     }
 }
