@@ -112,7 +112,8 @@ class ContractsTest {
         assertEquals(672f, WorldScale.FORTRESS_WIDTH, 0.001f)
         assertEquals(504f, WorldScale.FORTRESS_HEIGHT, 0.001f)
         assertEquals(470.4f, WorldScale.FORTRESS_HALF_WIDTH, 0.001f)
-        assertEquals(228f, WorldScale.CATAPULT_RENDER_WIDTH, 0.001f)
+        assertEquals(0.8f, WorldScale.CATAPULT_SIZE_MULTIPLIER)
+        assertEquals(182.4f, WorldScale.CATAPULT_RENDER_WIDTH, 0.001f)
         assertEquals(3.0f, WorldScale.UNIT_SCALE)
     }
 

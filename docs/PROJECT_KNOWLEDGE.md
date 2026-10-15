@@ -67,6 +67,11 @@ The current match HUD displays:
 - `MatchViewModel` blocks firing when the selected limited ammunition has no
   remaining stock, preventing an exhausted selection from crashing the Android
   match screen.
+- The demo match's Debug tools can enable a world-coordinate readout beside a
+  mouse cursor. `BattlefieldView` handles hover, generic-motion and pointer-move
+  events, and `BattlefieldCameraController.screenToGameWorld` converts them
+  through the current camera transform and viewport dimensions; campaign debug
+  tools omit this demo-only option.
 - The match tick reads the immutable simulation snapshot through
   `LocalMatchGateway` before advancing. This prevents a stale presentation
   state from dispatching `AdvanceSimulation` after the simulation has reached
@@ -171,18 +176,17 @@ The HUD is rendered as an overlay on the battlefield rather than as a separate
 black strip above the map.
 
 The match aiming presentation uses the shared catapult presentation contract
-for the pull-radius circle, trajectory preview and projectile rendering. The
-horizontal catapult relation is stable across campaign maps; the vertical
-anchor is derived from the map's foundation height plus the contract's fixed
-world-space offset. The trajectory preview starts at that anchor and applies
-the same scaled projectile physics as the deterministic simulation. The
-simulation starts a projectile at `catapult.anchorPosition`; the Android
-renderer draws the active projectile, hitbox and trail at the raw snapshot
-position without a second render-space offset. The pull-radius circle adapts to the visible
-viewport and camera transform so it remains inside the screen. The preview is
-intentionally a short sequence of decreasing dots rather than a full-flight
-line. Active projectile sprites use a smaller world-space render size and
-therefore scale with the battlefield camera zoom.
+for the pull-radius circle, trajectory preview and projectile rendering. Its
+aim origin is tied to the fortress-relative launch point, not the relocated
+catapult sprite; the circle, preview and simulation all consume the same
+snapshot anchor. The trajectory preview applies the same scaled projectile
+physics as the deterministic simulation. The Android renderer draws the active
+projectile, hitbox and trail at the raw snapshot position without a second
+render-space offset. The pull-radius circle adapts to the visible viewport and
+camera transform so it remains inside the screen. The preview is intentionally
+a short sequence of decreasing dots rather than a full-flight line. Active
+projectile sprites use a smaller world-space render size and therefore scale
+with the battlefield camera zoom.
 
 The match now exposes a legacy-style `DEBUG` control after the match starts.
 Its panel supports `Show hitboxes`, which renders presentation hitbox guides
@@ -206,13 +210,28 @@ damage and the debug preview use the same rectangle.
 Fortress presentation and collision share `WorldScale`: the current fortress
 dimensions are 672x504 world units, with a 470.4-unit half-width for protected
 terrain. Demo-map protected foundations cover that full half-width.
-Catapult sprites use the same 2.4 presentation scale in both the match and map
-editor, with their render width centralized at 228; positions and firing anchors
-remain governed by `CatapultPresentationContract`.
+Catapult sprites use the fortress presentation scale with a 0.8 size multiplier
+in both the match and map editor, giving a render width of 182.4 world units;
+the presentation contract positions them 110 world units outward from fortress
+centers and 165 units above the authored foundation after the linked fortress
+and catapult offsets. The catapult is rendered behind the fortress; the terrain
+cap renders in front of the fortress and can conceal its lower edge.
+Both fortresses are presented 35 world units lower than their authored ground
+foundation. The vertical offset is applied consistently to fortress collision,
+catapult positions and FHP; protected terrain and map foundation heights remain
+unchanged. Both catapults sit 200 units above that fortress presentation offset
+and 70 units farther outward than before. Their launch/aim anchors remain at
+the original fortress-relative offsets (`±40` X and `-360 * worldHeight / 4800`
+Y from the presented foundation), with a clamp above local ground if necessary.
+Any future fortress translation or size change must apply the same transform to
+its catapult, FHP and associated mage placement across all maps and biomes.
+The web editor preview uses the same frozen geometry and draw order.
 Simulation `FortressSnapshot` values carry each fortress center X and
 foundation Y; `RenderStateMapper` forwards them, and the Android renderer maps
 the sprite and alpha-bounds hitbox through the same world-to-view transform.
-Mapless fortress foundations use the same configured height as their catapults.
+Mapless fortress and catapult placements start from the same configured
+reference height, then apply their respective `+35` and `+35 - 200` world-Y
+presentation offsets. The aim origin remains fortress-relative.
 Initial battlefield framing remains at 1x and waits for a non-zero viewport.
 
 ## Data flow
@@ -273,11 +292,11 @@ must go through commands and domain/application boundaries.
 - Wind uses low, medium and high visual indicators for left/right direction.
 - Projectile trails are keyed by projectile identity, not team label, so a new
   projectile cannot inherit the previous projectile's trail.
-- `BattlefieldView` uses the catapult bitmap center as the single aim anchor
-  for `SlingshotAim`, the trajectory preview, and both BLUE/RED projectile
-  rendering paths. The legacy `muzzlePosition()` offset was removed; the
-  deterministic simulation starts projectiles at `catapult.position`, while
-  the Android renderer keeps the active flight and trail in anchor space.
+- `BattlefieldView` uses the explicit fortress-relative `anchorPosition` for
+  `SlingshotAim`, the trajectory preview, and projectile starts; this remains
+  independent of the relocated catapult bitmap center. The legacy
+  `muzzlePosition()` offset was removed, while the Android renderer keeps the
+  active flight and trail in anchor space.
   Preview timing and point density are presentation-only (`36` points at
   `1/16` second intervals); the deterministic simulation remains the source
   of truth for the fired projectile.
@@ -363,6 +382,8 @@ browser `localStorage`, and leaves the Swing editor available. Run it with `npm 
 desktop editor continues to use the shared `game-assets` source, JSON as the
 single map-definition source of truth, terrain locking before decoration
 placement, and validated versioned exports.
+The web editor's Debug panel can toggle a live world-coordinate readout beside
+the mouse cursor; coordinates account for the current viewport zoom and pan.
 
 During terrain editing, the web editor displays draggable terrain contour
 nodes at roughly 200 world-unit intervals. Dragging a node applies a smooth,

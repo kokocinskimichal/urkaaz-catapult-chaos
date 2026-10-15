@@ -183,6 +183,19 @@ class BattlefieldCameraController(
     fun screenToWorldY(screenY: Float): Float =
         (screenY - transform.offsetY) / transform.scale
 
+    fun screenToGameWorld(
+        screenX: Float,
+        screenY: Float,
+        viewportWidth: Float,
+        viewportHeight: Float,
+    ): Pair<Float, Float> {
+        require(viewportWidth > 0f && viewportHeight > 0f) {
+            "viewport dimensions must be positive"
+        }
+        return screenToWorldX(screenX) / viewportWidth * worldWidth to
+            screenToWorldY(screenY) / viewportHeight * worldHeight
+    }
+
     private fun centerOnTeam(
         state: RenderState,
         teamLabel: String,

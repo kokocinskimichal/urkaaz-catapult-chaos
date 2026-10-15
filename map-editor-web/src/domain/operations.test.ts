@@ -31,7 +31,7 @@ describe("map operations", () => {
     expect(map.protectedTerrainZones.find(zone => zone.id === "blue-foundation")?.minX).toBe(0);
     expect(map.protectedTerrainZones.find(zone => zone.id === "red-foundation")?.maxX).toBe(7200);
     expect(map.fortresses.map(fortress => fortress.x)).toEqual([490, 6710]);
-    expect(map.catapults.map(catapult => catapult.x)).toEqual([450, 6750]);
+    expect(map.catapults.map(catapult => catapult.x)).toEqual([380, 6820]);
     expect(foundationExtension).toBe(320);
     for (const zone of map.protectedTerrainZones) {
       expect(zone.minX % map.terrain.sampleStep).toBe(0);
@@ -121,7 +121,7 @@ describe("map operations", () => {
 
   it("keeps imported maps valid and checks registered decoration assets", () => {
     const map = decode(encode(defaultMap()));
-    expect(map.catapults.map(catapult => catapult.x)).toEqual([450, 6750]);
+    expect(map.catapults.map(catapult => catapult.x)).toEqual([380, 6820]);
     const document = { map, phase: "TERRAIN_EDITING" as const, revision: 0 };
     expect(validate(document, new Set())).toEqual([]);
 

@@ -20,5 +20,18 @@
 - On full-size maps, the first garrison slot is now 690 world units from each
   edge (up from 250) and slots use 70-unit spacing (up from 40); compact maps
   clamp the first slot to keep it clear of the midpoint.
+- The web map editor's Debug panel can show live world coordinates beside the
+  mouse cursor, using the current zoom and pan.
+- The Android demo's Debug tools can show world coordinates beside a mouse
+  cursor, accounting for the battlefield camera zoom and offset.
+- Both fortresses are lowered by 35 world units together with their catapults,
+  firing anchors and collision geometry; anchors stay above local terrain and
+  protected terrain foundations remain at their authored heights.
+- Catapult sprites are 20% smaller in the match and map-editor previews.
+- Catapults remain 200 world units higher and 70 units farther outward, behind
+  the fortress sprites; their projectile launch and aiming origins are restored
+  to their previous fortress-relative positions.
+- The terrain cap now renders in front of fortress sprites so the ground edge
+  can overlap and conceal their lower portions.
 - Cropped all blue- and red-facing Raging Boar animation sprites to one shared
   ground-aligned canvas while preserving their visible render size.

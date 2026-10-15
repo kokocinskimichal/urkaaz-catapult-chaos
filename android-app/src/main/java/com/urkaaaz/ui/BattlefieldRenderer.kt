@@ -72,15 +72,6 @@ class BattlefieldRenderer(
             debugHitboxesVisible = debugHitboxesVisible,
         )
         drawRelics(canvas, state, viewportWidth, viewportHeight, debugHitboxesVisible)
-        drawDeformedCap(
-            canvas = canvas,
-            bitmap = theme.cap,
-            samples = state.terrainHeightSamples,
-            sampleSpacing = state.terrainSampleSpacing,
-            viewportWidth = viewportWidth,
-            viewportHeight = viewportHeight,
-            fallbackColor = theme.fallbackColor,
-        )
 
         val fortressRenderWidth = worldToViewWidth(WorldScale.FORTRESS_WIDTH, viewportWidth)
         val fortressRenderHeight = worldToViewHeight(WorldScale.FORTRESS_HEIGHT, viewportHeight)
@@ -101,23 +92,6 @@ class BattlefieldRenderer(
         val redHealthBarTop =
             redFortressBaseline - fortressRenderHeight -
                 worldToViewHeight(FORTRESS_HEALTH_BAR_TOP_OFFSET, viewportHeight)
-        drawTextureAtWorldSize(
-            canvas,
-            assets.blueFortress,
-            blueFortressCenterX,
-            blueFortressBaseline,
-            fortressRenderWidth,
-            fortressRenderHeight,
-        )
-        drawTextureAtWorldSize(
-            canvas,
-            assets.redFortress,
-            redFortressCenterX,
-            redFortressBaseline,
-            fortressRenderWidth,
-            fortressRenderHeight,
-        )
-
         val blueCatapultCenterX = worldToViewX(state.blueCatapultX, viewportWidth)
         val redCatapultCenterX = worldToViewX(state.redCatapultX, viewportWidth)
         val catapultRenderWidth = worldToViewWidth(CATAPULT_RENDER_WIDTH, viewportWidth)
@@ -137,6 +111,33 @@ class BattlefieldRenderer(
             redCatapultBaseline,
             catapultRenderWidth,
         )
+        drawTextureAtWorldSize(
+            canvas,
+            assets.blueFortress,
+            blueFortressCenterX,
+            blueFortressBaseline,
+            fortressRenderWidth,
+            fortressRenderHeight,
+        )
+        drawTextureAtWorldSize(
+            canvas,
+            assets.redFortress,
+            redFortressCenterX,
+            redFortressBaseline,
+            fortressRenderWidth,
+            fortressRenderHeight,
+        )
+
+        drawDeformedCap(
+            canvas = canvas,
+            bitmap = theme.cap,
+            samples = state.terrainHeightSamples,
+            sampleSpacing = state.terrainSampleSpacing,
+            viewportWidth = viewportWidth,
+            viewportHeight = viewportHeight,
+            fallbackColor = theme.fallbackColor,
+        )
+
         drawReloadIndicator(
             canvas,
             blueHealthBarLeft + fortressHealthBarWidth + FORTRESS_RELOAD_BADGE_GAP,

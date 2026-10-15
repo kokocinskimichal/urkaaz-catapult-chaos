@@ -20,7 +20,7 @@ import com.urkaaaz.campaign.MapDefinitionRepository
 class MatchScreenController(
     private val activity: Activity,
     campaignLevel: Int,
-    demoMode: Boolean = false,
+    private val demoMode: Boolean = false,
     private val onBackClicked: () -> Unit,
     private val openDebugOnStart: Boolean = false,
 ) {
@@ -280,6 +280,17 @@ class MatchScreenController(
                 battlefieldView.debugHitboxesVisible = checked
             }
         })
+        if (demoMode) {
+            root.addView(CheckBox(activity).apply {
+                text = "Show cursor world coordinates"
+                setTextColor(Color.WHITE)
+                buttonTintList = ColorStateList.valueOf(Color.rgb(243, 210, 138))
+                isChecked = battlefieldView.debugCoordinatesVisible
+                setOnCheckedChangeListener { _, checked ->
+                    battlefieldView.debugCoordinatesVisible = checked
+                }
+            })
+        }
         root.addView(TextView(activity).apply {
             text = "SNAPSHOT"
             setTextColor(Color.WHITE)

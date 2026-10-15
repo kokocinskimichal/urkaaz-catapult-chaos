@@ -19,6 +19,7 @@ import "./ui/styles.css";
 const AUTOSAVE = "urkaaz-map-editor-autosave";
 type Tool = "draw" | "smooth" | "flatten" | "foundation" | "select";
 type WorldPoint = { x: number; y: number };
+type CursorPosition = WorldPoint & { screenX: number; screenY: number };
 type ControlDrag = { x: number; originalHeight: number; height: number };
 
 function findControlAt(
@@ -44,6 +45,8 @@ export default function App() {
   const [issues, setIssues] = useState(validate(state.present));
   const [drag, setDrag] = useState<WorldPoint[] | null>(null);
   const [controlDrag, setControlDrag] = useState<ControlDrag | null>(null);
+  const [showCursorCoordinates, setShowCursorCoordinates] = useState(false);
+  const [cursorPosition, setCursorPosition] = useState<CursorPosition | null>(null);
   const [selectedTeam, setSelectedTeam] = useState<"BLUE" | "RED">("BLUE");
   const [height, setHeight] = useState(3180);
   const [status, setStatus] = useState("Unsaved");
@@ -163,13 +166,37 @@ export default function App() {
   const treeAssetKey = registeredAssetKeys
     ? firstAssetKeyForBiome(registeredAssetKeys, state.present.map.biome, "tree")
     : undefined;
+  const cursorCoordinatesStyle = cursorPosition
+    ? {
+      left: Math.max(
+        0,
+        Math.min(cursorPosition.screenX + 12, (canvas.current?.clientWidth ?? 0) - 150),
+      ),
+      top: Math.max(
+        0,
+        Math.min(cursorPosition.screenY + 12, (canvas.current?.clientHeight ?? 0) - 30),
+      ),
+    }
+    : undefined;
 
   const pointer = (event: React.PointerEvent<HTMLCanvasElement>) => {
     const element = canvas.current;
     if (!element) return;
     const rect = element.getBoundingClientRect();
+    if (rect.width <= 0 || rect.height <= 0) {
+      setCursorPosition(null);
+      return;
+    }
     const screen = { x: event.clientX - rect.left, y: event.clientY - rect.top };
     const world = screenToWorld(screen.x, screen.y, view, rect.width, rect.height);
+
+    if (event.type === "pointermove") {
+      setCursorPosition({
+        ...world,
+        screenX: screen.x,
+        screenY: screen.y,
+      });
+    }
 
     if (event.type === "pointerdown") {
       element.setPointerCapture(event.pointerId);
@@ -275,6 +302,14 @@ export default function App() {
           <p className="tool-help">
             In draw mode, drag a yellow point to reshape the terrain contour.
           </p>
+          <h3>Debug</h3>
+          <button
+            className={showCursorCoordinates ? "active" : ""}
+            aria-pressed={showCursorCoordinates}
+            onClick={() => setShowCursorCoordinates(value => !value)}
+          >
+            Cursor coordinates: {showCursorCoordinates ? "On" : "Off"}
+          </button>
           <button
             disabled={state.present.phase !== "TERRAIN_EDITING"}
             onClick={() => operation({ type: "LOCK_TERRAIN" })}
@@ -313,8 +348,14 @@ export default function App() {
               setDrag(null);
               setControlDrag(null);
             }}
+            onPointerLeave={() => setCursorPosition(null)}
             onWheel={wheel}
           />
+          {showCursorCoordinates && cursorPosition && cursorCoordinatesStyle && (
+            <div className="cursor-coordinates" style={cursorCoordinatesStyle}>
+              X: {cursorPosition.x.toFixed(1)} · Y: {cursorPosition.y.toFixed(1)}
+            </div>
+          )}
           {(drag || controlDrag) && (
             <div className="hint">
               {controlDrag ? "Adjusting contour point · release to commit" : "Drawing preview · release to commit"}

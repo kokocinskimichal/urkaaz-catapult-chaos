@@ -29,7 +29,7 @@ export const TERRAIN_CONTROL_SPACING = 200;
 export function catapultsForFortresses(fortresses: FortressJson[]): CatapultJson[] {
   return fortresses.map(fortress => ({
     owner: fortress.owner,
-    x: fortress.x + (fortress.owner === "BLUE" ? -40 : 40),
+    x: fortress.x + (fortress.owner === "BLUE" ? -110 : 110),
     foundationHeight: fortress.foundationHeight,
     facing: fortress.owner === "BLUE" ? "RIGHT" : "LEFT",
     halfWidth: 72,

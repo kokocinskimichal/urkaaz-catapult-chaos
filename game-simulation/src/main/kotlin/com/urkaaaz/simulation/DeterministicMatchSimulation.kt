@@ -50,8 +50,8 @@ import kotlin.random.Random
 class DeterministicMatchSimulation(
     private val matchId: MatchId,
     private val config: SimulationConfig,
-    private val blueCatapult: Catapult = defaultCatapult(Team.BLUE, config.bounds, config),
-    private val redCatapult: Catapult = defaultCatapult(Team.RED, config.bounds, config),
+    blueCatapult: Catapult? = null,
+    redCatapult: Catapult? = null,
     private val blueFortress: Fortress = defaultFortress(Team.BLUE, config.bounds, config),
     private val redFortress: Fortress = defaultFortress(Team.RED, config.bounds, config),
     private val combatLogSink: CombatLogSink = NoOpCombatLogSink,
@@ -86,7 +86,9 @@ class DeterministicMatchSimulation(
     private var currentBlueFortress = blueFortress
     private var currentRedFortress = redFortress
     private var currentBlueCatapult = blueCatapult
+        ?: defaultCatapult(Team.BLUE, config.bounds, config, terrain)
     private var currentRedCatapult = redCatapult
+        ?: defaultCatapult(Team.RED, config.bounds, config, terrain)
     private var units = emptyList<Unit>()
     private var defeatedUnits = emptyList<DefeatedUnit>()
     private val movingTeams = mutableSetOf<Team>()
@@ -1925,9 +1927,20 @@ class DeterministicMatchSimulation(
                 GARRISON_FIRST_SLOT_FROM_SCREEN_EDGE
             }
 
-        private fun defaultCatapult(team: Team, bounds: WorldBounds, config: SimulationConfig): Catapult {
+        private fun defaultCatapult(
+            team: Team,
+            bounds: WorldBounds,
+            config: SimulationConfig,
+            terrain: TerrainState,
+        ): Catapult {
             val fortress = config.mapDefinition?.fortresses?.firstOrNull { it.owner == team }
-            val foundationHeight = fortress?.foundationHeight ?: bounds.height * config.defaultCatapultHeightRatio
+            val foundationHeight = (fortress?.foundationHeight
+                ?: bounds.height * config.defaultCatapultHeightRatio) +
+                CatapultPresentationContract.FORTRESS_VERTICAL_OFFSET +
+                CatapultPresentationContract.CATAPULT_VERTICAL_OFFSET
+            val anchorFoundationHeight = (fortress?.foundationHeight
+                ?: bounds.height * config.defaultCatapultHeightRatio) +
+                CatapultPresentationContract.FORTRESS_VERTICAL_OFFSET
             val catapultX = fortress?.let {
                 it.x + if (team == Team.BLUE) {
                     -CatapultPresentationContract.CATAPULT_CENTER_OFFSET_FROM_FORTRESS
@@ -1935,6 +1948,20 @@ class DeterministicMatchSimulation(
                     CatapultPresentationContract.CATAPULT_CENTER_OFFSET_FROM_FORTRESS
                 }
             } ?: CatapultPresentationContract.catapultCenterX(team, bounds.width)
+            val anchorX = fortress?.let {
+                it.x + if (team == Team.BLUE) {
+                    -CatapultPresentationContract.PROJECTILE_ANCHOR_OFFSET_FROM_FORTRESS
+                } else {
+                    CatapultPresentationContract.PROJECTILE_ANCHOR_OFFSET_FROM_FORTRESS
+                }
+            } ?: CatapultPresentationContract.projectileAnchorX(team, bounds.width)
+            val anchorY = minOf(
+                CatapultPresentationContract.anchorY(
+                    foundationHeight = anchorFoundationHeight,
+                    worldHeight = bounds.height,
+                ),
+                terrain.heightAt(anchorX) - 1f,
+            )
             return Catapult(
                 id = EntityId("${team.name.lowercase()}-catapult"),
                 team = team,
@@ -1943,11 +1970,8 @@ class DeterministicMatchSimulation(
                     y = foundationHeight,
                 ),
                 anchorPosition = WorldPosition(
-                    x = catapultX,
-                    y = CatapultPresentationContract.anchorY(
-                        foundationHeight = foundationHeight,
-                        worldHeight = bounds.height,
-                    ),
+                    x = anchorX,
+                    y = anchorY,
                 ),
                 aim = Aim(directionDegrees = 45f, power = 50f),
             )
@@ -1969,7 +1993,8 @@ class DeterministicMatchSimulation(
                         },
                     y = (config.mapDefinition?.fortresses
                         ?.firstOrNull { it.owner == team }?.foundationHeight
-                        ?: bounds.height * config.defaultCatapultHeightRatio) -
+                        ?: bounds.height * config.defaultCatapultHeightRatio) +
+                        CatapultPresentationContract.FORTRESS_VERTICAL_OFFSET -
                         WorldScale.FORTRESS_HEIGHT / 2f,
                 ),
                 maxHealth = if (team == Team.BLUE) {

@@ -10,13 +10,26 @@ import android.view.View
 import android.view.MotionEvent
 import android.view.ScaleGestureDetector
 import com.urkaaaz.contracts.WorldDimensions
+import java.util.Locale
 import kotlin.math.hypot
+
+private data class DebugCursorPosition(
+    val screenX: Float,
+    val screenY: Float,
+)
 
 /** Minimal renderer that draws only the presentation model, never the engine. */
 class BattlefieldView(context: Context) : View(context) {
     var debugHitboxesVisible: Boolean = false
         set(value) {
             field = value
+            invalidate()
+        }
+
+    var debugCoordinatesVisible: Boolean = false
+        set(value) {
+            field = value
+            debugCursorPosition = null
             invalidate()
         }
 
@@ -63,9 +76,18 @@ class BattlefieldView(context: Context) : View(context) {
     private var animationFrame = 0
     private var impactFrame = 0
     private var activeImpact: ImpactRenderState? = null
+    private var debugCursorPosition: DebugCursorPosition? = null
     private val projectileTrails = mutableMapOf<String, MutableList<Pair<Float, Float>>>()
     private val aimController = AimGestureController()
     private val camera = BattlefieldCameraController()
+    private val debugCoordinateBackgroundPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        color = Color.argb(224, 23, 37, 54)
+    }
+    private val debugCoordinateTextPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        color = Color.WHITE
+        textSize = 12f * resources.displayMetrics.scaledDensity
+        typeface = Typeface.MONOSPACE
+    }
     private var pinchActive = false
     private val scaleDetector = ScaleGestureDetector(
         context,
@@ -134,6 +156,9 @@ class BattlefieldView(context: Context) : View(context) {
             debugHitboxesVisible = debugHitboxesVisible,
             combatFeedback = state.combatFeedback,
         )
+        if (debugCoordinatesVisible) {
+            drawDebugCursorCoordinates(canvas)
+        }
     }
 
     override fun onSizeChanged(width: Int, height: Int, oldWidth: Int, oldHeight: Int) {
@@ -142,9 +167,101 @@ class BattlefieldView(context: Context) : View(context) {
     }
 
     override fun onTouchEvent(event: MotionEvent): Boolean {
+        if (debugCoordinatesVisible && event.actionMasked == MotionEvent.ACTION_MOVE) {
+            updateDebugCursorPosition(event.x, event.y)
+        }
         if (handlePinchTouch(event)) return true
         if (handleMapPanTouch(event)) return true
         return handleAimTouch(event)
+    }
+
+    override fun onHoverEvent(event: MotionEvent): Boolean {
+        if (!debugCoordinatesVisible) return super.onHoverEvent(event)
+
+        when (event.actionMasked) {
+            MotionEvent.ACTION_HOVER_ENTER,
+            MotionEvent.ACTION_HOVER_MOVE -> {
+                updateDebugCursorPosition(event.x, event.y)
+                return true
+            }
+            MotionEvent.ACTION_HOVER_EXIT -> {
+                clearDebugCursorPosition()
+                return true
+            }
+            else -> return super.onHoverEvent(event)
+        }
+    }
+
+    override fun onGenericMotionEvent(event: MotionEvent): Boolean {
+        if (!debugCoordinatesVisible) return super.onGenericMotionEvent(event)
+
+        when (event.actionMasked) {
+            MotionEvent.ACTION_HOVER_ENTER,
+            MotionEvent.ACTION_HOVER_MOVE -> {
+                updateDebugCursorPosition(event.x, event.y)
+                return true
+            }
+            MotionEvent.ACTION_HOVER_EXIT -> {
+                clearDebugCursorPosition()
+                return true
+            }
+            else -> return super.onGenericMotionEvent(event)
+        }
+    }
+
+    private fun updateDebugCursorPosition(screenX: Float, screenY: Float) {
+        if (width <= 0 || height <= 0) {
+            clearDebugCursorPosition()
+            return
+        }
+        debugCursorPosition = DebugCursorPosition(screenX, screenY)
+        invalidate()
+    }
+
+    private fun clearDebugCursorPosition() {
+        debugCursorPosition = null
+        invalidate()
+    }
+
+    private fun drawDebugCursorCoordinates(canvas: Canvas) {
+        val cursor = debugCursorPosition ?: return
+        if (width <= 0 || height <= 0) return
+        val (worldX, worldY) = camera.screenToGameWorld(
+            cursor.screenX,
+            cursor.screenY,
+            width.toFloat(),
+            height.toFloat(),
+        )
+        val density = resources.displayMetrics.density
+        val padding = 8f * density
+        val text = String.format(Locale.US, "X: %.1f  Y: %.1f", worldX, worldY)
+        val boxWidth = debugCoordinateTextPaint.measureText(text) + padding * 2f
+        val boxHeight = debugCoordinateTextPaint.textSize + padding * 2f
+        val preferredLeft = cursor.screenX + 12f * density
+        val preferredTop = cursor.screenY + 12f * density
+        val left = (if (preferredLeft + boxWidth <= width) {
+            preferredLeft
+        } else {
+            cursor.screenX - 12f * density - boxWidth
+        }).coerceIn(0f, (width - boxWidth).coerceAtLeast(0f))
+        val top = (if (preferredTop + boxHeight <= height) {
+            preferredTop
+        } else {
+            cursor.screenY - 12f * density - boxHeight
+        }).coerceIn(0f, (height - boxHeight).coerceAtLeast(0f))
+
+        canvas.drawRoundRect(
+            RectF(left, top, left + boxWidth, top + boxHeight),
+            5f * density,
+            5f * density,
+            debugCoordinateBackgroundPaint,
+        )
+        canvas.drawText(
+            text,
+            left + padding,
+            top + padding - debugCoordinateTextPaint.fontMetrics.top,
+            debugCoordinateTextPaint,
+        )
     }
 
     private fun handlePinchTouch(event: MotionEvent): Boolean {

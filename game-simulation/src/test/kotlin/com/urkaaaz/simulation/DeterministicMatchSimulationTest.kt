@@ -1,5 +1,6 @@
 package com.urkaaaz.simulation
 
+import com.urkaaaz.contracts.CatapultPresentationContract
 import com.urkaaaz.contracts.EntityId
 import com.urkaaaz.contracts.MatchEvent
 import com.urkaaaz.contracts.MatchId
@@ -48,8 +49,38 @@ class DeterministicMatchSimulationTest {
 
         assertEquals(490f, blueFortress.x)
         assertEquals(6_710f, redFortress.x)
-        assertEquals(3_456f, blueFortress.foundationY ?: error("Missing blue foundation"), 0.01f)
-        assertEquals(3_456f, redFortress.foundationY ?: error("Missing red foundation"), 0.01f)
+        val expectedFortressFoundationY =
+            3_456f + CatapultPresentationContract.FORTRESS_VERTICAL_OFFSET
+        assertEquals(
+            expectedFortressFoundationY,
+            blueFortress.foundationY ?: error("Missing blue foundation"),
+            0.01f,
+        )
+        assertEquals(
+            expectedFortressFoundationY,
+            redFortress.foundationY ?: error("Missing red foundation"),
+            0.01f,
+        )
+        val blueCatapult = snapshot.catapults.first { it.team == Team.BLUE }
+        val redCatapult = snapshot.catapults.first { it.team == Team.RED }
+        val expectedCatapultY =
+            expectedFortressFoundationY + CatapultPresentationContract.CATAPULT_VERTICAL_OFFSET
+        assertEquals(380f, blueCatapult.x, 0.01f)
+        assertEquals(6_820f, redCatapult.x, 0.01f)
+        assertEquals(expectedCatapultY, blueCatapult.y, 0.01f)
+        assertEquals(expectedCatapultY, redCatapult.y, 0.01f)
+        assertEquals(450f, blueCatapult.anchorX, 0.01f)
+        assertEquals(6_750f, redCatapult.anchorX, 0.01f)
+        assertEquals(
+            CatapultPresentationContract.anchorY(expectedFortressFoundationY, 4_800f),
+            blueCatapult.anchorY,
+            0.01f,
+        )
+        assertEquals(
+            CatapultPresentationContract.anchorY(expectedFortressFoundationY, 4_800f),
+            redCatapult.anchorY,
+            0.01f,
+        )
     }
 
     @Test
@@ -125,7 +156,8 @@ class DeterministicMatchSimulationTest {
                 ),
             )
             simulation.start()
-            val terrainSnapshotBeforeShot = simulation.snapshot().terrain
+            val snapshotBeforeShot = simulation.snapshot()
+            val terrainSnapshotBeforeShot = snapshotBeforeShot.terrain
             val terrainBeforeShot = TerrainState(
                 baselineHeight = terrainSnapshotBeforeShot.heightSamples.first(),
                 worldWidth = terrainSnapshotBeforeShot.worldWidth,
@@ -133,6 +165,8 @@ class DeterministicMatchSimulationTest {
                 heightSamples = terrainSnapshotBeforeShot.heightSamples,
             )
             val catapultId = EntityId("${team.name.lowercase()}-catapult")
+            val catapult = snapshotBeforeShot.catapults.first { it.team == team }
+            assertTrue(catapult.anchorY < terrainBeforeShot.heightAt(catapult.anchorX))
             simulation.aim(catapultId, directionDegrees = 0f, power = 50f)
             simulation.fire(catapultId)
 
@@ -145,7 +179,8 @@ class DeterministicMatchSimulationTest {
 
             assertTrue(
                 abs(impact.centerY - terrainBeforeShot.heightAt(impact.centerX)) <= 1f,
-                "$team projectile impact should be on the terrain surface",
+                "$team projectile impact (${impact.centerX}, ${impact.centerY}) should match " +
+                    "terrain ${terrainBeforeShot.heightAt(impact.centerX)}",
             )
         }
     }

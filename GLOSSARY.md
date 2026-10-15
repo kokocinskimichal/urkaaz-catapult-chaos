@@ -31,13 +31,18 @@
 10. **Tutorial Highlight odpowiada grafice.** Ramka wskazująca element musi mieć dokładnie rozmiar
     i położenie jego widocznej grafiki, bez sztucznego marginesu, przesunięcia ani przybliżonego
     hitboxa. Dotyczy to wszystkich wskazywanych elementów interfejsu i pola bitwy.
-11. **Fortress Hitbox Preview (FHP), grafika, mag i katapulta są sprzężonym kontraktem fortecy.**
-    Po ustaleniu prawidłowych kotwic maga i katapulty każde przesunięcie, skalowanie, opuszczenie,
-    zmiana kotwicy lub położenia fortecy na mapie musi aktualizować wszystkie cztery elementy.
-    Wszystkie przyszłe zmiany pozycji maga są wspólne dla wszystkich biomów, chapterów i poziomów;
-    nie wolno tworzyć osobnych ustawień maga zależnych od biomu.
-    Do tego czasu kotwice maga i katapulty pozostają osobnym etapem dopasowania. Każdy AGP
-    fortecy musi podawać te kotwice co do piksela na kanonicznym canvasie `1024 × 768 px`.
+11. **Fortress–Catapult Presentation Contract jest zamrożony i sprzężony.**
+    Obecny układ bazowy to forteca `672 × 504` jednostek świata z przesunięciem `+35` w osi Y;
+    katapulta ma szerokość `182.4`, pozycję `110` jednostek na zewnątrz od środka fortecy oraz
+    wysokość `foundation + 35 - 200`. Katapulta jest renderowana za fortecą, a cap przed nią.
+    Każde przyszłe przesunięcie fortecy musi przesunąć katapultę, FHP i powiązane rozmieszczenie
+    maga o ten sam wektor; każda zmiana wielkości fortecy musi zastosować ten sam mnożnik skali do
+    powiązanej grafiki i kolizji, zachowując mnożnik wielkości sprite'u katapulty `0.8`.
+    Punkty startu pocisku i okrąg celowania pozostają zakotwiczone względem fortecy, nie sprite'u
+    katapulty: X wynosi `40` jednostek na zewnątrz od środka, a Y `360 * worldHeight / 4800`
+    jednostek nad prezentowanym fundamentem. Każda zmiana musi być globalna dla biomów, chapterów
+    i poziomów oraz zaktualizować symulację, renderer Androida, podgląd edytora map i testy.
+    Nie zmieniaj zamrożonego układu bez wyraźnej decyzji użytkownika.
 
 ## Game subsystems / Podsystemy gry
 
@@ -87,7 +92,7 @@ kontrakty są wyraźnie oddzielone.
 | --- | --- |
 | **Tutorial Hint** | Jasne okienko zawierające tekst instrukcji oraz przycisk `NEXT` lub `START BATTLE`. |
 | **Fortress Hitbox Preview (FHP)** | Półprzezroczysty podgląd uproszczonego kształtu trafienia fortecy. Po ustaleniu kotwic maga i katapulty FHP, grafika, mag i katapulta mają wspólną transformację: pozycję, skalę, przesunięcie i kotwicę. Wszystkie korekty pozycji maga są globalne dla wszystkich biomów, chapterów i poziomów. |
-| **Fortress Presentation Template** | Kontrakt poziomu testowego Demo i źródło prawdy dla wszystkich biomów, chapterów i poziomów. Obejmuje skalę `0.55`, opuszczenie grafiki `0.16`, wysokość fortecy, pozycję fortec względem świata oraz identyczne kotwice katapult i magów; bieżąca korekta kotwic magów wynosi `+45/-45` w osi X i `-42` w osi Y; grafika fortecy może pozostać właściwa dla danego chapteru, ale jej układ nie może zmieniać geometrii template'u. |
+| **Fortress Presentation Template** | Kontrakt poziomu testowego Demo i źródło prawdy dla wszystkich biomów, chapterów i poziomów. Bieżąca geometria fortecy to `672 × 504` jednostek świata z przesunięciem Y `+35`; katapulta ma szerokość `182.4`, leży `110` jednostek na zewnątrz i `200` jednostek wyżej od prezentowanego fundamentu. FHP i grafika fortecy dzielą transformację, a katapulta pozostaje pod fortecą w kolejności renderowania. Launch/aim anchor ma stałe położenie względem fortecy, niezależne od sprite'u katapulty. Grafika może być właściwa dla chapteru, ale nie może zmieniać tej geometrii template'u. |
 | **Fortress Gameplay Anchor Pixels** | Niezmienne punkty na canvasie fortecy `1024 × 768 px`, wyliczone z kanonicznego układu Demo. Punkt środkowy platformy katapulty to `(284, 592)` dla lewej i `(745, 592)` dla prawej fortecy. Punkt dolnej kotwicy maga to `(473, 225)` dla lewej i `(585, 225)` dla prawej fortecy. Każdy AGP fortecy musi wymagać tych współrzędnych dokładnie, bez tolerancji projektowej; przezroczysty margines i widoczne granice grafiki nie zmieniają układu całego canvasa. |
 | **Demo** | Izolowany poziom `0`, uruchamiany przyciskiem `TEST` na ekranie głównym. Korzysta z biomu Copperwood i pełnego testowego loadoutu; służy do wspólnego ustawiania oraz weryfikacji fortec, FHP, maga i katapult bez wpływu na postęp kampanii. |
 | **Tutorial Spotlight** | Przyciemniona warstwa rozgrywki z ramką wokół opisywanego elementu. |
@@ -98,6 +103,7 @@ kontrakty są wyraźnie oddzielone.
 | Term | Meaning |
 | --- | --- |
 | **Battlefield** | Cały obszar gry zawierający teren, fortece, katapulty, jednostki, pociski i efekty. |
+| **Fortress–Catapult Presentation Contract** | Zamrożona wspólna geometria fortecy i katapulty: fortress `672 × 504`, fortress Y offset `+35`, catapult width `182.4`, pozycja `110` jednostek na zewnątrz i `foundation + 35 - 200` w osi Y. Katapulty są rysowane za fortecami; launch/aim anchor pozostaje fortress-relative (`±40` w X i `-360 * worldHeight / 4800` od prezentowanego fundamentu). Przyszłe przesunięcie lub skalowanie fortecy wymaga analogicznej zmiany powiązanych katapult, FHP i rozmieszczenia maga. |
 | **JS (world unit)** | Stała jednostka projektowa świata. Pozycje obiektów, kolizje i geometria rozgrywki używają JS, a dopiero kamera i zoom przeliczają je na piksele konkretnego urządzenia. |
 | **Fixed Design Coordinate System** | Stały układ współrzędnych, w którym szerokość świata pozostaje taka sama na każdym urządzeniu. Zmiana rozdzielczości wpływa na kadr i zoom, ale nie na pozycje obiektów ani relacje między nimi. |
 | **Player Fortress** | Twierdza po lewej stronie, kontrolowana przez gracza. |

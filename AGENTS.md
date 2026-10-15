@@ -78,6 +78,30 @@ view/controller and connect it through `AppScreen` and `AppNavigator`.
 - Do not introduce a second parallel terrain, asset or navigation contract.
 - Prefer existing helpers and patterns before adding new abstractions.
 
+## Fortress and catapult presentation lock
+
+The fortress/catapult layout is frozen at its current shared baseline. Fortress
+sprites and their hitboxes are `672 × 504` world units, with a `+35` world-Y
+presentation offset from the authored foundation. Catapult sprites are
+`182.4` world units wide, positioned `110` units outward from each fortress
+center and at `foundation + 35 - 200` on world Y. Render catapults before
+fortresses and the terrain cap after fortresses, so the fortresses occlude the
+catapults and the cap can conceal the fortresses' lower edges.
+
+Do not change this baseline unless the user asks. Every later fortress movement
+must apply the same world-space translation to its catapult, FHP and associated
+mage placement; every fortress size change must apply the same scale factor to
+their linked presentation and collision geometry while preserving the
+catapult's `0.8` relative sprite-size multiplier. Keep these transforms global
+across maps, biomes and levels, and update the simulation, Android renderer, web
+map-editor preview, tests and knowledge files together.
+
+Projectile launch and aiming origins are deliberately fortress-relative, not
+derived from the relocated catapult sprite: X is `40` world units outward from
+the fortress center, and Y is `360 * worldHeight / 4800` units above the
+presented fortress foundation, clamped above local terrain when needed. The
+trajectory preview, aiming circle and simulation must use the same anchor.
+
 ## Ammunition rules
 
 - `AmmunitionCatalog` is the single source of truth for player, AI and

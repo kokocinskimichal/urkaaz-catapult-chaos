@@ -81,6 +81,34 @@ class BattlefieldCameraControllerTest {
     }
 
     @Test
+    fun screenToGameWorldCoordinatesRespectViewportAndCameraZoom() {
+        val camera = BattlefieldCameraController()
+        val viewportWidth = 1_000f
+        val viewportHeight = 600f
+        val cursorX = 250f
+        val cursorY = 200f
+
+        val beforeZoom = camera.screenToGameWorld(
+            cursorX,
+            cursorY,
+            viewportWidth,
+            viewportHeight,
+        )
+        camera.applyZoom(2f, cursorX, cursorY, viewportWidth, viewportHeight)
+        val afterZoom = camera.screenToGameWorld(
+            cursorX,
+            cursorY,
+            viewportWidth,
+            viewportHeight,
+        )
+
+        assertEquals(1_800f, beforeZoom.first, 0.001f)
+        assertEquals(1_600f, beforeZoom.second, 0.001f)
+        assertEquals(beforeZoom.first, afterZoom.first, 0.001f)
+        assertEquals(beforeZoom.second, afterZoom.second, 0.001f)
+    }
+
+    @Test
     fun zoomCanReachTheExpandedMaximumScale() {
         val camera = BattlefieldCameraController()
 
