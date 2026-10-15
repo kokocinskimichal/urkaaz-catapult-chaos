@@ -58,6 +58,27 @@ class AiAgentTest {
     }
 
     @Test
+    fun aiAvoidsAmmunitionThatCannotDamageTheTargetFortress() {
+        val ammunitionSnapshot = snapshot.copy(
+            resources = snapshot.resources.copy(
+                ammunition = mapOf("PLAGUE_CAULDRON" to 1, "SIEGE_BOMB" to 1),
+            ),
+        )
+        val commands = AiAgent(
+            AiConfiguration(
+                playerId = PlayerId("ai-player"),
+                team = Team.RED,
+                temperament = AiTemperament.AGGRESSIVE,
+            ),
+        ).decide(ammunitionSnapshot)
+
+        assertEquals(
+            "SIEGE_BOMB",
+            (commands.first() as MatchCommand.SelectAmmo).ammunitionType,
+        )
+    }
+
+    @Test
     fun lowHealthChangesTemperamentToDesperateAndCanDeployUnit() {
         val lowHealth = snapshot.copy(
             fortresses = snapshot.fortresses.map {

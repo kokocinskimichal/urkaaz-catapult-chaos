@@ -152,14 +152,17 @@ class AiAgent(
             .keys
             .mapNotNull { runCatching { AmmunitionType.valueOf(it) }.getOrNull() }
             .ifEmpty { listOf(AmmunitionType.ROCK) }
+        val fortressAmmo = available
+            .filter { AmmunitionCatalog.definition(it).damage.fortressDamage > 0 }
+            .ifEmpty { listOf(AmmunitionType.ROCK) }
 
         return when (effectiveTemperament(snapshot)) {
             AiTemperament.AGGRESSIVE,
-            AiTemperament.DESPERATE -> available.maxBy {
+            AiTemperament.DESPERATE -> fortressAmmo.maxBy {
                 val definition = AmmunitionCatalog.definition(it)
                 definition.damage.fortressDamage + definition.damage.fortressRadius.toInt()
             }.name
-            AiTemperament.CAUTIOUS -> available.minBy {
+            AiTemperament.CAUTIOUS -> fortressAmmo.minBy {
                 AmmunitionCatalog.definition(it).damage.fortressRadius
             }.name
             AiTemperament.CHAOTIC -> available[random.nextInt(available.size)].name

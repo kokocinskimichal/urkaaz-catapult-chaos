@@ -19,7 +19,7 @@ object DemoLevelDefinitions {
             mapDefinition = mapDefinition,
             biome = TerrainBiome.fromMapId(mapDefinition.biome)
             ?: error("demo-map references an unsupported biome"),
-            initialWind = WindSnapshot(),
+            initialWind = WindSnapshot(direction = 1f, strength = 0.25f),
         )
     }
 }

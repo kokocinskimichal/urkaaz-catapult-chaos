@@ -22,6 +22,7 @@ import com.urkaaaz.contracts.WindSnapshot
 import com.urkaaaz.domain.Aim
 import com.urkaaaz.domain.AmmunitionType
 import com.urkaaaz.domain.AmmunitionCatalog
+import com.urkaaaz.domain.AmmunitionImpactBehavior
 import com.urkaaaz.domain.Catapult
 import com.urkaaaz.domain.Fortress
 import com.urkaaaz.domain.Projectile
@@ -82,7 +83,6 @@ class DeterministicMatchSimulation(
                 FORTRESS_FLAT_HALF_WIDTH,
             )
     private var projectiles = emptyList<Projectile>()
-    private val pendingProjectiles = mutableListOf<Projectile>()
     private var currentBlueFortress = blueFortress
     private var currentRedFortress = redFortress
     private var currentBlueCatapult = blueCatapult
@@ -350,8 +350,7 @@ class DeterministicMatchSimulation(
                 else -> resolved += advanced
             }
         }
-        projectiles = resolved + pendingProjectiles
-        pendingProjectiles.clear()
+        projectiles = resolved
         advanceLingeringEffects(deltaSeconds)
         logCombatState("tick")
         if (projectiles.isEmpty() && status == MatchStatus.RUNNING) {
@@ -496,8 +495,6 @@ class DeterministicMatchSimulation(
                 velocityX = it.velocity.x,
                 velocityY = it.velocity.y,
                 ageMilliseconds = (it.ageSeconds * 1_000f).toLong(),
-                parentProjectileId = it.parentProjectileId,
-                generation = it.generation,
                 mass = it.mass,
                 windResponse = it.windResponse,
                 gravityResponse = it.gravityResponse,
@@ -1399,23 +1396,6 @@ class DeterministicMatchSimulation(
     ) {
         val definition = AmmunitionCatalog.definition(projectile.ammunition)
         when (val behavior = definition.behavior) {
-            is com.urkaaaz.domain.AmmunitionImpactBehavior.Fragmentation -> {
-                if (projectile.generation == 0) {
-                    spawnSubprojectiles(projectile, behavior)
-                } else {
-                    applyDamageAt(
-                        position = projectile.position,
-                        radius = definition.damage.fortressRadius,
-                        damage = behavior.fragmentDamage,
-                        sourceTeam = projectile.firedBy,
-                        unitDamage = behavior.fragmentDamage,
-                        hitLayer = hitLayer,
-                        sourceProjectileId = projectile.id,
-                        minimumDamage = definition.damage.minimumDamage,
-                        friendlyFire = definition.collision.friendlyFire,
-                    )
-                }
-            }
             is com.urkaaaz.domain.AmmunitionImpactBehavior.LingeringArea -> {
                 applyDamageAt(
                     position = projectile.position,
@@ -1486,35 +1466,6 @@ class DeterministicMatchSimulation(
         finishIfFortressDestroyed()
     }
 
-    private fun spawnSubprojectiles(
-        parent: Projectile,
-        behavior: com.urkaaaz.domain.AmmunitionImpactBehavior.Fragmentation,
-    ) {
-        val centerIndex = (behavior.fragmentCount - 1) / 2f
-        repeat(behavior.fragmentCount) { index ->
-            val offset = (index - centerIndex) * behavior.spread
-            pendingProjectiles += parent.copy(
-                id = EntityId("${parent.id.value}-fragment-$index"),
-                position = parent.position.copy(x = parent.position.x + offset),
-                velocity = Velocity(
-                    x = parent.velocity.x * 0.35f + offset * 1.8f,
-                    y = parent.velocity.y * 0.35f - kotlin.math.abs(offset) * 0.4f,
-                ),
-                ageSeconds = 0f,
-                parentProjectileId = parent.id,
-                generation = parent.generation + 1,
-                mass = parent.mass,
-                windResponse = parent.windResponse,
-                gravityResponse = parent.gravityResponse,
-                drag = parent.drag,
-            )
-            logAmmunition(
-                reason = "subprojectile-spawned",
-                projectile = pendingProjectiles.last(),
-            )
-        }
-    }
-
     private fun applyDamageAt(
         position: WorldPosition,
         radius: Float,
@@ -1528,7 +1479,8 @@ class DeterministicMatchSimulation(
         minimumDamage: Int = 0,
         friendlyFire: FriendlyFirePolicy = FriendlyFirePolicy.ENEMY_ONLY,
     ) {
-        if (currentBlueFortress.intersects(position, radius) &&
+        if (damage > 0 &&
+            currentBlueFortress.intersects(position, radius) &&
             canHitFortress(sourceTeam, Team.BLUE, friendlyFire)
         ) {
             currentBlueFortress = currentBlueFortress.withDamage(damage)
@@ -1540,7 +1492,8 @@ class DeterministicMatchSimulation(
                 targetLayer = com.urkaaaz.domain.AmmunitionHitLayer.FORTRESS,
             )
         }
-        if (currentRedFortress.intersects(position, radius) &&
+        if (damage > 0 &&
+            currentRedFortress.intersects(position, radius) &&
             canHitFortress(sourceTeam, Team.RED, friendlyFire)
         ) {
             currentRedFortress = currentRedFortress.withDamage(damage)
@@ -1615,42 +1568,23 @@ class DeterministicMatchSimulation(
         if (lingeringEffects.isEmpty()) return
         val updated = mutableListOf<LingeringEffect>()
         lingeringEffects.forEach { effect ->
+            val definition = AmmunitionCatalog.definition(effect.ammunition)
+            val behavior = definition.behavior as? AmmunitionImpactBehavior.LingeringArea
+                ?: error("lingering effect has a non-lingering ammunition definition")
             var remaining = effect.remainingSeconds - deltaSeconds
             var untilNextTick = effect.untilNextTickSeconds - deltaSeconds
             while (remaining > 0f && untilNextTick <= 0f) {
                 applyDamageAt(
                     position = effect.currentCenter,
                     radius = effect.radius,
-                    damage = AmmunitionCatalog
-                        .definition(effect.ammunition)
-                        .damage
-                        .fortressDamage / 2,
+                    damage = behavior.fortressDamagePerTick,
                     sourceTeam = effect.sourceTeam,
-                    unitDamage = AmmunitionCatalog
-                        .definition(effect.ammunition)
-                        .behavior
-                        .let { behavior ->
-                            (behavior as? com.urkaaaz.domain.AmmunitionImpactBehavior.LingeringArea)
-                                ?.damagePerTick
-                                ?: 0
-                        },
-                    status = (
-                        AmmunitionCatalog.definition(effect.ammunition).behavior as?
-                            com.urkaaaz.domain.AmmunitionImpactBehavior.LingeringArea
-                    )?.status,
-                    statusDurationSeconds = (
-                        AmmunitionCatalog.definition(effect.ammunition).behavior as?
-                            com.urkaaaz.domain.AmmunitionImpactBehavior.LingeringArea
-                    )?.durationSeconds ?: 3f,
+                    unitDamage = behavior.damagePerTick,
+                    status = behavior.status,
+                    statusDurationSeconds = behavior.durationSeconds,
                     sourceProjectileId = effect.sourceProjectileId,
-                    friendlyFire = AmmunitionCatalog
-                        .definition(effect.ammunition)
-                        .collision
-                        .friendlyFire,
-                    minimumDamage = AmmunitionCatalog
-                        .definition(effect.ammunition)
-                        .damage
-                        .minimumDamage,
+                    friendlyFire = definition.collision.friendlyFire,
+                    minimumDamage = definition.damage.minimumDamage,
                 )
                 untilNextTick += effect.tickIntervalSeconds
             }

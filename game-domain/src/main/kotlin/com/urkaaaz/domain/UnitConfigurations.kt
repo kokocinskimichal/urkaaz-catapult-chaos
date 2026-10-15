@@ -35,7 +35,7 @@ object UnitConfigurations {
     val SAPPER = UnitConfiguration(
         id = "SAPPER",
         supplyCost = 10,
-        maxHealth = 60,
+        maxHealth = 20,
         speed = 260f,
         attackDamage = 180,
         attackCooldownSeconds = 1.75f,
@@ -45,7 +45,7 @@ object UnitConfigurations {
     val DEFENDER = UnitConfiguration(
         id = "DEFENDER",
         supplyCost = 5,
-        maxHealth = 260,
+        maxHealth = 50,
         speed = 150f,
         attackDamage = 30,
         attackCooldownSeconds = 0.8f,
@@ -55,7 +55,7 @@ object UnitConfigurations {
     val DEMOLISHER = UnitConfiguration(
         id = "DEMOLISHER",
         supplyCost = 10,
-        maxHealth = 70,
+        maxHealth = 25,
         speed = 110f,
         attackDamage = 0,
         attackCooldownSeconds = 0.8f,
@@ -65,7 +65,7 @@ object UnitConfigurations {
     val RAGING_BOAR = UnitConfiguration(
         id = "RAGING_BOAR",
         supplyCost = 10,
-        maxHealth = 420,
+        maxHealth = 80,
         speed = 240f,
         attackDamage = 52,
         attackCooldownSeconds = 0.8f,
@@ -75,7 +75,7 @@ object UnitConfigurations {
     val SLINGMASTER = UnitConfiguration(
         id = "SLINGMASTER",
         supplyCost = 5,
-        maxHealth = 75,
+        maxHealth = 25,
         speed = 120f,
         attackDamage = 20,
         attackCooldownSeconds = 1.2f,

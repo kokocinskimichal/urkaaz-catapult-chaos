@@ -698,7 +698,7 @@ class BattlefieldView(context: Context) : View(context) {
         private const val FORTRESS_CENTER_MARGIN = 490f
         private const val PROJECTILE_SPEED_SCALE = 8f
         private const val GRAVITY_ACCELERATION_Y = 420f
-        private const val WIND_ACCELERATION_SCALE = 260f
+        private const val WIND_ACCELERATION_SCALE = 390f
         private const val PHYSICS_WORLD_SCALE = 4.5f
         private const val AIM_CIRCLE_EDGE_MARGIN = 8f
         private const val MIN_VISUAL_PULL_RADIUS = 24f

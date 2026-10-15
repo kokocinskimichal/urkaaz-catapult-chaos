@@ -8,6 +8,8 @@ import com.urkaaaz.contracts.MatchPhase
 import com.urkaaaz.contracts.MatchStatus
 import com.urkaaaz.contracts.Team
 import com.urkaaaz.domain.AmmunitionType
+import com.urkaaaz.domain.UnitConfigurations
+import com.urkaaaz.domain.UnitFactory
 import com.urkaaaz.domain.WorldBounds
 import kotlin.math.abs
 import kotlin.test.Test
@@ -21,6 +23,9 @@ class DeterministicMatchSimulationTest {
         gravityAccelerationY = 0f,
         windAccelerationX = 2f,
     )
+
+    private fun durableDefender() =
+        UnitFactory.create(UnitConfigurations.DEFENDER.copy(maxHealth = 260))
 
     @Test
     fun startProducesDeterministicLifecycleEventsAndSnapshot() {
@@ -208,29 +213,6 @@ class DeterministicMatchSimulationTest {
     }
 
     @Test
-    fun clusterImpactSpawnsDeterministicNonRecursiveSubprojectiles() {
-        val logs = mutableListOf<AmmunitionLogRecord>()
-        val simulation = DeterministicMatchSimulation(
-            MatchId("cluster-match"),
-            SimulationConfig(
-                bounds = WorldBounds(width = 1_000f, height = 600f),
-                gravityAccelerationY = 1_000f,
-            ),
-            ammunitionLogSink = AmmunitionLogSink { logs += it },
-        )
-        simulation.start()
-        simulation.fire(EntityId("blue-catapult"), AmmunitionType.CLUSTER_BOMB)
-
-        simulation.advance(2_000)
-
-        val fragments = simulation.snapshot().projectiles
-            .filter { it.parentProjectileId != null }
-        assertEquals(3, fragments.size)
-        assertTrue(fragments.all { it.generation == 1 })
-        assertEquals(3, logs.count { it.reason == "subprojectile-spawned" })
-    }
-
-    @Test
     fun fireRainCreatesAVisibleLingeringEffectAfterImpact() {
         val simulation = DeterministicMatchSimulation(
             MatchId("fire-rain-match"),
@@ -393,15 +375,15 @@ class DeterministicMatchSimulationTest {
 
         val units = simulation.snapshot().units
         assertTrue(units.size <= 2)
-        assertTrue(units.isEmpty() || units.all { it.health < 260 })
+        assertTrue(units.isEmpty() || units.all { it.health < UnitConfigurations.DEFENDER.maxHealth })
     }
 
     @Test
     fun combatLuckCanProduceAWinningDefenderInsteadOfAForcedDraw() {
         val simulation = DeterministicMatchSimulation(MatchId("defender-luck-match"), config)
         simulation.start()
-        simulation.deployUnit(com.urkaaaz.domain.UnitFactory.defender(), Team.BLUE)
-        simulation.deployUnit(com.urkaaaz.domain.UnitFactory.defender(), Team.RED)
+        simulation.deployUnit(durableDefender(), Team.BLUE)
+        simulation.deployUnit(durableDefender(), Team.RED)
         simulation.sendWave(Team.BLUE)
         simulation.sendWave(Team.RED)
 
@@ -421,8 +403,8 @@ class DeterministicMatchSimulationTest {
         val simulation = DeterministicMatchSimulation(MatchId("formation-combat-match"), config)
         simulation.start()
         repeat(3) {
-            simulation.deployUnit(com.urkaaaz.domain.UnitFactory.defender(), Team.BLUE)
-            simulation.deployUnit(com.urkaaaz.domain.UnitFactory.defender(), Team.RED)
+            simulation.deployUnit(durableDefender(), Team.BLUE)
+            simulation.deployUnit(durableDefender(), Team.RED)
         }
         simulation.sendWave(Team.BLUE)
         simulation.sendWave(Team.RED)
@@ -451,8 +433,8 @@ class DeterministicMatchSimulationTest {
         )
         simulation.start()
         repeat(3) {
-            simulation.deployUnit(com.urkaaaz.domain.UnitFactory.defender(), Team.BLUE)
-            simulation.deployUnit(com.urkaaaz.domain.UnitFactory.defender(), Team.RED)
+            simulation.deployUnit(durableDefender(), Team.BLUE)
+            simulation.deployUnit(durableDefender(), Team.RED)
         }
         simulation.sendWave(Team.BLUE)
         simulation.sendWave(Team.RED)
@@ -482,8 +464,8 @@ class DeterministicMatchSimulationTest {
         val simulation = DeterministicMatchSimulation(MatchId("rear-slot-attack-match"), config)
         simulation.start()
         repeat(3) {
-            simulation.deployUnit(com.urkaaaz.domain.UnitFactory.defender(), Team.BLUE)
-            simulation.deployUnit(com.urkaaaz.domain.UnitFactory.defender(), Team.RED)
+            simulation.deployUnit(durableDefender(), Team.BLUE)
+            simulation.deployUnit(durableDefender(), Team.RED)
         }
         simulation.sendWave(Team.BLUE)
         simulation.sendWave(Team.RED)

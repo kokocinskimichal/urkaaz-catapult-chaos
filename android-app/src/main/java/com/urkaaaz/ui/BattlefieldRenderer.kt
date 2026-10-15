@@ -159,28 +159,41 @@ class BattlefieldRenderer(
             val projectileX = worldToViewX(projectile.x, viewportWidth)
                 .coerceIn(0f, viewportWidth)
             val projectileY = worldToViewY(projectile.y, viewportHeight)
-            val frames = assets.animationFor(projectile.ammunitionType).flightFrames
+            val animation = assets.animationFor(projectile.ammunitionType)
+            val frames = animation.flightFrames
+            val projectileRenderSize = animation.flightRenderSize
             val frame = frames.getOrNull(animationFrame % frames.size.coerceAtLeast(1))
             val projectileHeight = if (frame == null) {
-                PROJECTILE_RENDER_SIZE
+                projectileRenderSize
             } else {
-                PROJECTILE_RENDER_SIZE * frame.height.toFloat() / frame.width.coerceAtLeast(1)
+                projectileRenderSize * frame.height.toFloat() / frame.width.coerceAtLeast(1)
             }
             drawTexture(
                 canvas,
                 frame,
-                projectileX - PROJECTILE_RENDER_SIZE / 2f,
+                projectileX - projectileRenderSize / 2f,
                 projectileY - projectileHeight / 2f,
-                PROJECTILE_RENDER_SIZE,
+                projectileRenderSize,
             )
         }
         drawUnits(canvas, state, viewportWidth, viewportHeight, groundTop, animationFrame)
         activeImpact?.let { impact ->
-            val frames = assets.animationFor(impact.ammunitionType).impactFrames
+            val animation = assets.animationFor(impact.ammunitionType)
+            val frames = animation.impactFrames
             val frame = frames.getOrNull(impactFrame % frames.size.coerceAtLeast(1))
             val impactX = worldToViewX(impact.x, viewportWidth).coerceIn(0f, viewportWidth)
             val impactY = worldToViewY(impact.y, viewportHeight)
-            drawTexture(canvas, frame, impactX - 54f, impactY - 54f, 108f)
+            val impactRenderSize = animation.impactRenderSize
+            val impactRenderHeight = frame?.let {
+                impactRenderSize * it.height.toFloat() / it.width.coerceAtLeast(1)
+            } ?: impactRenderSize
+            drawTexture(
+                canvas,
+                frame,
+                impactX - impactRenderSize / 2f,
+                impactY - impactRenderHeight / 2f,
+                impactRenderSize,
+            )
         }
         drawCombatFeedback(canvas, combatFeedback, viewportWidth, viewportHeight, groundTop)
 
@@ -858,7 +871,6 @@ class BattlefieldRenderer(
         private const val BOAR_SOURCE_CROP_HEIGHT_RATIO = 301f / 512f
         private const val CATAPULT_RENDER_WIDTH = WorldScale.CATAPULT_RENDER_WIDTH
         private const val PROJECTILE_DEBUG_RADIUS = 30f
-        private const val PROJECTILE_RENDER_SIZE = 36f
         private const val DECORATION_RENDER_SIZE = 94f
         private const val DECORATION_GROUND_SINK = 12f
     }

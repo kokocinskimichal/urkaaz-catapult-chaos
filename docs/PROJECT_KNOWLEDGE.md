@@ -97,6 +97,9 @@ The current match HUD displays:
   events, and `BattlefieldCameraController.screenToGameWorld` converts them
   through the current camera transform and viewport dimensions; campaign debug
   tools omit this demo-only option.
+- The demo starts with light eastward wind (`direction = 1`, `strength = 0.25`),
+  enabling the deterministic wind system: it begins transitioning after eight
+  seconds and selects another wind target every 18–24 seconds.
 - The match tick reads the immutable simulation snapshot through
   `LocalMatchGateway` before advancing. This prevents a stale presentation
   state from dispatching `AdvanceSimulation` after the simulation has reached
@@ -184,13 +187,12 @@ disabled; selecting an enabled item updates the selector and sends
 Campaign wind is now passed from `CampaignLevelDefinition.initialWind` through
 `MatchViewModel`, `LocalMatchGateway` and `MatchSession` into
 `SimulationConfig.windAccelerationX` and
-`SimulationConfig.windAccelerationScale`. The Android match uses a calibrated
-physical scale of `260`, preserving a strong but controllable projectile
-deflection while allowing extreme opposing wind to stop a projectile before
-the opposing fortress. The snapshot continues to expose normalized strength
-values for the HUD. Campaign definitions currently use deterministic
-alternating directions and four low-to-medium strength bands for testable
-level variation.
+`SimulationConfig.windAccelerationScale`. The simulation uses a physical
+scale of `390`; the Android trajectory preview uses the same scale so its
+projected deflection matches the stronger projectile response. The snapshot
+continues to expose normalized strength values for the HUD. Campaign
+definitions currently use deterministic alternating directions and four
+low-to-medium strength bands for testable level variation.
 
 Wind is dynamic during gameplay: after an initial 8-second period it changes
 through a deterministic 3-second transition, then schedules the next change
@@ -227,7 +229,7 @@ and tree bounds include a lower-anchor cross for checking terrain placement.
 
 Catapults are not damage targets. Projectile damage is resolved against the
 opposing fortress collision hitbox; the debug overlay therefore does not draw
-catapult hitboxes. The fortress hitbox is one rectangle around the union of the
+catapult hitboxes. The fortress hitbox is one rectangle inset to 90% of the
 opaque bounds in both left and right fortress sprites. It is scaled from the
 1024x768 source canvas and centered on the rendered fortress. Direct hits, area
 damage and the debug preview use the same rectangle.
@@ -350,10 +352,22 @@ must go through commands and domain/application boundaries.
 - Ammunition damage profiles keep separate `unitDamage` and `fortressDamage`
   values and separate falloff radii, even when a type currently uses the same
   value for both target classes.
-- `POWDER_BARREL` currently deals 220 damage within a 220-world-unit blast
-  radius, creates a 150-world-unit crater with depth 90, and can damage allied
-  units but not the firing team's fortress. Its inventory remains limited to
-  three shots with a 6.5-second reload.
+- `POWDER_BARREL` currently deals up to 120 damage within a 220-world-unit
+  blast radius, with unit damage falling off by distance. It creates a
+  150-world-unit crater with depth 90 and can damage allied units but not the
+  firing team's fortress. Its inventory remains limited to three shots with a
+  6.5-second reload.
+- The ammunition catalog contains Rock, Siege Bomb, Powder Barrel, Fire Rain
+  and Plague Cauldron; Cluster Bomb and its fragment-only projectile metadata
+  and rendering have been removed. Rock deals 50 damage to units and
+  fortresses, Siege Bomb deals 100 fortress damage, Fire Rain ticks for 4
+  damage, and Plague Cauldron ticks for 8 unit damage without harming
+  fortresses.
+- The AI only considers ammunition with positive fortress damage when choosing
+  a shot against a fortress. Entity-impact presentation uses the collision
+  coordinates from `ProjectileHitEntity`.
+- Unit maximum health is centralized in `UnitConfigurations.kt`: Sapper 20,
+  Defender 50, Demolisher 25, Raging Boar 80 and Slingmaster 25.
 - Demo matches configure the BLUE player fortress with 5,000 maximum health
   (ten times the standard 500), while the RED fortress and non-demo matches
   retain 500 maximum health. The value is passed through the application

@@ -210,12 +210,8 @@ object RenderStateMapper {
                     )
                     is MatchEvent.ProjectileHitEntity -> ImpactRenderState(
                         event.eventId.value,
-                        if (event.targetId.value.startsWith("blue")) blueFortressX else redFortressX,
-                        if (event.targetId.value.startsWith("blue")) {
-                            blueFortressFoundationY
-                        } else {
-                            redFortressFoundationY
-                        },
+                        event.x,
+                        event.y,
                         event.ammunitionType,
                     )
                     else -> null

@@ -34,6 +34,8 @@ enum class BattlefieldAssetKind {
 data class ProjectileAnimation(
     val flightFrames: List<Bitmap>,
     val impactFrames: List<Bitmap>,
+    val flightRenderSize: Float = 36f,
+    val impactRenderSize: Float = 108f,
 )
 
 class BattlefieldAssetCatalog(private val context: Context) {
@@ -53,10 +55,14 @@ class BattlefieldAssetCatalog(private val context: Context) {
     private val rockImpactFrames = loadAnimationFrames("rock_impact")
 
     private val animations = mapOf(
-        "ROCK" to ProjectileAnimation(rockFlightFrames, rockImpactFrames),
+        "ROCK" to ProjectileAnimation(
+            flightFrames = rockFlightFrames,
+            impactFrames = rockImpactFrames,
+            flightRenderSize = 18f,
+            impactRenderSize = 36f,
+        ),
         "SIEGE_BOMB" to animation("siege_bomb"),
         "POWDER_BARREL" to animation("powder_barrel"),
-        "CLUSTER_BOMB" to animation("cluster_bomb"),
         "FIRE_RAIN" to animation("fire_rain"),
         "PLAGUE_CAULDRON" to animation("plague_cauldron"),
     )

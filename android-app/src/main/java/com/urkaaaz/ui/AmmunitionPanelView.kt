@@ -123,7 +123,6 @@ class AmmunitionPanelView(context: Context) : FrameLayout(context) {
         "ROCK" -> R.drawable.rock_flight_00
         "SIEGE_BOMB" -> R.drawable.ammo_icon_siege_bomb
         "POWDER_BARREL" -> R.drawable.ammo_icon_powder_barrel
-        "CLUSTER_BOMB" -> R.drawable.cluster_bomb_icon
         "FIRE_RAIN" -> R.drawable.fire_rain_icon
         "PLAGUE_CAULDRON" -> R.drawable.plague_cauldron_icon
         else -> R.drawable.rock_flight_00
@@ -146,7 +145,6 @@ class AmmunitionPanelView(context: Context) : FrameLayout(context) {
             "ROCK",
             "SIEGE_BOMB",
             "POWDER_BARREL",
-            "CLUSTER_BOMB",
             "FIRE_RAIN",
             "PLAGUE_CAULDRON",
         )

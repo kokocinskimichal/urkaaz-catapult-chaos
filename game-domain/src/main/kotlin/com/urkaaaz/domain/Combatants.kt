@@ -72,8 +72,6 @@ data class Projectile(
     val velocity: Velocity,
     val active: Boolean = true,
     val ageSeconds: Float = 0f,
-    val parentProjectileId: EntityId? = null,
-    val generation: Int = 0,
     val mass: Float = 1f,
     val windResponse: Float = 1f,
     val gravityResponse: Float = 1f,

@@ -4,9 +4,12 @@ import com.urkaaaz.contracts.MatchPhase
 import com.urkaaaz.contracts.MatchSnapshot
 import com.urkaaaz.contracts.MatchStatus
 import com.urkaaaz.contracts.EntityId
+import com.urkaaaz.contracts.EventId
 import com.urkaaaz.contracts.FortressSnapshot
 import com.urkaaaz.contracts.FortressPlacement
 import com.urkaaaz.contracts.InitialCameraAnchor
+import com.urkaaaz.contracts.MatchEvent
+import com.urkaaaz.contracts.MatchId
 import com.urkaaaz.contracts.MapDefinition
 import com.urkaaaz.contracts.MapDecoration
 import com.urkaaaz.contracts.MapGenerationMetadata
@@ -80,6 +83,31 @@ class RenderStateMapperTest {
         )
 
         assertEquals("projectile-42", state.projectiles.single().projectileId)
+    }
+
+    @Test
+    fun mapperPlacesEntityImpactAtCollisionCoordinates() {
+        val impactX = 2_910f
+        val impactY = 1_340f
+        val state = RenderStateMapper.map(
+            snapshot = MatchSnapshot(),
+            events = listOf(
+                MatchEvent.ProjectileHitEntity(
+                    eventId = EventId("impact-1"),
+                    matchId = MatchId("match-1"),
+                    simulationTimeMilliseconds = 1_000L,
+                    projectileId = EntityId("blue-projectile"),
+                    targetId = EntityId("red-fortress"),
+                    ammunitionType = "ROCK",
+                    targetLayer = "FORTRESS",
+                    x = impactX,
+                    y = impactY,
+                ),
+            ),
+        )
+
+        assertEquals(impactX, state.impact?.x)
+        assertEquals(impactY, state.impact?.y)
     }
 
     @Test

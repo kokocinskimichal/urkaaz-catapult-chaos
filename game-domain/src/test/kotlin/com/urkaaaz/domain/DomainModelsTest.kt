@@ -107,6 +107,15 @@ class DomainModelsTest {
     }
 
     @Test
+    fun unitConfigurationsUseRequestedHealthValues() {
+        assertEquals(50, UnitConfigurations.DEFENDER.maxHealth)
+        assertEquals(20, UnitConfigurations.SAPPER.maxHealth)
+        assertEquals(25, UnitConfigurations.DEMOLISHER.maxHealth)
+        assertEquals(80, UnitConfigurations.RAGING_BOAR.maxHealth)
+        assertEquals(25, UnitConfigurations.SLINGMASTER.maxHealth)
+    }
+
+    @Test
     fun unitFactoryAssignsAttackTypeToEveryUnit() {
         assertEquals(AttackType.MELEE, UnitFactory.defender().attackType)
         assertEquals(AttackType.SIEGE_MISSION, UnitFactory.sapper().attackType)

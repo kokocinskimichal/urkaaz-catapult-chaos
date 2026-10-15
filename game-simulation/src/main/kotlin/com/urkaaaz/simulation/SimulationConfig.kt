@@ -10,7 +10,7 @@ data class SimulationConfig(
     val terrainBiome: String = "GREEN_FRONTIER",
     val gravityAccelerationY: Float = 420f,
     val windAccelerationX: Float = 0f,
-    val windAccelerationScale: Float = 260f,
+    val windAccelerationScale: Float = 390f,
     val fortressCollisionRadius: Float = 46f,
     val unitCollisionRadius: Float = WorldScale.UNIT_COLLISION_RADIUS,
     val defaultCatapultHeightRatio: Float = 0.72f,

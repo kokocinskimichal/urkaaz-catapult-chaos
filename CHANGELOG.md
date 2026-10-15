@@ -64,3 +64,18 @@
   can overlap and conceal their lower portions.
 - Cropped all blue- and red-facing Raging Boar animation sprites to one shared
   ground-aligned canvas while preserving their visible render size.
+- The demo now starts with light eastward wind, and projectile wind strength
+  is increased consistently in the simulation and trajectory preview.
+- Rebalanced ammunition and unit health; the AI now avoids ammunition that
+  cannot damage the opposing fortress.
+- Fortress collision bounds are inset to 90% of their previous dimensions.
+
+### Fixed
+
+- Entity-impact visuals now use the reported collision coordinates instead of
+  the fortress center.
+
+### Removed
+
+- Removed Cluster Bomb, its fragmentation behavior and projectile metadata,
+  UI/rendering paths, tests, and 97 app image assets.

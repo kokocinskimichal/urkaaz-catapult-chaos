@@ -124,12 +124,12 @@ class ContractsTest {
     }
 
     @Test
-    fun fortressAlphaProfileUsesOneFullSilhouetteRectangle() {
+    fun fortressAlphaProfileUsesInsetSilhouetteRectangle() {
         val rectangle = FortressHitboxProfile.rectangles.single()
 
-        assertEquals(-282.1875f, rectangle.left, 0.001f)
-        assertEquals(-213.28125f, rectangle.top, 0.001f)
-        assertEquals(282.1875f, rectangle.right, 0.001f)
-        assertEquals(213.28125f, rectangle.bottom, 0.001f)
+        assertEquals(-253.96875f, rectangle.left, 0.001f)
+        assertEquals(-191.953125f, rectangle.top, 0.001f)
+        assertEquals(253.96875f, rectangle.right, 0.001f)
+        assertEquals(191.953125f, rectangle.bottom, 0.001f)
     }
 }

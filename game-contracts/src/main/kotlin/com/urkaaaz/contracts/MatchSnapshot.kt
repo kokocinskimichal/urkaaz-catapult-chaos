@@ -83,8 +83,6 @@ data class ProjectileSnapshot(
     val velocityX: Float,
     val velocityY: Float,
     val ageMilliseconds: Long = 0L,
-    val parentProjectileId: EntityId? = null,
-    val generation: Int = 0,
     val mass: Float = 1f,
     val windResponse: Float = 1f,
     val gravityResponse: Float = 1f,

@@ -27,6 +27,8 @@ class AddLevelSkillCompatibilityTest {
 
         assertEquals("demo-map", demo.mapDefinition.mapId)
         assertEquals("green_frontier", demo.mapDefinition.biome)
+        assertEquals(1f, demo.initialWind.direction)
+        assertEquals(0.25f, demo.initialWind.strength)
         assertTrue(MapDefinitionValidator.validate(demo.mapDefinition).isValid)
     }
 }

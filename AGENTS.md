@@ -111,8 +111,6 @@ trajectory preview, aiming circle and simulation must use the same anchor.
 - Projectile, impact, explosion and lingering-area visuals use world-space
   coordinates and the battlefield camera transform. HUD reload and inventory
   controls remain screen-space.
-- Subprojectiles are normal deterministic projectiles with a parent ID and
-  generation; a subprojectile must never recursively spawn another generation.
 - Ammunition logging is host-independent and must never change gameplay state.
 
 ## Validation gate

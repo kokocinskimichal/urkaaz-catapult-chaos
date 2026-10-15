@@ -46,7 +46,7 @@ render frames, wall-clock time or UI state.
 - Make new ammunition types possible without expanding one central `when`.
 - Keep projectile physics separate from impact behavior.
 - Keep unit damage, fortress damage and terrain damage independent.
-- Support multi-phase ammunition such as fragmentation, fire and toxic clouds.
+- Support multi-phase ammunition such as fire and toxic clouds.
 - Allow an ammunition type to behave differently when it hits terrain, a unit
   or a fortress.
 - Make all randomness deterministic and replayable from the match seed.
@@ -67,7 +67,6 @@ The current ammunition baseline is:
 ROCK
 SIEGE_BOMB
 POWDER_BARREL
-CLUSTER_BOMB
 FIRE_RAIN
 PLAGUE_CAULDRON
 ```
@@ -75,8 +74,9 @@ PLAGUE_CAULDRON
 Current `POWDER_BARREL` balance uses a 220-world-unit blast radius, allows
 friendly fire against units but not the firing team's fortress, and deforms
 terrain with a 150-world-unit crater radius and 90-world-unit depth. Its stock
-and reload rules remain three shots and 6.5 seconds respectively. It deals
-220 damage to units and fortresses within the blast radius.
+and reload rules remain three shots and 6.5 seconds respectively. It deals up
+to 120 damage to units and fortresses; unit damage falls off with distance from
+the blast center.
 
 Future types may include fantasy and humorous equivalents of modern weapons,
 for example:
@@ -125,7 +125,6 @@ Example conceptual types:
 RockAmmunition
 SiegeBombAmmunition
 PowderBarrelAmmunition
-ClusterBombAmmunition
 FireRainAmmunition
 PlagueCauldronAmmunition
 ```
@@ -133,11 +132,6 @@ PlagueCauldronAmmunition
 An explicit type may own parameters unique to its behavior:
 
 ```text
-ClusterBombAmmunition
-  fragmentCount
-  fragmentSpread
-  fragmentAmmunition
-
 PlagueCauldronAmmunition
   cloudRadius
   cloudDuration
@@ -277,7 +271,6 @@ Conceptual behavior categories:
 ```text
 DirectImpact
 Explosion
-Fragmentation
 LingeringArea
 StatusApplication
 TerrainDeformation
@@ -289,13 +282,11 @@ A single ammunition type may compose multiple phases:
 ```text
 impact
   -> explosion
-  -> fragments
   -> lingering fire
 ```
 
 Each phase has a clear responsibility and produces inspectable commands or
-events. A subprojectile is a full projectile with its own flight and collision
-rules, but it cannot create another generation of subprojectiles.
+events.
 
 ## 7. Impact context
 
@@ -407,7 +398,7 @@ Owns only:
 
 - selecting the typed impact behavior;
 - executing ordered impact phases;
-- creating damage, terrain, status and subprojectile commands.
+- creating damage, terrain and status commands.
 
 It does not render effects or mutate Android state.
 
@@ -494,7 +485,7 @@ The renderer consumes snapshots and events. It never decides whether an impact
 deals damage or whether a status stacks.
 
 Projectile and ammunition effects are world-space presentation. Flight sprites,
-impact animations, explosions, fragments, fire, toxic clouds and other
+impact animations, explosions, fire, toxic clouds and other
 lingering effects must use the same camera transform and zoom scale as the
 battlefield. Their position and visible size must therefore scale together
 with the map.
@@ -564,8 +555,6 @@ ProjectileLogState
   targetId
   lifetimeRemaining
   collisionMode
-  parentProjectileId
-  subprojectileGeneration
 ```
 
 Each active effect state includes:
@@ -615,7 +604,6 @@ projectile-hit-unit
 projectile-hit-fortress
 impact-resolved
 damage-applied
-subprojectile-spawned
 lingering-effect-started
 lingering-effect-ticked
 lingering-effect-refreshed
@@ -704,7 +692,6 @@ The logging contract must have tests for:
 - no-op logging on default/headless hosts;
 - one record for every important projectile transition;
 - stable projectile and effect IDs;
-- parent and subprojectile generation tracking;
 - correct world-space positions and radii;
 - correct damage, falloff and resistance values;
 - deterministic ordering for equal-time events;
@@ -721,14 +708,13 @@ Each simulation step follows this order:
 3. Detect terrain, unit, fortress and bounds collisions.
 4. Create immutable impact contexts.
 5. Resolve typed impact phases.
-6. Create damage, status, terrain and subprojectile commands.
+6. Create damage, status and terrain commands.
 7. Resolve area targets and distance falloff.
 8. Apply unit resistances and fortress siege modifiers.
 9. Start or refresh lingering effects.
-10. Spawn one permitted generation of subprojectiles.
-11. Apply terrain deformation.
-12. Emit ordered domain events.
-13. Publish the next immutable snapshot.
+10. Apply terrain deformation.
+11. Emit ordered domain events.
+12. Publish the next immutable snapshot.
 ```
 
 Commands are collected before state mutation where simultaneous effects are
@@ -778,6 +764,7 @@ LingeringEffect
   remainingDuration
   tickInterval
   damagePerTick
+  fortressDamagePerTick
   statusEffects
   driftsWithWind
   maximumOverlap
@@ -792,8 +779,6 @@ toxic clouds.
 All random decisions use a match-seeded random source:
 
 - damage variation;
-- fragment spread;
-- subprojectile order;
 - optional status variation;
 - optional effect drift variation.
 
@@ -822,7 +807,6 @@ ProjectileHitFortress
 ImpactResolved
 DamageApplied
 AreaDamageApplied
-SubprojectileSpawned
 LingeringEffectStarted
 LingeringEffectTicked
 LingeringEffectRefreshed
@@ -874,17 +858,7 @@ impact:
   medium crater
 ```
 
-### 14.3 Cluster Bomb
-
-```text
-impact:
-  primary impact
-  deterministic fragment spread
-  one generation of full subprojectiles
-  no subprojectile recursion
-```
-
-### 14.4 Fire Rain
+### 14.3 Fire Rain
 
 ```text
 impact:
@@ -894,18 +868,18 @@ impact:
   optional wind drift
 ```
 
-### 14.5 Plague Cauldron
+### 14.4 Plague Cauldron
 
 ```text
 impact:
   toxic cloud
   periodic damage
   poison status
+  no damage to fortresses
   controlled overlap
-  no automatic fortress poison status
 ```
 
-### 14.6 Future powerful fantasy ammunition
+### 14.5 Future powerful fantasy ammunition
 
 A future napalm-like or atomic-like fantasy type may combine:
 
@@ -947,7 +921,6 @@ Adding a new type must not require editing unrelated ammunition algorithms.
 - every type has valid positive timing and non-negative ranges;
 - unit and fortress damage are independently defined;
 - invalid profile combinations are rejected;
-- subprojectile recursion is rejected;
 - status stacking limits are valid.
 
 ### Simulation tests
@@ -960,7 +933,6 @@ Adding a new type must not require editing unrelated ammunition algorithms.
 - terrain deformation is battle-local;
 - lingering effects tick and expire deterministically;
 - wind drift applies only when enabled;
-- subprojectiles have one permitted generation;
 - status refresh and resistance rules work;
 - simultaneous impacts are independent of collection order;
 - replaying the same match produces the same result.
@@ -989,11 +961,10 @@ Implementation should be incremental:
 
 The current implementation includes:
 
-- explicit catalog definitions for all six production ammunition types;
+- explicit catalog definitions for all five production ammunition types;
 - immutable launch-time projectile flight profiles;
 - per-ammunition reload state and shared team inventory;
-- typed direct, explosive, fragmentation and lingering behaviors;
-- deterministic subprojectile IDs, parent links and generation limits;
+- typed direct, explosive and lingering behaviors;
 - terrain, unit and fortress collision layers;
 - configurable piercing and ignored-unit collision modes;
 - area damage with unit/fortress separation and linear falloff;
@@ -1014,9 +985,8 @@ tests, replay coverage, localization and the corresponding Android assets.
 3. Introduce explicit ammunition types and a catalog.
 4. Move impact resolution from the central branch into focused systems.
 5. Add typed lingering effects and status effects.
-6. Add explicit subprojectiles and deterministic spread.
-7. Expand contracts and Android presentation mappings.
-8. Remove obsolete effect flags and central ammunition branching.
+6. Expand contracts and Android presentation mappings.
+7. Remove obsolete effect flags and central ammunition branching.
 
 Each migration step must preserve existing replay and gameplay behavior unless a
 separate balance decision explicitly changes it.

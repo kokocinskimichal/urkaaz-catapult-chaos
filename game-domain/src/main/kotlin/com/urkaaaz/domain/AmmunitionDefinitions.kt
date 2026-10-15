@@ -117,23 +117,12 @@ sealed interface AmmunitionImpactBehavior {
         val lifetimeSeconds: Float,
     ) : AmmunitionImpactBehavior
 
-    data class Fragmentation(
-        val fragmentCount: Int,
-        val spread: Float,
-        val fragmentDamage: Int,
-    ) : AmmunitionImpactBehavior {
-        init {
-            require(fragmentCount > 0) { "fragment count must be positive" }
-            require(spread >= 0f) { "fragment spread must not be negative" }
-            require(fragmentDamage >= 0) { "fragment damage must not be negative" }
-        }
-    }
-
     data class LingeringArea(
         val radius: Float,
         val durationSeconds: Float,
         val tickIntervalSeconds: Float,
         val damagePerTick: Int,
+        val fortressDamagePerTick: Int,
         val driftsWithWind: Boolean,
         val status: UnitStatus? = null,
     ) : AmmunitionImpactBehavior {
@@ -144,6 +133,9 @@ sealed interface AmmunitionImpactBehavior {
                 "lingering tick interval must be positive"
             }
             require(damagePerTick >= 0) { "lingering damage must not be negative" }
+            require(fortressDamagePerTick >= 0) {
+                "lingering fortress damage must not be negative"
+            }
         }
     }
 }
@@ -200,19 +192,28 @@ object RockAmmunition : AmmunitionDefinition(
     inventory = InventoryProfile(unlimited = true),
     flight = FlightProfile(mass = 1.5f, windResponse = 1f),
     collision = CollisionProfile(
-        hitLayers = setOf(AmmunitionHitLayer.TERRAIN, AmmunitionHitLayer.FORTRESS),
+        hitLayers = setOf(
+            AmmunitionHitLayer.TERRAIN,
+            AmmunitionHitLayer.UNIT,
+            AmmunitionHitLayer.FORTRESS,
+        ),
         mode = AmmunitionCollisionMode.IMPACT_ON_TERRAIN,
         hitRadius = 28f,
     ),
     damage = DamageProfile(
-        unitDamage = 0,
-        fortressDamage = 28,
-        unitRadius = 0f,
+        unitDamage = 50,
+        fortressDamage = 50,
+        unitRadius = 28f,
         fortressRadius = 28f,
+        minimumDamage = 50,
     ),
     terrain = TerrainProfile(true, 24f, 14f),
     behavior = AmmunitionImpactBehavior.DirectImpact,
-    availableLayers = setOf(AmmunitionHitLayer.TERRAIN, AmmunitionHitLayer.FORTRESS),
+    availableLayers = setOf(
+        AmmunitionHitLayer.TERRAIN,
+        AmmunitionHitLayer.UNIT,
+        AmmunitionHitLayer.FORTRESS,
+    ),
 )
 
 object SiegeBombAmmunition : AmmunitionDefinition(
@@ -228,7 +229,7 @@ object SiegeBombAmmunition : AmmunitionDefinition(
     ),
     damage = DamageProfile(
         unitDamage = 72,
-        fortressDamage = 72,
+        fortressDamage = 100,
         unitRadius = 115f,
         fortressRadius = 115f,
     ),
@@ -250,35 +251,13 @@ object PowderBarrelAmmunition : AmmunitionDefinition(
         friendlyFire = FriendlyFirePolicy.ALL_UNITS,
     ),
     damage = DamageProfile(
-        unitDamage = 220,
-        fortressDamage = 220,
+        unitDamage = 120,
+        fortressDamage = 120,
         unitRadius = 220f,
         fortressRadius = 220f,
     ),
     terrain = TerrainProfile(true, 150f, 90f),
     behavior = AmmunitionImpactBehavior.Explosion(220f, 0.8f),
-    availableLayers = setOf(AmmunitionHitLayer.TERRAIN, AmmunitionHitLayer.FORTRESS),
-)
-
-object ClusterBombAmmunition : AmmunitionDefinition(
-    type = AmmunitionType.CLUSTER_BOMB,
-    displayKey = "ammunition.cluster_bomb",
-    reload = ReloadProfile(4.5f),
-    inventory = InventoryProfile(unlimited = true),
-    flight = FlightProfile(mass = 1.8f, windResponse = 0.95f),
-    collision = CollisionProfile(
-        hitLayers = setOf(AmmunitionHitLayer.TERRAIN, AmmunitionHitLayer.FORTRESS),
-        mode = AmmunitionCollisionMode.IMPACT_ON_TERRAIN,
-        hitRadius = 36f,
-    ),
-    damage = DamageProfile(
-        unitDamage = 22,
-        fortressDamage = 22,
-        unitRadius = 36f,
-        fortressRadius = 36f,
-    ),
-    terrain = TerrainProfile(true, 28f, 16f),
-    behavior = AmmunitionImpactBehavior.Fragmentation(3, 32f, 11),
     availableLayers = setOf(AmmunitionHitLayer.TERRAIN, AmmunitionHitLayer.FORTRESS),
 )
 
@@ -294,8 +273,8 @@ object FireRainAmmunition : AmmunitionDefinition(
         hitRadius = 68f,
     ),
     damage = DamageProfile(
-        unitDamage = 12,
-        fortressDamage = 12,
+        unitDamage = 4,
+        fortressDamage = 4,
         unitRadius = 68f,
         fortressRadius = 68f,
     ),
@@ -304,7 +283,8 @@ object FireRainAmmunition : AmmunitionDefinition(
         radius = 68f,
         durationSeconds = 3f,
         tickIntervalSeconds = 0.5f,
-        damagePerTick = 6,
+        damagePerTick = 4,
+        fortressDamagePerTick = 4,
         driftsWithWind = false,
         status = UnitStatus.BURNING,
     ),
@@ -323,8 +303,8 @@ object PlagueCauldronAmmunition : AmmunitionDefinition(
         hitRadius = 260f,
     ),
     damage = DamageProfile(
-        unitDamage = 75,
-        fortressDamage = 75,
+        unitDamage = 8,
+        fortressDamage = 0,
         unitRadius = 260f,
         fortressRadius = 260f,
     ),
@@ -333,7 +313,8 @@ object PlagueCauldronAmmunition : AmmunitionDefinition(
         radius = 260f,
         durationSeconds = 6f,
         tickIntervalSeconds = 1f,
-        damagePerTick = 12,
+        damagePerTick = 8,
+        fortressDamagePerTick = 0,
         driftsWithWind = true,
         status = UnitStatus.POISONED,
     ),
@@ -345,7 +326,6 @@ object AmmunitionCatalog {
         RockAmmunition,
         SiegeBombAmmunition,
         PowderBarrelAmmunition,
-        ClusterBombAmmunition,
         FireRainAmmunition,
         PlagueCauldronAmmunition,
     )

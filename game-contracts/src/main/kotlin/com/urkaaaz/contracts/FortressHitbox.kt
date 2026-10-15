@@ -1,6 +1,6 @@
 package com.urkaaaz.contracts
 
-/** Alpha-derived rectangular approximation of the fortress silhouette in world units. */
+/** Slightly inset, alpha-derived rectangular approximation in world units. */
 data class FortressHitboxRectangle(
     val left: Float,
     val top: Float,
@@ -28,6 +28,7 @@ data class FortressHitboxRectangle(
 object FortressHitboxProfile {
     private const val SOURCE_WIDTH = 1024f
     private const val SOURCE_HEIGHT = 768f
+    private const val HITBOX_INSET_SCALE = 0.9f
 
     private data class AlphaBounds(
         // Source-pixel bounds relative to the center of the full sprite canvas.
@@ -38,10 +39,10 @@ object FortressHitboxProfile {
     )
 
     private val fortressBounds = AlphaBounds(
-        left = -430f,
-        top = -325f,
-        right = 430f,
-        bottom = 325f,
+        left = -430f * HITBOX_INSET_SCALE,
+        top = -325f * HITBOX_INSET_SCALE,
+        right = 430f * HITBOX_INSET_SCALE,
+        bottom = 325f * HITBOX_INSET_SCALE,
     )
 
     private val sourceToWorldX = WorldScale.FORTRESS_WIDTH / SOURCE_WIDTH
