@@ -1,5 +1,6 @@
 package com.urkaaaz.ui
 
+import com.urkaaaz.contracts.InitialCameraAnchor
 import com.urkaaaz.contracts.MatchPhase
 import com.urkaaaz.contracts.MatchSnapshot
 import com.urkaaaz.contracts.MatchStatus
@@ -46,6 +47,57 @@ class BattlefieldCameraControllerTest {
                 7_200f * 1_000f * camera.transform.scale +
                 camera.transform.offsetX
         assertTrue(fortressLeftOnScreen in 0f..1_000f)
+    }
+
+    @Test
+    fun initialFramingUsesAuthoredAnchorAndZoom() {
+        val baseState = RenderStateMapper.map(
+            MatchSnapshot(
+                status = MatchStatus.RUNNING,
+                phase = MatchPhase.PLAYER_TURN,
+                activeTeam = Team.BLUE,
+            ),
+        )
+
+        val playerCamera = BattlefieldCameraController()
+        playerCamera.update(
+            baseState.copy(
+                initialCameraAnchor = InitialCameraAnchor.PLAYER_FORTRESS,
+                initialCameraZoom = 1.3f,
+            ),
+            1_000f,
+            600f,
+        )
+        assertEquals(1.3f, playerCamera.transform.scale)
+        val playerFortressCenter = baseState.blueFortressX / 7_200f * 1_000f *
+            playerCamera.transform.scale + playerCamera.transform.offsetX
+        assertTrue(playerFortressCenter < 500f)
+
+        val enemyCamera = BattlefieldCameraController()
+        enemyCamera.update(
+            baseState.copy(
+                initialCameraAnchor = InitialCameraAnchor.ENEMY_FORTRESS,
+                initialCameraZoom = 1.3f,
+            ),
+            1_000f,
+            600f,
+        )
+        val enemyFortressCenter = baseState.redFortressX / 7_200f * 1_000f *
+            enemyCamera.transform.scale + enemyCamera.transform.offsetX
+        assertTrue(enemyFortressCenter > 500f)
+
+        val centerCamera = BattlefieldCameraController()
+        centerCamera.update(
+            baseState.copy(
+                initialCameraAnchor = InitialCameraAnchor.CENTER,
+                initialCameraZoom = 1.3f,
+            ),
+            1_000f,
+            600f,
+        )
+        val centerWorld = centerCamera.screenToGameWorld(500f, 300f, 1_000f, 600f)
+        assertEquals(3_600f, centerWorld.first, 0.01f)
+        assertEquals(2_400f, centerWorld.second, 0.01f)
     }
 
     @Test

@@ -10,6 +10,19 @@ import { parseAssetIndex } from "./assets";
 import { decode, encode } from "../format/codec";
 
 describe("map operations", () => {
+  it("changes the biome without changing map layout or phase", () => {
+    const document = { map: defaultMap(), phase: "TERRAIN_LOCKED" as const, revision: 4 };
+    const updated = applyOperation(document, {
+      type: "CHANGE_BIOME",
+      biome: "copperwood",
+    });
+    expect(updated.map.biome).toBe("copperwood");
+    expect(updated.map.terrain).toEqual(document.map.terrain);
+    expect(updated.map.fortresses).toEqual(document.map.fortresses);
+    expect(updated.phase).toBe(document.phase);
+    expect(updated.revision).toBe(5);
+  });
+
   it("changes foundation height atomically", () => {
     const document = { map: defaultMap(), phase: "TERRAIN_EDITING" as const, revision: 0 };
     const updated = applyOperation(document, {
@@ -148,5 +161,46 @@ describe("map operations", () => {
       { type: "MARK_READY_TO_EXPORT" },
       assetKeys,
     ).phase).toBe("READY_TO_EXPORT");
+  });
+
+  it("places registered Relics inside soil only after terrain is locked", () => {
+    const relicCatalog = parseAssetIndex(
+      "terrain_green_frontier_relic_01_cracked_watering_can.png",
+    );
+    const document = {
+      map: defaultMap(),
+      phase: "TERRAIN_LOCKED" as const,
+      revision: 0,
+    };
+    const relic = {
+      id: "relic-1",
+      type: "DECORATION" as const,
+      x: 3600,
+      y: 3250,
+      scale: 1,
+      rotationDegrees: 0,
+      assetKey: "relic.green_frontier.small.1",
+      collision: "NONE" as const,
+      allowOverlap: false,
+      relicSize: "SMALL" as const,
+    };
+
+    const updated = applyOperation(document, {
+      type: "PLACE_OBJECT",
+      object: relic,
+    }, relicCatalog);
+    expect(updated.phase).toBe("DECORATION_EDITING");
+    expect(updated.map.objects).toContainEqual(relic);
+    expect(() => applyOperation({
+      ...document,
+      phase: "TERRAIN_EDITING",
+    }, {
+      type: "PLACE_OBJECT",
+      object: relic,
+    }, relicCatalog)).toThrow("Lock terrain before placing decorations");
+    expect(() => applyOperation(document, {
+      type: "PLACE_OBJECT",
+      object: { ...relic, id: "buried-too-shallow", y: 3200 },
+    }, relicCatalog)).toThrow("Relic footprint must be fully inside soil");
   });
 });

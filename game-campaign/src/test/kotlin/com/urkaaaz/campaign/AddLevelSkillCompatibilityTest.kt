@@ -9,9 +9,11 @@ class AddLevelSkillCompatibilityTest {
     fun registryUsesOnlyValidatedBundledJsonForCampaignLevels() {
         val registry = CampaignLevelRegistry.default()
         val first = registry.mapDefinition(1)
+        val levelThree = registry.mapDefinition(3)
         val last = registry.mapDefinition(CampaignLevelDefinition.MAX_LEVELS)
 
         assertEquals("demo-map", first.mapId)
+        assertEquals("chapter1-level3", levelThree.mapId)
         assertEquals(first, last)
         assertTrue(MapDefinitionValidator.validate(first).isValid)
     }

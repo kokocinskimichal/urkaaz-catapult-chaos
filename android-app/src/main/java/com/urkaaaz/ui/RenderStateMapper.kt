@@ -3,6 +3,7 @@ package com.urkaaaz.ui
 import com.urkaaaz.contracts.MatchEvent
 import com.urkaaaz.contracts.MatchSnapshot
 import com.urkaaaz.contracts.CatapultPresentationContract
+import com.urkaaaz.contracts.InitialCameraAnchor
 import com.urkaaaz.contracts.Team
 import com.urkaaaz.contracts.WorldDimensions
 
@@ -11,6 +12,8 @@ data class RenderState(
     val statusLabel: String,
     val phaseLabel: String,
     val activeTeamLabel: String,
+    val initialCameraAnchor: InitialCameraAnchor = InitialCameraAnchor.PLAYER_FORTRESS,
+    val initialCameraZoom: Float = 1f,
     val projectileCount: Int,
     val terrainRevision: Long,
     val terrainBiome: String,
@@ -153,6 +156,9 @@ object RenderStateMapper {
         projectileCount = snapshot.projectiles.size,
         terrainRevision = snapshot.terrain.revision,
         terrainBiome = snapshot.terrain.biome,
+        initialCameraAnchor = snapshot.mapDefinition?.initialCameraAnchor
+            ?: InitialCameraAnchor.PLAYER_FORTRESS,
+        initialCameraZoom = snapshot.mapDefinition?.initialCameraZoom ?: 1f,
         craters = snapshot.terrain.craters.map {
             CraterRenderState(it.centerX, it.centerY, it.radius, it.depth)
         },

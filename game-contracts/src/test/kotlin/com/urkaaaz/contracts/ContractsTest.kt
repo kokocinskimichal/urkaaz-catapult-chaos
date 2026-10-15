@@ -94,16 +94,22 @@ class ContractsTest {
             protectedTerrainZones = emptyList(),
             fortresses = emptyList(),
             decorations = emptyList(),
+            initialCameraAnchor = InitialCameraAnchor.ENEMY_FORTRESS,
+            initialCameraZoom = 1.3f,
             generationMetadata = MapGenerationMetadata(
                 seed = 1L,
                 generatorVersion = "test",
+                authoringVersion = "test-authoring",
             ),
         )
 
         assertEquals("test-map", definition.mapId)
         assertEquals("green_frontier", definition.biome)
         assertEquals(40f, definition.terrain.sampleStep)
+        assertEquals(InitialCameraAnchor.ENEMY_FORTRESS, definition.initialCameraAnchor)
+        assertEquals(1.3f, definition.initialCameraZoom)
         assertEquals(1L, definition.generationMetadata?.seed)
+        assertEquals("test-authoring", definition.generationMetadata?.authoringVersion)
     }
 
     @Test

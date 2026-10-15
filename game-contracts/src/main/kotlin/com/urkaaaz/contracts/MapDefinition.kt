@@ -14,8 +14,17 @@ data class MapDefinition(
     val protectedTerrainZones: List<ProtectedTerrainZone>,
     val fortresses: List<FortressPlacement>,
     val decorations: List<MapDecoration>,
+    val initialCameraAnchor: InitialCameraAnchor = InitialCameraAnchor.PLAYER_FORTRESS,
+    val initialCameraZoom: Float = 1f,
     val generationMetadata: MapGenerationMetadata? = null,
 )
+
+@Serializable
+enum class InitialCameraAnchor {
+    PLAYER_FORTRESS,
+    ENEMY_FORTRESS,
+    CENTER,
+}
 
 @Serializable
 data class MapWorldDimensions(
@@ -88,4 +97,5 @@ enum class RelicSize(
 data class MapGenerationMetadata(
     val seed: Long,
     val generatorVersion: String,
+    val authoringVersion: String? = null,
 )

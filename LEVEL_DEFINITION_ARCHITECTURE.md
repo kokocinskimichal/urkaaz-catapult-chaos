@@ -88,6 +88,7 @@ najmniej:
 - rozmieszczenie katapult przez `CatapultPlacement`;
 - listę `MapObjectPlacement`;
 - `InitialCameraAnchor`;
+- początkowy zoom kamery (`initialCameraZoom`);
 - `MapGenerationMetadata`.
 
 Kontrakt powinien pozwalać odtworzyć identyczny poziom na podstawie samej
@@ -202,9 +203,8 @@ symulacji.
 
 `InitialCameraAnchor` określa początkowy punkt widoku dla match screen:
 
-- pozycję world-space;
-- opcjonalny cel kamery;
-- początkowy zoom;
+- `PLAYER_FORTRESS`, `ENEMY_FORTRESS` albo `CENTER`;
+- początkowy zoom w zakresie 1–4;
 - ograniczenia kadrowania;
 - identyfikator scenariusza widoku, jeżeli poziom wymaga specjalnego startu.
 
@@ -220,6 +220,7 @@ zdiagnozować definicję:
 - źródło definicji;
 - seed generatora, jeśli użyto generowania;
 - wersję generatora;
+- wersję narzędzia authoringu;
 - nazwę autora lub narzędzia authoringu;
 - znaczniki oraz notatki techniczne;
 - checksumę albo fingerprint danych, jeśli jest wymagany przez replay.

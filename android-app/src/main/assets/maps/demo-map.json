@@ -777,5 +777,7 @@
   "generationMetadata": {
     "seed": 1,
     "generatorVersion": "web"
-  }
+  },
+  "initialCameraAnchor": "PLAYER_FORTRESS",
+  "initialCameraZoom": 1.0
 }

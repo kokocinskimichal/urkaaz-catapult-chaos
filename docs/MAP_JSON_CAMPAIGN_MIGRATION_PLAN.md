@@ -45,10 +45,10 @@ przed stopniowym przygotowaniem pozostałych map.
   wynikają ze stałego kontraktu fortecy w grze.
 - Mapa zawiera teren, chronione strefy, położenie fortec i dekoracje.
   Gameplayowe reguły i obiekty pozostają poza mapą.
-- Kamera nie jest częścią mapy. Wyjątki od reguły kamery są konfigurowane poza
-  mapą.
-- Metadane generowania są opcjonalne i ograniczone do seeda oraz wersji
-  generatora.
+- Kamera jest opisana przez `initialCameraAnchor` i `initialCameraZoom`;
+  ustawienia te wpływają wyłącznie na początkowe kadrowanie.
+- Metadane generowania zawierają seed i wersję generatora; nowo authorowane
+  poziomy mogą podać także `authoringVersion`.
 - Eksport `~/Downloads/web-map.json` jest wejściowym plikiem mapy demo. Nie
   odczytujemy go z katalogu Downloads w runtime; po walidacji trafia do
   bundlowanych zasobów aplikacji.
@@ -64,6 +64,8 @@ dekoracje muszą zawierać zatwierdzone placementy.
   "schemaVersion": 1,
   "mapId": "campaign-level-001",
   "biome": "green_frontier",
+  "initialCameraAnchor": "PLAYER_FORTRESS",
+  "initialCameraZoom": 1.0,
   "world": {
     "width": 7200,
     "height": 4800
@@ -77,7 +79,8 @@ dekoracje muszą zawierać zatwierdzone placementy.
   "decorations": [],
   "generationMetadata": {
     "seed": 10001,
-    "generatorVersion": "map-editor-web/..."
+    "generatorVersion": "map-editor-web/...",
+    "authoringVersion": "map-editor-web/0.1.0"
   }
 }
 ```
@@ -89,13 +92,15 @@ dekoracje muszą zawierać zatwierdzone placementy.
 | `schemaVersion` | Wersja formatu JSON; nieznana nowsza wersja jest jawnie odrzucana. |
 | `mapId` | Stabilny identyfikator mapy; docelowo identyfikuje mapę jednego poziomu kampanii. |
 | `biome` | Stabilny identyfikator biomu; jest źródłem wyboru soil i tematu renderowania. |
+| `initialCameraAnchor` | `PLAYER_FORTRESS`, `ENEMY_FORTRESS` albo `CENTER`; wskazuje początkowy obszar widoku. |
+| `initialCameraZoom` | Początkowe powiększenie kamery w zakresie `1..4`; nie zmienia geometrii. |
 | `world.width`, `world.height` | Muszą być dokładnie `7200` i `4800`; nie zmieniają rozmiaru meczu. |
 | `terrain.sampleStep` | Odstęp próbek heightmapy, zgodny z obsługiwanymi wartościami edytora i walidatora. |
 | `terrain.heightSamples` | Próbki wysokości obejmujące pełną szerokość świata; jedyna geometryczna prawda o powierzchni terenu. |
 | `protectedZones` | Chronione zakresy, np. fundamenty; zawierają granice i politykę deformacji. |
 | `fortresses` | Pozycje fortec BLUE i RED oraz wymagane dane assetu, fundamentu, hitboxa i strefy ochronnej. |
 | `decorations` | Tylko wizualne elementy mapy; nie zawierają reguł gameplayowych ani kolizji. |
-| `generationMetadata` | Opcjonalne `seed` i `generatorVersion`; nie wpływają na runtime mapy już zapisanej w próbkach. |
+| `generationMetadata` | Seed i `generatorVersion`; nowo authorowane mapy zapisują też `authoringVersion`. Nie zmieniają runtime geometrii już zapisanej w próbkach. |
 
 Pojedyncza dekoracja zawiera:
 

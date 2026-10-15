@@ -23,6 +23,18 @@ class CampaignLevelDefinitionTest {
     }
 
     @Test
+    fun chapterOneLevelThreeUsesImportedMapWithoutOverridingCampaignSettings() {
+        val level = CampaignLevelDefinition.forLevel(3)
+
+        assertEquals("chapter1-level3", level.mapDefinition.mapId)
+        assertEquals(CampaignAiDifficulty.MEDIUM, level.enemy.difficulty)
+        assertEquals(12, level.startingAmmunition)
+        assertEquals(1f, level.initialWind.direction)
+        assertEquals(0.55f, level.initialWind.strength)
+        assertFalse(level.tutorial.enabled)
+    }
+
+    @Test
     fun milestoneUnlocksRemainDeterministicWhileMapAssignmentIsTemporary() {
         val level = CampaignLevelDefinition.forLevel(41)
 

@@ -2,6 +2,7 @@ import {
   EditorDocument,
   MapDocumentJson,
   Team,
+  isMapBiome,
   WORLD_HEIGHT,
   WORLD_WIDTH,
   catapultsForFortresses,
@@ -42,7 +43,7 @@ export function normalizeMap(input: unknown): MapDocumentJson {
   const raw = object(input, "map");
   keys(
     raw,
-    ["schemaVersion", "mapId", "biome", "world", "terrain", "protectedZones", "fortresses", "decorations", "generationMetadata"],
+    ["schemaVersion", "mapId", "biome", "initialCameraAnchor", "initialCameraZoom", "world", "terrain", "protectedZones", "fortresses", "decorations", "generationMetadata"],
     ["schemaVersion", "mapId", "biome", "world", "terrain", "protectedZones", "fortresses", "decorations"],
     "map",
   );
@@ -51,8 +52,20 @@ export function normalizeMap(input: unknown): MapDocumentJson {
   }
   const mapId = string(raw.mapId, "map.mapId");
   const biome = string(raw.biome, "map.biome");
-  if (!["green_frontier", "frostbound", "copperwood", "ashen_march", "sunken_marshes"].includes(biome)) {
+  if (!isMapBiome(biome)) {
     throw new Error(`map.biome is unsupported: ${biome}`);
+  }
+  const initialCameraAnchor = raw.initialCameraAnchor ?? "PLAYER_FORTRESS";
+  if (initialCameraAnchor !== "PLAYER_FORTRESS" &&
+    initialCameraAnchor !== "ENEMY_FORTRESS" &&
+    initialCameraAnchor !== "CENTER") {
+    throw new Error("map.initialCameraAnchor is unsupported");
+  }
+  const initialCameraZoom = raw.initialCameraZoom === undefined
+    ? 1
+    : number(raw.initialCameraZoom, "map.initialCameraZoom");
+  if (initialCameraZoom < 1 || initialCameraZoom > 4) {
+    throw new Error("map.initialCameraZoom must be between 1 and 4");
   }
   const world = object(raw.world, "world");
   keys(world, ["width", "height"], ["width", "height"], "world");
@@ -140,10 +153,18 @@ export function normalizeMap(input: unknown): MapDocumentJson {
   };
   if (raw.generationMetadata !== undefined && raw.generationMetadata !== null) {
     const metadata = object(raw.generationMetadata, "generationMetadata");
-    keys(metadata, ["seed", "generatorVersion"], ["seed", "generatorVersion"], "generationMetadata");
+    keys(
+      metadata,
+      ["seed", "generatorVersion", "authoringVersion"],
+      ["seed", "generatorVersion"],
+      "generationMetadata",
+    );
     generationMetadata = {
       seed: number(metadata.seed, "generationMetadata.seed"),
       generatorVersion: string(metadata.generatorVersion, "generationMetadata.generatorVersion"),
+      ...(metadata.authoringVersion === undefined
+        ? {}
+        : { authoringVersion: string(metadata.authoringVersion, "generationMetadata.authoringVersion") }),
     };
   }
 
@@ -151,6 +172,8 @@ export function normalizeMap(input: unknown): MapDocumentJson {
     schemaVersion: CURRENT_SCHEMA_VERSION,
     mapId,
     biome,
+    initialCameraAnchor,
+    initialCameraZoom,
     world: { width: worldWidth, height: worldHeight },
     terrain: { sampleStep, samples },
     protectedTerrainZones,
@@ -181,6 +204,8 @@ export function encode(document: EditorDocument | MapDocumentJson): string {
     schemaVersion: CURRENT_SCHEMA_VERSION,
     mapId: map.mapId,
     biome: map.biome,
+    initialCameraAnchor: map.initialCameraAnchor,
+    initialCameraZoom: map.initialCameraZoom,
     world: { width: map.world.width, height: map.world.height },
     terrain: {
       sampleStep: map.terrain.sampleStep,
@@ -197,6 +222,9 @@ export function encode(document: EditorDocument | MapDocumentJson): string {
       generationMetadata: {
         seed: map.generationMetadata.seed,
         generatorVersion: map.generationMetadata.generatorVersion,
+        ...(map.generationMetadata.authoringVersion
+          ? { authoringVersion: map.generationMetadata.authoringVersion }
+          : {}),
       },
     } : {}),
   };

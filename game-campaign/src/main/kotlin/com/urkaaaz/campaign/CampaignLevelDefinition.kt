@@ -183,7 +183,13 @@ data class CampaignLevelDefinition(
                         emptyList()
                     },
                 ),
-                mapDefinition = mapRepository.require("demo-map"),
+                mapDefinition = mapRepository.require(
+                    if (safeLevel == CHAPTER_ONE_LEVEL_THREE) {
+                        CHAPTER_ONE_LEVEL_THREE_MAP_ID
+                    } else {
+                        "demo-map"
+                    },
+                ),
             )
         }
 
@@ -194,5 +200,8 @@ data class CampaignLevelDefinition(
             level <= 30 -> CampaignAiDifficulty.MEDIUM
             else -> CampaignAiDifficulty.HARD
         }
+
+        private const val CHAPTER_ONE_LEVEL_THREE = 3
+        private const val CHAPTER_ONE_LEVEL_THREE_MAP_ID = "chapter1-level3"
     }
 }

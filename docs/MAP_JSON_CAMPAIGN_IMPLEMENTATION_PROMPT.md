@@ -165,13 +165,16 @@ która jest źródłem tego zadania, ma puste `objects`.
 ### Dane, które trzeba usunąć z mapy
 
 - `catapults`;
-- `initialCameraAnchor`;
 - `world.tileSize`;
 - `terrain.tiles` i wszelkie soil tile placements;
 - ogólna lista `objects` mogąca zawierać elementy gameplayowe;
 - stan edytora (`phase`, `terrainLocked`);
-- `author`, `source`, `authoringVersion`, fingerprint i inne metadane poza
-  opcjonalnymi `seed` i `generatorVersion`.
+- `author`, `source`, fingerprint i inne metadane poza obsługiwanymi polami
+  `seed`, `generatorVersion` i opcjonalnym `authoringVersion`.
+
+`initialCameraAnchor` (`PLAYER_FORTRESS`, `ENEMY_FORTRESS` albo `CENTER`) oraz
+`initialCameraZoom` są częścią mapy; kontrolują wyłącznie początkowe kadrowanie,
+nie geometrię ani symulację.
 
 ## Wymagania architektoniczne
 

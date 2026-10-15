@@ -2,8 +2,20 @@
 
 ## 2026-10-15
 
+### Added
+
+- Chapter 1, Level 3 now uses the imported Green Frontier map with its authored
+  terrain, fortress foundations and tree decoration; the map is bundled for
+  Android offline loading.
+- The web map editor now provides a graphical Trees, Rocks, Props and Relics
+  palette that can place assets after terrain is locked.
+
 ### Changed
 
+- Campaign maps preserve an initial camera anchor and zoom; Level 3 opens on
+  the player fortress at 1.3× while other maps retain their current framing.
+- The map editor layers grounded decorations below the terrain cap and buried
+  Relics above it, with placement validation for flat ground and soil.
 - Rebuilt the fortress hitbox as one alpha-bounds rectangle shared by both
   fortress sprites and removed fortress-name labels from the hitbox debug view.
 - Pinch zoom now anchors on the gesture focus, supports up to 4x zoom, and

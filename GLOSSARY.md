@@ -256,6 +256,9 @@ hazard, collision rule, movement modifier, damage rule, or projectile rule.
 | **Terrain Heightmap** | Aktualny profil wysokości definiujący Ground Surface, zmieniający się po uderzeniach. |
 | **HUD-Safe Terrain Boundary** | Zasada mapy, według której cała generowana powobrierzchnia terenu znajduje się nad dolnym panelem ikon sterowania; HUD nie może zasłaniać terenu. |
 | **Background-Bounded Zoom** | Ograniczenie oddalenia kamery do rozmiaru malowanego tła mapy; zoom nie może pokazywać pustej przestrzeni poza panoramą. |
+| **Initial Camera Anchor** | Typowany punkt początkowego kadrowania mapy: `PLAYER_FORTRESS`, `ENEMY_FORTRESS` albo `CENTER`. Jest częścią definicji mapy i nie zmienia stanu symulacji. |
+| **Initial Camera Zoom** | Jawne początkowe powiększenie mapy w zakresie `1×–4×`; renderer stosuje je wraz z Initial Camera Anchor bez modyfikowania world-space. |
+| **Map Asset Palette** | Graficzna paleta drzew, skał, propsów i Relics w edytorze map. Placementy są dostępne po zablokowaniu terenu; dekoracje grounded wymagają płaskiego podłoża, a Relics mieszczą się w glebie. |
 | **Crater** | Zagłębienie wyryte w Ground Surface przez uderzenie pocisku lub eksplozję. |
 | **Destructible Terrain** | Teren, który może zmieniać się pod wpływem amunicji i eksplozji. |
 | **Terrain Obstacle** | Obiekt mapy, taki jak drzewo, skała lub dom, wpływający na wygląd pola albo tor pocisku. |

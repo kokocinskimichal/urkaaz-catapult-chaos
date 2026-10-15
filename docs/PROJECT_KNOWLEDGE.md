@@ -26,21 +26,24 @@ does not represent persistent campaign progression.
 
 Campaign maps use one immutable JSON contract in `game-contracts`:
 `MapDefinition` contains a map ID and biome, fixed world dimensions,
-`terrain.heightSamples`, protected zones, fortresses, visual-only decorations
-and optional seed/generator metadata. Catapults, camera anchors, terrain tiles,
-editor state and gameplay objects are excluded. `MapDefinitionRepository`
+`terrain.heightSamples`, protected zones, fortresses, visual-only decorations,
+an initial camera anchor and zoom, and generation metadata. Catapults, terrain
+tiles, editor state and gameplay objects are excluded. `MapDefinitionRepository`
 strictly decodes bundled JSON and reports explicit load failures;
 `MapDefinitionValidator` checks schema, fixed world dimensions, known biome and
-assets, terrain, protected zones, fortress placements and decoration anchors.
+assets, terrain, protected zones, fortress placements, decoration anchors and
+camera framing.
 
 The normalized `game-campaign/src/main/resources/maps/demo-map.json` came from
 the supplied `~/Downloads/web-map.json`; the source file was not modified.
 Android also bundles the same file at
 `android-app/src/main/assets/maps/demo-map.json` for offline loading. All 100
-campaign levels explicitly use `demo-map` temporarily while retaining their
-Kotlin gameplay configuration. This is a transition mapping, not the final
-one-map-per-level arrangement. The former Kotlin campaign map definitions and
-map authoring builder have been removed.
+campaign levels used `demo-map` temporarily while retaining their Kotlin
+gameplay configuration. Chapter 1, Level 3 now uses the imported
+`chapter1-level3` map in both resource locations; other levels continue to use
+`demo-map`. This is a transition mapping, not the final one-map-per-level
+arrangement. The former Kotlin campaign map definitions and map authoring
+builder have been removed.
 
 Catapult positions are derived from fortress positions by
 `CatapultPresentationContract`, and simulation dimensions always come from
@@ -50,11 +53,12 @@ use stable asset keys and remain visual-only; buried Relics use
 
 The web and Kotlin editor codecs read and write the same strict schema-1 JSON.
 Editor phase and selection remain editor-only; production JSON contains no
-catapult placements, camera anchor, terrain tile placements or generic object
-list. The web editor derives its preview catapults from fortress placements,
-syncs the shared terrain asset index for decoration-key validation, and keeps
-those editor-only catapults out of exported JSON. Both campaign and editor maps
-are available offline.
+catapult placements, terrain tile placements or generic object list. The web
+editor derives its preview catapults from fortress placements, syncs the
+shared terrain asset index for decoration-key validation, and keeps those
+editor-only catapults out of exported JSON. The Android camera consumes
+authored framing data without changing simulation state. Both campaign and
+editor maps are available offline.
 
 The current match HUD displays:
 

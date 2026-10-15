@@ -1,6 +1,7 @@
 package com.urkaaaz.campaign
 
 import com.urkaaaz.assets.AssetCatalog
+import com.urkaaaz.contracts.InitialCameraAnchor
 import com.urkaaaz.contracts.MapDefinition
 import com.urkaaaz.contracts.MapDecoration
 import com.urkaaaz.contracts.RelicSize
@@ -44,8 +45,34 @@ object MapDefinitionValidator {
         validateTerrain(definition, errors)
         validateZones(definition, errors)
         validateFortresses(definition, errors)
+        validateInitialCamera(definition, errors)
         validateDecorations(definition, errors)
+        definition.generationMetadata?.authoringVersion?.let {
+            if (it.isBlank()) {
+                errors += MapValidationError(
+                    "generationMetadata.authoringVersion",
+                    "must not be blank when provided",
+                )
+            }
+        }
+        if (!definition.initialCameraZoom.isFinite() || definition.initialCameraZoom !in 1f..4f) {
+            errors += MapValidationError("initialCameraZoom", "must be between 1 and 4")
+        }
         return MapValidationResult(errors)
+    }
+
+    private fun validateInitialCamera(definition: MapDefinition, errors: MutableList<MapValidationError>) {
+        val targetOwner = when (definition.initialCameraAnchor) {
+            InitialCameraAnchor.PLAYER_FORTRESS -> Team.BLUE
+            InitialCameraAnchor.ENEMY_FORTRESS -> Team.RED
+            InitialCameraAnchor.CENTER -> return
+        }
+        if (definition.fortresses.none { it.owner == targetOwner }) {
+            errors += MapValidationError(
+                "initialCameraAnchor",
+                "${definition.initialCameraAnchor} requires a ${targetOwner.name} fortress",
+            )
+        }
     }
 
     fun requireValid(definition: MapDefinition): MapDefinition {

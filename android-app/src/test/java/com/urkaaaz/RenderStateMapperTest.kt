@@ -6,6 +6,7 @@ import com.urkaaaz.contracts.MatchStatus
 import com.urkaaaz.contracts.EntityId
 import com.urkaaaz.contracts.FortressSnapshot
 import com.urkaaaz.contracts.FortressPlacement
+import com.urkaaaz.contracts.InitialCameraAnchor
 import com.urkaaaz.contracts.MapDefinition
 import com.urkaaaz.contracts.MapDecoration
 import com.urkaaaz.contracts.MapGenerationMetadata
@@ -212,6 +213,8 @@ class RenderStateMapperTest {
                     seed = 3L,
                     generatorVersion = "test",
                 ),
+                initialCameraAnchor = InitialCameraAnchor.ENEMY_FORTRESS,
+                initialCameraZoom = 1.3f,
             ),
         )
 
@@ -224,5 +227,7 @@ class RenderStateMapperTest {
         assertEquals(3_180f, state.blueFortressFoundationY)
         assertEquals(6_680f, state.redFortressX)
         assertEquals(3_180f, state.redFortressFoundationY)
+        assertEquals(InitialCameraAnchor.ENEMY_FORTRESS, state.initialCameraAnchor)
+        assertEquals(1.3f, state.initialCameraZoom)
     }
 }

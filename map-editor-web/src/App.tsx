@@ -1,9 +1,11 @@
 import React, { useEffect, useRef, useState } from "react";
 import { decode, encode } from "./format/codec";
-import { firstAssetKeyForBiome, parseAssetIndex } from "./domain/assets";
+import { paletteAssetsForBiome, parseAssetIndex } from "./domain/assets";
 import {
   defaultMap,
   EditorDocument,
+  MAP_BIOMES,
+  maximumTerrainHeightInRange,
   SampleJson,
   terrainControlPoints,
   terrainHeightAt,
@@ -17,10 +19,15 @@ import { screenToWorld, worldToScreen } from "./rendering/transform";
 import "./ui/styles.css";
 
 const AUTOSAVE = "urkaaz-map-editor-autosave";
-type Tool = "draw" | "smooth" | "flatten" | "foundation" | "select";
 type WorldPoint = { x: number; y: number };
 type CursorPosition = WorldPoint & { screenX: number; screenY: number };
 type ControlDrag = { x: number; originalHeight: number; height: number };
+const ASSET_PALETTE_GROUPS = [
+  { category: "tree", label: "Trees" },
+  { category: "rock", label: "Rocks" },
+  { category: "prop", label: "Props" },
+  { category: "relic", label: "Relics" },
+] as const;
 
 function findControlAt(
   point: WorldPoint,
@@ -41,15 +48,12 @@ export default function App() {
   const { state, operation, undo, redo, load } = useEditorStore(registeredAssetKeys);
   const canvas = useRef<HTMLCanvasElement>(null);
   const [view, setView] = useState({ zoom: 1, panX: 0, panY: 0 });
-  const [tool, setTool] = useState<Tool>("draw");
   const [issues, setIssues] = useState(validate(state.present));
-  const [drag, setDrag] = useState<WorldPoint[] | null>(null);
   const [controlDrag, setControlDrag] = useState<ControlDrag | null>(null);
   const [showCursorCoordinates, setShowCursorCoordinates] = useState(false);
   const [cursorPosition, setCursorPosition] = useState<CursorPosition | null>(null);
-  const [selectedTeam, setSelectedTeam] = useState<"BLUE" | "RED">("BLUE");
-  const [height, setHeight] = useState(3180);
   const [status, setStatus] = useState("Unsaved");
+  const nextObjectId = useRef(0);
   const restored = useRef(false);
 
   useEffect(() => {
@@ -102,6 +106,7 @@ export default function App() {
         view,
         true,
         controlDrag ? { x: controlDrag.x, height: controlDrag.height } : undefined,
+        registeredAssetKeys,
       );
     }
     const validation = validate(state.present, registeredAssetKeys);
@@ -116,10 +121,7 @@ export default function App() {
         event.preventDefault();
         event.shiftKey ? redo() : undo();
       }
-      if (event.key === "Escape") {
-        setDrag(null);
-        setControlDrag(null);
-      }
+      if (event.key === "Escape") setControlDrag(null);
     };
     window.addEventListener("keydown", key);
     return () => window.removeEventListener("keydown", key);
@@ -163,9 +165,10 @@ export default function App() {
     setStatus(final ? "Exported" : "Draft downloaded");
   };
 
-  const treeAssetKey = registeredAssetKeys
-    ? firstAssetKeyForBiome(registeredAssetKeys, state.present.map.biome, "tree")
-    : undefined;
+  const assetPalette = registeredAssetKeys
+    ? paletteAssetsForBiome(registeredAssetKeys, state.present.map.biome)
+    : { tree: [], rock: [], prop: [], relic: [] };
+  const canPlaceAssets = ["TERRAIN_LOCKED", "DECORATION_EDITING"].includes(state.present.phase);
   const cursorCoordinatesStyle = cursorPosition
     ? {
       left: Math.max(
@@ -189,77 +192,116 @@ export default function App() {
     }
     const screen = { x: event.clientX - rect.left, y: event.clientY - rect.top };
     const world = screenToWorld(screen.x, screen.y, view, rect.width, rect.height);
-
     if (event.type === "pointermove") {
       setCursorPosition({
         ...world,
         screenX: screen.x,
         screenY: screen.y,
       });
-    }
-
-    if (event.type === "pointerdown") {
-      element.setPointerCapture(event.pointerId);
-      if (tool === "draw" && state.present.phase === "TERRAIN_EDITING") {
-        const control = findControlAt(screen, state.present, view, rect.width, rect.height);
-        if (control) {
-          setControlDrag({ x: control.x, originalHeight: control.height, height: control.height });
-          return;
-        }
-      }
-      if (tool === "draw" || tool === "smooth" || tool === "flatten") {
-        setDrag([world]);
-      } else if (tool === "foundation") {
-        operation({ type: "CHANGE_FOUNDATION_HEIGHT", owner: selectedTeam, height });
-      } else if (tool === "select") {
-        const object = state.present.map.objects.find(
-          item => Math.abs(item.x - world.x) < 120 && Math.abs(item.y - world.y) < 180,
-        );
-        setStatus(object ? `Selected ${object.id}` : "No object selected");
-      }
-      return;
-    }
-
-    if (event.type === "pointermove") {
       if (controlDrag) {
         setControlDrag({
           ...controlDrag,
           height: Math.max(0, Math.min(WORLD_HEIGHT, world.y)),
         });
-      } else if (drag) {
-        setDrag([...drag, world]);
       }
       return;
     }
-
-    if (event.type === "pointerup") {
-      if (controlDrag) {
-        if (controlDrag.height !== controlDrag.originalHeight) {
-          operation({
-            type: "MOVE_TERRAIN_CONTROL_POINT",
-            x: controlDrag.x,
-            height: controlDrag.height,
-          });
-        }
-        setControlDrag(null);
-      } else if (drag) {
-        const points = [...drag, world].sort((left, right) => left.x - right.x);
-        const minX = points[0].x;
-        const maxX = points[points.length - 1].x;
-        if (tool === "draw") {
-          operation({
-            type: "DRAW_TERRAIN_PROFILE",
-            points: points.map(point => ({ x: point.x, height: point.y })),
-          });
-        } else if (tool === "smooth") {
-          operation({ type: "SMOOTH_TERRAIN_RANGE", minX, maxX });
-        } else if (tool === "flatten") {
-          operation({ type: "FLATTEN_TERRAIN_RANGE", minX, maxX });
-        }
-        setDrag(null);
+    if (event.type === "pointerdown") {
+      if (state.present.phase !== "TERRAIN_EDITING") return;
+      const control = findControlAt(screen, state.present, view, rect.width, rect.height);
+      if (control) {
+        element.setPointerCapture(event.pointerId);
+        setControlDrag({ x: control.x, originalHeight: control.height, height: control.height });
       }
-      element.releasePointerCapture(event.pointerId);
+      return;
     }
+    if (event.type === "pointerup" && controlDrag) {
+      if (controlDrag.height !== controlDrag.originalHeight) {
+        operation({
+          type: "MOVE_TERRAIN_CONTROL_POINT",
+          x: controlDrag.x,
+          height: controlDrag.height,
+        });
+      }
+      setControlDrag(null);
+      if (element.hasPointerCapture(event.pointerId)) element.releasePointerCapture(event.pointerId);
+    }
+  };
+
+  const dropAsset = (event: React.DragEvent<HTMLCanvasElement>) => {
+    if (!canPlaceAssets) return;
+    event.preventDefault();
+    const assetKey = event.dataTransfer.getData("application/x-urkaaz-map-asset");
+    const asset = Object.values(assetPalette).flat().find(item => item.assetKey === assetKey);
+    if (!asset) {
+      setStatus(`Unknown or unavailable map asset: ${assetKey}`);
+      return;
+    }
+    const element = canvas.current;
+    if (!element) return;
+    const rect = element.getBoundingClientRect();
+    if (rect.width <= 0 || rect.height <= 0) return;
+    const world = screenToWorld(
+      event.clientX - rect.left,
+      event.clientY - rect.top,
+      view,
+      rect.width,
+      rect.height,
+    );
+    const map = state.present.map;
+    if (world.x < 0 || world.x > WORLD_WIDTH || world.y < 0 || world.y > WORLD_HEIGHT) {
+      setStatus("Assets must be placed inside the map bounds");
+      return;
+    }
+
+    let y: number;
+    if (asset.relicSize) {
+      const halfWidth = 56;
+      const halfHeight = 40;
+      if (world.x - halfWidth < 0 || world.x + halfWidth > WORLD_WIDTH) {
+        setStatus("Relic must fit inside the map bounds");
+        return;
+      }
+      const soilTop = maximumTerrainHeightInRange(map, world.x - halfWidth, world.x + halfWidth);
+      if (soilTop === undefined) {
+        setStatus("Cannot place a relic without a terrain profile");
+        return;
+      }
+      y = Math.max(world.y, soilTop + halfHeight);
+      if (y + halfHeight > WORLD_HEIGHT) {
+        setStatus("Relic must fit completely inside the soil");
+        return;
+      }
+    } else {
+      const surface = terrainHeightAt(map, world.x);
+      const left = terrainHeightAt(map, world.x - map.terrain.sampleStep);
+      const right = terrainHeightAt(map, world.x + map.terrain.sampleStep);
+      if (surface === undefined || left === undefined || right === undefined) {
+        setStatus("Cannot place an asset without a terrain profile");
+        return;
+      }
+      if (Math.abs(left - surface) > 1 || Math.abs(right - surface) > 1) {
+        setStatus("Trees, rocks, and props can only be placed on flat terrain");
+        return;
+      }
+      y = surface;
+    }
+
+    operation({
+      type: "PLACE_OBJECT",
+      object: {
+        id: `map-asset-${Date.now()}-${nextObjectId.current++}`,
+        type: "DECORATION",
+        x: world.x,
+        y,
+        scale: 1,
+        rotationDegrees: 0,
+        assetKey: asset.assetKey,
+        collision: "NONE",
+        allowOverlap: false,
+        ...(asset.relicSize ? { relicSize: asset.relicSize } : {}),
+      },
+    });
   };
 
   const wheel = (event: React.WheelEvent) => {
@@ -289,19 +331,20 @@ export default function App() {
       </header>
       <section className="layout">
         <aside>
-          <h3>Tools</h3>
-          {(["draw", "smooth", "flatten", "foundation", "select"] as const).map(value => (
-            <button
-              className={tool === value ? "active" : ""}
-              onClick={() => setTool(value)}
-              key={value}
-            >
-              {value}
-            </button>
-          ))}
-          <p className="tool-help">
-            In draw mode, drag a yellow point to reshape the terrain contour.
-          </p>
+          <h3>Biome</h3>
+          <select
+            aria-label="Biome"
+            value={state.present.map.biome}
+            onChange={event => {
+              const selected = MAP_BIOMES.find(biome => biome.value === event.currentTarget.value);
+              if (selected) operation({ type: "CHANGE_BIOME", biome: selected.value });
+            }}
+          >
+            {MAP_BIOMES.map(biome => (
+              <option key={biome.value} value={biome.value}>{biome.label}</option>
+            ))}
+          </select>
+          <p>Fortress and catapult sprites are shared between biomes.</p>
           <h3>Debug</h3>
           <button
             className={showCursorCoordinates ? "active" : ""}
@@ -316,26 +359,6 @@ export default function App() {
           >
             Lock terrain
           </button>
-          <button
-            disabled={!["TERRAIN_LOCKED", "DECORATION_EDITING"].includes(state.present.phase)}
-            onClick={() => operation({ type: "MARK_READY_TO_EXPORT" })}
-          >
-            Ready to export
-          </button>
-          <button onClick={() => setIssues(validate(state.present, registeredAssetKeys))}>Validate</button>
-          <h3>Foundation</h3>
-          <select
-            value={selectedTeam}
-            onChange={event => setSelectedTeam(event.target.value as "BLUE" | "RED")}
-          >
-            <option>BLUE</option>
-            <option>RED</option>
-          </select>
-          <input
-            type="number"
-            value={height}
-            onChange={event => setHeight(Number(event.target.value))}
-          />
           <p>World<br />{WORLD_WIDTH} × {WORLD_HEIGHT}</p>
         </aside>
         <div className="canvas-wrap">
@@ -344,11 +367,14 @@ export default function App() {
             onPointerDown={pointer}
             onPointerMove={pointer}
             onPointerUp={pointer}
-            onPointerCancel={() => {
-              setDrag(null);
-              setControlDrag(null);
-            }}
+            onPointerCancel={() => setControlDrag(null)}
             onPointerLeave={() => setCursorPosition(null)}
+            onDragOver={event => {
+              if (!canPlaceAssets) return;
+              event.preventDefault();
+              event.dataTransfer.dropEffect = "copy";
+            }}
+            onDrop={dropAsset}
             onWheel={wheel}
           />
           {showCursorCoordinates && cursorPosition && cursorCoordinatesStyle && (
@@ -356,10 +382,8 @@ export default function App() {
               X: {cursorPosition.x.toFixed(1)} · Y: {cursorPosition.y.toFixed(1)}
             </div>
           )}
-          {(drag || controlDrag) && (
-            <div className="hint">
-              {controlDrag ? "Adjusting contour point · release to commit" : "Drawing preview · release to commit"}
-            </div>
+          {controlDrag && (
+            <div className="hint">Adjusting contour point · release to commit</div>
           )}
         </div>
         <aside>
@@ -379,36 +403,38 @@ export default function App() {
           <p>Biome: {state.present.map.biome}</p>
           {assetCatalogError && <p className="error">Asset catalogue unavailable: {assetCatalogError}</p>}
           {!assetCatalogError && !registeredAssetKeys && <p>Loading asset catalogue…</p>}
-          {registeredAssetKeys && !treeAssetKey && <p>No registered tree asset for this biome.</p>}
-          <button
-            disabled={!["TERRAIN_LOCKED", "DECORATION_EDITING"].includes(state.present.phase) || !treeAssetKey}
-            onClick={() => {
-              const y = terrainHeightAt(state.present.map, 3600);
-              if (!treeAssetKey || y === undefined) {
-                setStatus("Cannot place a tree without a registered asset and terrain profile");
-                return;
-              }
-              operation({
-                type: "PLACE_OBJECT",
-                object: {
-                  id: `tree-${Date.now()}`,
-                  type: "DECORATION",
-                  x: 3600,
-                  y,
-                  scale: 1,
-                  rotationDegrees: 0,
-                  assetKey: treeAssetKey,
-                  collision: "NONE",
-                  allowOverlap: false,
-                },
-              });
-            }}
-          >
-            Add tree
-          </button>
+          <p>{canPlaceAssets ? "Drag an asset onto the map." : "Lock terrain before placing assets."}</p>
+          {ASSET_PALETTE_GROUPS.map(group => (
+            <section className="asset-category" key={group.category}>
+              <h4>{group.label}</h4>
+              {assetPalette[group.category].length === 0 ? (
+                <p className="asset-empty">No assets for this biome.</p>
+              ) : (
+                <div className="asset-grid">
+                  {assetPalette[group.category].map(asset => (
+                    <button
+                      className="asset-item"
+                      key={asset.assetKey}
+                      draggable={canPlaceAssets}
+                      disabled={!canPlaceAssets}
+                      title={asset.label}
+                      aria-label={`Drag ${group.label.toLowerCase()} asset ${asset.label} onto the map`}
+                      onDragStart={event => {
+                        event.dataTransfer.setData("application/x-urkaaz-map-asset", asset.assetKey);
+                        event.dataTransfer.effectAllowed = "copy";
+                      }}
+                    >
+                      <img src={asset.thumbnailPath} alt="" draggable={false} />
+                      <span>{asset.label}</span>
+                    </button>
+                  ))}
+                </div>
+              )}
+            </section>
+          ))}
         </aside>
       </section>
-      <footer>{state.message ?? "Terrain contour points are draggable · changes support undo/redo"}</footer>
+      <footer>{state.message ?? "Drag yellow contour nodes to shape terrain · Lock terrain to finish"}</footer>
     </main>
   );
 }
