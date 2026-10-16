@@ -71,7 +71,6 @@ class BattlefieldCameraController(
             centerOnWorld(trackedProjectile.x, trackedProjectile.y, viewportWidth, viewportHeight)
         } else {
             val phaseChanged = lastPhaseLabel != null && lastPhaseLabel != state.phaseLabel
-            if (phaseChanged) manualPanActive = false
             if (manualPanActive || panningMap) {
                 lastPhaseLabel = state.phaseLabel
                 clampOffset(viewportWidth, viewportHeight)

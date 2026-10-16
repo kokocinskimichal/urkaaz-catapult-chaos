@@ -1,5 +1,23 @@
 # Changelog
 
+## 2026-10-16
+
+### Added
+
+- Added generated idle, jog, combat and death animations for both Defender
+  teams, plus blue/red Demolisher idle and jog animations and the accepted blue
+  Demolisher contact explosion.
+- Added per-unit death-animation playback and retention so defeated units stay
+  visible until their presentation sequence completes.
+
+### Changed
+
+- Melee units now stop at a shared visual standoff distance while remaining in
+  attack range, with wider spacing for additional formation ranks.
+- Manual battlefield panning persists across match-phase changes.
+- Increased the Slingmaster's visible unit-panel icon size to match the other
+  unit icons without cropping its artwork.
+
 ## 2026-10-15
 
 ### Added

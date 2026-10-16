@@ -379,6 +379,30 @@ class DeterministicMatchSimulationTest {
     }
 
     @Test
+    fun opposingDefendersKeepVisualSpacingWhileRemainingInMeleeRange() {
+        val simulation = DeterministicMatchSimulation(MatchId("unit-combat-spacing-match"), config)
+        simulation.start()
+        simulation.deployUnit(durableDefender(), Team.BLUE)
+        simulation.deployUnit(durableDefender(), Team.RED)
+        simulation.sendWave(Team.BLUE)
+        simulation.sendWave(Team.RED)
+
+        repeat(25) { simulation.advance(100) }
+
+        val units = simulation.snapshot().units
+        assertEquals(2, units.size)
+        val blue = units.single { it.team == Team.BLUE }
+        val red = units.single { it.team == Team.RED }
+        val distance = abs(blue.x - red.x)
+        assertTrue(distance in 130f..165f, "opposing Defender distance was $distance: $units")
+        assertTrue(units.all { it.targetId != null }, "both Defenders should retain a combat target")
+        assertTrue(
+            units.any { it.actionState == "ATTACKING" || it.actionState == "RECOVERING" },
+            "the wider melee spacing must still allow attacks",
+        )
+    }
+
+    @Test
     fun combatLuckCanProduceAWinningDefenderInsteadOfAForcedDraw() {
         val simulation = DeterministicMatchSimulation(MatchId("defender-luck-match"), config)
         simulation.start()
@@ -409,7 +433,7 @@ class DeterministicMatchSimulationTest {
         simulation.sendWave(Team.BLUE)
         simulation.sendWave(Team.RED)
 
-        repeat(75) { simulation.advance(100) }
+        repeat(90) { simulation.advance(100) }
 
         val units = simulation.snapshot().units
         val bluePositions = units.filter { it.team == Team.BLUE }.map { it.x }.sorted()

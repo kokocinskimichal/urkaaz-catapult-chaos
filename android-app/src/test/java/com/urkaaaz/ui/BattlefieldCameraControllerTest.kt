@@ -133,6 +133,36 @@ class BattlefieldCameraControllerTest {
     }
 
     @Test
+    fun manualPanRemainsInPlaceAfterTheMatchPhaseChanges() {
+        val camera = BattlefieldCameraController()
+        val state = RenderStateMapper.map(
+            MatchSnapshot(
+                status = MatchStatus.RUNNING,
+                phase = MatchPhase.PLAYER_TURN,
+                activeTeam = Team.BLUE,
+            ),
+        )
+        val viewportWidth = 1_000f
+        val viewportHeight = 600f
+        camera.update(state, viewportWidth, viewportHeight)
+        camera.translateMap(-120f, -45f, viewportWidth, viewportHeight)
+        val manuallyPannedTransform = camera.transform
+
+        camera.update(
+            state.copy(phaseLabel = "ENEMY_TURN", activeTeamLabel = "RED"),
+            viewportWidth,
+            viewportHeight,
+        )
+        camera.update(
+            state.copy(phaseLabel = "PLAYER_TURN", activeTeamLabel = "BLUE"),
+            viewportWidth,
+            viewportHeight,
+        )
+
+        assertEquals(manuallyPannedTransform, camera.transform)
+    }
+
+    @Test
     fun screenToGameWorldCoordinatesRespectViewportAndCameraZoom() {
         val camera = BattlefieldCameraController()
         val viewportWidth = 1_000f

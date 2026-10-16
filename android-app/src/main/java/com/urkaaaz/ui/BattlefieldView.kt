@@ -75,6 +75,9 @@ class BattlefieldView(context: Context) : View(context) {
     )
     private var animationFrame = 0
     private var impactFrame = 0
+    private val deathAnimationClock = UnitDeathAnimationClock()
+    private val unitDeathAnimationRetention =
+        UnitDeathAnimationRetention(deathAnimationClock)
     private var activeImpact: ImpactRenderState? = null
     private var debugCursorPosition: DebugCursorPosition? = null
     private val projectileTrails = mutableMapOf<String, MutableList<Pair<Float, Float>>>()
@@ -127,7 +130,9 @@ class BattlefieldView(context: Context) : View(context) {
     fun render(newState: RenderState) {
         updateProjectileTrails(newState)
         camera.update(newState, width.toFloat(), height.toFloat())
-        state = newState
+        state = newState.copy(
+            units = unitDeathAnimationRetention.update(newState.units),
+        )
         animationFrame = (animationFrame + 1) % 1024
         if (newState.impact != null && newState.impact != activeImpact) {
             activeImpact = newState.impact
@@ -149,6 +154,7 @@ class BattlefieldView(context: Context) : View(context) {
             camera = camera.transform,
             activeImpact = activeImpact,
             animationFrame = animationFrame,
+            deathAnimationClock = deathAnimationClock,
             impactFrame = impactFrame,
             isAiming = aimController.isDragging,
             viewportWidth = width.toFloat(),

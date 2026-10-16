@@ -138,6 +138,9 @@ The current match HUD displays:
    balance values live centrally in `UnitConfigurations.kt`; `UnitFactory`
    creates the dedicated class from a configuration or command identifier, so
    balance tuning does not require editing unit classes.
+- Melee units stop `150` world units from their target and attack from that
+   standoff distance, with `55` additional world units per formation rank. This
+   keeps opposing sprites visually separated while preserving melee attacks.
 - Newly recruited units occupy the fortress-side garrison slot while older
   units walk outward into the next slot instead of overlapping. The first slot
   is `690` world units from the world edge on full-size maps (`worldWidth - 690`
@@ -158,6 +161,52 @@ frame offset so idle and walking animations do not start in sync. The shared
 animation clock uses a long cycle so idle sets with more than 16 frames are
 not truncated to a subset; unit frame playback advances at approximately
 `7.5 FPS` to match the slower legacy feel.
+- The approved blue and red Demolisher idle animations each use 48 transparent
+  512x512 frames named `demolisher_{left,right}_idle_000` through `_047`.
+  Source indices 006-053 are used for both variants; the running poses at
+  indices 000-005 and 054-059 were excluded. The original AnimGen archives are
+  retained under `assets_src/animgen/demolisher/{blue,red}/idle/`. The generated
+  red animation's barrel panels and cloth were locally hue-corrected to match
+  the red source sprite while preserving the orange fuse, green skin, and
+  brown equipment. Both expanded canvases are scaled 2x and bottom-aligned
+  with a `75/512` transparent-bottom offset.
+- The approved blue and red Demolisher jog animations each use 60 transparent
+  512x512 frames named `demolisher_{left,right}_jog_000` through `_059`. The
+  original AnimGen archives are retained under
+  `assets_src/animgen/demolisher/{blue,red}/jog/`; the red jog's barrel panels
+  and cloth were locally hue-corrected while preserving the orange fuse, green
+  skin, and brown equipment. The 3-digit jog sequences load separately from
+  the legacy 2-digit Demolisher movement frames and use the same 2x canvas
+  scale and `75/512` bottom anchor offset as the generated idle.
+- The user-approved blue Demolisher contact/death animation uses 60 generated
+  512x512 frames named `demolisher_left_death_000` through `_059`, styled after
+  the in-game Powder Barrel impact. Its original AnimGen archive is retained
+  under `assets_src/animgen/demolisher/blue/death/`. The accepted sequence has
+  visible effects touching the canvas edge in frames 034-055; it is imported
+  unchanged at the same generated canvas scale and bottom anchor as the blue
+  Demolisher idle/jog. Death retention supports this blue sequence and the
+  existing two-team Defender death animations; a red Demolisher death sequence
+  has not been generated.
+- Both blue and red Defender idle and jog animations use 60 transparent
+  256x256 frames from their approved AnimGen sequences, sampled at every other
+  source frame to match the renderer's approximately `7.5 FPS` cadence. Their
+  expanded canvases are scaled and bottom-aligned by `BattlefieldRenderer`,
+  with per-idle-sequence offsets and a shared jog offset keeping the feet and
+  health bars stable. Both Defender combat animations use 30 transparent
+  frames for one overhead axe strike; the opponent's red variant attacks with
+  the left hand. Each generated state has its own measured transparent-bottom
+  offset to keep the feet and health bars stable. One accepted blue-idle frame
+  retains the source's top-clipped axe toss (source frames 23-25); the red
+  idle sequence has a consistent 79/512 transparent-bottom ratio, and neither
+  jog sequence has edge clipping.
+- Both blue and red Defender death animations use 60 approved transparent
+  512x512 frames at the renderer's approximately `10 FPS` death cadence,
+  driven by an independent per-unit clock that starts when each unit enters
+  the dead state. The renderer retains either team's immutable dead-unit
+  snapshot after simulation cleanup long enough to play all 60 frames. Their
+  expanded canvases use measured transparent-bottom offsets (`70/512` blue,
+  `79/512` red) to keep the ground anchor stable; the red animation's final
+  transparent frames let the defeated unit disappear.
 - Unit sprite and animation bitmaps are cached by the asset catalog; rendering
 does not decode the full animation set again for every frame or every unit.
 - Realtime AI decisions now include unit recruitment every second using the
@@ -308,6 +357,9 @@ must go through commands and domain/application boundaries.
 
 ## Known decisions
 
+- **Unit purchase icons:** `UnitPanelView` keeps all five buttons at 48dp and
+  uses 1dp image padding for the Slingmaster (4dp for the others) so its
+  smaller artwork has a matching visible size without cropping the icon.
 - **Map JSON campaign migration:** campaign geometry is loaded from the
   bundled schema-1 map repository. The temporary explicit assignment maps all
   campaign levels to `demo-map`; there is no fallback to old Kotlin geometry.
@@ -330,8 +382,9 @@ must go through commands and domain/application boundaries.
 - Camera panning must be distinguished from aiming release so `ACTION_UP` fires
   only when the gesture was an aim gesture.
 - Pinch zoom anchors the same battlefield point beneath the gesture focus
-  (`ScaleGestureDetector.focusX/Y`), pauses automatic camera tracking after a
-  manual zoom until the phase changes, and is capped at a 4x view scale.
+  (`ScaleGestureDetector.focusX/Y`) and is capped at a 4x view scale. Manual
+  pan or zoom keeps the chosen camera framing across match-phase changes and
+  suppresses automatic projectile tracking for the rest of the match.
 - Soil textures repeat at a base tile width of 256 view units in both the
   Android battlefield and web map preview. Android tiles preserve the source
   aspect ratio and repeat vertically rather than stretching to the soil depth.

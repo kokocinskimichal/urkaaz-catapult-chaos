@@ -176,10 +176,15 @@ class BattlefieldAssetCatalog(private val context: Context) {
                     "RAGING_BOAR" -> "goblin_raging_boar_attack${if (side == "right") "_right" else ""}"
                     else -> ""
                 }
-                if (prefix.isEmpty()) emptyList() else loadAnimationFrames(prefix)
+                when {
+                    prefix.isEmpty() -> emptyList()
+                    unitType == "DEFENDER" -> loadThreeDigitAnimationFrames(prefix)
+                    else -> loadAnimationFrames(prefix)
+                }
             } else if (!moving) {
                 when (unitType) {
-                    "DEFENDER" -> loadIdleAnimationFrames("defender_${side}_idle")
+                    "DEFENDER" -> loadThreeDigitAnimationFrames("defender_${side}_idle")
+                    "DEMOLISHER" -> loadThreeDigitAnimationFrames("demolisher_${side}_idle")
                     "RAGING_BOAR" -> loadAnimationFrames(
                         "goblin_raging_boar_idle${if (side == "right") "_right" else ""}",
                     )
@@ -188,13 +193,21 @@ class BattlefieldAssetCatalog(private val context: Context) {
             } else {
                 val prefix = when (unitType) {
                     "SAPPER" -> "sapper_${side}_anim"
-                    "DEFENDER" -> "defender_${side}_anim"
-                    "DEMOLISHER" -> "demolisher_${side}_anim"
+                    "DEFENDER" -> "defender_${side}_jog"
+                    "DEMOLISHER" -> "demolisher_${side}_jog"
                     "RAGING_BOAR" -> "goblin_raging_boar_run${if (side == "right") "_right" else ""}"
                     "SLINGMASTER" -> "goblin_slingmaster_run"
                     else -> return@getOrPut emptyList()
                 }
-                loadAnimationFrames(prefix)
+                if (unitType == "DEMOLISHER") {
+                    loadThreeDigitAnimationFrames(prefix).ifEmpty {
+                        loadAnimationFrames("demolisher_${side}_anim")
+                    }
+                } else if (unitType == "DEFENDER") {
+                    loadThreeDigitAnimationFrames(prefix)
+                } else {
+                    loadAnimationFrames(prefix)
+                }
             }
         }
 
@@ -205,10 +218,17 @@ class BattlefieldAssetCatalog(private val context: Context) {
         val cacheKey = "death:$unitType:$side"
         return unitAnimationCache.getOrPut(cacheKey) {
             when (unitType) {
-                "DEFENDER" -> loadAnimationFrames("defender_${side}_death")
+                "DEFENDER" -> {
+                    val generatedFrames =
+                        loadThreeDigitAnimationFrames("defender_${side}_death_anim")
+                    generatedFrames.ifEmpty {
+                        loadAnimationFrames("defender_${side}_death")
+                    }
+                }
                 "RAGING_BOAR" -> loadAnimationFrames(
                     "goblin_raging_boar_death${if (side == "right") "_right" else ""}",
                 )
+                "DEMOLISHER" -> loadThreeDigitAnimationFrames("demolisher_${side}_death")
                 else -> emptyList()
             }
         }
@@ -264,7 +284,7 @@ class BattlefieldAssetCatalog(private val context: Context) {
             resourceId.takeIf { it != 0 }?.let { BitmapFactory.decodeResource(resources, it) }
         }
 
-    private fun loadIdleAnimationFrames(prefix: String): List<Bitmap> =
+    private fun loadThreeDigitAnimationFrames(prefix: String): List<Bitmap> =
         (0..99).mapNotNull { index ->
             val resourceId = resources.getIdentifier(
                 "${prefix}_%03d".format(index),

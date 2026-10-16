@@ -33,6 +33,7 @@ class BattlefieldRenderer(
         camera: CameraTransform,
         activeImpact: ImpactRenderState?,
         animationFrame: Int,
+        deathAnimationClock: UnitDeathAnimationClock,
         impactFrame: Int,
         isAiming: Boolean,
         viewportWidth: Float,
@@ -176,7 +177,15 @@ class BattlefieldRenderer(
                 projectileRenderSize,
             )
         }
-        drawUnits(canvas, state, viewportWidth, viewportHeight, groundTop, animationFrame)
+        drawUnits(
+            canvas,
+            state,
+            viewportWidth,
+            viewportHeight,
+            groundTop,
+            animationFrame,
+            deathAnimationClock,
+        )
         activeImpact?.let { impact ->
             val animation = assets.animationFor(impact.ammunitionType)
             val frames = animation.impactFrames
@@ -525,6 +534,7 @@ class BattlefieldRenderer(
         viewportHeight: Float,
         groundTop: Float,
         animationFrame: Int,
+        deathAnimationClock: UnitDeathAnimationClock,
     ) {
         val unitPaint = Paint(Paint.ANTI_ALIAS_FLAG)
         val worldToViewportScale = viewportWidth / WORLD_WIDTH
@@ -555,7 +565,8 @@ class BattlefieldRenderer(
             val frame = if (frames.isEmpty()) {
                 null
             } else if (defeated) {
-                frames[(animationFrame / 3).coerceIn(0, frames.lastIndex)]
+                deathAnimationClock.frameIndex(unit.entityId, frames.size)
+                    ?.let(frames::get)
             } else if (attacking) {
                 frames[(unit.attackProgress * frames.size)
                     .toInt()
@@ -569,29 +580,72 @@ class BattlefieldRenderer(
             }
             val bitmap = frame ?: assets.unitBitmap(unit.unitType, unit.teamLabel)
             if (bitmap != null) {
-                val spriteHeightWorld = when (unit.unitType) {
+                val baseSpriteHeightWorld = when (unit.unitType) {
                     "SAPPER" -> 144f
                     "RAGING_BOAR" -> 220f * 1.6f * BOAR_SOURCE_CROP_HEIGHT_RATIO
                     "SLINGMASTER" -> 170f
                     else -> 150f
                 } * 0.96f * 0.308f * WorldScale.UNIT_SCALE
+                val usesGeneratedDefenderAnimation =
+                    frame != null &&
+                        unit.unitType == "DEFENDER" &&
+                        (unit.teamLabel == "BLUE" || unit.teamLabel == "RED")
+                val usesGeneratedDemolisherAnimation =
+                    frame != null &&
+                        unit.unitType == "DEMOLISHER" &&
+                        (unit.teamLabel == "BLUE" || unit.teamLabel == "RED")
+                val generatedAnimationCanvasScale = when {
+                    usesGeneratedDefenderAnimation -> GENERATED_DEFENDER_CANVAS_SCALE
+                    usesGeneratedDemolisherAnimation ->
+                        GENERATED_DEMOLISHER_CANVAS_SCALE
+                    else -> 1f
+                }
+                val spriteHeightWorld =
+                    baseSpriteHeightWorld * generatedAnimationCanvasScale
                 val spriteHeight = spriteHeightWorld * worldToViewportScale
                 val spriteWidth = spriteHeight * bitmap.width / bitmap.height
+                val generatedAnimationBottomPaddingRatio = when {
+                    usesGeneratedDemolisherAnimation ->
+                        GENERATED_DEMOLISHER_BOTTOM_PADDING_RATIO
+                    !usesGeneratedDefenderAnimation -> 0f
+                    defeated && unit.teamLabel == "BLUE" ->
+                        GENERATED_BLUE_DEFENDER_DEATH_BOTTOM_PADDING_RATIO
+                    defeated && unit.teamLabel == "RED" ->
+                        GENERATED_RED_DEFENDER_DEATH_BOTTOM_PADDING_RATIO
+                    unit.moving -> GENERATED_DEFENDER_JOG_BOTTOM_PADDING_RATIO
+                    attacking && unit.teamLabel == "BLUE" ->
+                        GENERATED_BLUE_DEFENDER_COMBAT_BOTTOM_PADDING_RATIO
+                    attacking && unit.teamLabel == "RED" ->
+                        GENERATED_RED_DEFENDER_COMBAT_BOTTOM_PADDING_RATIO
+                    unit.teamLabel == "BLUE" -> GENERATED_BLUE_DEFENDER_IDLE_BOTTOM_PADDING_RATIO
+                    unit.teamLabel == "RED" -> GENERATED_RED_DEFENDER_IDLE_BOTTOM_PADDING_RATIO
+                    else -> 0f
+                }
+                val transparentBottomPadding =
+                    spriteHeight * generatedAnimationBottomPaddingRatio
+                val healthBarSpriteHeightWorld = if (
+                    usesGeneratedDefenderAnimation || usesGeneratedDemolisherAnimation
+                ) {
+                    baseSpriteHeightWorld
+                } else {
+                    spriteHeightWorld
+                }
                 canvas.drawBitmap(
                     bitmap,
                     null,
                     RectF(
                         centerX - spriteWidth / 2f,
-                        baselineY - spriteHeight,
+                        baselineY - spriteHeight + transparentBottomPadding,
                         centerX + spriteWidth / 2f,
-                        baselineY,
+                        baselineY + transparentBottomPadding,
                     ),
                     spritePaint,
                 )
                 drawHealthBar(
                     canvas = canvas,
                     centerX = centerX,
-                    centerY = baselineY - spriteHeight - 14f * worldToViewportScale,
+                    centerY = baselineY -
+                        (healthBarSpriteHeightWorld + 14f) * worldToViewportScale,
                     width = UNIT_HEALTH_BAR_WIDTH_WORLD * WorldScale.UNIT_SCALE *
                         worldToViewportScale,
                     health = unit.health,
@@ -869,6 +923,16 @@ class BattlefieldRenderer(
         private const val FORTRESS_LABEL_GAP = 6f
         private const val UNIT_HEALTH_BAR_WIDTH_WORLD = 46.2f
         private const val BOAR_SOURCE_CROP_HEIGHT_RATIO = 301f / 512f
+        private const val GENERATED_DEFENDER_CANVAS_SCALE = 2f
+        private const val GENERATED_DEMOLISHER_CANVAS_SCALE = 2f
+        private const val GENERATED_DEMOLISHER_BOTTOM_PADDING_RATIO = 75f / 512f
+        private const val GENERATED_BLUE_DEFENDER_IDLE_BOTTOM_PADDING_RATIO = 68f / 512f
+        private const val GENERATED_RED_DEFENDER_IDLE_BOTTOM_PADDING_RATIO = 79f / 512f
+        private const val GENERATED_DEFENDER_JOG_BOTTOM_PADDING_RATIO = 76f / 512f
+        private const val GENERATED_BLUE_DEFENDER_COMBAT_BOTTOM_PADDING_RATIO = 69f / 512f
+        private const val GENERATED_RED_DEFENDER_COMBAT_BOTTOM_PADDING_RATIO = 65f / 512f
+        private const val GENERATED_BLUE_DEFENDER_DEATH_BOTTOM_PADDING_RATIO = 70f / 512f
+        private const val GENERATED_RED_DEFENDER_DEATH_BOTTOM_PADDING_RATIO = 79f / 512f
         private const val CATAPULT_RENDER_WIDTH = WorldScale.CATAPULT_RENDER_WIDTH
         private const val PROJECTILE_DEBUG_RADIUS = 30f
         private const val DECORATION_RENDER_SIZE = 94f

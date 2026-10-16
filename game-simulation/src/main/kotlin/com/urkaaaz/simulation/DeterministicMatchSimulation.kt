@@ -727,7 +727,7 @@ class DeterministicMatchSimulation(
                             direction * (unit.type.attackRange + formationOffset)
                     else ->
                         target.position.x -
-                            direction * (config.unitCollisionRadius + formationOffset)
+                            direction * (MELEE_ATTACK_STANDOFF_DISTANCE + formationOffset)
                 }
             }
             val formationRank = combatTarget?.let { target ->
@@ -1187,7 +1187,7 @@ class DeterministicMatchSimulation(
         val formationRank = sameTargetMembers.indexOfFirst { it.id == attacker.id }
         if (formationRank < 0) return false
         val formationReach =
-            config.unitCollisionRadius + formationRank * ATTACK_FORMATION_SPACING
+            MELEE_ATTACK_STANDOFF_DISTANCE + formationRank * ATTACK_FORMATION_SPACING
         return kotlin.math.abs(target.position.x - attacker.position.x) <= formationReach
     }
 
@@ -1839,7 +1839,8 @@ class DeterministicMatchSimulation(
         private const val DEATH_ANIMATION_SECONDS = 0.8f
         private const val SAPPER_CONTACT_SPEED_MULTIPLIER = 0.45f
         private const val ALLIED_UNIT_MIN_SEPARATION = 16f
-        private const val ATTACK_FORMATION_SPACING = 42f
+        private const val MELEE_ATTACK_STANDOFF_DISTANCE = 150f
+        private const val ATTACK_FORMATION_SPACING = 55f
         private const val FORTRESS_CENTER_MARGIN = 490f
         private const val CATAPULT_CENTER_MARGIN = 450f
         // Keep default foundations wide enough for the scaled fortress footprint.

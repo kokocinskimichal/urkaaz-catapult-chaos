@@ -19,14 +19,19 @@ class UnitPanelView(context: Context) : LinearLayout(context) {
         UnitOption("DEFENDER", "defender_icon", 5),
         UnitOption("DEMOLISHER", "demolisher_icon", 10),
         UnitOption("RAGING_BOAR", "goblin_raging_boar_icon", 10),
-        UnitOption("SLINGMASTER", "goblin_slingmaster_icon", 5),
+        UnitOption("SLINGMASTER", "goblin_slingmaster_icon", 5, iconPaddingDp = 1),
     )
     private val supplyGauge = SupplyGaugeView(context)
     private val buttons = options.associateWith { option ->
         ImageButton(context).apply {
             contentDescription = option.type
             scaleType = ImageView.ScaleType.CENTER_INSIDE
-            setPadding(dp(4), dp(4), dp(4), dp(4))
+            setPadding(
+                dp(option.iconPaddingDp),
+                dp(option.iconPaddingDp),
+                dp(option.iconPaddingDp),
+                dp(option.iconPaddingDp),
+            )
             setImageResource(
                 context.resources.getIdentifier(option.iconName, "drawable", context.packageName),
             )
@@ -108,6 +113,7 @@ class UnitPanelView(context: Context) : LinearLayout(context) {
         val type: String,
         val iconName: String,
         val cost: Int,
+        val iconPaddingDp: Int = 4,
     )
 
 }
