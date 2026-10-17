@@ -7,6 +7,7 @@ import com.urkaaaz.contracts.MatchId
 import com.urkaaaz.contracts.MatchPhase
 import com.urkaaaz.contracts.MatchStatus
 import com.urkaaaz.contracts.Team
+import com.urkaaaz.contracts.WorldDimensions
 import com.urkaaaz.domain.AmmunitionType
 import com.urkaaaz.domain.UnitConfigurations
 import com.urkaaaz.domain.UnitFactory
@@ -226,7 +227,101 @@ class DeterministicMatchSimulationTest {
 
         simulation.advance(2_000)
 
-        assertEquals(listOf("FIRE_RAIN"), simulation.snapshot().effects.map { it.effectType })
+        assertTrue(simulation.snapshot().effects.isNotEmpty())
+        assertTrue(simulation.snapshot().effects.all { it.effectType == "FIRE_RAIN" })
+    }
+
+    @Test
+    fun fireRainStartsAtHalfTheSpeedOfRock() {
+        val fireRainSimulation = DeterministicMatchSimulation(
+            MatchId("fire-rain-speed-match"),
+            config,
+        )
+        val rockSimulation = DeterministicMatchSimulation(
+            MatchId("rock-speed-match"),
+            config,
+        )
+        fireRainSimulation.start()
+        rockSimulation.start()
+
+        fireRainSimulation.fire(EntityId("blue-catapult"), AmmunitionType.FIRE_RAIN)
+        rockSimulation.fire(EntityId("blue-catapult"), AmmunitionType.ROCK)
+
+        val fireRain = fireRainSimulation.snapshot().projectiles.single()
+        val rock = rockSimulation.snapshot().projectiles.single()
+        assertEquals(rock.velocityX * 0.5f, fireRain.velocityX)
+        assertEquals(rock.velocityY * 0.5f, fireRain.velocityY)
+    }
+
+    @Test
+    fun fireRainLingeringTicksDamageUnitsFromBothTeams() {
+        val simulation = DeterministicMatchSimulation(
+            MatchId("fire-rain-friendly-fire-match"),
+            SimulationConfig(
+                bounds = WorldBounds(width = 1_060f, height = 600f),
+                gravityAccelerationY = 1_000f,
+            ),
+        )
+        simulation.start()
+        simulation.deployUnit(durableDefender(), Team.BLUE)
+        simulation.deployUnit(durableDefender(), Team.RED)
+        simulation.sendWave(Team.BLUE)
+        simulation.sendWave(Team.RED)
+        simulation.aim(EntityId("blue-catapult"), directionDegrees = 20f, power = 50f)
+        simulation.fire(EntityId("blue-catapult"), AmmunitionType.FIRE_RAIN)
+
+        repeat(80) { simulation.advance(100) }
+
+        assertTrue(
+            simulation.snapshot().units.all {
+                it.statuses.containsKey("BURNING")
+            },
+            "the lingering Fire Rain area should burn units from both teams: " +
+                "units=${simulation.snapshot().units}, effects=${simulation.snapshot().effects}",
+        )
+    }
+
+    @Test
+    fun fireRainSplitsIntoSevenIndependentProjectilesAtItsApex() {
+        val simulation = DeterministicMatchSimulation(
+            MatchId("fire-rain-split-match"),
+            SimulationConfig(
+                bounds = WorldBounds(
+                    width = WorldDimensions.WIDTH,
+                    height = WorldDimensions.HEIGHT,
+                ),
+                gravityAccelerationY = 420f,
+            ),
+        )
+        simulation.start()
+        simulation.fire(EntityId("blue-catapult"), AmmunitionType.FIRE_RAIN)
+        val firedProjectile = simulation.snapshot().projectiles.single()
+        val events = mutableListOf<MatchEvent>()
+
+        events += simulation.advance(500)
+        val projectiles = simulation.snapshot().projectiles
+        val split = events.filterIsInstance<MatchEvent.ProjectileSplit>().single()
+
+        assertEquals(7, projectiles.size)
+        assertEquals(firedProjectile.entityId, split.projectileId)
+        assertEquals(6, split.fragmentProjectileIds.size)
+        assertEquals(
+            split.fragmentProjectileIds.toSet(),
+            projectiles.map { it.entityId }.filter { it != firedProjectile.entityId }.toSet(),
+        )
+        assertTrue(projectiles.all { it.ammunitionType == AmmunitionType.FIRE_RAIN.name })
+
+        val referenceSpeed = abs(firedProjectile.velocityX).coerceAtLeast(120f)
+        val fragments = projectiles.filter { it.entityId != firedProjectile.entityId }
+        val expectedHorizontalVelocities = listOf(-3, -2, -1, 1, 2, 3)
+            .map { firedProjectile.velocityX + it * referenceSpeed * 0.18f }
+            .sorted()
+        assertEquals(expectedHorizontalVelocities, fragments.map { it.velocityX }.sorted())
+        assertTrue(
+            projectiles.single { it.entityId == firedProjectile.entityId }.velocityY >
+                referenceSpeed * 0.10f,
+        )
+        assertTrue(fragments.all { it.velocityY > 0f })
     }
 
     @Test

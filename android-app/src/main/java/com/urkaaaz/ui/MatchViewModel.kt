@@ -44,6 +44,7 @@ class MatchViewModel(
     private val playerId: PlayerId = PlayerId("local-player"),
 ) {
     private var commandSequence = 0
+    private var matchGeneration = 0L
     private var paused = false
     private var selectedAmmunition = "ROCK"
     private var aiUnitAutomationEnabled = true
@@ -87,7 +88,7 @@ class MatchViewModel(
                 unitType = unitId,
             ),
         )
-        return RenderStateMapper.map(snapshot, gateway.consumeEvents())
+        return mapRenderState(snapshot, gateway.consumeEvents())
             .also { renderState = it }
     }
 
@@ -99,7 +100,7 @@ class MatchViewModel(
                 playerId = PlayerId("local-ai"),
             ),
         )
-        return RenderStateMapper.map(snapshot, gateway.consumeEvents())
+        return mapRenderState(snapshot, gateway.consumeEvents())
             .also { renderState = it }
     }
 
@@ -107,7 +108,7 @@ class MatchViewModel(
         if (action == MatchUiAction.AdvanceSimulation) {
             val currentSnapshot = gateway.snapshot()
             if (currentSnapshot.status != com.urkaaaz.contracts.MatchStatus.RUNNING) {
-                return RenderStateMapper.map(currentSnapshot).also { renderState = it }
+                return mapRenderState(currentSnapshot).also { renderState = it }
             }
         }
         if (action == MatchUiAction.FireRock && !selectedAmmunitionIsAvailable()) {
@@ -117,6 +118,7 @@ class MatchViewModel(
             MatchUiAction.StartMatch -> {
                 paused = false
                 aiUnitDecisionElapsedMilliseconds = 0L
+                matchGeneration += 1L
                 gateway.dispatch(
                     MatchCommand.Start(
                     commandId = CommandId("ui-${++commandSequence}"),
@@ -128,6 +130,7 @@ class MatchViewModel(
             MatchUiAction.RestartMatch -> {
                 paused = false
                 aiUnitDecisionElapsedMilliseconds = 0L
+                matchGeneration += 1L
                 selectedAmmunition = "ROCK"
                 gateway.restart(matchId, playerId)
             }
@@ -150,7 +153,10 @@ class MatchViewModel(
             MatchUiAction.TogglePause -> {
                 paused = !paused
                 if (paused) gateway.pause() else gateway.resume()
-                return renderState.copy(statusLabel = if (paused) "PAUSED" else "RUNNING")
+                return renderState.copy(
+                    statusLabel = if (paused) "PAUSED" else "RUNNING",
+                    isPaused = paused,
+                )
                     .also { renderState = it }
             }
             is MatchUiAction.Aim -> gateway.dispatch(
@@ -232,8 +238,15 @@ class MatchViewModel(
                 }
             }
         }
-        return RenderStateMapper.map(snapshot, presentationEvents).also { renderState = it }
+        return mapRenderState(snapshot, presentationEvents).also { renderState = it }
     }
+
+    private fun mapRenderState(
+        snapshot: MatchSnapshot,
+        events: List<com.urkaaaz.contracts.MatchEvent> = emptyList(),
+    ): RenderState = RenderStateMapper.map(snapshot, events).copy(
+        matchGeneration = matchGeneration,
+    )
 
     private fun selectedAmmunitionIsAvailable(): Boolean =
         renderState.playerAmmunition[selectedAmmunition]?.let { it > 0 } ?: true

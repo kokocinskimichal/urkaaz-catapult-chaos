@@ -37,6 +37,17 @@ sealed interface MatchEvent {
         val y: Float = 0f,
     ) : MatchEvent
 
+    data class ProjectileSplit(
+        override val eventId: EventId,
+        override val matchId: MatchId,
+        override val simulationTimeMilliseconds: Long,
+        val projectileId: EntityId,
+        val fragmentProjectileIds: List<EntityId>,
+        val ammunitionType: String,
+        val x: Float,
+        val y: Float,
+    ) : MatchEvent
+
     data class ProjectileHitTerrain(
         override val eventId: EventId,
         override val matchId: MatchId,

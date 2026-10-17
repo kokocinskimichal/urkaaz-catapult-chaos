@@ -222,11 +222,17 @@ class MatchScreenController(
 
     fun onResume() {
         gameHandler.removeCallbacks(gameTick)
+        if (::battlefieldView.isInitialized) {
+            battlefieldView.setLifecyclePaused(false)
+        }
         gameHandler.postDelayed(gameTick, 33L)
     }
 
     fun onPause() {
         gameHandler.removeCallbacks(gameTick)
+        if (::battlefieldView.isInitialized) {
+            battlefieldView.setLifecyclePaused(true)
+        }
     }
 
     private fun render(state: RenderState) {

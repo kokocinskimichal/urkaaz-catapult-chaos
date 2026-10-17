@@ -5,6 +5,7 @@ import com.urkaaaz.contracts.MatchSnapshot
 import com.urkaaaz.contracts.MatchStatus
 import com.urkaaaz.contracts.EntityId
 import com.urkaaaz.contracts.EventId
+import com.urkaaaz.contracts.EffectSnapshot
 import com.urkaaaz.contracts.FortressSnapshot
 import com.urkaaaz.contracts.FortressPlacement
 import com.urkaaaz.contracts.InitialCameraAnchor
@@ -83,6 +84,104 @@ class RenderStateMapperTest {
         )
 
         assertEquals("projectile-42", state.projectiles.single().projectileId)
+    }
+
+    @Test
+    fun mapperExposesAllFireRainSplitsAndActiveEffects() {
+        val matchId = MatchId("fire-rain-match")
+        val firstSplit = MatchEvent.ProjectileSplit(
+            eventId = EventId("split-1"),
+            matchId = matchId,
+            simulationTimeMilliseconds = 1_000L,
+            projectileId = EntityId("container-1"),
+            fragmentProjectileIds = listOf(EntityId("fragment-1"), EntityId("fragment-2")),
+            ammunitionType = "FIRE_RAIN",
+            x = 1_200f,
+            y = 700f,
+        )
+        val secondSplit = firstSplit.copy(
+            eventId = EventId("split-2"),
+            projectileId = EntityId("container-2"),
+            fragmentProjectileIds = listOf(EntityId("fragment-3"), EntityId("fragment-4")),
+        )
+        val ignoredSplit = firstSplit.copy(
+            eventId = EventId("other-ammunition-split"),
+            ammunitionType = "ROCK",
+        )
+        val state = RenderStateMapper.map(
+            snapshot = MatchSnapshot(
+                matchId = matchId,
+                effects = listOf(
+                    EffectSnapshot(
+                        effectType = "FIRE_RAIN",
+                        remainingMilliseconds = 2_500L,
+                        effectId = EntityId("fire-1"),
+                        sourceProjectileId = EntityId("fragment-1"),
+                        x = 1_400f,
+                        y = 800f,
+                        radius = 68f,
+                    ),
+                    EffectSnapshot(
+                        effectType = "FIRE_RAIN",
+                        remainingMilliseconds = 1_700L,
+                        effectId = EntityId("fire-2"),
+                        sourceProjectileId = EntityId("fragment-2"),
+                        x = 1_600f,
+                        y = 820f,
+                        radius = 68f,
+                    ),
+                    EffectSnapshot(
+                        effectType = "PLAGUE_CAULDRON",
+                        remainingMilliseconds = 5_000L,
+                        effectId = EntityId("plague-1"),
+                    ),
+                ),
+            ),
+            events = listOf(firstSplit, ignoredSplit, secondSplit),
+        )
+
+        assertEquals("fire-rain-match", state.matchId)
+        assertEquals(
+            listOf("split-1", "split-2"),
+            state.fireRainSplits.map { it.eventId },
+        )
+        assertEquals("container-1", state.fireRainSplits.first().projectileId)
+        assertEquals(listOf("fragment-1", "fragment-2"), state.fireRainSplits.first().fragmentProjectileIds)
+        assertEquals(listOf("fire-1", "fire-2"), state.fireRainEffects.map { it.effectId })
+        assertEquals(68f, state.fireRainEffects.first().radius)
+    }
+
+    @Test
+    fun mapperUsesMatchStartedEventAsPresentationGeneration() {
+        val matchId = MatchId("restartable-match")
+        val eventId = EventId("match-start-2")
+        val state = RenderStateMapper.map(
+            snapshot = MatchSnapshot(matchId = matchId),
+            events = listOf(
+                MatchEvent.MatchStarted(
+                    eventId = eventId,
+                    matchId = matchId,
+                    simulationTimeMilliseconds = 0L,
+                ),
+            ),
+        )
+
+        assertEquals("restartable-match", state.matchId)
+        assertEquals("match-start-2", state.matchStartEventId)
+    }
+
+    @Test(expected = IllegalArgumentException::class)
+    fun mapperRejectsFireRainEffectWithoutStableId() {
+        RenderStateMapper.map(
+            MatchSnapshot(
+                effects = listOf(
+                    EffectSnapshot(
+                        effectType = "FIRE_RAIN",
+                        remainingMilliseconds = 1_000L,
+                    ),
+                ),
+            ),
+        )
     }
 
     @Test

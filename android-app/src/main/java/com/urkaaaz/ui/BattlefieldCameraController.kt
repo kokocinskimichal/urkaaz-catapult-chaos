@@ -39,11 +39,41 @@ class BattlefieldCameraController(
     private var panStartY = 0f
     private var initialLevelFramingApplied = false
     private var snapshotMode = false
+    private var previousBlueProjectileIds = emptySet<String>()
+    private var matchIdentityInitialized = false
+    private var lastMatchId: String? = null
+    private var lastMatchGeneration = 0L
 
     fun update(state: RenderState, viewportWidth: Float, viewportHeight: Float) {
         if (snapshotMode) {
             transform = CameraTransform(1f, 0f, 0f)
             return
+        }
+        val matchChanged = matchIdentityInitialized &&
+            (state.matchId != lastMatchId || state.matchGeneration != lastMatchGeneration)
+        if (matchChanged) {
+            previousBlueProjectileIds = emptySet()
+            manualPanActive = false
+            wasFollowingProjectile = false
+            trackedTeamLabel = null
+            lastFramedTeamLabel = null
+            lastPhaseLabel = null
+            postImpactHoldSeconds = 0f
+            cameraReturnActive = false
+        }
+        matchIdentityInitialized = true
+        lastMatchId = state.matchId
+        lastMatchGeneration = state.matchGeneration
+
+        val blueProjectiles = state.projectiles.filter { it.teamLabel == "BLUE" }
+        val newlyLaunchedProjectile = blueProjectiles.firstOrNull {
+            it.projectileId !in previousBlueProjectileIds
+        }
+        previousBlueProjectileIds = blueProjectiles.mapTo(mutableSetOf()) {
+            it.projectileId
+        }
+        if (newlyLaunchedProjectile != null && !panningMap) {
+            manualPanActive = false
         }
         if (!initialLevelFramingApplied && state.statusLabel == "RUNNING") {
             if (viewportWidth <= 0f || viewportHeight <= 0f) return
@@ -55,10 +85,10 @@ class BattlefieldCameraController(
             return
         }
 
-        val trackedProjectile = if (manualPanActive) {
+        val trackedProjectile = if (manualPanActive || panningMap) {
             null
         } else {
-            state.projectiles.firstOrNull { it.teamLabel == "BLUE" }
+            newlyLaunchedProjectile ?: blueProjectiles.firstOrNull()
         }
         if (trackedProjectile != null) {
             manualPanActive = false
@@ -140,7 +170,6 @@ class BattlefieldCameraController(
         if (wasFollowingProjectile) return false
         panningMap = true
         panDragging = false
-        manualPanActive = true
         panStartX = x
         panStartY = y
         panLastX = x
@@ -153,6 +182,7 @@ class BattlefieldCameraController(
         if (!panDragging) {
             if (hypot(x - panStartX, y - panStartY) < PAN_START_DISTANCE) return true
             panDragging = true
+            manualPanActive = true
             panLastX = x
             panLastY = y
             return true
@@ -170,6 +200,9 @@ class BattlefieldCameraController(
 
     fun translateMap(deltaX: Float, deltaY: Float, viewportWidth: Float, viewportHeight: Float) {
         if (wasFollowingProjectile) return
+        if (deltaX != 0f || deltaY != 0f) {
+            manualPanActive = true
+        }
         transform = transform.copy(
             offsetX = transform.offsetX + deltaX,
             offsetY = transform.offsetY + deltaY,

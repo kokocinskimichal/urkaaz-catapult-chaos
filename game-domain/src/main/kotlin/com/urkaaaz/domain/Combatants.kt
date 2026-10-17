@@ -76,6 +76,8 @@ data class Projectile(
     val windResponse: Float = 1f,
     val gravityResponse: Float = 1f,
     val drag: Float = 0f,
+    val apexFragmentation: ApexFragmentationProfile? = null,
+    val hasFragmented: Boolean = false,
 ) {
     fun advance(
         deltaSeconds: Float,

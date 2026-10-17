@@ -382,9 +382,11 @@ must go through commands and domain/application boundaries.
 - Camera panning must be distinguished from aiming release so `ACTION_UP` fires
   only when the gesture was an aim gesture.
 - Pinch zoom anchors the same battlefield point beneath the gesture focus
-  (`ScaleGestureDetector.focusX/Y`) and is capped at a 4x view scale. Manual
-  pan or zoom keeps the chosen camera framing across match-phase changes and
-  suppresses automatic projectile tracking for the rest of the match.
+  (`ScaleGestureDetector.focusX/Y`) and is capped at a 4x view scale. Confirmed
+  manual pan or zoom keeps the chosen framing across match-phase changes, but
+  automatic tracking resumes when the next BLUE projectile launches. A pan
+  touch that ends before the drag threshold does not disable tracking, and a
+  match restart resets the manual override even if projectile IDs are reused.
 - Soil textures repeat at a base tile width of 256 view units in both the
   Android battlefield and web map preview. Android tiles preserve the source
   aspect ratio and repeat vertically rather than stretching to the soil depth.
@@ -415,7 +417,44 @@ must go through commands and domain/application boundaries.
   and rendering have been removed. Rock deals 50 damage to units and
   fortresses, Siege Bomb deals 100 fortress damage, Fire Rain ticks for 4
   damage, and Plague Cauldron ticks for 8 unit damage without harming
-  fortresses.
+  fortresses. Fire Rain splits at its flight apex into its continuing parent
+  projectile and six independently simulated fragments; the split profile is
+  defined in the ammunition flight catalog and published as a
+  `ProjectileSplit` event.
+- FIRE_RAIN uses one neutral AnimGen presentation set shared by both teams:
+  24 container-flight frames (`fire_rain_flight_00`–`23`), 12 split-flash
+  frames (`fire_rain_split_flash_00`–`11`), 24 fragment-flight frames
+  (`fire_rain_fragment_flight_00`–`23`), and 24 fire-field frames
+  (`fire_rain_field_00`–`23`). All are transparent 512×512 PNGs under
+  `android-app/src/main/res/drawable-nodpi/`; each original ZIP and MP4 is
+  preserved in its corresponding `assets_src/ammunition/fire-rain/` phase
+  directory. The accepted no-reference fire-field generation used no Powder
+  Barrel image.
+- The user supplied an isolated 1254×1254 RGBA Fire Rain shard image generated
+  in a separate tool. It was uploaded as the fragment-flight first frame; the
+  composite ammunition icon was not sent to AnimGen for this phase. The
+  approved 45-credit generation and preview succeeded; 24 sequential 512×512
+  RGBA PNG frames are imported as `fire_rain_fragment_flight_00.png` through
+  `_23.png`. ZIP integrity passed; no frame touches a canvas edge and the
+  minimum alpha-bound margin is 162 pixels. The original ZIP and MP4 are
+  preserved under `assets_src/ammunition/fire-rain/fragment-flight/`. The
+  `BattlefieldAssetCatalog` strictly loads all four FIRE_RAIN sequences and
+  reports a phase/index-specific error for missing, invalid, or extra frames;
+  unknown ammunition animations fail explicitly instead of falling back to
+  ROCK. `RenderStateMapper` carries every matching `ProjectileSplit` and
+  active FIRE_RAIN `EffectSnapshot`. A view-owned presentation clock hides the
+  parent projectile and its trail after the split, assigns fragment animation
+  by child ID, independently animates split flashes and fields, freezes during
+  match/activity pause or view detachment, and resets on match identity/
+  generation changes. View detachment preserves presentation IDs for
+  reattachment. The renderer draws all phases through the existing battlefield
+  camera; the fire-field canvas is rendered at 4× the gameplay diameter to
+  account for transparent padding, with its visible lower alpha bound aligned
+  to terrain. Field fade selects its final 500 ms from
+  `EffectSnapshot.remainingMilliseconds`. Mapper, clock, and PNG-set tests
+  cover these contracts; FIRE_RAIN's projectile and fragment reference
+  speeds are half their prior values, and its ground fire lasts 9 seconds
+  with the existing 500 ms tick interval.
 - The AI only considers ammunition with positive fortress damage when choosing
   a shot against a fortress. Entity-impact presentation uses the collision
   coordinates from `ProjectileHitEntity`.

@@ -187,6 +187,7 @@ FlightProfile
   canPierceUnits
   canHitTerrain
   canHitFortress
+  apexFragmentation?
 ```
 
 Mass is a gameplay input to the flight model. The simulation may derive
@@ -195,7 +196,9 @@ relationships must be explicit and deterministic.
 
 A projectile stores the ammunition identity and the immutable flight values
 used at launch. A later balance change must not alter an already-running
-projectile during replay.
+projectile during replay. Optional apex fragmentation is configured in the
+flight profile; each projectile carries that launch-time profile and a
+one-shot fragmentation state.
 
 ### 5.4 Damage profile
 
@@ -598,6 +601,7 @@ match-started
 ammunition-selected
 projectile-fired
 projectile-advanced
+projectile-split
 projectile-collision-candidate
 projectile-hit-terrain
 projectile-hit-unit

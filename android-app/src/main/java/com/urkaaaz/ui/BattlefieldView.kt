@@ -6,6 +6,7 @@ import android.graphics.Color
 import android.graphics.Paint
 import android.graphics.RectF
 import android.graphics.Typeface
+import android.os.SystemClock
 import android.view.View
 import android.view.MotionEvent
 import android.view.ScaleGestureDetector
@@ -75,6 +76,9 @@ class BattlefieldView(context: Context) : View(context) {
     )
     private var animationFrame = 0
     private var impactFrame = 0
+    private var lifecyclePaused = false
+    private val fireRainPresentationClock = FireRainPresentationClock()
+    private var fireRainPresentationFrame = FireRainPresentationFrame()
     private val deathAnimationClock = UnitDeathAnimationClock()
     private val unitDeathAnimationRetention =
         UnitDeathAnimationRetention(deathAnimationClock)
@@ -130,6 +134,13 @@ class BattlefieldView(context: Context) : View(context) {
     fun render(newState: RenderState) {
         updateProjectileTrails(newState)
         camera.update(newState, width.toFloat(), height.toFloat())
+        val presentationState = newState.copy(
+            isPaused = newState.isPaused || lifecyclePaused || !isAttachedToWindow,
+        )
+        fireRainPresentationFrame = fireRainPresentationClock.update(
+            presentationState,
+            SystemClock.uptimeMillis(),
+        )
         state = newState.copy(
             units = unitDeathAnimationRetention.update(newState.units),
         )
@@ -137,13 +148,48 @@ class BattlefieldView(context: Context) : View(context) {
         if (newState.impact != null && newState.impact != activeImpact) {
             activeImpact = newState.impact
             impactFrame = 0
-        } else if (activeImpact != null) {
-            impactFrame += 1
-            if (impactFrame >= assets.animationFor(activeImpact?.ammunitionType ?: "ROCK").impactFrames.size) {
-                activeImpact = null
+        } else {
+            activeImpact?.let { currentImpact ->
+                impactFrame += 1
+                if (
+                    impactFrame >=
+                    assets.animationFor(currentImpact.ammunitionType).impactFrames.size
+                ) {
+                    activeImpact = null
+                }
             }
         }
         invalidate()
+    }
+
+    fun setLifecyclePaused(paused: Boolean) {
+        if (lifecyclePaused == paused) return
+        lifecyclePaused = paused
+        fireRainPresentationFrame = fireRainPresentationClock.update(
+            state.copy(
+                isPaused = state.isPaused || lifecyclePaused || !isAttachedToWindow,
+            ),
+            SystemClock.uptimeMillis(),
+        )
+        invalidate()
+    }
+
+    override fun onAttachedToWindow() {
+        super.onAttachedToWindow()
+        fireRainPresentationFrame = fireRainPresentationClock.update(
+            state.copy(isPaused = state.isPaused || lifecyclePaused),
+            SystemClock.uptimeMillis(),
+        )
+        invalidate()
+    }
+
+    override fun onDetachedFromWindow() {
+        fireRainPresentationFrame = fireRainPresentationClock.update(
+            state.copy(isPaused = true),
+            SystemClock.uptimeMillis(),
+        )
+        projectileTrails.clear()
+        super.onDetachedFromWindow()
     }
 
     override fun onDraw(canvas: Canvas) {
@@ -156,6 +202,7 @@ class BattlefieldView(context: Context) : View(context) {
             animationFrame = animationFrame,
             deathAnimationClock = deathAnimationClock,
             impactFrame = impactFrame,
+            fireRainPresentation = fireRainPresentationFrame,
             isAiming = aimController.isDragging,
             viewportWidth = width.toFloat(),
             viewportHeight = height.toFloat(),
@@ -539,13 +586,17 @@ class BattlefieldView(context: Context) : View(context) {
         )
     }
 
-    private fun drawProjectileTrails(canvas: Canvas) {
+    private fun drawProjectileTrails(
+        canvas: Canvas,
+        suppressedProjectileIds: Set<String>,
+    ) {
         val trailPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
             style = Paint.Style.STROKE
             strokeWidth = 5f
             strokeCap = Paint.Cap.ROUND
         }
-        projectileTrails.values.forEach { trail ->
+        projectileTrails.forEach { (projectileId, trail) ->
+            if (projectileId in suppressedProjectileIds) return@forEach
             for (index in 1 until trail.size) {
                 val alphaFraction = index / trail.size.toFloat()
                 trailPaint.color = Color.argb(

@@ -26,6 +26,26 @@ class AmmunitionDefinitionsTest {
     }
 
     @Test
+    fun fireRainUsesHalfSpeedAndConfiguredApexFragmentationProfile() {
+        val fireRain = AmmunitionCatalog.definition(AmmunitionType.FIRE_RAIN)
+        val profile = requireNotNull(
+            fireRain.flight.apexFragmentation,
+        )
+
+        assertEquals(4f, fireRain.flight.initialSpeedMultiplier)
+        assertEquals(3, profile.fragmentsPerSide)
+        assertEquals(120f, profile.minimumReferenceSpeed)
+        assertEquals(0.18f, profile.horizontalSpreadPerStep)
+        assertEquals(0.10f, profile.initialDownwardSpeed)
+        assertEquals(0.025f, profile.downwardSpreadPerStep)
+        assertEquals(
+            null,
+            AmmunitionCatalog.definition(AmmunitionType.ROCK)
+                .flight.apexFragmentation,
+        )
+    }
+
+    @Test
     fun rockDamagesUnitsAndFortressesAndCanCollideWithUnits() {
         val rock = AmmunitionCatalog.definition(AmmunitionType.ROCK)
 
@@ -50,6 +70,13 @@ class AmmunitionDefinitionsTest {
         )
         assertEquals(4, fireBehavior.damagePerTick)
         assertEquals(4, fireBehavior.fortressDamagePerTick)
+        assertEquals(9f, fireBehavior.durationSeconds)
+        assertEquals(0.5f, fireBehavior.tickIntervalSeconds)
+        assertEquals(FriendlyFirePolicy.ALL_UNITS, fireBehavior.unitFriendlyFire)
+        assertEquals(
+            FriendlyFirePolicy.ENEMY_ONLY,
+            fireRain.collision.friendlyFire,
+        )
         assertTrue(plagueBehavior.driftsWithWind)
         assertEquals(8, plagueBehavior.damagePerTick)
         assertEquals(0, plague.damage.fortressDamage)

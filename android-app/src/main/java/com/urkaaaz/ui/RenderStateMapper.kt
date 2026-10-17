@@ -57,6 +57,12 @@ data class RenderState(
     val windDirection: Float,
     val combatFeedback: List<CombatFeedbackRenderState>,
     val mapObjects: List<MapObjectRenderState> = emptyList(),
+    val matchId: String? = null,
+    val matchStartEventId: String? = null,
+    val isPaused: Boolean = false,
+    val fireRainSplits: List<FireRainSplitRenderState> = emptyList(),
+    val fireRainEffects: List<FireRainEffectRenderState> = emptyList(),
+    val matchGeneration: Long = 0L,
 )
 
 data class MapObjectRenderState(
@@ -153,6 +159,11 @@ object RenderStateMapper {
         statusLabel = snapshot.status.name,
         phaseLabel = snapshot.phase.name,
         activeTeamLabel = snapshot.activeTeam?.name ?: "NONE",
+        matchId = snapshot.matchId?.value,
+        matchStartEventId = events.lastOrNull { event ->
+            event is MatchEvent.MatchStarted &&
+                (snapshot.matchId == null || event.matchId == snapshot.matchId)
+        }?.eventId?.value,
         projectileCount = snapshot.projectiles.size,
         terrainRevision = snapshot.terrain.revision,
         terrainBiome = snapshot.terrain.biome,
@@ -323,9 +334,42 @@ object RenderStateMapper {
                 relicRenderSize = it.relicSize?.renderSize,
             )
         } ?: emptyList(),
+        fireRainSplits = events.mapNotNull { event ->
+            (event as? MatchEvent.ProjectileSplit)
+                ?.takeIf {
+                    it.ammunitionType == FIRE_RAIN_AMMUNITION &&
+                        (snapshot.matchId == null || it.matchId == snapshot.matchId)
+                }
+                ?.let {
+                    FireRainSplitRenderState(
+                        eventId = it.eventId.value,
+                        projectileId = it.projectileId.value,
+                        fragmentProjectileIds = it.fragmentProjectileIds.map { id -> id.value },
+                        x = it.x,
+                        y = it.y,
+                    )
+                }
+        },
+        fireRainEffects = snapshot.effects.mapNotNull { effect ->
+            if (effect.effectType != FIRE_RAIN_AMMUNITION) {
+                null
+            } else {
+                FireRainEffectRenderState(
+                    effectId = requireNotNull(effect.effectId) {
+                        "FIRE_RAIN effect snapshot is missing its effectId"
+                    }.value,
+                    x = effect.x,
+                    y = effect.y,
+                    radius = effect.radius,
+                    remainingMilliseconds = effect.remainingMilliseconds,
+                )
+            }
+        },
         )
     }
 
     private fun fortressX(id: String, blueX: Float, redX: Float): Float =
         if (id.startsWith("blue")) blueX else redX
+
+    private const val FIRE_RAIN_AMMUNITION = "FIRE_RAIN"
 }

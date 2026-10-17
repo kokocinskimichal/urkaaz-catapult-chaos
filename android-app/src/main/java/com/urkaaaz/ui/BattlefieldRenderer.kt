@@ -21,7 +21,7 @@ class BattlefieldRenderer(
     private val drawTextureAtWorldSize: (Canvas, Bitmap?, Float, Float, Float, Float) -> Unit,
     private val drawReloadIndicator: (Canvas, Float, Float, Float, Boolean) -> Unit,
     private val drawTrajectoryPreview: (Canvas) -> Unit,
-    private val drawProjectileTrails: (Canvas) -> Unit,
+    private val drawProjectileTrails: (Canvas, Set<String>) -> Unit,
     private val drawAimGesture: (Canvas, Float) -> Unit,
 ) {
     private val backgroundPaint = Paint(Paint.ANTI_ALIAS_FLAG)
@@ -35,6 +35,7 @@ class BattlefieldRenderer(
         animationFrame: Int,
         deathAnimationClock: UnitDeathAnimationClock,
         impactFrame: Int,
+        fireRainPresentation: FireRainPresentationFrame,
         isAiming: Boolean,
         viewportWidth: Float,
         viewportHeight: Float,
@@ -138,6 +139,12 @@ class BattlefieldRenderer(
             viewportHeight = viewportHeight,
             fallbackColor = theme.fallbackColor,
         )
+        drawFireRainFields(
+            canvas = canvas,
+            fields = fireRainPresentation.fireFields,
+            viewportWidth = viewportWidth,
+            viewportHeight = viewportHeight,
+        )
 
         drawReloadIndicator(
             canvas,
@@ -155,15 +162,37 @@ class BattlefieldRenderer(
         )
 
         drawTrajectoryPreview(canvas)
-        drawProjectileTrails(canvas)
+        drawProjectileTrails(canvas, fireRainPresentation.hiddenProjectileIds)
         state.projectiles.forEach { projectile ->
+            if (projectile.projectileId in fireRainPresentation.hiddenProjectileIds) {
+                return@forEach
+            }
             val projectileX = worldToViewX(projectile.x, viewportWidth)
                 .coerceIn(0f, viewportWidth)
             val projectileY = worldToViewY(projectile.y, viewportHeight)
-            val animation = assets.animationFor(projectile.ammunitionType)
-            val frames = animation.flightFrames
-            val projectileRenderSize = animation.flightRenderSize
-            val frame = frames.getOrNull(animationFrame % frames.size.coerceAtLeast(1))
+            val isFireRainFragment =
+                projectile.projectileId in fireRainPresentation.fragmentProjectileIds
+            val animation = if (isFireRainFragment) {
+                null
+            } else {
+                assets.animationFor(projectile.ammunitionType)
+            }
+            val frames = animation?.flightFrames
+                ?: assets.fireRainAnimations.fragmentFlightFrames
+            val projectileRenderSize = if (isFireRainFragment) {
+                FIRE_RAIN_FRAGMENT_RENDER_SIZE
+            } else {
+                requireNotNull(animation).flightRenderSize
+            }
+            val frameIndex = if (
+                isFireRainFragment ||
+                projectile.ammunitionType == FIRE_RAIN_AMMUNITION
+            ) {
+                fireRainPresentation.projectileFrameIndex
+            } else {
+                animationFrame
+            }
+            val frame = frames.getOrNull(frameIndex % frames.size.coerceAtLeast(1))
             val projectileHeight = if (frame == null) {
                 projectileRenderSize
             } else {
@@ -177,6 +206,12 @@ class BattlefieldRenderer(
                 projectileRenderSize,
             )
         }
+        drawFireRainSplitFlashes(
+            canvas = canvas,
+            splitFlashes = fireRainPresentation.splitFlashes,
+            viewportWidth = viewportWidth,
+            viewportHeight = viewportHeight,
+        )
         drawUnits(
             canvas,
             state,
@@ -189,20 +224,21 @@ class BattlefieldRenderer(
         activeImpact?.let { impact ->
             val animation = assets.animationFor(impact.ammunitionType)
             val frames = animation.impactFrames
-            val frame = frames.getOrNull(impactFrame % frames.size.coerceAtLeast(1))
-            val impactX = worldToViewX(impact.x, viewportWidth).coerceIn(0f, viewportWidth)
-            val impactY = worldToViewY(impact.y, viewportHeight)
-            val impactRenderSize = animation.impactRenderSize
-            val impactRenderHeight = frame?.let {
-                impactRenderSize * it.height.toFloat() / it.width.coerceAtLeast(1)
-            } ?: impactRenderSize
-            drawTexture(
-                canvas,
-                frame,
-                impactX - impactRenderSize / 2f,
-                impactY - impactRenderHeight / 2f,
-                impactRenderSize,
-            )
+            if (frames.isNotEmpty()) {
+                val frame = frames[impactFrame % frames.size]
+                val impactX = worldToViewX(impact.x, viewportWidth).coerceIn(0f, viewportWidth)
+                val impactY = worldToViewY(impact.y, viewportHeight)
+                val impactRenderSize = animation.impactRenderSize
+                val impactRenderHeight =
+                    impactRenderSize * frame.height.toFloat() / frame.width.coerceAtLeast(1)
+                drawTexture(
+                    canvas,
+                    frame,
+                    impactX - impactRenderSize / 2f,
+                    impactY - impactRenderHeight / 2f,
+                    impactRenderSize,
+                )
+            }
         }
         drawCombatFeedback(canvas, combatFeedback, viewportWidth, viewportHeight, groundTop)
 
@@ -244,6 +280,55 @@ class BattlefieldRenderer(
         drawOutcome(canvas, state.outcomeLabel, viewportWidth, viewportHeight)
         if (isAiming) drawAimGesture(canvas, groundTop)
         canvas.restore()
+    }
+
+    private fun drawFireRainFields(
+        canvas: Canvas,
+        fields: List<FireRainFieldAnimation>,
+        viewportWidth: Float,
+        viewportHeight: Float,
+    ) {
+        fields.forEach { field ->
+            val frame = assets.fireRainAnimations.fireFieldFrames.getOrNull(field.frameIndex)
+                ?: error("FIRE_RAIN fire field frame ${field.frameIndex} is unavailable")
+            val centerX = worldToViewX(field.x, viewportWidth)
+            val centerY = worldToViewY(field.y, viewportHeight)
+            val canvasDiameter = field.radius * 2f * FIRE_RAIN_FIELD_CANVAS_DIAMETER_MULTIPLIER
+            val width = worldToViewWidth(canvasDiameter, viewportWidth)
+            val height = worldToViewHeight(canvasDiameter, viewportHeight)
+            drawTextureAtWorldSize(
+                canvas,
+                frame,
+                centerX,
+                centerY + height * (1f - FIRE_RAIN_FIELD_GROUND_ANCHOR_Y_RATIO),
+                width,
+                height,
+            )
+        }
+    }
+
+    private fun drawFireRainSplitFlashes(
+        canvas: Canvas,
+        splitFlashes: List<FireRainSplitFlash>,
+        viewportWidth: Float,
+        viewportHeight: Float,
+    ) {
+        splitFlashes.forEach { flash ->
+            val frame = assets.fireRainAnimations.splitFlashFrames.getOrNull(flash.frameIndex)
+                ?: error("FIRE_RAIN split flash frame ${flash.frameIndex} is unavailable")
+            val centerX = worldToViewX(flash.x, viewportWidth)
+            val centerY = worldToViewY(flash.y, viewportHeight)
+            val width = worldToViewWidth(FIRE_RAIN_SPLIT_FLASH_RENDER_SIZE, viewportWidth)
+            val height = worldToViewHeight(FIRE_RAIN_SPLIT_FLASH_RENDER_SIZE, viewportHeight)
+            drawTextureAtWorldSize(
+                canvas,
+                frame,
+                centerX,
+                centerY + height / 2f,
+                width,
+                height,
+            )
+        }
     }
 
     private fun drawRelics(
@@ -937,5 +1022,11 @@ class BattlefieldRenderer(
         private const val PROJECTILE_DEBUG_RADIUS = 30f
         private const val DECORATION_RENDER_SIZE = 94f
         private const val DECORATION_GROUND_SINK = 12f
+        private const val FIRE_RAIN_AMMUNITION = "FIRE_RAIN"
+        private const val FIRE_RAIN_FRAGMENT_RENDER_SIZE = 28f
+        private const val FIRE_RAIN_SPLIT_FLASH_RENDER_SIZE = 120f
+        // Generated frames are mostly transparent; align their visible base to terrain.
+        private const val FIRE_RAIN_FIELD_CANVAS_DIAMETER_MULTIPLIER = 4f
+        private const val FIRE_RAIN_FIELD_GROUND_ANCHOR_Y_RATIO = 374f / 512f
     }
 }

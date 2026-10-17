@@ -166,6 +166,7 @@ class DeterministicMatchSimulation(
             windResponse = ammunitionDefinition.flight.windResponse,
             gravityResponse = ammunitionDefinition.flight.gravityResponse,
             drag = ammunitionDefinition.flight.drag,
+            apexFragmentation = ammunitionDefinition.flight.apexFragmentation,
         )
         projectiles = projectiles + projectile
         resources[catapult.team] = availableResources.consume(ammunition)
@@ -316,38 +317,22 @@ class DeterministicMatchSimulation(
         finishIfFortressDestroyed()
         val resolved = mutableListOf<Projectile>()
         projectiles.forEach { projectile ->
-            val advanced = projectile.advance(
-                deltaSeconds = deltaSeconds,
-                windAccelerationX = wind.accelerationX(),
-                gravityAccelerationY = config.gravityAccelerationY * worldPhysicsScale,
-                windResponse = projectile.windResponse,
-                gravityResponse = projectile.gravityResponse,
-                drag = projectile.drag,
-            )
-            val terrainImpact = terrainImpactPosition(
-                previous = projectile,
-                deltaSeconds = deltaSeconds,
-                windAccelerationX = wind.accelerationX() * projectile.windResponse,
-                gravityAccelerationY = config.gravityAccelerationY *
-                    worldPhysicsScale *
-                    projectile.gravityResponse,
-            )
-            val impactProjectile = terrainImpact?.let {
-                advanced.copy(position = it)
-            } ?: advanced
-            val target = targetHitBy(impactProjectile)
-            when {
-                target != null -> {
-                    resolveEntityImpact(impactProjectile, target)
-                    if (!target.stopsProjectile) resolved += impactProjectile
+            val apexTime = timeToApex(projectile, deltaSeconds)
+            if (apexTime == null) {
+                fragmentAtApex(projectile).forEach { fragment ->
+                    advanceProjectile(fragment, deltaSeconds)?.let(resolved::add)
                 }
-                terrainImpact != null -> resolveTerrainImpact(impactProjectile)
-                outsideBounds(advanced.position) ||
-                    advanced.ageSeconds >= AmmunitionCatalog
-                        .definition(advanced.ammunition)
-                        .flight
-                        .maximumLifetimeSeconds -> Unit
-                else -> resolved += advanced
+            } else {
+                val atApex = advanceProjectile(projectile, apexTime)
+                if (atApex != null) {
+                    val splitProjectile = atApex.copy(
+                        velocity = atApex.velocity.copy(y = 0f),
+                    )
+                    val remainingSeconds = deltaSeconds - apexTime
+                    fragmentAtApex(splitProjectile).forEach { fragment ->
+                        advanceProjectile(fragment, remainingSeconds)?.let(resolved::add)
+                    }
+                }
             }
         }
         projectiles = resolved
@@ -357,6 +342,135 @@ class DeterministicMatchSimulation(
             phase = MatchPhase.PLAYER_TURN
         }
         return drainEvents()
+    }
+
+    private fun timeToApex(projectile: Projectile, deltaSeconds: Float): Float? {
+        if (
+            projectile.apexFragmentation == null ||
+            projectile.hasFragmented ||
+            projectile.velocity.y >= 0f ||
+            deltaSeconds <= 0f
+        ) {
+            return null
+        }
+
+        val gravityAcceleration = config.gravityAccelerationY *
+            worldPhysicsScale *
+            projectile.gravityResponse
+        if (gravityAcceleration <= 0f) return null
+
+        fun verticalVelocityAfter(seconds: Float): Float = projectile.advance(
+            deltaSeconds = seconds,
+            windAccelerationX = wind.accelerationX(),
+            gravityAccelerationY = config.gravityAccelerationY * worldPhysicsScale,
+            windResponse = projectile.windResponse,
+            gravityResponse = projectile.gravityResponse,
+            drag = projectile.drag,
+        ).velocity.y
+
+        if (verticalVelocityAfter(deltaSeconds) < 0f) return null
+
+        var ascendingSeconds = 0f
+        var descendingSeconds = deltaSeconds
+        repeat(APEX_TIME_SEARCH_ITERATIONS) {
+            val midpoint = (ascendingSeconds + descendingSeconds) * 0.5f
+            if (verticalVelocityAfter(midpoint) >= 0f) {
+                descendingSeconds = midpoint
+            } else {
+                ascendingSeconds = midpoint
+            }
+        }
+        return descendingSeconds
+    }
+
+    private fun advanceProjectile(
+        projectile: Projectile,
+        deltaSeconds: Float,
+    ): Projectile? {
+        val advanced = projectile.advance(
+            deltaSeconds = deltaSeconds,
+            windAccelerationX = wind.accelerationX(),
+            gravityAccelerationY = config.gravityAccelerationY * worldPhysicsScale,
+            windResponse = projectile.windResponse,
+            gravityResponse = projectile.gravityResponse,
+            drag = projectile.drag,
+        )
+        val terrainImpact = terrainImpactPosition(
+            previous = projectile,
+            deltaSeconds = deltaSeconds,
+            windAccelerationX = wind.accelerationX() * projectile.windResponse,
+            gravityAccelerationY = config.gravityAccelerationY *
+                worldPhysicsScale *
+                projectile.gravityResponse,
+        )
+        val impactProjectile = terrainImpact?.let {
+            advanced.copy(position = it)
+        } ?: advanced
+        val target = targetHitBy(impactProjectile)
+        return when {
+            target != null -> {
+                resolveEntityImpact(impactProjectile, target)
+                impactProjectile.takeIf { !target.stopsProjectile }
+            }
+            terrainImpact != null -> {
+                resolveTerrainImpact(impactProjectile)
+                null
+            }
+            outsideBounds(advanced.position) ||
+                advanced.ageSeconds >= AmmunitionCatalog
+                    .definition(advanced.ammunition)
+                    .flight
+                    .maximumLifetimeSeconds -> null
+            else -> advanced
+        }
+    }
+
+    private fun fragmentAtApex(projectile: Projectile): List<Projectile> {
+        val profile = projectile.apexFragmentation
+            ?: return listOf(projectile)
+        if (projectile.hasFragmented || projectile.velocity.y < 0f) {
+            return listOf(projectile)
+        }
+
+        val referenceSpeed = kotlin.math.abs(projectile.velocity.x)
+            .coerceAtLeast(profile.minimumReferenceSpeed)
+        val parent = projectile.copy(
+            velocity = projectile.velocity.copy(
+                y = referenceSpeed * profile.initialDownwardSpeed,
+            ),
+            hasFragmented = true,
+        )
+        val fragments = (-profile.fragmentsPerSide..profile.fragmentsPerSide)
+            .filter { it != 0 }
+            .mapIndexed { index, offset ->
+                projectile.copy(
+                    id = EntityId("${projectile.id.value}-fragment-${index + 1}"),
+                    velocity = Velocity(
+                        x = projectile.velocity.x +
+                            offset * referenceSpeed * profile.horizontalSpreadPerStep,
+                        y = referenceSpeed * (
+                            profile.initialDownwardSpeed +
+                                kotlin.math.abs(offset) * profile.downwardSpreadPerStep
+                            ),
+                    ),
+                    ageSeconds = 0f,
+                    hasFragmented = true,
+                )
+            }
+
+        emit {
+            MatchEvent.ProjectileSplit(
+                eventId = it,
+                matchId = matchId,
+                simulationTimeMilliseconds = simulationTimeMilliseconds,
+                projectileId = projectile.id,
+                fragmentProjectileIds = fragments.map { fragment -> fragment.id },
+                ammunitionType = projectile.ammunition.name,
+                x = projectile.position.x,
+                y = projectile.position.y,
+            )
+        }
+        return listOf(parent) + fragments
     }
 
     /**
@@ -1478,6 +1592,7 @@ class DeterministicMatchSimulation(
         sourceProjectileId: EntityId? = null,
         minimumDamage: Int = 0,
         friendlyFire: FriendlyFirePolicy = FriendlyFirePolicy.ENEMY_ONLY,
+        unitFriendlyFire: FriendlyFirePolicy? = null,
     ) {
         if (damage > 0 &&
             currentBlueFortress.intersects(position, radius) &&
@@ -1513,7 +1628,7 @@ class DeterministicMatchSimulation(
                 )
                 if (unit.isAlive &&
                     distance <= radius &&
-                    canHitUnit(sourceTeam, unit.team, friendlyFire)
+                    canHitUnit(sourceTeam, unit.team, unitFriendlyFire ?: friendlyFire)
                 ) {
                     val distanceFactor = if (radius <= 0f) 1f else {
                         (1f - distance / radius).coerceIn(0f, 1f)
@@ -1584,6 +1699,7 @@ class DeterministicMatchSimulation(
                     statusDurationSeconds = behavior.durationSeconds,
                     sourceProjectileId = effect.sourceProjectileId,
                     friendlyFire = definition.collision.friendlyFire,
+                    unitFriendlyFire = behavior.unitFriendlyFire,
                     minimumDamage = definition.damage.minimumDamage,
                 )
                 untilNextTick += effect.tickIntervalSeconds
@@ -1846,6 +1962,7 @@ class DeterministicMatchSimulation(
         // Keep default foundations wide enough for the scaled fortress footprint.
         private val FORTRESS_FLAT_HALF_WIDTH = WorldScale.FORTRESS_HALF_WIDTH
         private const val BASE_PHYSICS_WORLD_WIDTH = 1_600f
+        private const val APEX_TIME_SEARCH_ITERATIONS = 16
         private const val TERRAIN_COLLISION_SEARCH_ITERATIONS = 12
         private const val TERRAIN_COLLISION_SAMPLE_SECONDS = 1f / 60f
 

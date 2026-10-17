@@ -1,9 +1,32 @@
 # Changelog
 
+## 2026-10-17
+
+### Added
+
+- Completed FIRE_RAIN battlefield presentation with the approved animations
+  for container flight, apex split, shard flight and ground fire; original
+  AnimGen exports are preserved under `assets_src/ammunition/fire-rain/`.
+
+### Changed
+
+- FIRE_RAIN container and fragment speeds are halved, and its ground fire now
+  lasts 9 seconds while retaining the existing 500 ms damage tick interval.
+
+### Fixed
+
+- Manual camera pan or zoom no longer disables BLUE projectile tracking for
+  the rest of the match; tracking resumes at the next launch, and an
+  incomplete pan gesture does not suppress it.
+
 ## 2026-10-16
 
 ### Added
 
+- Restored Fire Rain's apex split into six independently simulated fragments
+  using a typed flight profile and a deterministic projectile-split event.
+- Imported the user-approved AnimGen Fire Rain container-flight sequence.
+- Imported the user-approved AnimGen Fire Rain split-flash sequence.
 - Added generated idle, jog, combat and death animations for both Defender
   teams, plus blue/red Demolisher idle and jog animations and the accepted blue
   Demolisher contact explosion.

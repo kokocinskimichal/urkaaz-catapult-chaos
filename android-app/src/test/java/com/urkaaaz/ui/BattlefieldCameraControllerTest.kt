@@ -163,6 +163,131 @@ class BattlefieldCameraControllerTest {
     }
 
     @Test
+    fun manualCameraAdjustmentResumesFollowingWhenTheNextPlayerProjectileLaunches() {
+        val camera = BattlefieldCameraController()
+        val state = RenderStateMapper.map(
+            MatchSnapshot(
+                status = MatchStatus.RUNNING,
+                phase = MatchPhase.PLAYER_TURN,
+                activeTeam = Team.BLUE,
+            ),
+        )
+        val viewportWidth = 1_000f
+        val viewportHeight = 600f
+        camera.update(state, viewportWidth, viewportHeight)
+        camera.applyZoom(
+            scaleFactor = 2f,
+            focusX = viewportWidth / 2f,
+            focusY = viewportHeight / 2f,
+            viewportWidth = viewportWidth,
+            viewportHeight = viewportHeight,
+        )
+
+        camera.update(state, viewportWidth, viewportHeight)
+        assertTrue(!camera.wasFollowingProjectile)
+
+        val projectile = ProjectileRenderState(
+            projectileId = "blue-shot-1",
+            teamLabel = "BLUE",
+            x = 2_400f,
+            y = 1_200f,
+            ammunitionType = "ROCK",
+        )
+        camera.update(
+            state.copy(projectiles = listOf(projectile)),
+            viewportWidth,
+            viewportHeight,
+        )
+
+        assertTrue(camera.wasFollowingProjectile)
+        assertEquals(
+            viewportWidth / 2f,
+            projectile.x / 7_200f * viewportWidth * camera.transform.scale +
+                camera.transform.offsetX,
+            0.001f,
+        )
+        assertEquals(
+            viewportHeight / 2f,
+            projectile.y / 4_800f * viewportHeight * camera.transform.scale +
+                camera.transform.offsetY,
+            0.001f,
+        )
+    }
+
+    @Test
+    fun endingPanBeforeDraggingDoesNotDisableFollowing() {
+        val camera = BattlefieldCameraController()
+        val state = RenderStateMapper.map(
+            MatchSnapshot(
+                status = MatchStatus.RUNNING,
+                phase = MatchPhase.PLAYER_TURN,
+                activeTeam = Team.BLUE,
+            ),
+        )
+        camera.update(state, 1_000f, 600f)
+        camera.beginPan(100f, 100f)
+        camera.endPan()
+
+        camera.update(
+            state.copy(
+                projectiles = listOf(
+                    ProjectileRenderState(
+                        projectileId = "blue-shot-1",
+                        teamLabel = "BLUE",
+                        x = 2_400f,
+                        y = 1_200f,
+                        ammunitionType = "ROCK",
+                    ),
+                ),
+            ),
+            1_000f,
+            600f,
+        )
+
+        assertTrue(camera.wasFollowingProjectile)
+    }
+
+    @Test
+    fun matchRestartWithReusedProjectileIdRestoresFollowing() {
+        val camera = BattlefieldCameraController()
+        val state = RenderStateMapper.map(
+            MatchSnapshot(
+                status = MatchStatus.RUNNING,
+                phase = MatchPhase.PLAYER_TURN,
+                activeTeam = Team.BLUE,
+            ),
+        ).copy(matchId = "match-1", matchGeneration = 1L)
+        val projectile = ProjectileRenderState(
+            projectileId = "blue-shot-1",
+            teamLabel = "BLUE",
+            x = 2_400f,
+            y = 1_200f,
+            ammunitionType = "ROCK",
+        )
+        val stateWithProjectile = state.copy(projectiles = listOf(projectile))
+
+        camera.update(state, 1_000f, 600f)
+        camera.update(stateWithProjectile, 1_000f, 600f)
+        camera.applyZoom(
+            scaleFactor = 2f,
+            focusX = 500f,
+            focusY = 300f,
+            viewportWidth = 1_000f,
+            viewportHeight = 600f,
+        )
+        camera.update(stateWithProjectile, 1_000f, 600f)
+        assertTrue(!camera.wasFollowingProjectile)
+
+        camera.update(
+            stateWithProjectile.copy(matchGeneration = 2L),
+            1_000f,
+            600f,
+        )
+
+        assertTrue(camera.wasFollowingProjectile)
+    }
+
+    @Test
     fun screenToGameWorldCoordinatesRespectViewportAndCameraZoom() {
         val camera = BattlefieldCameraController()
         val viewportWidth = 1_000f

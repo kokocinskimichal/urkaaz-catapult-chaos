@@ -44,6 +44,28 @@ data class InventoryProfile(
     }
 }
 
+data class ApexFragmentationProfile(
+    val fragmentsPerSide: Int,
+    val minimumReferenceSpeed: Float,
+    val horizontalSpreadPerStep: Float,
+    val initialDownwardSpeed: Float,
+    val downwardSpreadPerStep: Float,
+) {
+    init {
+        require(fragmentsPerSide > 0) { "fragment count per side must be positive" }
+        require(minimumReferenceSpeed > 0f) { "minimum reference speed must be positive" }
+        require(horizontalSpreadPerStep >= 0f) {
+            "horizontal spread per step must not be negative"
+        }
+        require(initialDownwardSpeed >= 0f) {
+            "initial downward speed must not be negative"
+        }
+        require(downwardSpreadPerStep >= 0f) {
+            "downward spread per step must not be negative"
+        }
+    }
+}
+
 data class FlightProfile(
     val mass: Float,
     val windResponse: Float,
@@ -51,6 +73,7 @@ data class FlightProfile(
     val drag: Float = 0f,
     val initialSpeedMultiplier: Float = 8f,
     val maximumLifetimeSeconds: Float = 30f,
+    val apexFragmentation: ApexFragmentationProfile? = null,
 ) {
     init {
         require(mass > 0f) { "projectile mass must be positive" }
@@ -125,6 +148,7 @@ sealed interface AmmunitionImpactBehavior {
         val fortressDamagePerTick: Int,
         val driftsWithWind: Boolean,
         val status: UnitStatus? = null,
+        val unitFriendlyFire: FriendlyFirePolicy = FriendlyFirePolicy.ENEMY_ONLY,
     ) : AmmunitionImpactBehavior {
         init {
             require(radius >= 0f) { "lingering radius must not be negative" }
@@ -266,7 +290,18 @@ object FireRainAmmunition : AmmunitionDefinition(
     displayKey = "ammunition.fire_rain",
     reload = ReloadProfile(8f),
     inventory = InventoryProfile(unlimited = false, startingCount = 3),
-    flight = FlightProfile(mass = 1.2f, windResponse = 1.1f),
+    flight = FlightProfile(
+        mass = 1.2f,
+        windResponse = 1.1f,
+        initialSpeedMultiplier = 4f,
+        apexFragmentation = ApexFragmentationProfile(
+            fragmentsPerSide = 3,
+            minimumReferenceSpeed = 120f,
+            horizontalSpreadPerStep = 0.18f,
+            initialDownwardSpeed = 0.10f,
+            downwardSpreadPerStep = 0.025f,
+        ),
+    ),
     collision = CollisionProfile(
         hitLayers = setOf(AmmunitionHitLayer.TERRAIN, AmmunitionHitLayer.FORTRESS),
         mode = AmmunitionCollisionMode.IMPACT_ON_TERRAIN,
@@ -281,12 +316,13 @@ object FireRainAmmunition : AmmunitionDefinition(
     terrain = TerrainProfile(true, 36f, 10f),
     behavior = AmmunitionImpactBehavior.LingeringArea(
         radius = 68f,
-        durationSeconds = 3f,
+        durationSeconds = 9f,
         tickIntervalSeconds = 0.5f,
         damagePerTick = 4,
         fortressDamagePerTick = 4,
         driftsWithWind = false,
         status = UnitStatus.BURNING,
+        unitFriendlyFire = FriendlyFirePolicy.ALL_UNITS,
     ),
     availableLayers = setOf(AmmunitionHitLayer.TERRAIN, AmmunitionHitLayer.FORTRESS),
 )

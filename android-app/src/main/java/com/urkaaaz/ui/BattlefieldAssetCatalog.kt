@@ -38,6 +38,13 @@ data class ProjectileAnimation(
     val impactRenderSize: Float = 108f,
 )
 
+data class FireRainAnimationSet(
+    val containerFlightFrames: List<Bitmap>,
+    val splitFlashFrames: List<Bitmap>,
+    val fragmentFlightFrames: List<Bitmap>,
+    val fireFieldFrames: List<Bitmap>,
+)
+
 class BattlefieldAssetCatalog(private val context: Context) {
     private val resources = context.resources
     private val unitBitmapCache = mutableMapOf<String, Bitmap?>()
@@ -53,6 +60,28 @@ class BattlefieldAssetCatalog(private val context: Context) {
 
     private val rockFlightFrames = loadAnimationFrames("rock_flight")
     private val rockImpactFrames = loadAnimationFrames("rock_impact")
+    val fireRainAnimations = FireRainAnimationSet(
+        containerFlightFrames = loadRequiredFireRainFrames(
+            phase = "container flight",
+            prefix = "fire_rain_flight",
+            frameCount = FIRE_RAIN_CONTAINER_FLIGHT_FRAME_COUNT,
+        ),
+        splitFlashFrames = loadRequiredFireRainFrames(
+            phase = "split flash",
+            prefix = "fire_rain_split_flash",
+            frameCount = FIRE_RAIN_SPLIT_FLASH_FRAME_COUNT,
+        ),
+        fragmentFlightFrames = loadRequiredFireRainFrames(
+            phase = "fragment flight",
+            prefix = "fire_rain_fragment_flight",
+            frameCount = FIRE_RAIN_FRAGMENT_FLIGHT_FRAME_COUNT,
+        ),
+        fireFieldFrames = loadRequiredFireRainFrames(
+            phase = "fire field",
+            prefix = "fire_rain_field",
+            frameCount = FIRE_RAIN_FIELD_FRAME_COUNT,
+        ),
+    )
 
     private val animations = mapOf(
         "ROCK" to ProjectileAnimation(
@@ -63,7 +92,10 @@ class BattlefieldAssetCatalog(private val context: Context) {
         ),
         "SIEGE_BOMB" to animation("siege_bomb"),
         "POWDER_BARREL" to animation("powder_barrel"),
-        "FIRE_RAIN" to animation("fire_rain"),
+        "FIRE_RAIN" to ProjectileAnimation(
+            flightFrames = fireRainAnimations.containerFlightFrames,
+            impactFrames = emptyList(),
+        ),
         "PLAGUE_CAULDRON" to animation("plague_cauldron"),
     )
 
@@ -261,7 +293,8 @@ class BattlefieldAssetCatalog(private val context: Context) {
     }
 
     fun animationFor(ammunitionType: String): ProjectileAnimation =
-        animations[ammunitionType] ?: animations.getValue("ROCK")
+        animations[ammunitionType]
+            ?: error("No projectile animation is registered for ammunition '$ammunitionType'")
 
     private fun animation(prefix: String): ProjectileAnimation =
         ProjectileAnimation(
@@ -284,6 +317,49 @@ class BattlefieldAssetCatalog(private val context: Context) {
             resourceId.takeIf { it != 0 }?.let { BitmapFactory.decodeResource(resources, it) }
         }
 
+    private fun loadRequiredFireRainFrames(
+        phase: String,
+        prefix: String,
+        frameCount: Int,
+    ): List<Bitmap> {
+        val frames = (0 until frameCount).map { index ->
+            val resourceName = "${prefix}_%02d".format(index)
+            val resourceId = resources.getIdentifier(
+                resourceName,
+                "drawable",
+                context.packageName,
+            )
+            check(resourceId != 0) {
+                "FIRE_RAIN $phase is missing frame $index ('$resourceName')"
+            }
+            val bitmap = BitmapFactory.decodeResource(resources, resourceId)
+                ?: error("FIRE_RAIN $phase frame $index ('$resourceName') could not be decoded")
+            check(bitmap.width == FIRE_RAIN_FRAME_WIDTH &&
+                bitmap.height == FIRE_RAIN_FRAME_HEIGHT
+            ) {
+                "FIRE_RAIN $phase frame $index ('$resourceName') has invalid size " +
+                    "${bitmap.width}x${bitmap.height}; expected " +
+                    "${FIRE_RAIN_FRAME_WIDTH}x$FIRE_RAIN_FRAME_HEIGHT"
+            }
+            check(bitmap.hasAlpha()) {
+                "FIRE_RAIN $phase frame $index ('$resourceName') has no alpha channel"
+            }
+            bitmap
+        }
+        val unexpectedResourceName = "${prefix}_%02d".format(frameCount)
+        check(
+            resources.getIdentifier(
+                unexpectedResourceName,
+                "drawable",
+                context.packageName,
+            ) == 0,
+        ) {
+            "FIRE_RAIN $phase has an unexpected frame at index $frameCount " +
+                "('$unexpectedResourceName')"
+        }
+        return frames
+    }
+
     private fun loadThreeDigitAnimationFrames(prefix: String): List<Bitmap> =
         (0..99).mapNotNull { index ->
             val resourceId = resources.getIdentifier(
@@ -295,6 +371,12 @@ class BattlefieldAssetCatalog(private val context: Context) {
         }
 
     private companion object {
+        const val FIRE_RAIN_FRAME_WIDTH = 512
+        const val FIRE_RAIN_FRAME_HEIGHT = 512
+        const val FIRE_RAIN_CONTAINER_FLIGHT_FRAME_COUNT = 24
+        const val FIRE_RAIN_SPLIT_FLASH_FRAME_COUNT = 12
+        const val FIRE_RAIN_FRAGMENT_FLIGHT_FRAME_COUNT = 24
+        const val FIRE_RAIN_FIELD_FRAME_COUNT = 24
         val RELIC_ASSET_RESOURCES = buildMap {
             val biomeResources = mapOf(
                 "green_frontier" to listOf(
