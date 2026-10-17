@@ -36,7 +36,15 @@ data class ProjectileAnimation(
     val impactFrames: List<Bitmap>,
     val flightRenderSize: Float = 36f,
     val impactRenderSize: Float = 108f,
-)
+    val impactFullRenderSizeStartFrame: Int = 0,
+) {
+    fun impactRenderSizeAt(frameIndex: Int): Float =
+        if (frameIndex < impactFullRenderSizeStartFrame) {
+            flightRenderSize
+        } else {
+            impactRenderSize
+        }
+}
 
 data class FireRainAnimationSet(
     val containerFlightFrames: List<Bitmap>,
@@ -89,8 +97,13 @@ class BattlefieldAssetCatalog(private val context: Context) {
             impactFrames = rockImpactFrames,
             flightRenderSize = 18f,
             impactRenderSize = 36f,
+            impactFullRenderSizeStartFrame = ROCK_IMPACT_BREAKUP_FRAME,
         ),
-        "SIEGE_BOMB" to animation("siege_bomb"),
+        "SIEGE_BOMB" to animation(
+            prefix = "siege_bomb",
+            flightRenderSize = 18f,
+            impactRenderSize = 54f,
+        ),
         "POWDER_BARREL" to animation("powder_barrel"),
         "FIRE_RAIN" to ProjectileAnimation(
             flightFrames = fireRainAnimations.containerFlightFrames,
@@ -296,10 +309,16 @@ class BattlefieldAssetCatalog(private val context: Context) {
         animations[ammunitionType]
             ?: error("No projectile animation is registered for ammunition '$ammunitionType'")
 
-    private fun animation(prefix: String): ProjectileAnimation =
+    private fun animation(
+        prefix: String,
+        flightRenderSize: Float = 36f,
+        impactRenderSize: Float = 108f,
+    ): ProjectileAnimation =
         ProjectileAnimation(
             flightFrames = loadAnimationFrames("${prefix}_flight"),
             impactFrames = loadAnimationFrames("${prefix}_impact"),
+            flightRenderSize = flightRenderSize,
+            impactRenderSize = impactRenderSize,
         )
 
     private fun loadBitmap(name: String): Bitmap? {
@@ -371,6 +390,7 @@ class BattlefieldAssetCatalog(private val context: Context) {
         }
 
     private companion object {
+        const val ROCK_IMPACT_BREAKUP_FRAME = 9
         const val FIRE_RAIN_FRAME_WIDTH = 512
         const val FIRE_RAIN_FRAME_HEIGHT = 512
         const val FIRE_RAIN_CONTAINER_FLIGHT_FRAME_COUNT = 24

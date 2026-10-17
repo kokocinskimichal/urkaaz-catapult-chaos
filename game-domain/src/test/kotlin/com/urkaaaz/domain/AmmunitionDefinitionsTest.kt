@@ -26,16 +26,16 @@ class AmmunitionDefinitionsTest {
     }
 
     @Test
-    fun fireRainUsesHalfSpeedAndConfiguredApexFragmentationProfile() {
+    fun fireRainUsesStandardSpeedAndConfiguredApexFragmentationProfile() {
         val fireRain = AmmunitionCatalog.definition(AmmunitionType.FIRE_RAIN)
         val profile = requireNotNull(
             fireRain.flight.apexFragmentation,
         )
 
-        assertEquals(4f, fireRain.flight.initialSpeedMultiplier)
+        assertEquals(8f, fireRain.flight.initialSpeedMultiplier)
         assertEquals(3, profile.fragmentsPerSide)
         assertEquals(120f, profile.minimumReferenceSpeed)
-        assertEquals(0.18f, profile.horizontalSpreadPerStep)
+        assertEquals(0.09f, profile.horizontalSpreadPerStep)
         assertEquals(0.10f, profile.initialDownwardSpeed)
         assertEquals(0.025f, profile.downwardSpreadPerStep)
         assertEquals(
@@ -49,6 +49,7 @@ class AmmunitionDefinitionsTest {
     fun rockDamagesUnitsAndFortressesAndCanCollideWithUnits() {
         val rock = AmmunitionCatalog.definition(AmmunitionType.ROCK)
 
+        assertEquals(14f, rock.collision.hitRadius)
         assertEquals(50, rock.damage.unitDamage)
         assertEquals(50, rock.damage.fortressDamage)
         assertEquals(28f, rock.damage.unitRadius)
@@ -97,7 +98,7 @@ class AmmunitionDefinitionsTest {
         val explosion = powderBarrel.behavior as AmmunitionImpactBehavior.Explosion
 
         assertEquals(FriendlyFirePolicy.ALL_UNITS, powderBarrel.collision.friendlyFire)
-        assertEquals(220f, powderBarrel.collision.hitRadius)
+        assertEquals(110f, powderBarrel.collision.hitRadius)
         assertEquals(120, powderBarrel.damage.unitDamage)
         assertEquals(120, powderBarrel.damage.fortressDamage)
         assertEquals(220f, powderBarrel.damage.unitRadius)
@@ -105,5 +106,25 @@ class AmmunitionDefinitionsTest {
         assertEquals(220f, explosion.radius)
         assertEquals(150f, powderBarrel.terrain.craterRadius)
         assertEquals(90f, powderBarrel.terrain.craterDepth)
+    }
+
+    @Test
+    fun allAmmunitionProjectileHitboxesAreHalfTheirPreviousRadii() {
+        val expectedHitRadii = mapOf(
+            AmmunitionType.ROCK to 14f,
+            AmmunitionType.SIEGE_BOMB to 57.5f,
+            AmmunitionType.POWDER_BARREL to 110f,
+            AmmunitionType.FIRE_RAIN to 34f,
+            AmmunitionType.PLAGUE_CAULDRON to 130f,
+        )
+
+        expectedHitRadii.forEach { (type, expectedRadius) ->
+            assertEquals(
+                expectedRadius,
+                AmmunitionCatalog.definition(type).collision.hitRadius,
+                0.001f,
+                "$type hit radius",
+            )
+        }
     }
 }

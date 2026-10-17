@@ -260,6 +260,10 @@ Possible behaviors include:
 - resolve only after a timer expires;
 - resolve after leaving the battlefield.
 
+`hitRadius` is the projectile's collision radius and is independent of the
+impact/damage area radii. Current projectile hit radii, including the default
+fortress collision margin, are half their previous values.
+
 The collision system must not infer these rules from the renderer or from the
 visual asset.
 

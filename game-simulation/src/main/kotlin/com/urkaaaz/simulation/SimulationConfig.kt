@@ -11,7 +11,7 @@ data class SimulationConfig(
     val gravityAccelerationY: Float = 420f,
     val windAccelerationX: Float = 0f,
     val windAccelerationScale: Float = 390f,
-    val fortressCollisionRadius: Float = 46f,
+    val fortressCollisionRadius: Float = 23f,
     val unitCollisionRadius: Float = WorldScale.UNIT_COLLISION_RADIUS,
     val defaultCatapultHeightRatio: Float = 0.72f,
     val blueFortressMaxHealth: Int = 500,

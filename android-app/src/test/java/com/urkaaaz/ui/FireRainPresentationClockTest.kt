@@ -70,6 +70,27 @@ class FireRainPresentationClockTest {
     }
 
     @Test
+    fun fireFieldLoopsOnlyContinuousBurningFramesBeforeFading() {
+        val clock = FireRainPresentationClock()
+        val effect = fireEffect("fire-1", remainingMilliseconds = 9_000L)
+
+        assertEquals(0, clock.update(state(effects = listOf(effect)), 0L)
+            .fireFields.single().frameIndex)
+        assertEquals(2, clock.update(
+            state(effects = listOf(effect)),
+            250L,
+        ).fireFields.single().frameIndex)
+        assertEquals(12, clock.update(
+            state(effects = listOf(effect.copy(remainingMilliseconds = 7_750L))),
+            1_250L,
+        ).fireFields.single().frameIndex)
+        assertEquals(2, clock.update(
+            state(effects = listOf(effect.copy(remainingMilliseconds = 7_650L))),
+            1_350L,
+        ).fireFields.single().frameIndex)
+    }
+
+    @Test
     fun presentationClocksFreezeDuringPauseAndResumeWithoutCatchingUp() {
         val clock = FireRainPresentationClock()
         val effect = fireEffect("fire-1", remainingMilliseconds = 3_000L)

@@ -387,6 +387,9 @@ must go through commands and domain/application boundaries.
   automatic tracking resumes when the next BLUE projectile launches. A pan
   touch that ends before the drag threshold does not disable tracking, and a
   match restart resets the manual override even if projectile IDs are reused.
+  Aiming power uses screen-space pull distance, so the same finger drag keeps
+  its strength across zoom levels; the aiming circle and gesture threshold are
+  also measured in screen space.
 - Soil textures repeat at a base tile width of 256 view units in both the
   Android battlefield and web map preview. Android tiles preserve the source
   aspect ratio and repeat vertically rather than stretching to the soil depth.
@@ -450,11 +453,21 @@ must go through commands and domain/application boundaries.
   reattachment. The renderer draws all phases through the existing battlefield
   camera; the fire-field canvas is rendered at 4× the gameplay diameter to
   account for transparent padding, with its visible lower alpha bound aligned
-  to terrain. Field fade selects its final 500 ms from
+  to terrain. Its loop uses only continuous-burning frames 2–12, excluding
+  the source animation's extinguishing frames so the fire does not visibly
+  die and reignite. Field fade selects its final 500 ms from
   `EffectSnapshot.remainingMilliseconds`. Mapper, clock, and PNG-set tests
-  cover these contracts; FIRE_RAIN's projectile and fragment reference
-  speeds are half their prior values, and its ground fire lasts 9 seconds
-  with the existing 500 ms tick interval.
+  cover these contracts; FIRE_RAIN uses launch speed multiplier 8 and
+  horizontal fragment spread per step 0.09, and its ground fire lasts
+  9 seconds with the existing 500 ms tick interval.
+- All projectile collision radii are half their previous values, including
+  the default fortress collision margin (23 world units); impact and damage
+  radii are unchanged.
+- ROCK impact sprites use the same render size as the flying rock through
+  frame 8 and expand from breakup frame 9, avoiding an apparent size jump
+  before impact.
+- SIEGE_BOMB renders at 18 world units in flight and 54 world units on impact;
+  these are presentation sizes and do not affect collision or damage.
 - The AI only considers ammunition with positive fortress damage when choosing
   a shot against a fortress. Entity-impact presentation uses the collision
   coordinates from `ProjectileHitEntity`.

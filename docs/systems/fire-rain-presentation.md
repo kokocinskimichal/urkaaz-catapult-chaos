@@ -129,7 +129,7 @@ Assety nie zależą od koloru drużyny ani od modyfikatorów UI.
 | Lot pojemnika | aktywny pocisk `FIRE_RAIN` przed `ProjectileSplit` | nowa pętla lotu; po evencie pocisk główny jest ukrywany wyłącznie wizualnie |
 | Rozpad | `ProjectileSplit` | krótka jednorazowa animacja w world-space pozycji eventu |
 | Lot fragmentu | ID fragmentu z `ProjectileSplit` obecne w snapshotach pocisków | jedna wspólna animacja ciemnego, kamiennego odłamka z pomarańczowym żarem, odtwarzana niezależnie dla każdego fragmentu |
-| Trafienie i ogień | nowy `EffectSnapshot` | osobny zapłon oraz niewielkie pole przytwierdzone do podłoża; pętla trwa zgodnie z `remainingMilliseconds`, a ostatnie 500 ms wygaszają ją |
+| Trafienie i ogień | nowy `EffectSnapshot` | osobny zapłon, pętla ciągłego płomienia (klatki 2–12) bez klatek dogasania, a ostatnie 500 ms wygaszają pole zgodnie z `remainingMilliseconds` |
 
 Jeden zestaw klatek fragmentu jest współdzielony przez sześć fragmentów;
 pozycje i niezależne tory ruchu pochodzą z symulacji, nie z animacji. Styl

@@ -241,7 +241,7 @@ class FireRainPresentationClock {
         const val FIRE_FIELD_IGNITION_FRAME_DURATION_MILLISECONDS = 125L
         const val FIRE_FIELD_IGNITION_LAST_FRAME = 1
         const val FIRE_FIELD_LOOP_FIRST_FRAME = 2
-        const val FIRE_FIELD_LOOP_FRAME_COUNT = 17
+        const val FIRE_FIELD_LOOP_FRAME_COUNT = 11
         const val FIRE_FIELD_LOOP_FRAME_DURATION_MILLISECONDS = 100L
         const val FIRE_FIELD_FADE_FIRST_FRAME = 19
         const val FIRE_FIELD_FADE_FRAME_COUNT = 5

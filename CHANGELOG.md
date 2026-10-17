@@ -12,12 +12,32 @@
 
 - FIRE_RAIN container and fragment speeds are halved, and its ground fire now
   lasts 9 seconds while retaining the existing 500 ms damage tick interval.
+- Halved flying projectile collision hitboxes for every ammunition type;
+  impact and damage radii are unchanged.
 
 ### Fixed
 
 - Manual camera pan or zoom no longer disables BLUE projectile tracking for
   the rest of the match; tracking resumes at the next launch, and an
   incomplete pan gesture does not suppress it.
+- Aiming pull strength and the aim-versus-pan threshold now use screen-space
+  distance, so camera zoom does not reduce the force from the same finger drag.
+
+## 2026-10-18
+
+### Changed
+
+- Restored FIRE_RAIN's standard launch speed multiplier of 8 and reduced its
+  horizontal fragment spread per step from 0.18 to 0.09.
+- Halved SIEGE_BOMB flight and impact render sizes; gameplay collision and
+  damage values are unchanged.
+
+### Fixed
+
+- FIRE_RAIN fire-field playback no longer loops through its extinguishing
+  frames, avoiding a visible burnout and relight during the burn.
+- ROCK impact frames remain at flight size until the rock breaks apart, then
+  expand to the impact size.
 
 ## 2026-10-16
 

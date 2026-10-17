@@ -222,7 +222,7 @@ object RockAmmunition : AmmunitionDefinition(
             AmmunitionHitLayer.FORTRESS,
         ),
         mode = AmmunitionCollisionMode.IMPACT_ON_TERRAIN,
-        hitRadius = 28f,
+        hitRadius = 14f,
     ),
     damage = DamageProfile(
         unitDamage = 50,
@@ -249,7 +249,7 @@ object SiegeBombAmmunition : AmmunitionDefinition(
     collision = CollisionProfile(
         hitLayers = setOf(AmmunitionHitLayer.TERRAIN, AmmunitionHitLayer.FORTRESS),
         mode = AmmunitionCollisionMode.IMPACT_ON_TERRAIN,
-        hitRadius = 115f,
+        hitRadius = 57.5f,
     ),
     damage = DamageProfile(
         unitDamage = 72,
@@ -271,7 +271,7 @@ object PowderBarrelAmmunition : AmmunitionDefinition(
     collision = CollisionProfile(
         hitLayers = setOf(AmmunitionHitLayer.TERRAIN, AmmunitionHitLayer.FORTRESS),
         mode = AmmunitionCollisionMode.IMPACT_ON_TERRAIN,
-        hitRadius = 220f,
+        hitRadius = 110f,
         friendlyFire = FriendlyFirePolicy.ALL_UNITS,
     ),
     damage = DamageProfile(
@@ -293,11 +293,11 @@ object FireRainAmmunition : AmmunitionDefinition(
     flight = FlightProfile(
         mass = 1.2f,
         windResponse = 1.1f,
-        initialSpeedMultiplier = 4f,
+        initialSpeedMultiplier = 8f,
         apexFragmentation = ApexFragmentationProfile(
             fragmentsPerSide = 3,
             minimumReferenceSpeed = 120f,
-            horizontalSpreadPerStep = 0.18f,
+            horizontalSpreadPerStep = 0.09f,
             initialDownwardSpeed = 0.10f,
             downwardSpreadPerStep = 0.025f,
         ),
@@ -305,7 +305,7 @@ object FireRainAmmunition : AmmunitionDefinition(
     collision = CollisionProfile(
         hitLayers = setOf(AmmunitionHitLayer.TERRAIN, AmmunitionHitLayer.FORTRESS),
         mode = AmmunitionCollisionMode.IMPACT_ON_TERRAIN,
-        hitRadius = 68f,
+        hitRadius = 34f,
     ),
     damage = DamageProfile(
         unitDamage = 4,
@@ -336,7 +336,7 @@ object PlagueCauldronAmmunition : AmmunitionDefinition(
     collision = CollisionProfile(
         hitLayers = setOf(AmmunitionHitLayer.TERRAIN, AmmunitionHitLayer.FORTRESS),
         mode = AmmunitionCollisionMode.IMPACT_ON_TERRAIN,
-        hitRadius = 260f,
+        hitRadius = 130f,
     ),
     damage = DamageProfile(
         unitDamage = 8,

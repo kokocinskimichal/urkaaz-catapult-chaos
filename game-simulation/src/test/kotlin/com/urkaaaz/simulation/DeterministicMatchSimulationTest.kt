@@ -42,6 +42,15 @@ class DeterministicMatchSimulationTest {
     }
 
     @Test
+    fun defaultFortressCollisionMarginIsHalfThePreviousRadius() {
+        assertEquals(
+            23f,
+            SimulationConfig(bounds = WorldBounds(width = 1_000f, height = 600f))
+                .fortressCollisionRadius,
+        )
+    }
+
+    @Test
     fun snapshotExposesFortressWorldPositionsAndDefaultFoundation() {
         val simulation = DeterministicMatchSimulation(
             MatchId("fortress-render-state"),
@@ -232,7 +241,7 @@ class DeterministicMatchSimulationTest {
     }
 
     @Test
-    fun fireRainStartsAtHalfTheSpeedOfRock() {
+    fun fireRainStartsAtTheSameSpeedAsRock() {
         val fireRainSimulation = DeterministicMatchSimulation(
             MatchId("fire-rain-speed-match"),
             config,
@@ -249,8 +258,8 @@ class DeterministicMatchSimulationTest {
 
         val fireRain = fireRainSimulation.snapshot().projectiles.single()
         val rock = rockSimulation.snapshot().projectiles.single()
-        assertEquals(rock.velocityX * 0.5f, fireRain.velocityX)
-        assertEquals(rock.velocityY * 0.5f, fireRain.velocityY)
+        assertEquals(rock.velocityX, fireRain.velocityX)
+        assertEquals(rock.velocityY, fireRain.velocityY)
     }
 
     @Test
@@ -298,7 +307,7 @@ class DeterministicMatchSimulationTest {
         val firedProjectile = simulation.snapshot().projectiles.single()
         val events = mutableListOf<MatchEvent>()
 
-        events += simulation.advance(500)
+        events += simulation.advance(1_000)
         val projectiles = simulation.snapshot().projectiles
         val split = events.filterIsInstance<MatchEvent.ProjectileSplit>().single()
 
@@ -314,7 +323,7 @@ class DeterministicMatchSimulationTest {
         val referenceSpeed = abs(firedProjectile.velocityX).coerceAtLeast(120f)
         val fragments = projectiles.filter { it.entityId != firedProjectile.entityId }
         val expectedHorizontalVelocities = listOf(-3, -2, -1, 1, 2, 3)
-            .map { firedProjectile.velocityX + it * referenceSpeed * 0.18f }
+            .map { firedProjectile.velocityX + it * referenceSpeed * 0.09f }
             .sorted()
         assertEquals(expectedHorizontalVelocities, fragments.map { it.velocityX }.sorted())
         assertTrue(

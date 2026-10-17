@@ -350,11 +350,12 @@ class BattlefieldView(context: Context) : View(context) {
 
     private fun handleAimTouch(event: MotionEvent): Boolean {
         val (originX, originY) = playerAimOriginView()
+        val screenSpaceScale = camera.transform.scale
         val mapX = camera.screenToWorldX(event.x)
         val mapY = camera.screenToWorldY(event.y)
         when (event.actionMasked) {
             MotionEvent.ACTION_DOWN -> {
-                if (hypot(mapX - originX, mapY - originY) > 120f) {
+                if (hypot(mapX - originX, mapY - originY) * screenSpaceScale > 120f) {
                     cancelAiming()
                     startMapPan(event)
                     return true
@@ -373,6 +374,7 @@ class BattlefieldView(context: Context) : View(context) {
                             directionValid = false,
                             shouldFire = false,
                         ),
+                        screenSpaceScale = screenSpaceScale,
                     ),
                 )
                 invalidate()
@@ -380,7 +382,13 @@ class BattlefieldView(context: Context) : View(context) {
             }
             MotionEvent.ACTION_MOVE -> {
                 if (!aimController.isDragging) return false
-                aimController.move(originX, originY, mapX, mapY)?.let(::handleAimResult)
+                aimController.move(
+                    originX,
+                    originY,
+                    mapX,
+                    mapY,
+                    screenSpaceScale = screenSpaceScale,
+                )?.let(::handleAimResult)
                 invalidate()
                 return true
             }
@@ -417,11 +425,12 @@ class BattlefieldView(context: Context) : View(context) {
 
     private fun drawAimGesture(canvas: Canvas, groundTop: Float) {
         val (originX, originY) = playerAimOriginView()
+        val screenSpaceScale = camera.transform.scale
         val visualRadius = visualPullRadius(originX, originY)
         val limitPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
             color = Color.argb(110, 255, 255, 255)
             style = Paint.Style.STROKE
-            strokeWidth = 2.5f
+            strokeWidth = 2.5f / screenSpaceScale
         }
         canvas.drawCircle(
             originX,
@@ -446,24 +455,28 @@ class BattlefieldView(context: Context) : View(context) {
                 Color.RED
             }
             style = Paint.Style.STROKE
-            strokeWidth = 6f
+            strokeWidth = 6f / screenSpaceScale
             strokeCap = Paint.Cap.ROUND
         }
         canvas.drawLine(originX, originY, pullX, pullY, paint)
-        canvas.drawCircle(pullX, pullY, 28f, paint)
+        canvas.drawCircle(pullX, pullY, 28f / screenSpaceScale, paint)
     }
 
     private fun visualPullRadius(originX: Float, originY: Float): Float {
         val cameraTransform = camera.transform
         val screenOriginX = originX * cameraTransform.scale + cameraTransform.offsetX
         val screenOriginY = originY * cameraTransform.scale + cameraTransform.offsetY
-        val availableRadius = minOf(
+        val availableScreenRadius = minOf(
             screenOriginX,
             width - screenOriginX,
             screenOriginY,
             height - screenOriginY,
-        ) / cameraTransform.scale - AIM_CIRCLE_EDGE_MARGIN
-        return minOf(VISUAL_MAX_PULL_DISTANCE, availableRadius.coerceAtLeast(MIN_VISUAL_PULL_RADIUS))
+        ) - AIM_CIRCLE_EDGE_MARGIN
+        val screenRadius = minOf(
+            VISUAL_MAX_PULL_DISTANCE,
+            availableScreenRadius.coerceAtLeast(MIN_VISUAL_PULL_RADIUS),
+        )
+        return screenRadius / cameraTransform.scale
     }
 
     private fun drawHealthBar(

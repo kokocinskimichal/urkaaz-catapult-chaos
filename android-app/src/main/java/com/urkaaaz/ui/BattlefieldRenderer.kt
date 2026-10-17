@@ -228,7 +228,7 @@ class BattlefieldRenderer(
                 val frame = frames[impactFrame % frames.size]
                 val impactX = worldToViewX(impact.x, viewportWidth).coerceIn(0f, viewportWidth)
                 val impactY = worldToViewY(impact.y, viewportHeight)
-                val impactRenderSize = animation.impactRenderSize
+                val impactRenderSize = animation.impactRenderSizeAt(impactFrame)
                 val impactRenderHeight =
                     impactRenderSize * frame.height.toFloat() / frame.width.coerceAtLeast(1)
                 drawTexture(
