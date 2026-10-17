@@ -67,7 +67,7 @@ enum class AmmunitionType(
     PLAGUE_CAULDRON(
         effect = AmmunitionEffect.PLAGUE,
         reloadSeconds = 15f,
-        damageRadius = 260f,
+        damageRadius = 300f,
         damage = 8,
         craterRadius = 0f,
         craterDepth = 0f,

@@ -2,6 +2,7 @@ package com.urkaaaz.domain
 
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFalse
 import kotlin.test.assertTrue
 
 class AmmunitionDefinitionsTest {
@@ -74,12 +75,21 @@ class AmmunitionDefinitionsTest {
         assertEquals(9f, fireBehavior.durationSeconds)
         assertEquals(0.5f, fireBehavior.tickIntervalSeconds)
         assertEquals(FriendlyFirePolicy.ALL_UNITS, fireBehavior.unitFriendlyFire)
+        assertEquals(1f, fireBehavior.windDriftMultiplier)
+        assertFalse(fireBehavior.followsTerrain)
         assertEquals(
             FriendlyFirePolicy.ENEMY_ONLY,
             fireRain.collision.friendlyFire,
         )
         assertTrue(plagueBehavior.driftsWithWind)
+        assertEquals(0.75f, plagueBehavior.windDriftMultiplier)
+        assertTrue(plagueBehavior.followsTerrain)
         assertEquals(8, plagueBehavior.damagePerTick)
+        assertEquals(300f, AmmunitionType.PLAGUE_CAULDRON.damageRadius)
+        assertEquals(300f, plague.damage.unitRadius)
+        assertEquals(300f, plague.damage.fortressRadius)
+        assertEquals(300f, plagueBehavior.radius)
+        assertEquals(6f, plagueBehavior.durationSeconds)
         assertEquals(0, plague.damage.fortressDamage)
         assertEquals(0, plagueBehavior.fortressDamagePerTick)
     }

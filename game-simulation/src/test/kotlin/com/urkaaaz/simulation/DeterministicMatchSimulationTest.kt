@@ -5,6 +5,7 @@ import com.urkaaaz.contracts.EntityId
 import com.urkaaaz.contracts.MatchEvent
 import com.urkaaaz.contracts.MatchId
 import com.urkaaaz.contracts.MatchPhase
+import com.urkaaaz.contracts.MatchSnapshot
 import com.urkaaaz.contracts.MatchStatus
 import com.urkaaaz.contracts.Team
 import com.urkaaaz.contracts.WorldDimensions
@@ -201,12 +202,14 @@ class DeterministicMatchSimulationTest {
     }
 
     @Test
-    fun plagueImpactDoesNotCreateTerrainCrater() {
+    fun plagueEffectFollowsTerrainAndDriftsSlowerWithoutCreatingCrater() {
         val simulation = DeterministicMatchSimulation(
             MatchId("plague-match"),
             SimulationConfig(
                 bounds = WorldBounds(width = 2_000f, height = 600f),
                 gravityAccelerationY = 1_000f,
+                windAccelerationX = 0.2f,
+                windAccelerationScale = 50f,
             ),
         )
         simulation.start()
@@ -220,6 +223,26 @@ class DeterministicMatchSimulationTest {
 
         assertTrue(events.any { it is MatchEvent.ProjectileHitTerrain })
         assertEquals(0L, simulation.snapshot().terrain.revision)
+        val beforeDrift = simulation.snapshot()
+        val initialEffect = beforeDrift.effects.single()
+        assertEquals(300f, initialEffect.radius)
+        assertEquals("PLAGUE_CAULDRON", initialEffect.effectType)
+
+        simulation.advance(100L)
+
+        val afterDrift = simulation.snapshot()
+        val movedEffect = afterDrift.effects.single()
+        assertEquals(
+            beforeDrift.wind.direction * beforeDrift.wind.strength *
+                50f * 0.75f * 0.1f,
+            movedEffect.x - initialEffect.x,
+            0.01f,
+        )
+        assertEquals(
+            terrainHeightAt(afterDrift, movedEffect.x),
+            movedEffect.y,
+            0.01f,
+        )
     }
 
     @Test
@@ -238,6 +261,16 @@ class DeterministicMatchSimulationTest {
 
         assertTrue(simulation.snapshot().effects.isNotEmpty())
         assertTrue(simulation.snapshot().effects.all { it.effectType == "FIRE_RAIN" })
+    }
+
+    private fun terrainHeightAt(snapshot: MatchSnapshot, x: Float): Float {
+        val terrain = snapshot.terrain
+        val position = x.coerceIn(0f, terrain.worldWidth) / terrain.sampleSpacing
+        val left = position.toInt().coerceIn(0, terrain.heightSamples.lastIndex)
+        val right = (left + 1).coerceAtMost(terrain.heightSamples.lastIndex)
+        val fraction = position - left
+        return terrain.heightSamples[left] +
+            (terrain.heightSamples[right] - terrain.heightSamples[left]) * fraction
     }
 
     @Test

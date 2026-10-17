@@ -31,6 +31,8 @@
   horizontal fragment spread per step from 0.18 to 0.09.
 - Halved SIEGE_BOMB flight and impact render sizes; gameplay collision and
   damage values are unchanged.
+- PLAGUE_CAULDRON reuses its impact frames for a growing, 50%-opaque cloud
+  that follows terrain at 75% wind drift; its gameplay radius is now 300 units.
 
 ### Fixed
 

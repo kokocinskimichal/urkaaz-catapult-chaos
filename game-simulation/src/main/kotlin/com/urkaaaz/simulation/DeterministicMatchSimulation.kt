@@ -1511,8 +1511,15 @@ class DeterministicMatchSimulation(
         val definition = AmmunitionCatalog.definition(projectile.ammunition)
         when (val behavior = definition.behavior) {
             is com.urkaaaz.domain.AmmunitionImpactBehavior.LingeringArea -> {
+                val effectCenter = if (behavior.followsTerrain) {
+                    projectile.position.copy(
+                        y = terrain.heightAt(projectile.position.x),
+                    )
+                } else {
+                    projectile.position
+                }
                 applyDamageAt(
-                    position = projectile.position,
+                    position = effectCenter,
                     radius = definition.damage.fortressRadius,
                     damage = definition.damage.fortressDamage,
                     sourceTeam = projectile.firedBy,
@@ -1529,7 +1536,7 @@ class DeterministicMatchSimulation(
                     sourceProjectileId = projectile.id,
                     ammunition = projectile.ammunition,
                     sourceTeam = projectile.firedBy,
-                    center = projectile.position,
+                    center = effectCenter,
                     radius = behavior.radius,
                     remainingSeconds = behavior.durationSeconds,
                     tickIntervalSeconds = behavior.tickIntervalSeconds,
@@ -1705,14 +1712,24 @@ class DeterministicMatchSimulation(
                 untilNextTick += effect.tickIntervalSeconds
             }
             if (remaining > 0f) {
-                val nextCenter = if (effect.driftsWithWind) {
-                    effect.currentCenter.copy(
-                        x = effect.currentCenter.x +
-                            wind.accelerationX() * deltaSeconds,
-                    )
+                val nextX = if (effect.driftsWithWind) {
+                    (
+                        effect.currentCenter.x +
+                            wind.accelerationX() *
+                            behavior.windDriftMultiplier *
+                            deltaSeconds
+                        ).coerceIn(0f, terrain.worldWidth)
                 } else {
-                    effect.currentCenter
+                    effect.currentCenter.x
                 }
+                val nextCenter = effect.currentCenter.copy(
+                    x = nextX,
+                    y = if (behavior.followsTerrain) {
+                        terrain.heightAt(nextX)
+                    } else {
+                        effect.currentCenter.y
+                    },
+                )
                 updated += effect.copy(
                     currentCenter = nextCenter,
                     remainingSeconds = remaining,

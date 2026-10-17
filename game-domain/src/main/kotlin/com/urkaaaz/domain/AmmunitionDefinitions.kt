@@ -147,6 +147,8 @@ sealed interface AmmunitionImpactBehavior {
         val damagePerTick: Int,
         val fortressDamagePerTick: Int,
         val driftsWithWind: Boolean,
+        val windDriftMultiplier: Float = 1f,
+        val followsTerrain: Boolean = false,
         val status: UnitStatus? = null,
         val unitFriendlyFire: FriendlyFirePolicy = FriendlyFirePolicy.ENEMY_ONLY,
     ) : AmmunitionImpactBehavior {
@@ -159,6 +161,9 @@ sealed interface AmmunitionImpactBehavior {
             require(damagePerTick >= 0) { "lingering damage must not be negative" }
             require(fortressDamagePerTick >= 0) {
                 "lingering fortress damage must not be negative"
+            }
+            require(windDriftMultiplier >= 0f) {
+                "lingering wind drift multiplier must not be negative"
             }
         }
     }
@@ -341,17 +346,19 @@ object PlagueCauldronAmmunition : AmmunitionDefinition(
     damage = DamageProfile(
         unitDamage = 8,
         fortressDamage = 0,
-        unitRadius = 260f,
-        fortressRadius = 260f,
+        unitRadius = 300f,
+        fortressRadius = 300f,
     ),
     terrain = TerrainProfile(false, 0f, 0f),
     behavior = AmmunitionImpactBehavior.LingeringArea(
-        radius = 260f,
+        radius = 300f,
         durationSeconds = 6f,
         tickIntervalSeconds = 1f,
         damagePerTick = 8,
         fortressDamagePerTick = 0,
         driftsWithWind = true,
+        windDriftMultiplier = 0.75f,
+        followsTerrain = true,
         status = UnitStatus.POISONED,
     ),
     availableLayers = setOf(AmmunitionHitLayer.TERRAIN, AmmunitionHitLayer.FORTRESS),

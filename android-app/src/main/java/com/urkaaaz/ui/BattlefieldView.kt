@@ -79,10 +79,13 @@ class BattlefieldView(context: Context) : View(context) {
     private var lifecyclePaused = false
     private val fireRainPresentationClock = FireRainPresentationClock()
     private var fireRainPresentationFrame = FireRainPresentationFrame()
+    private val plagueCauldronPresentationClock = PlagueCauldronPresentationClock()
+    private var plagueCauldronPresentationFrame = PlagueCauldronPresentationFrame()
     private val deathAnimationClock = UnitDeathAnimationClock()
     private val unitDeathAnimationRetention =
         UnitDeathAnimationRetention(deathAnimationClock)
     private var activeImpact: ImpactRenderState? = null
+    private var lastImpactEventId: String? = null
     private var debugCursorPosition: DebugCursorPosition? = null
     private val projectileTrails = mutableMapOf<String, MutableList<Pair<Float, Float>>>()
     private val aimController = AimGestureController()
@@ -137,18 +140,35 @@ class BattlefieldView(context: Context) : View(context) {
         val presentationState = newState.copy(
             isPaused = newState.isPaused || lifecyclePaused || !isAttachedToWindow,
         )
+        val nowMilliseconds = SystemClock.uptimeMillis()
         fireRainPresentationFrame = fireRainPresentationClock.update(
             presentationState,
-            SystemClock.uptimeMillis(),
+            nowMilliseconds,
         )
+        plagueCauldronPresentationFrame = plagueCauldronPresentationClock.update(
+            presentationState,
+            nowMilliseconds,
+        )
+        if (
+            newState.matchId != state.matchId ||
+            newState.matchGeneration != state.matchGeneration
+        ) {
+            activeImpact = null
+            impactFrame = 0
+            lastImpactEventId = null
+        }
         state = newState.copy(
             units = unitDeathAnimationRetention.update(newState.units),
         )
         animationFrame = (animationFrame + 1) % 1024
-        if (newState.impact != null && newState.impact != activeImpact) {
+        if (newState.impact != null && newState.impact.eventId != lastImpactEventId) {
             activeImpact = newState.impact
+            lastImpactEventId = newState.impact.eventId
             impactFrame = 0
         } else {
+            if (newState.impact?.eventId == activeImpact?.eventId) {
+                activeImpact = newState.impact
+            }
             activeImpact?.let { currentImpact ->
                 impactFrame += 1
                 if (
@@ -171,6 +191,12 @@ class BattlefieldView(context: Context) : View(context) {
             ),
             SystemClock.uptimeMillis(),
         )
+        plagueCauldronPresentationFrame = plagueCauldronPresentationClock.update(
+            state.copy(
+                isPaused = state.isPaused || lifecyclePaused || !isAttachedToWindow,
+            ),
+            SystemClock.uptimeMillis(),
+        )
         invalidate()
     }
 
@@ -180,11 +206,19 @@ class BattlefieldView(context: Context) : View(context) {
             state.copy(isPaused = state.isPaused || lifecyclePaused),
             SystemClock.uptimeMillis(),
         )
+        plagueCauldronPresentationFrame = plagueCauldronPresentationClock.update(
+            state.copy(isPaused = state.isPaused || lifecyclePaused),
+            SystemClock.uptimeMillis(),
+        )
         invalidate()
     }
 
     override fun onDetachedFromWindow() {
         fireRainPresentationFrame = fireRainPresentationClock.update(
+            state.copy(isPaused = true),
+            SystemClock.uptimeMillis(),
+        )
+        plagueCauldronPresentationFrame = plagueCauldronPresentationClock.update(
             state.copy(isPaused = true),
             SystemClock.uptimeMillis(),
         )
@@ -203,6 +237,7 @@ class BattlefieldView(context: Context) : View(context) {
             deathAnimationClock = deathAnimationClock,
             impactFrame = impactFrame,
             fireRainPresentation = fireRainPresentationFrame,
+            plagueCauldronPresentation = plagueCauldronPresentationFrame,
             isAiming = aimController.isDragging,
             viewportWidth = width.toFloat(),
             viewportHeight = height.toFloat(),

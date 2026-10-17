@@ -134,6 +134,10 @@ class RenderStateMapperTest {
                         effectType = "PLAGUE_CAULDRON",
                         remainingMilliseconds = 5_000L,
                         effectId = EntityId("plague-1"),
+                        sourceProjectileId = EntityId("plague-projectile"),
+                        x = 1_800f,
+                        y = 840f,
+                        radius = 300f,
                     ),
                 ),
             ),
@@ -149,6 +153,9 @@ class RenderStateMapperTest {
         assertEquals(listOf("fragment-1", "fragment-2"), state.fireRainSplits.first().fragmentProjectileIds)
         assertEquals(listOf("fire-1", "fire-2"), state.fireRainEffects.map { it.effectId })
         assertEquals(68f, state.fireRainEffects.first().radius)
+        assertEquals("plague-1", state.plagueCauldronEffects.single().effectId)
+        assertEquals("plague-projectile", state.plagueCauldronEffects.single().sourceProjectileId)
+        assertEquals(300f, state.plagueCauldronEffects.single().radius)
     }
 
     @Test
@@ -184,6 +191,21 @@ class RenderStateMapperTest {
         )
     }
 
+    @Test(expected = IllegalArgumentException::class)
+    fun mapperRejectsPlagueEffectWithoutItsSourceProjectileId() {
+        RenderStateMapper.map(
+            MatchSnapshot(
+                effects = listOf(
+                    EffectSnapshot(
+                        effectType = "PLAGUE_CAULDRON",
+                        remainingMilliseconds = 1_000L,
+                        effectId = EntityId("plague-effect"),
+                    ),
+                ),
+            ),
+        )
+    }
+
     @Test
     fun mapperPlacesEntityImpactAtCollisionCoordinates() {
         val impactX = 2_910f
@@ -207,6 +229,42 @@ class RenderStateMapperTest {
 
         assertEquals(impactX, state.impact?.x)
         assertEquals(impactY, state.impact?.y)
+    }
+
+    @Test
+    fun mapperPlacesPlagueTerrainImpactAtItsLingeringEffectCoordinates() {
+        val projectileId = EntityId("plague-projectile")
+        val impactX = 2_910f
+        val impactY = 1_340f
+        val state = RenderStateMapper.map(
+            snapshot = MatchSnapshot(
+                effects = listOf(
+                    EffectSnapshot(
+                        effectType = "PLAGUE_CAULDRON",
+                        remainingMilliseconds = 6_000L,
+                        effectId = EntityId("plague-effect"),
+                        sourceProjectileId = projectileId,
+                        x = impactX,
+                        y = impactY,
+                        radius = 300f,
+                    ),
+                ),
+            ),
+            events = listOf(
+                MatchEvent.ProjectileHitTerrain(
+                    eventId = EventId("plague-impact"),
+                    matchId = MatchId("match-1"),
+                    simulationTimeMilliseconds = 1_000L,
+                    projectileId = projectileId,
+                    ammunitionType = "PLAGUE_CAULDRON",
+                ),
+            ),
+        )
+
+        assertEquals(impactX, state.impact?.x)
+        assertEquals(impactY, state.impact?.y)
+        assertEquals(300f, state.impact?.radius)
+        assertEquals("plague-projectile", state.impact?.projectileId)
     }
 
     @Test

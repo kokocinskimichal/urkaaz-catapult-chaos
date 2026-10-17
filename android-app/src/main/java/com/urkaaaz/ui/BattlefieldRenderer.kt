@@ -36,6 +36,7 @@ class BattlefieldRenderer(
         deathAnimationClock: UnitDeathAnimationClock,
         impactFrame: Int,
         fireRainPresentation: FireRainPresentationFrame,
+        plagueCauldronPresentation: PlagueCauldronPresentationFrame,
         isAiming: Boolean,
         viewportWidth: Float,
         viewportHeight: Float,
@@ -221,6 +222,13 @@ class BattlefieldRenderer(
             animationFrame,
             deathAnimationClock,
         )
+        drawPlagueCauldronClouds(
+            canvas = canvas,
+            clouds = plagueCauldronPresentation.clouds,
+            activeImpact = activeImpact,
+            viewportWidth = viewportWidth,
+            viewportHeight = viewportHeight,
+        )
         activeImpact?.let { impact ->
             val animation = assets.animationFor(impact.ammunitionType)
             val frames = animation.impactFrames
@@ -228,16 +236,48 @@ class BattlefieldRenderer(
                 val frame = frames[impactFrame % frames.size]
                 val impactX = worldToViewX(impact.x, viewportWidth).coerceIn(0f, viewportWidth)
                 val impactY = worldToViewY(impact.y, viewportHeight)
-                val impactRenderSize = animation.impactRenderSizeAt(impactFrame)
-                val impactRenderHeight =
-                    impactRenderSize * frame.height.toFloat() / frame.width.coerceAtLeast(1)
-                drawTexture(
-                    canvas,
-                    frame,
-                    impactX - impactRenderSize / 2f,
-                    impactY - impactRenderHeight / 2f,
-                    impactRenderSize,
-                )
+                if (
+                    impact.ammunitionType == PLAGUE_CAULDRON_AMMUNITION &&
+                    impact.radius > 0f
+                ) {
+                    val growthProgress = (
+                        impactFrame.toFloat() /
+                            PlagueCauldronVisualContract.IMPACT_GROWTH_END_FRAME
+                        ).coerceIn(0f, 1f).let(::smoothstep)
+                    val startWidth = animation.impactRenderSize
+                    val startHeight =
+                        startWidth * frame.height.toFloat() / frame.width.coerceAtLeast(1)
+                    val targetWidth = impact.radius *
+                        PlagueCauldronVisualContract.CANVAS_WIDTH_TO_RADIUS
+                    val targetHeight = impact.radius *
+                        PlagueCauldronVisualContract.CANVAS_HEIGHT_TO_RADIUS
+                    drawTextureAtWorldSizeWithAlpha(
+                        canvas = canvas,
+                        bitmap = frame,
+                        centerX = impactX,
+                        baselineY = impactY,
+                        width = worldToViewWidth(
+                            lerp(startWidth, targetWidth, growthProgress),
+                            viewportWidth,
+                        ),
+                        height = worldToViewHeight(
+                            lerp(startHeight, targetHeight, growthProgress),
+                            viewportHeight,
+                        ),
+                        opacity = plagueImpactOpacity(impactFrame),
+                    )
+                } else {
+                    val impactRenderSize = animation.impactRenderSizeAt(impactFrame)
+                    val impactRenderHeight =
+                        impactRenderSize * frame.height.toFloat() / frame.width.coerceAtLeast(1)
+                    drawTexture(
+                        canvas,
+                        frame,
+                        impactX - impactRenderSize / 2f,
+                        impactY - impactRenderHeight / 2f,
+                        impactRenderSize,
+                    )
+                }
             }
         }
         drawCombatFeedback(canvas, combatFeedback, viewportWidth, viewportHeight, groundTop)
@@ -306,6 +346,86 @@ class BattlefieldRenderer(
             )
         }
     }
+
+    private fun drawPlagueCauldronClouds(
+        canvas: Canvas,
+        clouds: List<PlagueCauldronCloudAnimation>,
+        activeImpact: ImpactRenderState?,
+        viewportWidth: Float,
+        viewportHeight: Float,
+    ) {
+        clouds.forEach { cloud ->
+            if (
+                activeImpact?.ammunitionType == PLAGUE_CAULDRON_AMMUNITION &&
+                cloud.sourceProjectileId == activeImpact.projectileId
+            ) {
+                return@forEach
+            }
+            val frame = assets.animationFor(PLAGUE_CAULDRON_AMMUNITION)
+                .impactFrames.getOrNull(cloud.frameIndex)
+                ?: error("PLAGUE_CAULDRON cloud frame ${cloud.frameIndex} is unavailable")
+            val width = lerp(
+                cloud.radius * PlagueCauldronVisualContract.GROWTH_START_WIDTH_TO_RADIUS,
+                cloud.radius * PlagueCauldronVisualContract.CANVAS_WIDTH_TO_RADIUS,
+                cloud.growthProgress,
+            )
+            val height = lerp(
+                cloud.radius * PlagueCauldronVisualContract.GROWTH_START_HEIGHT_TO_RADIUS,
+                cloud.radius * PlagueCauldronVisualContract.CANVAS_HEIGHT_TO_RADIUS,
+                cloud.growthProgress,
+            )
+            drawTextureAtWorldSizeWithAlpha(
+                canvas = canvas,
+                bitmap = frame,
+                centerX = worldToViewX(cloud.x, viewportWidth),
+                baselineY = worldToViewY(cloud.y, viewportHeight),
+                width = worldToViewWidth(width, viewportWidth),
+                height = worldToViewHeight(height, viewportHeight),
+                opacity = cloud.opacity,
+            )
+        }
+    }
+
+    private fun drawTextureAtWorldSizeWithAlpha(
+        canvas: Canvas,
+        bitmap: Bitmap?,
+        centerX: Float,
+        baselineY: Float,
+        width: Float,
+        height: Float,
+        opacity: Float,
+    ) {
+        if (bitmap == null || opacity <= 0f) return
+        val left = centerX - width / 2f
+        val top = baselineY - height
+        val saveCount = canvas.saveLayerAlpha(
+            left,
+            top,
+            left + width,
+            baselineY,
+            (opacity.coerceIn(0f, 1f) * 255f).toInt(),
+        )
+        drawTextureAtWorldSize(canvas, bitmap, centerX, baselineY, width, height)
+        canvas.restoreToCount(saveCount)
+    }
+
+    private fun plagueImpactOpacity(frameIndex: Int): Float {
+        if (frameIndex <= PlagueCauldronVisualContract.IMPACT_OPACITY_FIRST_FRAME) {
+            return 1f
+        }
+        val transitionProgress = (
+            (frameIndex - PlagueCauldronVisualContract.IMPACT_OPACITY_FIRST_FRAME).toFloat() /
+                (PlagueCauldronVisualContract.IMPACT_OPACITY_LAST_FRAME -
+                    PlagueCauldronVisualContract.IMPACT_OPACITY_FIRST_FRAME)
+            ).coerceIn(0f, 1f)
+        return lerp(1f, PlagueCauldronVisualContract.MAX_OPACITY, transitionProgress)
+    }
+
+    private fun smoothstep(progress: Float): Float =
+        progress * progress * (3f - 2f * progress)
+
+    private fun lerp(start: Float, end: Float, progress: Float): Float =
+        start + (end - start) * progress
 
     private fun drawFireRainSplitFlashes(
         canvas: Canvas,
@@ -1023,6 +1143,7 @@ class BattlefieldRenderer(
         private const val DECORATION_RENDER_SIZE = 94f
         private const val DECORATION_GROUND_SINK = 12f
         private const val FIRE_RAIN_AMMUNITION = "FIRE_RAIN"
+        private const val PLAGUE_CAULDRON_AMMUNITION = "PLAGUE_CAULDRON"
         private const val FIRE_RAIN_FRAGMENT_RENDER_SIZE = 28f
         private const val FIRE_RAIN_SPLIT_FLASH_RENDER_SIZE = 120f
         // Generated frames are mostly transparent; align their visible base to terrain.

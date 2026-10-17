@@ -433,6 +433,15 @@ must go through commands and domain/application boundaries.
   preserved in its corresponding `assets_src/ammunition/fire-rain/` phase
   directory. The accepted no-reference fire-field generation used no Powder
   Barrel image.
+- PLAGUE_CAULDRON uses its approved 24-frame 768×576 impact sequence for
+  both the cauldron breakup and lingering poison cloud; no separate cloud
+  animation is loaded. The impact grows from the cauldron size to a visible
+  cloud footprint of about 600×450 world units, overlays units at 50%
+  opacity, then loops mature impact frames until the six-second effect fades.
+  The presentation clock pauses with the match and follows the wind-drifted
+  effect along the terrain; the cauldron's drift rate is 75% of the
+  wind-derived rate. Its gameplay and lingering radii are both 300 world
+  units, matching the cloud's approximate 600-unit visible width.
 - The user supplied an isolated 1254×1254 RGBA Fire Rain shard image generated
   in a separate tool. It was uploaded as the fragment-flight first frame; the
   composite ammunition icon was not sent to AnimGen for this phase. The

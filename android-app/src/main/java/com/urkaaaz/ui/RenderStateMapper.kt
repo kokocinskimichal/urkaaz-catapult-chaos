@@ -62,6 +62,7 @@ data class RenderState(
     val isPaused: Boolean = false,
     val fireRainSplits: List<FireRainSplitRenderState> = emptyList(),
     val fireRainEffects: List<FireRainEffectRenderState> = emptyList(),
+    val plagueCauldronEffects: List<PlagueCauldronEffectRenderState> = emptyList(),
     val matchGeneration: Long = 0L,
 )
 
@@ -96,6 +97,8 @@ data class ImpactRenderState(
     val x: Float,
     val y: Float,
     val ammunitionType: String,
+    val projectileId: String? = null,
+    val radius: Float = 0f,
 )
 
 data class CombatFeedbackRenderState(
@@ -210,8 +213,26 @@ object RenderStateMapper {
         redFortressHealth = snapshot.fortresses.firstOrNull { it.team.name == "RED" }?.health ?: 0,
         redFortressMaxHealth = snapshot.fortresses.firstOrNull { it.team.name == "RED" }?.maxHealth ?: 0,
         windStrength = snapshot.wind.strength,
-        impact = events.lastOrNull { it is MatchEvent.TerrainDeformed || it is MatchEvent.ProjectileHitEntity }
+        impact = events.lastOrNull {
+            it is MatchEvent.TerrainDeformed ||
+                it is MatchEvent.ProjectileHitEntity ||
+                (
+                    it is MatchEvent.ProjectileHitTerrain &&
+                        it.ammunitionType == PLAGUE_CAULDRON_AMMUNITION
+                    )
+        }
             ?.let { event ->
+                val projectileId = when (event) {
+                    is MatchEvent.ProjectileHitEntity -> event.projectileId
+                    is MatchEvent.ProjectileHitTerrain -> event.projectileId
+                    else -> null
+                }
+                val plagueEffect = projectileId?.let { id ->
+                    snapshot.effects.lastOrNull {
+                        it.effectType == PLAGUE_CAULDRON_AMMUNITION &&
+                            it.sourceProjectileId == id
+                    }
+                }
                 when (event) {
                     is MatchEvent.TerrainDeformed -> ImpactRenderState(
                         event.eventId.value,
@@ -224,7 +245,19 @@ object RenderStateMapper {
                         event.x,
                         event.y,
                         event.ammunitionType,
+                        projectileId = event.projectileId.value,
+                        radius = plagueEffect?.radius ?: 0f,
                     )
+                    is MatchEvent.ProjectileHitTerrain -> plagueEffect?.let { effect ->
+                        ImpactRenderState(
+                            eventId = event.eventId.value,
+                            x = effect.x,
+                            y = effect.y,
+                            ammunitionType = event.ammunitionType,
+                            projectileId = event.projectileId.value,
+                            radius = effect.radius,
+                        )
+                    }
                     else -> null
                 }
             },
@@ -365,6 +398,24 @@ object RenderStateMapper {
                 )
             }
         },
+        plagueCauldronEffects = snapshot.effects.mapNotNull { effect ->
+            if (effect.effectType != PLAGUE_CAULDRON_AMMUNITION) {
+                null
+            } else {
+                PlagueCauldronEffectRenderState(
+                    effectId = requireNotNull(effect.effectId) {
+                        "PLAGUE_CAULDRON effect snapshot is missing its effectId"
+                    }.value,
+                    sourceProjectileId = requireNotNull(effect.sourceProjectileId) {
+                        "PLAGUE_CAULDRON effect snapshot is missing its sourceProjectileId"
+                    }.value,
+                    x = effect.x,
+                    y = effect.y,
+                    radius = effect.radius,
+                    remainingMilliseconds = effect.remainingMilliseconds,
+                )
+            }
+        },
         )
     }
 
@@ -372,4 +423,5 @@ object RenderStateMapper {
         if (id.startsWith("blue")) blueX else redX
 
     private const val FIRE_RAIN_AMMUNITION = "FIRE_RAIN"
+    private const val PLAGUE_CAULDRON_AMMUNITION = "PLAGUE_CAULDRON"
 }
