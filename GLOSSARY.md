@@ -65,10 +65,11 @@ kontrakty są wyraźnie oddzielone.
 | **US** | **Unit System** | Rekrutacja, supply, garnizon, fale, ruch, konfiguracje i interakcje jednostek. | Działa dla obecnych jednostek. |
 | **AIS** | **AI System** | Decyzje AI na podstawie snapshotów, rekrutacja, dobór kontr, fale i temperament. | Działa w obecnym zakresie. Właściciel: `game-ai`. |
 | **CaS** | **Campaign System** | Poziomy, chaptery, odblokowania, cele, modyfikatory i postęp kampanii. | Częściowy; definicje poziomów działają, persystencja progresji jest planowana. Właściciel: `game-campaign`. |
-| **SS** | **Spell System** | Definicje czarów, mana, aktywacja, efekty, cooldowny, dostępność i integracja z walką. | Planowany. |
+| **SS** | **Spell System** | Definicje czarów, mana, aktywacja, efekty, cooldowny, dostępność i integracja z walką. | Planowany; `CastSpell` i efekty nie są obsługiwane. |
 | **TutS** | **Tutorial System** | Kroki tutoriala, hinty, spotlighty, cele, odblokowywanie paneli i ograniczenia AI. | Planowany. |
-| **PSys** | **Persistence System** | Trwały zapis profilu, lives, waluty, loadoutu, odblokowań i postępu. | Planowany. |
-| **LoS** | **Loadout System** | Konfiguracja jednostek, amunicji i czarów przed poziomem. | Częściowy; pełny loadout pozostaje planowany. |
+| **PSys** | **Persistence System** | Trwały zapis profilu, lives, waluty, loadoutu, odblokowań i postępu. | Częściowy: lokalny profil progresji i zatwierdzony loadout używają DataStore; kampania, nagrody, lives i tutoriale pozostają poza implementacją. |
+| **PPS** | **Player Progression System** | Snapshot lokalnego profilu używany przy walidacji loadoutu. | Częściowy: potwierdzony seed i zapis v1 działają; zakupy, milestone'y autoryzowane przez kampanię i rozliczanie stocku są poza zakresem. |
+| **LoS** | **Loadout System** | Konfiguracja jednostek, amunicji i czarów przed poziomem. | Częściowy: walidacja, normalizacja, zapis DataStore i bezpieczny start działają; interaktywna selekcja i integracja poziomów 6/8 pozostają niedokończone. |
 | **RS** | **Reward System** | Wynik meczu, nagrody, OrCoins, lives, event rewards i przejście do kolejnego poziomu. | Planowany; obecny wynik jest uproszczonym overlayem. |
 | **BS** | **Balance System** | Wersjonowane parametry balansu, walidacja konfiguracji i symulacje porównawcze. | Planowany. |
 | **ObjS** | **Objective System** | Cele główne i specjalne, Central Objective oraz reguły poziomów boss/special. | Częściowy; Central Objective i pełne reguły bossów są planowane. |

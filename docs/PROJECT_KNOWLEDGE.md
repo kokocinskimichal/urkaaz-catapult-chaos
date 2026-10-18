@@ -3,11 +3,14 @@
 ## Current state
 
 The project is a modular Android game with a deterministic local match
-simulation. The application opens into `StartScreen`, which reproduces the legacy start
-menu. Its Play button opens the legacy-style `DashboardScreen`; the dashboard
-Campaign button opens the legacy-style `CampaignScreen`; the test mode button
-opens `MatchScreen` with `DEMO_LEVEL`. Loadout, shop and result screens remain
-placeholders so they can be implemented incrementally.
+simulation. The application opens into `StartScreen`, which reproduces the
+legacy start menu. Its Play button opens the legacy-style `DashboardScreen`;
+the dashboard Campaign button opens `CampaignScreen`, and selecting a level
+opens the loadout screen. The test mode button still opens `MatchScreen` with
+`DEMO_LEVEL`. The loadout core, local player profile and per-level loadout
+persistence are implemented with AndroidX DataStore. Campaign matches start
+only after the profile and saved loadout are read, validated and committed.
+Shop and result screens remain placeholders.
 
 Terminology convention: **mecz** means the gameplay session and runtime
 simulation only. The Android UI is called the **match screen**, while the
@@ -15,9 +18,23 @@ selected campaign data is a **campaign level**.
 
 The campaign screen intentionally reuses the legacy visual style only. Its
 level count and level selection are driven by the new
-`CampaignLevelDefinition` contract. Selecting level `n` navigates with a typed
-`campaignLevel = n`, and `MatchViewModel` constructs the new match using that
-campaign definition rather than copying legacy campaign behavior.
+`CampaignLevelDefinition` contract. `MatchScenario` carries level availability
+and an optional committed `PlayerLoadoutConfig` separately. `MatchSession`
+rejects blue-player unit/ammunition commands outside the scenario selection;
+AI remains unaffected. The match ammunition selector is filtered to level
+availability and the committed player's equipped slots, matching that
+validation boundary.
+
+`game-application/application/loadout` owns the canonical immutable
+`MatchLoadout`, deterministic defaults, stored-selection normalization,
+typed validation and asynchronous progression/repository ports.
+`PlayerProgressionUseCases` initializes a new profile from the confirmed
+legacy baseline (`FORTRESS_SHIELD`, zero gold and zero limited stock).
+AndroidX DataStore adapters persist that profile and committed per-level
+loadouts separately. `LoadoutScreen` displays the validated draft and status,
+and only navigates after a successful commit. Interactive category editors,
+campaign-authorized level unlocks/milestones, and spell gameplay remain
+unfinished.
 
 For emulator testing, `CampaignUiState` currently initializes
 `highestUnlockedLevel` to `CampaignLevelDefinition.MAX_LEVELS`, so all 100
@@ -339,6 +356,10 @@ must go through commands and domain/application boundaries.
 | `android-app/.../screens/start/StartScreen.kt` | Legacy-style start menu |
 | `android-app/.../screens/dashboard/DashboardScreen.kt` | Legacy-style dashboard |
 | `android-app/.../screens/campaign/CampaignScreen.kt` | Legacy-style campaign level selector |
+| `game-application/.../progression/PlayerProgressionUseCases.kt` | Local profile initialization and snapshot validation |
+| `android-app/.../persistence/DataStorePlayerProgressionRepository.kt` | Versioned profile storage |
+| `android-app/.../persistence/DataStoreLoadoutRepository.kt` | Versioned per-level loadout storage |
+| `android-app/.../screens/loadout/LoadoutViewModel.kt` | Async loadout state and guarded commit |
 | `android-app/.../screens/match/MatchScreen.kt` | Match screen boundary |
 | `android-app/.../ui/MatchScreenController.kt` | Match composition and lifecycle |
 | `android-app/.../ui/MatchHudView.kt` | Timer, wind and pause HUD |
@@ -495,9 +516,18 @@ must go through commands and domain/application boundaries.
 
 ## Known incomplete areas
 
-- Dashboard, campaign, loadout, shop and result screens are placeholders.
-- Campaign level entries are currently all unlocked for emulator testing; a
-  persistent progression repository and production unlock rules are still
+- Loadout profile and persistence adapters are implemented using DataStore
+  schema v1; first-run values are Fortress Shield, zero gold, and zero
+  limited-ammunition/special-spell stock. The screen loads and commits a
+  validated default draft. Interactive selectors and level 6/8 tutorials
+  remain incomplete. Campaign progression still exposes all levels in its
+  temporary test selector, and runtime ammunition consumption is not
+  reconciled with persistent stock.
+- `SpellType` definitions and selected-spell contract data exist, but
+  `CastSpell` and spell effects are not implemented.
+- Shop and result screens remain placeholders.
+- Campaign level entries are currently all selectable for emulator testing;
+  persistent `highestUnlockedLevel` and production unlock rules are still
   pending.
 - Navigation is implemented as a lightweight single-activity screen host; it
   can later be replaced by Android Navigation or Compose without changing the

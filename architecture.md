@@ -53,16 +53,21 @@ flowchart TB
     subgraph Android["Aplikacja Android"]
         Activity[MainActivity]
         Navigation[Navigation]
+        LoadoutScreen[LoadoutScreen]
+        LoadoutViewModel[LoadoutViewModel]
         MatchScreen[MatchScreen]
         MatchViewModel[MatchViewModel]
         Battlefield[BattlefieldView]
         Hud[HudRenderer]
         UIActions[MatchUiAction]
         LocalGateway[LocalMatchGateway]
-        Persistence[ProgressionRepository]
+        Persistence[Android DataStore adapters]
     end
 
     subgraph Application["Warstwa aplikacyjna"]
+        LoadoutUseCases[LoadoutUseCases]
+        ProgressionPort[PlayerProgressionRepository]
+        LoadoutPort[LoadoutRepository]
         MatchSession[MatchSession]
         CommandHandler[MatchCommandHandler]
         SnapshotPublisher[SnapshotPublisher]
@@ -81,7 +86,15 @@ flowchart TB
     User --> Battlefield
     User --> UIActions
     Activity --> Navigation
+    Navigation --> LoadoutScreen
     Navigation --> MatchScreen
+    LoadoutScreen --> LoadoutViewModel
+    LoadoutViewModel --> LoadoutUseCases
+    LoadoutUseCases --> ProgressionPort
+    LoadoutUseCases --> LoadoutPort
+    Persistence -. implements .-> ProgressionPort
+    Persistence -. implements .-> LoadoutPort
+    LoadoutUseCases --> MatchScreen
     MatchScreen --> MatchViewModel
     Battlefield --> MatchViewModel
     MatchViewModel --> UIActions
@@ -100,7 +113,6 @@ flowchart TB
     Match --> SnapshotPublisher
     SnapshotPublisher --> MatchSession
     MatchSession --> LocalGateway
-    Persistence --> MatchViewModel
 ```
 
 ### Właściciele odpowiedzialności
@@ -118,7 +130,7 @@ flowchart TB
 | `MatchSimulation` | wykonywania kroków symulacji | nawigacji i UI |
 | `Rules and Validators` | sprawdzania, czy akcja jest dozwolona | renderowania |
 | `SnapshotPublisher` | tworzenia bezpiecznego odczytu | mutowania meczu |
-| `ProgressionRepository` | zapisu kampanii i postępu | zapisu stanu runtime meczu |
+| `ProgressionRepository` | lokalnego profilu progresji i loadoutu | zapisu stanu runtime meczu |
 
 ### Jedyny właściciel stanu meczu
 
@@ -360,6 +372,11 @@ RESULT_SAVED
 
 `MatchScenario` trafia do fabryki domenowej. UI nie tworzy ręcznie katapult,
 fortec ani systemów.
+
+W aktualnym kontrakcie scenariusz rozdziela dostępność jednostek, amunicji i
+czarów od opcjonalnego `PlayerLoadoutConfig`. `MatchSession` egzekwuje wybrane
+jednostki i amunicję przed przekazaniem komend do symulacji. `SimulationConfig`
+przenosi zatwierdzony loadout, ale obsługa czarów pozostaje niedokończona.
 
 ### Uruchomienie
 
@@ -1451,15 +1468,22 @@ application.campaign
 
 application.loadout
 ├── MatchLoadout
-├── LoadoutValidator
+├── LoadoutUseCases
+├── LoadoutProgressionPort
 └── LoadoutRepository
 
 application.progression
-├── GoldProgress
-├── LivesProgress
-├── SpellProgress
-└── AmmunitionProgress
+├── PlayerProgressionRepository (port)
+└── PlayerProgressionUseCases
+
+android-app.persistence
+├── DataStorePlayerProgressionRepository
+└── DataStoreLoadoutRepository
 ```
+
+Profil i zatwierdzony loadout są zapisywane asynchronicznie w osobnych
+namespace'ach wersjonowanego AndroidX DataStore. Adaptery pozostają w
+`android-app`; core zna wyłącznie porty.
 
 Poziom kampanii tworzy konfigurację meczu:
 
@@ -1508,13 +1532,15 @@ Specjalne zachowanie poziomu tutorialowego powinno być opisane przez
 
 ## 29. Persystencja
 
-Persystencja mobilna powinna przechowywać dane aplikacyjne:
+Persystencja mobilna przechowuje dane aplikacyjne. Obecny zakres implementacji
+to wersjonowany lokalny profil progresji i zatwierdzony loadout w AndroidX
+DataStore. Profil przechowuje odblokowane czary, zapasy ograniczonej amunicji
+i czarów specjalnych oraz saldo; zakupy i rozliczanie stocku pozostają poza
+obecną implementacją. Zapis kampanii, żyć, ustawień i tutoriali pozostaje
+przyszłą pracą:
 
 - progres kampanii;
-- złoto;
 - życia;
-- odblokowane zaklęcia;
-- loadout;
 - ustawienia;
 - tutorial progress.
 
@@ -1692,12 +1718,15 @@ zarządza bieżącym ekranem i stosem Back, a `ScreenHost` podmienia aktywny
 Aktualne ekrany:
 
 - `DashboardScreen` — placeholder;
-- `CampaignScreen` — placeholder;
-- `LoadoutScreen` — placeholder;
+- `CampaignScreen` — wybór poziomu z nawigacją;
+- `LoadoutScreen` — asynchronicznie odczytuje i waliduje draft; uruchamia mecz
+  dopiero po udanym zapisie;
 - `ShopScreen` — placeholder;
 - `MatchScreen` — działający ekran meczu;
 - `ResultScreen` — placeholder.
 
-Placeholdery korzystają ze wspólnego `PlaceholderScreenView`, ale każdy ekran
-ma własny pakiet i może zostać rozwinięty bez zmiany kontraktu nawigacji.
-Ekran meczu zachowuje własny `MatchScreenController`, HUD i panel amunicji.
+Pozostałe placeholdery korzystają ze wspólnego `PlaceholderScreenView`.
+`LoadoutScreen` ma własny widok i ViewModel, a jego operacje są anulowane wraz
+z lifecycle ekranu. `MainActivity` składa zależności DataStore, ale nie
+przechowuje stanu progresji ani reguł loadoutu. Ekran meczu zachowuje własny
+`MatchScreenController`, HUD i panel amunicji.

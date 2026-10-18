@@ -16,16 +16,19 @@ import android.widget.CheckBox
 import android.widget.ScrollView
 import android.widget.TextView
 import com.urkaaaz.campaign.MapDefinitionRepository
+import com.urkaaaz.contracts.PlayerLoadoutConfig
 
 class MatchScreenController(
     private val activity: Activity,
     campaignLevel: Int,
+    playerLoadout: PlayerLoadoutConfig? = null,
     private val demoMode: Boolean = false,
     private val onBackClicked: () -> Unit,
     private val openDebugOnStart: Boolean = false,
 ) {
     private val viewModel = MatchViewModel(
         campaignLevel = campaignLevel,
+        playerLoadout = playerLoadout,
         demoMode = demoMode,
         mapRepository = MapDefinitionRepository { path -> activity.assets.open(path) },
         combatLogSink = AndroidCombatLogSink(),
@@ -73,7 +76,10 @@ class MatchScreenController(
             }
             onBackClicked = this@MatchScreenController.onBackClicked
         }
-        ammunitionPanel = AmmunitionPanelView(activity).apply {
+        ammunitionPanel = AmmunitionPanelView(
+            activity,
+            viewModel.selectableAmmunitionTypes,
+        ).apply {
             onAmmoSelected = { ammunitionType ->
                 render(viewModel.dispatch(MatchUiAction.SelectAmmo(ammunitionType)))
             }

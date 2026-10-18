@@ -3,6 +3,7 @@ package com.urkaaaz.application
 import com.urkaaaz.contracts.MatchCommand
 import com.urkaaaz.contracts.MatchSnapshot
 import com.urkaaaz.contracts.MatchStatus
+import com.urkaaaz.contracts.MatchScenario
 import com.urkaaaz.contracts.MapDefinition
 import com.urkaaaz.domain.AmmunitionType
 import com.urkaaaz.domain.WorldBounds
@@ -10,6 +11,8 @@ import com.urkaaaz.domain.UnitFactory
 import com.urkaaaz.contracts.Team
 import com.urkaaaz.contracts.WindSnapshot
 import com.urkaaaz.contracts.WorldDimensions
+import com.urkaaaz.application.loadout.LoadoutCommandRejectedException
+import com.urkaaaz.application.loadout.LoadoutError
 import com.urkaaaz.simulation.DeterministicMatchSimulation
 import com.urkaaaz.simulation.CombatLogSink
 import com.urkaaaz.simulation.NoOpCombatLogSink
@@ -21,6 +24,7 @@ class MatchSession(
     private val terrainBiome: String = "GREEN_FRONTIER",
     private val initialWind: WindSnapshot = WindSnapshot(),
     private val mapDefinition: MapDefinition? = null,
+    private val scenario: MatchScenario? = null,
     private val blueFortressMaxHealth: Int = 500,
     private val combatLogSink: CombatLogSink = NoOpCombatLogSink,
     private val ammunitionLogSink: AmmunitionLogSink = NoOpAmmunitionLogSink,
@@ -39,12 +43,15 @@ class MatchSession(
             is MatchCommand.Start -> start(command)
             is MatchCommand.SelectAmmo -> {
                 val team = teamForPlayer(command.playerId)
-                selectedAmmunition[team] = runCatching {
-                    AmmunitionType.valueOf(command.ammunitionType)
-                }.getOrElse { throw IllegalArgumentException("unknown ammunition: ${command.ammunitionType}") }
+                val ammunition = AmmunitionType.values().firstOrNull {
+                    it.name == command.ammunitionType
+                } ?: throw LoadoutCommandRejectedException(LoadoutError.UNKNOWN_AMMUNITION)
+                enforceAmmunitionSelection(command.playerId, command.ammunitionType)
+                selectedAmmunition[team] = ammunition
                 requireRunning().snapshot()
             }
             is MatchCommand.DeployUnit -> {
+                enforceUnitSelection(command.playerId, command.unitType)
                 val unitType = UnitFactory.byId(command.unitType)
                 latestEvents = listOf(
                     requireRunning().deployUnit(unitType, teamForPlayer(command.playerId)),
@@ -113,6 +120,14 @@ class MatchSession(
     fun snapshot(): MatchSnapshot = simulation?.snapshot() ?: latestSnapshot
 
     fun canDeployUnit(team: Team, unitType: String): Boolean {
+        val matchScenario = scenario
+        if (team == Team.BLUE && matchScenario != null) {
+            if (matchScenario.availableUnits.isNotEmpty() &&
+                unitType !in matchScenario.availableUnits
+            ) return false
+            val loadout = matchScenario.playerLoadout
+            if (loadout != null && unitType !in loadout.unitTypes) return false
+        }
         val definition = runCatching { UnitFactory.byId(unitType) }.getOrNull() ?: return false
         val resources = latestSnapshot.resourcesByTeam[team] ?: return false
         if (resources.supply < definition.supplyCost) return false
@@ -125,6 +140,8 @@ class MatchSession(
     }
 
     private fun start(command: MatchCommand.Start): MatchSnapshot {
+        selectedAmmunition[Team.BLUE] = AmmunitionType.ROCK
+        selectedAmmunition[Team.RED] = AmmunitionType.ROCK
         simulation = DeterministicMatchSimulation(
             matchId = command.matchId,
             config = SimulationConfig(
@@ -136,6 +153,7 @@ class MatchSession(
                 windAccelerationX = initialWind.direction * initialWind.strength,
                 blueFortressMaxHealth = blueFortressMaxHealth,
                 mapDefinition = mapDefinition,
+                playerLoadout = scenario?.playerLoadout,
             ),
             combatLogSink = combatLogSink,
             ammunitionLogSink = ammunitionLogSink,
@@ -151,5 +169,42 @@ class MatchSession(
         }
 
     private fun teamForPlayer(playerId: com.urkaaaz.contracts.PlayerId): Team =
-        if (playerId.value.contains("ai", ignoreCase = true)) Team.RED else Team.BLUE
+        scenario?.players?.firstOrNull { it.playerId == playerId }?.team
+            ?: if (playerId.value.contains("ai", ignoreCase = true)) Team.RED else Team.BLUE
+
+    private fun enforceUnitSelection(
+        playerId: com.urkaaaz.contracts.PlayerId,
+        unitType: String,
+    ) {
+        val matchScenario = scenario ?: return
+        if (teamForPlayer(playerId) != Team.BLUE) return
+        if (matchScenario.availableUnits.isNotEmpty() &&
+            unitType !in matchScenario.availableUnits
+        ) {
+            throw LoadoutCommandRejectedException(LoadoutError.UNIT_UNAVAILABLE)
+        }
+        val loadout = matchScenario.playerLoadout
+        if (loadout?.playerId == playerId && unitType !in loadout.unitTypes) {
+            throw LoadoutCommandRejectedException(LoadoutError.UNIT_UNAVAILABLE)
+        }
+    }
+
+    private fun enforceAmmunitionSelection(
+        playerId: com.urkaaaz.contracts.PlayerId,
+        ammunitionType: String,
+    ) {
+        val matchScenario = scenario ?: return
+        if (teamForPlayer(playerId) != Team.BLUE) return
+        if (matchScenario.availableAmmunition.isNotEmpty() &&
+            ammunitionType !in matchScenario.availableAmmunition
+        ) {
+            throw LoadoutCommandRejectedException(LoadoutError.AMMUNITION_UNAVAILABLE)
+        }
+        val loadout = matchScenario.playerLoadout
+        if (loadout?.playerId == playerId &&
+            ammunitionType !in loadout.ammunitionSlots.filterNotNull()
+        ) {
+            throw LoadoutCommandRejectedException(LoadoutError.AMMUNITION_UNAVAILABLE)
+        }
+    }
 }

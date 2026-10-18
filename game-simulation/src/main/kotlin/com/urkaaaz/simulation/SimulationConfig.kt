@@ -1,6 +1,7 @@
 package com.urkaaaz.simulation
 
 import com.urkaaaz.contracts.MapDefinition
+import com.urkaaaz.contracts.PlayerLoadoutConfig
 import com.urkaaaz.contracts.WorldScale
 import com.urkaaaz.domain.WorldBounds
 
@@ -19,6 +20,7 @@ data class SimulationConfig(
     val startingLimitedAmmunition: Int = 3,
     val matchDurationMilliseconds: Long = 300_000L,
     val mapDefinition: MapDefinition? = null,
+    val playerLoadout: PlayerLoadoutConfig? = null,
 ) {
     init {
         require(gravityAccelerationY >= 0f) { "gravity must not be negative" }

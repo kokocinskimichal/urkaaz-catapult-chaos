@@ -58,6 +58,49 @@ class ContractsTest {
     }
 
     @Test
+    fun playerLoadoutIsValidatedAndSeparateFromScenarioAvailability() {
+        val loadout = PlayerLoadoutConfig(
+            playerId = playerId,
+            unitTypes = listOf("DEFENDER"),
+            ammunitionSlots = listOf("ROCK", "SIEGE_BOMB", null),
+            spellTypes = listOf("FORTRESS_SHIELD"),
+        )
+        val scenario = MatchScenario(
+            scenarioId = "loadout",
+            battlefield = BattlefieldConfig(width = 100, height = 100),
+            players = listOf(PlayerConfig(playerId, Team.BLUE)),
+            availableUnits = listOf("DEFENDER", "SAPPER"),
+            availableAmmunition = listOf("ROCK", "SIEGE_BOMB"),
+            availableSpells = listOf("FORTRESS_SHIELD", "HASTE"),
+            playerLoadout = loadout,
+        )
+
+        assertEquals(listOf("DEFENDER", "SAPPER"), scenario.availableUnits)
+        assertEquals(listOf("DEFENDER"), scenario.playerLoadout?.unitTypes)
+        assertEquals(listOf("FORTRESS_SHIELD"), scenario.playerLoadout?.spellTypes)
+    }
+
+    @Test
+    fun playerLoadoutRejectsInvalidSlotsAndDuplicateSelections() {
+        assertFailsWith<IllegalArgumentException> {
+            PlayerLoadoutConfig(
+                playerId = playerId,
+                unitTypes = listOf("DEFENDER", "DEFENDER"),
+                ammunitionSlots = listOf("SIEGE_BOMB", "ROCK", null),
+                spellTypes = listOf("FORTRESS_SHIELD"),
+            )
+        }
+        assertFailsWith<IllegalArgumentException> {
+            PlayerLoadoutConfig(
+                playerId = playerId,
+                unitTypes = listOf("DEFENDER"),
+                ammunitionSlots = listOf("ROCK", "SIEGE_BOMB"),
+                spellTypes = listOf("FORTRESS_SHIELD"),
+            )
+        }
+    }
+
+    @Test
     fun finishedSnapshotRequiresOutcome() {
         assertFailsWith<IllegalArgumentException> {
             MatchSnapshot(status = MatchStatus.FINISHED)

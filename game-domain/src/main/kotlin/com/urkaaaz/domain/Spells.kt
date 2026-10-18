@@ -27,25 +27,3 @@ enum class SpellType(
     SIEGE_FRENZY(1_200, SpellCategory.OFFENSIVE, true),
     BERSERKER(2_000, SpellCategory.OFFENSIVE, true),
 }
-
-/** A validated set of spells available to one player during a match. */
-data class SpellLoadout(
-    val spells: Set<SpellType>,
-) {
-    init {
-        require(spells.size <= MAX_SPELLS) {
-            "a spell loadout may contain at most $MAX_SPELLS spells"
-        }
-    }
-
-    companion object {
-        const val MAX_SPELLS = 3
-        val default = SpellLoadout(
-            setOf(
-                SpellType.FORTRESS_SHIELD,
-                SpellType.ICE_TRAP,
-                SpellType.HASTE,
-            ),
-        )
-    }
-}

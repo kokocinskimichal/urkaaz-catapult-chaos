@@ -25,6 +25,11 @@
 
 ## 2026-10-18
 
+### Added
+
+- Added a versioned local progression profile and per-level loadout storage;
+  campaign matches start only after the loadout is validated and saved.
+
 ### Changed
 
 - Restored FIRE_RAIN's standard launch speed multiplier of 8 and reduced its
@@ -36,6 +41,9 @@
 
 ### Fixed
 
+- Campaign ammunition selection now lists only level-available ammunition
+  equipped in the committed loadout, preventing rejected selections from
+  crashing the match screen.
 - FIRE_RAIN fire-field playback no longer loops through its extinguishing
   frames, avoiding a visible burnout and relight during the burn.
 - ROCK impact frames remain at flight size until the rock breaks apart, then

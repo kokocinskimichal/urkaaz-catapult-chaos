@@ -1,11 +1,43 @@
 package com.urkaaaz
 
+import com.urkaaaz.contracts.PlayerId
+import com.urkaaaz.contracts.PlayerLoadoutConfig
 import com.urkaaaz.ui.MatchUiAction
 import com.urkaaaz.ui.MatchViewModel
+import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class MatchViewModelCombatTest {
+    @Test
+    fun campaignMatchUsesCommittedLoadoutPlayerIdByDefault() {
+        val loadout = PlayerLoadoutConfig(
+            playerId = PlayerId("player"),
+            unitTypes = listOf("DEFENDER"),
+            ammunitionSlots = listOf("ROCK", null, null),
+            spellTypes = listOf("FORTRESS_SHIELD"),
+        )
+
+        val viewModel = MatchViewModel(campaignLevel = 1, playerLoadout = loadout)
+
+        assertNotNull(viewModel.renderState)
+    }
+
+    @Test
+    fun campaignMatchOnlyOffersAmmunitionFromTheCommittedLoadout() {
+        val loadout = PlayerLoadoutConfig(
+            playerId = PlayerId("player"),
+            unitTypes = listOf("DEFENDER"),
+            ammunitionSlots = listOf("ROCK", null, null),
+            spellTypes = listOf("FORTRESS_SHIELD"),
+        )
+
+        val viewModel = MatchViewModel(campaignLevel = 1, playerLoadout = loadout)
+
+        assertEquals(setOf("ROCK"), viewModel.selectableAmmunitionTypes)
+    }
+
     @Test
     fun defenderHealthChangesThroughTheAndroidMatchPipeline() {
         val viewModel = MatchViewModel(demoMode = true)

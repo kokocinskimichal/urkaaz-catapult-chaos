@@ -1,6 +1,7 @@
 package com.urkaaaz.campaign
 
 import com.urkaaaz.contracts.PlayerId
+import com.urkaaaz.contracts.PlayerLoadoutConfig
 import com.urkaaaz.domain.AmmunitionType
 import com.urkaaaz.domain.SpellType
 import com.urkaaaz.domain.UnitFactory
@@ -71,8 +72,30 @@ class CampaignLevelDefinitionTest {
         assertEquals("campaign-6", scenario.scenarioId)
         assertEquals(2, scenario.players.size)
         assertEquals("blue-player", scenario.players.first().playerId.value)
+        assertTrue("DEFENDER" in scenario.availableUnits)
+        assertTrue(scenario.initialUnits.isEmpty())
         assertTrue("SIEGE_BOMB" in scenario.availableAmmunition)
         assertTrue(scenario.initialResources.ammunition.isNotEmpty())
-        assertEquals("DEFENDER", scenario.initialUnits.first().unitType)
+    }
+
+    @Test
+    fun scenarioKeepsPlayerSelectionSeparateFromLevelAvailability() {
+        val level = CampaignLevelDefinition.forLevel(8)
+        val selected = PlayerLoadoutConfig(
+            playerId = PlayerId("blue-player"),
+            unitTypes = listOf("DEFENDER"),
+            ammunitionSlots = listOf("ROCK", "SIEGE_BOMB", null),
+            spellTypes = listOf("HASTE"),
+        )
+
+        val scenario = level.toMatchScenario(
+            playerId = PlayerId("blue-player"),
+            opponentId = PlayerId("red-player"),
+            playerLoadout = selected,
+        )
+
+        assertEquals(listOf("DEFENDER", "DEMOLISHER", "SAPPER"), scenario.availableUnits)
+        assertEquals(listOf("DEFENDER"), scenario.playerLoadout?.unitTypes)
+        assertEquals(listOf("HASTE"), scenario.playerLoadout?.spellTypes)
     }
 }

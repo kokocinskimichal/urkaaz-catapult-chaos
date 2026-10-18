@@ -7,9 +7,17 @@ import com.urkaaaz.contracts.MatchStatus
 import com.urkaaaz.contracts.PlayerId
 import com.urkaaaz.contracts.EntityId
 import com.urkaaaz.contracts.WindSnapshot
+import com.urkaaaz.contracts.BattlefieldConfig
+import com.urkaaaz.contracts.MatchScenario
+import com.urkaaaz.contracts.PlayerConfig
+import com.urkaaaz.contracts.PlayerLoadoutConfig
+import com.urkaaaz.contracts.Team
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFailsWith
 import kotlin.test.assertTrue
+import com.urkaaaz.application.loadout.LoadoutCommandRejectedException
+import com.urkaaaz.application.loadout.LoadoutError
 
 class MatchSessionTest {
     @Test
@@ -173,5 +181,130 @@ class MatchSessionTest {
 
         assertTrue(after.units.single().moving)
         assertTrue(advanced.units.single().x > before.units.single().x)
+    }
+
+    @Test
+    fun matchScenarioRejectsAvailableButUnselectedUnitWithoutSpendingSupply() {
+        val playerId = PlayerId("player")
+        val scenario = MatchScenario(
+            scenarioId = "loadout-match",
+            battlefield = BattlefieldConfig(100, 100),
+            players = listOf(
+                PlayerConfig(playerId, Team.BLUE),
+                PlayerConfig(PlayerId("local-ai"), Team.RED),
+            ),
+            availableUnits = listOf("DEFENDER", "SAPPER"),
+            availableAmmunition = listOf("ROCK", "SIEGE_BOMB"),
+            playerLoadout = PlayerLoadoutConfig(
+                playerId = playerId,
+                unitTypes = listOf("DEFENDER"),
+                ammunitionSlots = listOf("ROCK", "SIEGE_BOMB", null),
+                spellTypes = listOf("FORTRESS_SHIELD"),
+            ),
+        )
+        val session = MatchSession(scenario = scenario)
+        session.dispatch(MatchCommand.Start(CommandId("start-loadout"), MatchId("m"), playerId))
+        val supplyBefore = session.snapshot().resourcesByTeam[Team.BLUE]?.supply
+
+        assertFailsWith<LoadoutCommandRejectedException> {
+            session.dispatch(
+                MatchCommand.DeployUnit(
+                    CommandId("deploy-unselected"),
+                    MatchId("m"),
+                    playerId,
+                    "SAPPER",
+                ),
+            )
+        }.also { assertEquals(LoadoutError.UNIT_UNAVAILABLE, it.error) }
+        assertEquals(supplyBefore, session.snapshot().resourcesByTeam[Team.BLUE]?.supply)
+        assertTrue(session.canDeployUnit(Team.BLUE, "DEFENDER"))
+        assertTrue(!session.canDeployUnit(Team.BLUE, "SAPPER"))
+    }
+
+    @Test
+    fun matchScenarioRejectsAvailableButUnselectedAmmunition() {
+        val playerId = PlayerId("player")
+        val scenario = MatchScenario(
+            scenarioId = "loadout-ammo",
+            battlefield = BattlefieldConfig(100, 100),
+            players = listOf(
+                PlayerConfig(playerId, Team.BLUE),
+                PlayerConfig(PlayerId("local-ai"), Team.RED),
+            ),
+            availableUnits = listOf("DEFENDER"),
+            availableAmmunition = listOf("ROCK", "SIEGE_BOMB", "POWDER_BARREL"),
+            playerLoadout = PlayerLoadoutConfig(
+                playerId = playerId,
+                unitTypes = listOf("DEFENDER"),
+                ammunitionSlots = listOf("ROCK", "SIEGE_BOMB", null),
+                spellTypes = listOf("FORTRESS_SHIELD"),
+            ),
+        )
+        val session = MatchSession(scenario = scenario)
+        session.dispatch(MatchCommand.Start(CommandId("start-loadout-ammo"), MatchId("m"), playerId))
+
+        assertFailsWith<LoadoutCommandRejectedException> {
+            session.dispatch(
+                MatchCommand.SelectAmmo(
+                    CommandId("select-unselected"),
+                    MatchId("m"),
+                    playerId,
+                    "POWDER_BARREL",
+                ),
+            )
+        }.also { assertEquals(LoadoutError.AMMUNITION_UNAVAILABLE, it.error) }
+    }
+
+    @Test
+    fun restartRetainsTheCommittedLoadoutAndResetsSelectedAmmunition() {
+        val playerId = PlayerId("player")
+        val matchId = MatchId("restart-loadout")
+        val scenario = MatchScenario(
+            scenarioId = "restart-loadout",
+            battlefield = BattlefieldConfig(100, 100),
+            players = listOf(
+                PlayerConfig(playerId, Team.BLUE),
+                PlayerConfig(PlayerId("local-ai"), Team.RED),
+            ),
+            availableUnits = listOf("DEFENDER", "SAPPER"),
+            availableAmmunition = listOf("ROCK", "SIEGE_BOMB"),
+            playerLoadout = PlayerLoadoutConfig(
+                playerId = playerId,
+                unitTypes = listOf("DEFENDER"),
+                ammunitionSlots = listOf("ROCK", "SIEGE_BOMB", null),
+                spellTypes = listOf("FORTRESS_SHIELD"),
+            ),
+        )
+        val session = MatchSession(scenario = scenario)
+        session.dispatch(MatchCommand.Start(CommandId("start-restart-loadout"), matchId, playerId))
+        session.dispatch(
+            MatchCommand.SelectAmmo(
+                CommandId("select-before-restart"),
+                matchId,
+                playerId,
+                "SIEGE_BOMB",
+            ),
+        )
+
+        session.restart(matchId, playerId)
+        assertFailsWith<LoadoutCommandRejectedException> {
+            session.dispatch(
+                MatchCommand.DeployUnit(
+                    CommandId("deploy-after-restart"),
+                    matchId,
+                    playerId,
+                    "SAPPER",
+                ),
+            )
+        }
+        val fired = session.dispatch(
+            MatchCommand.Fire(
+                CommandId("fire-after-restart"),
+                matchId,
+                playerId,
+                EntityId("blue-catapult"),
+            ),
+        )
+        assertEquals("ROCK", fired.projectiles.single().ammunitionType)
     }
 }

@@ -14,6 +14,8 @@ import com.urkaaaz.contracts.MatchCommand
 import com.urkaaaz.contracts.MatchId
 import com.urkaaaz.contracts.MatchSnapshot
 import com.urkaaaz.contracts.PlayerId
+import com.urkaaaz.contracts.PlayerLoadoutConfig
+import com.urkaaaz.contracts.MatchScenario
 import com.urkaaaz.contracts.TerrainBiome
 import com.urkaaaz.simulation.CombatLogSink
 import com.urkaaaz.simulation.NoOpCombatLogSink
@@ -29,20 +31,46 @@ import com.urkaaaz.simulation.NoOpAmmunitionLogSink
 class MatchViewModel(
     campaignLevel: Int = 1,
     demoMode: Boolean = false,
+    playerLoadout: PlayerLoadoutConfig? = null,
     mapRepository: MapDefinitionRepository = MapDefinitionRepository.bundled,
     private val combatLogSink: CombatLogSink = NoOpCombatLogSink,
     private val ammunitionLogSink: AmmunitionLogSink = NoOpAmmunitionLogSink,
+    private val matchId: MatchId = MatchId("local-match"),
+    private val playerId: PlayerId = playerLoadout?.playerId ?: PlayerId("local-player"),
     private val gateway: LocalMatchGateway = LocalMatchGateway(
         loadSelectedDefinition(campaignLevel, demoMode, mapRepository).biome.name,
         loadSelectedDefinition(campaignLevel, demoMode, mapRepository).initialWind,
         mapDefinition = loadSelectedDefinition(campaignLevel, demoMode, mapRepository).mapDefinition,
+        scenario = loadSelectedScenario(
+            campaignLevel,
+            demoMode,
+            mapRepository,
+            playerLoadout,
+            playerId,
+        ),
         blueFortressMaxHealth = if (demoMode) DEMO_BLUE_FORTRESS_MAX_HEALTH else DEFAULT_FORTRESS_MAX_HEALTH,
         combatLogSink = combatLogSink,
         ammunitionLogSink = ammunitionLogSink,
     ),
-    private val matchId: MatchId = MatchId("local-match"),
-    private val playerId: PlayerId = PlayerId("local-player"),
 ) {
+    val selectableAmmunitionTypes: Set<String>? = loadSelectedScenario(
+        campaignLevel,
+        demoMode,
+        mapRepository,
+        playerLoadout,
+        playerId,
+    )?.let { scenario ->
+        playerLoadout?.ammunitionSlots
+            ?.filterNotNull()
+            ?.toSet()
+            ?.let { selectedTypes ->
+                scenario.availableAmmunition.filterTo(mutableSetOf()) {
+                    it in selectedTypes
+                }
+            }
+            ?: scenario.availableAmmunition.toSet()
+    }
+
     private var commandSequence = 0
     private var matchGeneration = 0L
     private var paused = false
@@ -274,3 +302,18 @@ private fun loadSelectedDefinition(
             initialWind = campaign.initialWind,
         )
     }
+
+private fun loadSelectedScenario(
+    campaignLevel: Int,
+    demoMode: Boolean,
+    repository: MapDefinitionRepository,
+    playerLoadout: PlayerLoadoutConfig?,
+    playerId: PlayerId,
+): MatchScenario? {
+    if (demoMode) return null
+    return CampaignLevelDefinition.forLevel(campaignLevel, repository).toMatchScenario(
+        playerId = playerId,
+        opponentId = PlayerId("local-ai"),
+        playerLoadout = playerLoadout,
+    )
+}

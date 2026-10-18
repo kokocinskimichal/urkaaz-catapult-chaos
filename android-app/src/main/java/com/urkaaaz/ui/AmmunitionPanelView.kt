@@ -19,10 +19,17 @@ import com.urkaaaz.android.R
  * with the available ammunition types. Selection remains an Android UI action;
  * the match view model owns the gameplay command.
  */
-class AmmunitionPanelView(context: Context) : FrameLayout(context) {
+class AmmunitionPanelView(
+    context: Context,
+    availableAmmunitionTypes: Set<String>? = null,
+) : FrameLayout(context) {
     private var selectedAmmo = ROCK
     private var latestState = RenderStateMapper.map(com.urkaaaz.contracts.MatchSnapshot())
     private val selectorButton = ImageButton(context)
+    private val selectableAmmunitionTypes =
+        ALL_AMMUNITION_TYPES.filter {
+            availableAmmunitionTypes == null || it in availableAmmunitionTypes
+        }
 
     var onAmmoSelected: ((String) -> Unit)? = null
 
@@ -68,7 +75,7 @@ class AmmunitionPanelView(context: Context) : FrameLayout(context) {
         }
         lateinit var popup: PopupWindow
         val columns = 4
-        ammunitionTypes.forEachIndexed { index, ammunitionType ->
+        selectableAmmunitionTypes.forEachIndexed { index, ammunitionType ->
             if (index % columns == 0) {
                 content.addView(LinearLayout(context).apply {
                     orientation = LinearLayout.HORIZONTAL
@@ -99,7 +106,7 @@ class AmmunitionPanelView(context: Context) : FrameLayout(context) {
             })
         }
 
-        val rows = (ammunitionTypes.size + columns - 1) / columns
+        val rows = (selectableAmmunitionTypes.size + columns - 1) / columns
         popup = PopupWindow(
             content,
             dp(64 * columns + 8),
@@ -141,7 +148,7 @@ class AmmunitionPanelView(context: Context) : FrameLayout(context) {
 
     private companion object {
         const val ROCK = "ROCK"
-        val ammunitionTypes = listOf(
+        val ALL_AMMUNITION_TYPES = listOf(
             "ROCK",
             "SIEGE_BOMB",
             "POWDER_BARREL",

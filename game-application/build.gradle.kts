@@ -11,4 +11,5 @@ dependencies {
     implementation(project(":game-domain"))
     implementation(project(":game-simulation"))
     testImplementation(kotlin("test"))
+    testImplementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.9.0")
 }

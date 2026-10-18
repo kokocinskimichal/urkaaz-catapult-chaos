@@ -1,14 +1,13 @@
 package com.urkaaaz.campaign
 
 import com.urkaaaz.contracts.BattlefieldConfig
-import com.urkaaaz.contracts.EntityId
 import com.urkaaaz.contracts.MatchScenario
 import com.urkaaaz.contracts.MapDefinition
 import com.urkaaaz.contracts.PlayerConfig
 import com.urkaaaz.contracts.PlayerId
+import com.urkaaaz.contracts.PlayerLoadoutConfig
 import com.urkaaaz.contracts.ResourceSnapshot
 import com.urkaaaz.contracts.Team
-import com.urkaaaz.contracts.UnitConfig
 import com.urkaaaz.contracts.VictoryRulesConfig
 import com.urkaaaz.contracts.WindSnapshot
 import com.urkaaaz.contracts.WorldDimensions
@@ -73,6 +72,7 @@ data class CampaignLevelDefinition(
     fun toMatchScenario(
         playerId: PlayerId = PlayerId("player"),
         opponentId: PlayerId = PlayerId("opponent"),
+        playerLoadout: PlayerLoadoutConfig? = null,
     ): MatchScenario = MatchScenario(
         scenarioId = "campaign-$level",
         battlefield = BattlefieldConfig(
@@ -86,15 +86,10 @@ data class CampaignLevelDefinition(
         initialResources = ResourceSnapshot(
             ammunition = availableAmmunition.associate { it.name to startingAmmunition },
         ),
+        availableUnits = availableUnits.map { it.id }.sorted(),
         availableAmmunition = availableAmmunition.map { it.name }.sorted(),
         availableSpells = availableSpells.map { it.name }.sorted(),
-        initialUnits = availableUnits.map {
-            UnitConfig(
-                entityId = EntityId("level-$level-${it.id.lowercase()}"),
-                unitType = it.id,
-                team = Team.BLUE,
-            )
-        }.sortedBy { it.unitType },
+        playerLoadout = playerLoadout,
         wind = initialWind,
         victoryRules = VictoryRulesConfig(defeatAllOpponents = true),
         mapDefinition = mapDefinition,

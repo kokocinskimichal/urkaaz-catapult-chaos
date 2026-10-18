@@ -78,14 +78,18 @@ snapshotów i eventów zamiast mutować bezpośrednio stan innych podsystemów.
 
 ## Ograniczenia i niedokończone obszary
 
-- `LoadoutScreen`, `ShopScreen` i `ResultScreen` pozostają placeholderami.
+- `LoadoutScreen` asynchronicznie odczytuje, waliduje i zapisuje domyślny
+  loadout; interaktywne edytory nadal nie są gotowe. `ShopScreen` i
+  `ResultScreen` pozostają placeholderami.
 - Dashboard i campaign mają działającą nawigację, ale nie pełną funkcjonalność
   produkcyjnej progresji.
 - Wszystkie 100 poziomów kampanii jest tymczasowo odblokowane dla emulatora;
   brak trwałego repozytorium progresji i produkcyjnych reguł unlock.
 - Wynik meczu jest uproszczonym overlayem; brakuje pełnego panelu nagród,
   zapisu ukończenia, następnego poziomu, złota i żyć.
-- Brak pełnego loadoutu jednostek, zaklęć i amunicji przed poziomem.
+- Lokalny profil i zatwierdzony loadout są zapisywane przez DataStore, ale
+  brakuje interaktywnych edytorów loadoutu, zakupów i rozliczania stocku po
+  meczu.
 - Brak pełnego systemu many, zaklęć, tutoriala, bossów, centralnego celu i
   wszystkich legacy widgetów HUD.
 - Brak pełnej zgodności legacy dla wszystkich mechanik, garrisonu i fal,
@@ -98,11 +102,13 @@ snapshotów i eventów zamiast mutować bezpośrednio stan innych podsystemów.
 
 ## Jawnie odroczone decyzje
 
-1. Produkcyjny model persystencji kampanii, odblokowań, złota i żyć.
+1. Produkcyjna persystencja postępu kampanii i żyć oraz przepływy nagród,
+   zakupów i aktualizacji złota/stocku.
 2. Docelowa technologia nawigacji: obecny `AppNavigator` versus Android
    Navigation/Compose.
 3. Zakres i właściciel przyszłego backendu/network play.
-4. Pełna migracja tutoriala, sklepu, loadoutu, zaklęć, bossów i wyników.
+4. Interaktywna edycja loadoutu oraz pełna migracja tutoriala, sklepu,
+   zaklęć, bossów i wyników.
 5. Zakres zgodności wizualnej i regresyjnej ze starą aplikacją poza obecnym
    deterministycznym wycinkiem M11.
 6. Finalna polityka assetów/audio dla elementów, których status lub źródło

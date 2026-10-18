@@ -4,6 +4,7 @@ import com.urkaaaz.contracts.MatchCommand
 import com.urkaaaz.contracts.MatchEvent
 import com.urkaaaz.contracts.MatchSnapshot
 import com.urkaaaz.contracts.MapDefinition
+import com.urkaaaz.contracts.MatchScenario
 import com.urkaaaz.contracts.WindSnapshot
 import com.urkaaaz.simulation.CombatLogSink
 import com.urkaaaz.simulation.NoOpCombatLogSink
@@ -15,6 +16,7 @@ class LocalMatchGateway(
     terrainBiome: String = "GREEN_FRONTIER",
     initialWind: WindSnapshot = WindSnapshot(),
     mapDefinition: MapDefinition? = null,
+    scenario: MatchScenario? = null,
     blueFortressMaxHealth: Int = 500,
     combatLogSink: CombatLogSink = NoOpCombatLogSink,
     ammunitionLogSink: AmmunitionLogSink = NoOpAmmunitionLogSink,
@@ -22,6 +24,7 @@ class LocalMatchGateway(
         terrainBiome = terrainBiome,
         initialWind = initialWind,
         mapDefinition = mapDefinition,
+        scenario = scenario,
         blueFortressMaxHealth = blueFortressMaxHealth,
         combatLogSink = combatLogSink,
         ammunitionLogSink = ammunitionLogSink,

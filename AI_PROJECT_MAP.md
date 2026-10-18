@@ -17,7 +17,7 @@ Android jest nazywana **match screen**, a wybrana definicja kampanii —
 | `game-contracts` | stabilne, niemutowalne kontrakty komunikacji | komendy, snapshoty, eventy, scenariusze, identyfikatory |
 | `game-domain` | reguły i stan domeny gry | `Match`, fortece, jednostki, amunicja, obrażenia, konfiguracje |
 | `game-simulation` | deterministyczne wykonywanie meczu | ticki, pociski, kolizje, teren, wiatr, jednostki, eventy |
-| `game-application` | cykl życia i lokalny gateway meczu | `MatchSession`, `LocalMatchGateway` |
+| `game-application` | cykl życia meczu, lokalny gateway i przypadki użycia loadoutu | `MatchSession`, `LocalMatchGateway`, `application.loadout` |
 | `game-campaign` | definicje poziomów i konfiguracja kampanii | `CampaignLevelDefinition`, biom, wiatr, scenariusz |
 | `game-ai` | decyzje AI na podstawie snapshotu | `AiAgent`, rekrutacja, dobór kontr, wysyłanie fal |
 | `android-app` | lifecycle, nawigacja, input i renderowanie | `MainActivity`, ekrany, ViewModel, HUD, battlefield |
@@ -60,15 +60,19 @@ przez komendy i granice domeny/aplikacji.
 
 ## Cykl życia meczu
 
-1. `CampaignScreen` wybiera typowany `CampaignLevelDefinition`.
-2. `MatchScreen` przekazuje campaign level do `MatchViewModel`.
-3. `LocalMatchGateway` tworzy `MatchSession` z konfiguracją poziomu, w tym
-   wiatrem i scenariuszem.
-4. `MatchSession` uruchamia i aktualizuje deterministyczną symulację.
-5. Snapshot jest mapowany na niemutowalny stan prezentacji.
-6. Ekran meczu obsługuje lifecycle, pauzę, restart, celowanie, amunicję,
+1. `CampaignScreen` przekazuje numer wybranego poziomu do `LoadoutScreen`.
+2. `LoadoutScreen` asynchronicznie odczytuje profil i zapis per-level przez
+   `LoadoutUseCases`; błędy lub nieprawidłowe dane blokują start.
+3. Po świeżej walidacji i zapisie `PlayerLoadoutConfig` przechodzi do
+   `MatchScreen` i scenariusza kampanii.
+4. `LocalMatchGateway` tworzy `MatchSession` z konfiguracją poziomu i
+   opcjonalnym scenariuszem, w tym wiatrem i loadoutem.
+5. `MatchSession` odrzuca niedostępne/niewybrane jednostki i amunicję gracza,
+   a następnie uruchamia i aktualizuje deterministyczną symulację.
+6. Snapshot jest mapowany na niemutowalny stan prezentacji.
+7. Ekran meczu obsługuje lifecycle, pauzę, restart, celowanie, amunicję,
    jednostki, HUD i debug overlay.
-7. Wynik meczu jest prezentowany przez istniejący uproszczony overlay; pełny
+8. Wynik meczu jest prezentowany przez istniejący uproszczony overlay; pełny
    ekran wyniku i zapis progresji pozostają niedokończone.
 
 ## Android i nawigacja
@@ -85,7 +89,7 @@ Dostępne ekrany:
 - `StartScreen` — styl startowego menu;
 - `DashboardScreen` — dashboard;
 - `CampaignScreen` — wybór poziomu kampanii;
-- `LoadoutScreen` — placeholder;
+- `LoadoutScreen` — pokazuje dostępność, draft i stan walidacji/zapisu;
 - `ShopScreen` — placeholder;
 - `MatchScreen` — działający ekran meczu;
 - `ResultScreen` — placeholder.
@@ -158,5 +162,9 @@ wiatru; Android wyłącznie renderuje bieżący snapshot.
 | `android-app/src/main/java/com/urkaaaz/ui/RenderStateMapper.kt` | snapshot → render state |
 | `game-application/src/main/kotlin/com/urkaaaz/application/MatchSession.kt` | sesja meczu |
 | `game-application/src/main/kotlin/com/urkaaaz/application/LocalMatchGateway.kt` | lokalny gateway |
+| `game-application/src/main/kotlin/com/urkaaaz/application/loadout/` | loadout, walidacja i jawne porty progresji/zapisu |
+| `game-application/src/main/kotlin/com/urkaaaz/application/progression/PlayerProgressionUseCases.kt` | inicjalizacja i walidacja snapshotu profilu |
+| `android-app/src/main/java/com/urkaaaz/persistence/DataStorePlayerProgressionRepository.kt` | wersjonowany adapter profilu |
+| `android-app/src/main/java/com/urkaaaz/persistence/DataStoreLoadoutRepository.kt` | wersjonowany adapter loadoutu |
 | `game-simulation/src/main/kotlin/com/urkaaaz/simulation/DeterministicMatchSimulation.kt` | wykonanie symulacji |
 | `game-contracts/src/main/kotlin/com/urkaaaz/contracts/MatchSnapshot.kt` | read model |

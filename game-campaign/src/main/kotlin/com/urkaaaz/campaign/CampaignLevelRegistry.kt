@@ -3,6 +3,7 @@ package com.urkaaaz.campaign
 import com.urkaaaz.contracts.MapDefinition
 import com.urkaaaz.contracts.MatchScenario
 import com.urkaaaz.contracts.PlayerId
+import com.urkaaaz.contracts.PlayerLoadoutConfig
 
 class CampaignLevelRegistry(
     private val levels: Map<Int, CampaignLevelDefinition> =
@@ -17,7 +18,9 @@ class CampaignLevelRegistry(
         levelNumber: Int,
         playerId: PlayerId = PlayerId("player"),
         opponentId: PlayerId = PlayerId("opponent"),
-    ): MatchScenario = level(levelNumber).toMatchScenario(playerId, opponentId)
+        playerLoadout: PlayerLoadoutConfig? = null,
+    ): MatchScenario =
+        level(levelNumber).toMatchScenario(playerId, opponentId, playerLoadout)
 
     fun contains(levelNumber: Int): Boolean = levelNumber in levels
 

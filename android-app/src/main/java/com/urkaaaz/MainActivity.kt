@@ -6,9 +6,14 @@ import androidx.activity.OnBackPressedCallback
 import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.WindowInsetsControllerCompat
+import com.urkaaaz.application.loadout.LoadoutUseCases
+import com.urkaaaz.application.progression.PlayerProgressionUseCases
 import com.urkaaaz.navigation.AppNavigator
 import com.urkaaaz.navigation.AppScreen
 import com.urkaaaz.navigation.ScreenHost
+import com.urkaaaz.persistence.DataStoreLoadoutRepository
+import com.urkaaaz.persistence.DataStorePlayerProgressionRepository
+import com.urkaaaz.persistence.urkaazPreferencesDataStore
 import com.urkaaaz.screens.campaign.CampaignScreen
 import com.urkaaaz.screens.dashboard.DashboardScreen
 import com.urkaaaz.screens.loadout.LoadoutScreen
@@ -21,6 +26,15 @@ class MainActivity : ComponentActivity() {
     private lateinit var screenHost: ScreenHost
     private lateinit var navigator: AppNavigator
     private var activityResumed = false
+    private val loadoutUseCases by lazy {
+        val dataStore = applicationContext.urkaazPreferencesDataStore
+        LoadoutUseCases(
+            progression = PlayerProgressionUseCases(
+                DataStorePlayerProgressionRepository(dataStore),
+            ),
+            repository = DataStoreLoadoutRepository(dataStore),
+        )
+    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -77,18 +91,30 @@ class MainActivity : ComponentActivity() {
                 onBack = { navigator.back() },
                 onLevelSelected = { level ->
                     navigator.navigate(
+                        AppScreen.Loadout(campaignLevel = level),
+                    )
+                },
+            )
+            is AppScreen.Loadout -> LoadoutScreen(
+                context = this,
+                campaignLevel = screen.campaignLevel,
+                loadoutUseCases = loadoutUseCases,
+                onBack = { navigator.back() },
+                onStart = { playerLoadout ->
+                    navigator.replace(
                         AppScreen.Match(
-                            levelId = "LEVEL_$level",
-                            campaignLevel = level,
+                            levelId = "LEVEL_${screen.campaignLevel}",
+                            campaignLevel = screen.campaignLevel,
+                            playerLoadout = playerLoadout,
                         ),
                     )
                 },
             )
-            AppScreen.Loadout -> LoadoutScreen(this)
             AppScreen.Shop -> ShopScreen(this)
             is AppScreen.Match -> MatchScreen(
                 activity = this,
                 campaignLevel = screen.campaignLevel,
+                playerLoadout = screen.playerLoadout,
                 demoMode = screen.levelId == "DEMO_LEVEL",
                 onBackClicked = {
                     if (!navigator.back()) {

@@ -46,7 +46,8 @@ Available screens:
 - `StartScreen` — legacy-style start menu;
 - `DashboardScreen` — legacy-style dashboard, wired to navigation;
 - `CampaignScreen` — legacy-style campaign level selector, wired to navigation;
-- `LoadoutScreen` — placeholder;
+- `LoadoutScreen` — reads and validates a saved draft, then starts a match
+  only after successful persistence; interactive editors remain incomplete;
 - `ShopScreen` — placeholder;
 - `MatchScreen` — working match screen;
 - `ResultScreen` — placeholder.
