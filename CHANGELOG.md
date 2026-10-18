@@ -2,8 +2,19 @@
 
 ## 2026-10-19
 
+### Added
+
+- Match sessions now capture a versioned, deterministic replay with its
+  explicit random seed, initial configuration, accepted commands and lifecycle
+  transitions; the replay can be run again in-process.
+
 ### Changed
 
+- Unit attacks and ammunition now use seeded damage variation clamped to
+  80%-120% of base damage. Lingering ammunition effects reuse their impact
+  roll for every tick.
+- Each unit receives a seeded delay of up to half its attack cooldown before
+  its first attack; subsequent attack timing is unchanged.
 - Reduced initial and maximum supply from 20 to 10 for both teams; supply
   continues to regenerate by one every three seconds.
 - Campaign `POWDER_BARREL` ammunition now unlocks at level 10.

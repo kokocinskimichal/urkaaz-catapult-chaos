@@ -23,7 +23,17 @@ data class UnitCombatState(
     val attackCycleId: Long = 0L,
     val attackProgress: Float = 0f,
     val attackCooldownRemainingSeconds: Float = 0f,
-)
+    val firstAttackDelayRemainingSeconds: Float? = null,
+) {
+    init {
+        require(
+            firstAttackDelayRemainingSeconds == null ||
+                firstAttackDelayRemainingSeconds >= 0f,
+        ) {
+            "first attack delay must not be negative"
+        }
+    }
+}
 
 data class AttackGroup(
     val id: AttackGroupId,

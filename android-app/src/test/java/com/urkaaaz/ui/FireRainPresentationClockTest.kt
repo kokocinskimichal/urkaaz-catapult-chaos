@@ -129,6 +129,7 @@ class FireRainPresentationClockTest {
             eventId = EventId("start-old"),
             matchId = MatchId("match"),
             simulationTimeMilliseconds = 0L,
+            randomSeed = 7L,
         )
         val stateBeforeRestart = state(
             projectileIds = listOf("container", "fragment-0"),

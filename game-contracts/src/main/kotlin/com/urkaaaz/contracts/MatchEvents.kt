@@ -9,6 +9,7 @@ sealed interface MatchEvent {
         override val eventId: EventId,
         override val matchId: MatchId,
         override val simulationTimeMilliseconds: Long,
+        val randomSeed: Long,
     ) : MatchEvent
 
     data class TurnChanged(

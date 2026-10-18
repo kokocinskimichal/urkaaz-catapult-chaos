@@ -5,6 +5,7 @@ import com.urkaaaz.campaign.DemoLevelDefinition
 import com.urkaaaz.campaign.DemoLevelDefinitions
 import com.urkaaaz.campaign.MapDefinitionRepository
 import com.urkaaaz.application.LocalMatchGateway
+import com.urkaaaz.application.MatchReplay
 import com.urkaaaz.ai.AiAgent
 import com.urkaaaz.ai.AiConfiguration
 import com.urkaaaz.ai.AiDifficulty
@@ -110,6 +111,8 @@ class MatchViewModel(
 
     fun aiAllowedAmmunitionIds(): Set<String> =
         aiAgent.allowedAmmunitionIds()
+
+    fun recordedReplay(): MatchReplay? = gateway.replay()
 
     fun setAiUnitAutomationEnabled(enabled: Boolean) {
         aiUnitAutomationEnabled = enabled

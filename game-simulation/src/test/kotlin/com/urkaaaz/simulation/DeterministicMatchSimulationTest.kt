@@ -18,6 +18,7 @@ import kotlin.math.abs
 import kotlin.test.Test
 import kotlin.test.assertFailsWith
 import kotlin.test.assertEquals
+import kotlin.test.assertNotEquals
 import kotlin.test.assertTrue
 
 class DeterministicMatchSimulationTest {
@@ -670,8 +671,8 @@ class DeterministicMatchSimulationTest {
             combatLogSink = CombatLogSink { records += it },
         )
         simulation.start()
-        simulation.deployUnit(com.urkaaaz.domain.UnitFactory.defender(), Team.BLUE)
-        simulation.deployUnit(com.urkaaaz.domain.UnitFactory.defender(), Team.RED)
+        simulation.deployUnit(durableDefender(), Team.BLUE)
+        simulation.deployUnit(durableDefender(), Team.RED)
         simulation.sendWave(Team.BLUE)
         simulation.sendWave(Team.RED)
 
@@ -826,13 +827,16 @@ class DeterministicMatchSimulationTest {
     }
 
     @Test
-    fun combatDamageIsSeededByMatchIdAndReplaysExactly() {
-        fun trace(): Pair<List<MatchEvent>, com.urkaaaz.contracts.MatchSnapshot> {
-            val simulation = DeterministicMatchSimulation(MatchId("seeded-combat"), config)
+    fun combatDamageIsSeededExplicitlyAndReplaysExactly() {
+        fun trace(seed: Long): Pair<List<MatchEvent>, com.urkaaaz.contracts.MatchSnapshot> {
+            val simulation = DeterministicMatchSimulation(
+                MatchId("seeded-combat"),
+                config.copy(combatRandomSeed = seed),
+            )
             val events = buildList {
                 addAll(simulation.start())
-                add(simulation.deployUnit(com.urkaaaz.domain.UnitFactory.defender(), Team.BLUE))
-                add(simulation.deployUnit(com.urkaaaz.domain.UnitFactory.defender(), Team.RED))
+                add(simulation.deployUnit(durableDefender(), Team.BLUE))
+                add(simulation.deployUnit(durableDefender(), Team.RED))
                 simulation.sendWave(Team.BLUE)
                 simulation.sendWave(Team.RED)
                 repeat(90) { addAll(simulation.advance(100)) }
@@ -840,7 +844,103 @@ class DeterministicMatchSimulationTest {
             return events to simulation.snapshot()
         }
 
-        assertEquals(trace(), trace())
+        val first = trace(713L)
+        assertEquals(first, trace(713L))
+        val differentSeed = trace(714L)
+        val firstRolls = first.first.filterIsInstance<MatchEvent.AttackHit>().map { it.rolledDamage }
+        val differentRolls = differentSeed.first
+            .filterIsInstance<MatchEvent.AttackHit>()
+            .map { it.rolledDamage }
+
+        assertTrue(firstRolls.isNotEmpty())
+        assertNotEquals(firstRolls, differentRolls)
+        first.first.filterIsInstance<MatchEvent.AttackHit>().forEach { hit ->
+            assertTrue(
+                hit.rolledDamage in
+                    (hit.baseDamage * 0.8f).toInt()..(hit.baseDamage * 1.2f).toInt(),
+                "rolled damage ${hit.rolledDamage} out of range for base ${hit.baseDamage}",
+            )
+        }
     }
 
+    @Test
+    fun firstAttackTimingVariesBySeedButLaterAttacksKeepTheUnitCooldown() {
+        fun attackStartTimes(seed: Long): List<Long> {
+            val simulation = DeterministicMatchSimulation(
+                MatchId("initiative-match"),
+                config.copy(
+                    bounds = WorldBounds(width = 1_000f, height = 600f),
+                    windAccelerationX = 0f,
+                    combatRandomSeed = seed,
+                ),
+            )
+            simulation.start()
+            simulation.deployUnit(com.urkaaaz.domain.UnitFactory.defender(), Team.BLUE)
+            simulation.sendWave(Team.BLUE)
+
+            return buildList {
+                repeat(1_500) {
+                    addAll(simulation.advance(10))
+                }
+            }.filterIsInstance<MatchEvent.AttackStarted>()
+                .filter { it.attackType == "SIEGE_MISSION" }
+                .map { it.simulationTimeMilliseconds }
+        }
+
+        val seeds = (1L..12L).map(::attackStartTimes)
+        val firstAttackTimes = seeds.map { times -> times.first() }
+
+        assertTrue(
+            firstAttackTimes.max() - firstAttackTimes.min() <= 410L,
+            "initial attack timing exceeded the 400ms maximum: $firstAttackTimes",
+        )
+        val repeatedAttacks = seeds.first()
+        assertTrue(repeatedAttacks.size >= 3, "not enough repeated attacks: $repeatedAttacks")
+        assertEquals(
+            listOf(810L, 810L),
+            repeatedAttacks.take(3).zipWithNext { first, second -> second - first },
+        )
+    }
+
+    @Test
+    fun ammunitionDamageUsesOneSeededRollForTheWholeLingeringEffect() {
+        fun damageTrace(seed: Long): List<MatchEvent.DamageApplied> {
+            val simulation = DeterministicMatchSimulation(
+                MatchId("ammunition-variance-match"),
+                SimulationConfig(
+                    bounds = WorldBounds(width = 1_060f, height = 600f),
+                    gravityAccelerationY = 1_000f,
+                    combatRandomSeed = seed,
+                ),
+            )
+            simulation.start()
+            simulation.deployUnit(durableDefender(), Team.BLUE)
+            simulation.deployUnit(durableDefender(), Team.RED)
+            simulation.sendWave(Team.BLUE)
+            simulation.sendWave(Team.RED)
+            simulation.aim(EntityId("blue-catapult"), directionDegrees = 20f, power = 50f)
+            simulation.fire(EntityId("blue-catapult"), AmmunitionType.FIRE_RAIN)
+
+            return buildList {
+                repeat(100) {
+                    addAll(simulation.advance(100))
+                }
+            }.filterIsInstance<MatchEvent.DamageApplied>()
+                .filter { it.targetLayer == "UNIT" && it.sourceProjectileId != null }
+        }
+
+        val first = damageTrace(31L)
+        assertTrue(first.size >= 2, "expected lingering ammunition damage, got $first")
+        val repeatedHits = first.groupBy { it.sourceProjectileId to it.targetId }
+            .values
+            .firstOrNull { hits ->
+                hits.size >= 2 && hits.map { it.amount }.distinct().size == 1
+            }
+            ?: error(
+                "no target received a stable repeated roll: " +
+                    first.groupBy { it.sourceProjectileId to it.targetId }
+                        .mapValues { (_, hits) -> hits.map { it.amount } },
+            )
+        assertNotEquals(first.map { it.amount }, damageTrace(32L).map { it.amount })
+    }
 }

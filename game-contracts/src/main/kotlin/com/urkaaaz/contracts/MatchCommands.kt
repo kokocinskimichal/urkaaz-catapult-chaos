@@ -9,6 +9,7 @@ sealed interface MatchCommand {
         override val commandId: CommandId,
         override val matchId: MatchId,
         override val playerId: PlayerId,
+        val randomSeed: Long? = null,
     ) : MatchCommand
 
     data class SelectAmmo(

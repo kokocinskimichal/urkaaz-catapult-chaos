@@ -169,6 +169,7 @@ class RenderStateMapperTest {
                     eventId = eventId,
                     matchId = matchId,
                     simulationTimeMilliseconds = 0L,
+                    randomSeed = 7L,
                 ),
             ),
         )

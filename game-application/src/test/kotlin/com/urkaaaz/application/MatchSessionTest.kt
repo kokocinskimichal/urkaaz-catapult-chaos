@@ -2,6 +2,7 @@ package com.urkaaaz.application
 
 import com.urkaaaz.contracts.MatchCommand
 import com.urkaaaz.contracts.CommandId
+import com.urkaaaz.contracts.MatchEvent
 import com.urkaaaz.contracts.MatchId
 import com.urkaaaz.contracts.MatchStatus
 import com.urkaaaz.contracts.PlayerId
@@ -15,11 +16,113 @@ import com.urkaaaz.contracts.Team
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
+import kotlin.test.assertNotEquals
 import kotlin.test.assertTrue
 import com.urkaaaz.application.loadout.LoadoutCommandRejectedException
 import com.urkaaaz.application.loadout.LoadoutError
 
 class MatchSessionTest {
+    @Test
+    fun replayCapturesSeedAndReproducesTheCommandTrace() {
+        val session = MatchSession(randomSeedProvider = { 713L })
+        val matchId = MatchId("replay-match")
+        val playerId = PlayerId("replay-player")
+        val commands = buildList {
+            add(MatchCommand.Start(CommandId("replay-start"), matchId, playerId))
+            add(MatchCommand.DeployUnit(CommandId("replay-deploy"), matchId, playerId, "DEFENDER"))
+            add(MatchCommand.SendWave(CommandId("replay-wave"), matchId, playerId))
+            repeat(30) { index ->
+                add(
+                    MatchCommand.AdvanceSimulation(
+                        CommandId("replay-advance-$index"),
+                        matchId,
+                        playerId,
+                        100,
+                    ),
+                )
+            }
+        }
+        val events = mutableListOf<MatchEvent>()
+        commands.forEach { command ->
+            session.dispatch(command)
+            events += session.consumeEvents()
+        }
+        session.pause()
+        session.dispatch(
+            MatchCommand.AdvanceSimulation(
+                CommandId("replay-paused-advance"),
+                matchId,
+                playerId,
+                500,
+            ),
+        )
+        events += session.consumeEvents()
+        session.resume()
+        session.dispatch(
+            MatchCommand.AdvanceSimulation(
+                CommandId("replay-resumed-advance"),
+                matchId,
+                playerId,
+                100,
+            ),
+        )
+        events += session.consumeEvents()
+        val snapshot = session.snapshot()
+
+        val replay = session.replay() ?: error("match replay was not recorded")
+        val replayResult = MatchReplayPlayer.play(replay)
+
+        assertEquals(713L, replay.randomSeed)
+        val replayStart = (replay.steps.first() as MatchReplayStep.Command).value as MatchCommand.Start
+        assertEquals(713L, replayStart.randomSeed)
+        assertTrue(MatchReplayStep.Pause in replay.steps)
+        assertTrue(MatchReplayStep.Resume in replay.steps)
+        assertEquals(snapshot, replayResult.snapshot)
+        assertEquals(events, replayResult.events)
+    }
+
+    @Test
+    fun replayCapturesStopTransitionAndReturnsStoppedSnapshot() {
+        val session = MatchSession(randomSeedProvider = { 17L })
+        session.dispatch(
+            MatchCommand.Start(
+                CommandId("stop-replay-start"),
+                MatchId("stop-replay"),
+                PlayerId("stop-replay-player"),
+            ),
+        )
+
+        val stoppedSnapshot = session.stop()
+        val replay = session.replay() ?: error("match replay was not recorded")
+        val replayResult = MatchReplayPlayer.play(replay)
+
+        assertTrue(MatchReplayStep.Stop in replay.steps)
+        assertEquals(stoppedSnapshot, replayResult.snapshot)
+    }
+
+    @Test
+    fun restartingMatchGeneratesAndRecordsANewRandomSeed() {
+        val seeds = listOf(11L, 22L).iterator()
+        val session = MatchSession(randomSeedProvider = { seeds.next() })
+        val matchId = MatchId("seeded-restart")
+        val playerId = PlayerId("seeded-restart-player")
+        session.dispatch(MatchCommand.Start(CommandId("seeded-start"), matchId, playerId))
+        val firstSeed = session.consumeEvents()
+            .filterIsInstance<MatchEvent.MatchStarted>()
+            .single()
+            .randomSeed
+
+        session.restart(matchId, playerId)
+        val secondSeed = session.consumeEvents()
+            .filterIsInstance<MatchEvent.MatchStarted>()
+            .single()
+            .randomSeed
+
+        assertEquals(11L, firstSeed)
+        assertEquals(22L, secondSeed)
+        assertNotEquals(firstSeed, session.replay()?.randomSeed)
+    }
+
     @Test
     fun startCommandProducesRunningSnapshot() {
         val snapshot = MatchSession().dispatch(

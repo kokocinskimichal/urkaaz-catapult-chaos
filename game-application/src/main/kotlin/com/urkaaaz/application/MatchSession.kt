@@ -19,6 +19,7 @@ import com.urkaaaz.simulation.NoOpCombatLogSink
 import com.urkaaaz.simulation.SimulationConfig
 import com.urkaaaz.simulation.AmmunitionLogSink
 import com.urkaaaz.simulation.NoOpAmmunitionLogSink
+import kotlin.random.Random
 
 class MatchSession(
     private val terrainBiome: String = "GREEN_FRONTIER",
@@ -28,6 +29,7 @@ class MatchSession(
     private val blueFortressMaxHealth: Int = 500,
     private val combatLogSink: CombatLogSink = NoOpCombatLogSink,
     private val ammunitionLogSink: AmmunitionLogSink = NoOpAmmunitionLogSink,
+    private val randomSeedProvider: () -> Long = { Random.nextLong() },
 ) {
     private var simulation: DeterministicMatchSimulation? = null
     private val selectedAmmunition = mutableMapOf(
@@ -37,8 +39,19 @@ class MatchSession(
     private var paused = false
     private var latestSnapshot = MatchSnapshot()
     private var latestEvents = emptyList<com.urkaaaz.contracts.MatchEvent>()
+    private var replaySeed: Long? = null
+    private val replaySteps = mutableListOf<MatchReplayStep>()
+
+    private val replayConfiguration = MatchReplayConfiguration(
+        terrainBiome = terrainBiome,
+        initialWind = initialWind,
+        mapDefinition = mapDefinition,
+        scenario = scenario,
+        blueFortressMaxHealth = blueFortressMaxHealth,
+    )
 
     fun dispatch(command: MatchCommand): MatchSnapshot {
+        latestEvents = emptyList()
         latestSnapshot = when (command) {
             is MatchCommand.Start -> start(command)
             is MatchCommand.SelectAmmo -> {
@@ -53,17 +66,18 @@ class MatchSession(
             is MatchCommand.DeployUnit -> {
                 enforceUnitSelection(command.playerId, command.unitType)
                 val unitType = UnitFactory.byId(command.unitType)
-                latestEvents = listOf(
-                    requireRunning().deployUnit(unitType, teamForPlayer(command.playerId)),
-                )
+                requireRunning().deployUnit(unitType, teamForPlayer(command.playerId))
+                latestEvents = requireRunning().drainEvents()
                 requireRunning().snapshot()
             }
             is MatchCommand.SendWave -> {
                 requireRunning().sendWave(teamForPlayer(command.playerId))
+                latestEvents = requireRunning().drainEvents()
                 requireRunning().snapshot()
             }
             is MatchCommand.Aim -> {
                 requireRunning().aim(command.catapultId, command.directionDegrees, command.power)
+                latestEvents = requireRunning().drainEvents()
                 requireRunning().snapshot()
             }
             is MatchCommand.Fire -> {
@@ -87,22 +101,47 @@ class MatchSession(
                 "M10 command is not implemented by the local session: ${command::class.simpleName}",
             )
         }
+        if (command !is MatchCommand.Start) {
+            replaySteps += MatchReplayStep.Command(command)
+        }
         return latestSnapshot
     }
 
+    fun replay(): MatchReplay? {
+        val seed = replaySeed ?: return null
+        val startCommand = (replaySteps.firstOrNull() as? MatchReplayStep.Command)
+            ?.value as? MatchCommand.Start
+            ?: error("recorded match replay is missing its start command")
+        return MatchReplay(
+            formatVersion = MatchReplay.CURRENT_FORMAT_VERSION,
+            matchId = startCommand.matchId,
+            randomSeed = seed,
+            configuration = replayConfiguration,
+            steps = replaySteps.toList(),
+        )
+    }
+
     fun pause() {
-        paused = true
+        if (!paused) {
+            paused = true
+            if (replaySeed != null) replaySteps += MatchReplayStep.Pause
+        }
     }
 
     fun resume() {
-        paused = false
+        if (paused) {
+            paused = false
+            if (replaySeed != null) replaySteps += MatchReplayStep.Resume
+        }
     }
 
     fun stop(): MatchSnapshot {
+        if (simulation != null && replaySeed != null) replaySteps += MatchReplayStep.Stop
         simulation = null
         paused = false
         latestEvents = emptyList()
-        return MatchSnapshot()
+        latestSnapshot = MatchSnapshot()
+        return latestSnapshot
     }
 
     fun restart(matchId: com.urkaaaz.contracts.MatchId, playerId: com.urkaaaz.contracts.PlayerId): MatchSnapshot =
@@ -144,6 +183,7 @@ class MatchSession(
     private fun start(command: MatchCommand.Start): MatchSnapshot {
         selectedAmmunition[Team.BLUE] = AmmunitionType.ROCK
         selectedAmmunition[Team.RED] = AmmunitionType.ROCK
+        val randomSeed = command.randomSeed ?: randomSeedProvider()
         simulation = DeterministicMatchSimulation(
             matchId = command.matchId,
             config = SimulationConfig(
@@ -157,11 +197,15 @@ class MatchSession(
                 mapDefinition = mapDefinition,
                 playerLoadout = scenario?.playerLoadout,
                 availableAmmunitionTypes = scenario?.availableAmmunition?.toSet().orEmpty(),
+                combatRandomSeed = randomSeed,
             ),
             combatLogSink = combatLogSink,
             ammunitionLogSink = ammunitionLogSink,
         )
         latestEvents = requireNotNull(simulation).start()
+        replaySeed = randomSeed
+        replaySteps.clear()
+        replaySteps += MatchReplayStep.Command(command.copy(randomSeed = randomSeed))
         paused = false
         return requireNotNull(simulation).snapshot()
     }

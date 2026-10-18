@@ -47,6 +47,8 @@ class LocalMatchGateway(
 
     fun consumeEvents(): List<MatchEvent> = session.consumeEvents()
 
+    fun replay(): MatchReplay? = session.replay()
+
     fun canDeployUnit(team: com.urkaaaz.contracts.Team, unitType: String): Boolean =
         session.canDeployUnit(team, unitType)
 }

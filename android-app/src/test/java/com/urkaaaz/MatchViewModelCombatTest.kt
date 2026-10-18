@@ -11,6 +11,15 @@ import org.junit.Test
 
 class MatchViewModelCombatTest {
     @Test
+    fun matchViewModelExposesTheCurrentSeededReplay() {
+        val viewModel = MatchViewModel()
+
+        viewModel.dispatch(MatchUiAction.StartMatch)
+
+        assertNotNull(viewModel.recordedReplay()?.randomSeed)
+    }
+
+    @Test
     fun campaignMatchUsesCommittedLoadoutPlayerIdByDefault() {
         val loadout = PlayerLoadoutConfig(
             playerId = PlayerId("player"),

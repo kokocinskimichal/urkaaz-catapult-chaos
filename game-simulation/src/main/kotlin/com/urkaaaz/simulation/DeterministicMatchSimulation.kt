@@ -112,14 +112,21 @@ class DeterministicMatchSimulation(
         }
     private val pendingEvents = mutableListOf<MatchEvent>()
     private var lingeringEffects = emptyList<LingeringEffect>()
-    private val combatRandom = Random(matchId.value.hashCode().toLong())
+    private val combatRandom = Random(config.combatRandomSeed)
     private val combatLuckByUnit = mutableMapOf<EntityId, Float>()
 
     fun start(): List<MatchEvent> {
         check(status == MatchStatus.NOT_STARTED) { "match has already started" }
         status = MatchStatus.RUNNING
         phase = MatchPhase.PLAYER_TURN
-        emit { MatchEvent.MatchStarted(it, matchId, simulationTimeMilliseconds) }
+        emit {
+            MatchEvent.MatchStarted(
+                it,
+                matchId,
+                simulationTimeMilliseconds,
+                config.combatRandomSeed,
+            )
+        }
         emit { MatchEvent.TurnChanged(it, matchId, simulationTimeMilliseconds, activeTeam) }
         logCombatState("match-started")
         return drainEvents()
@@ -1056,50 +1063,63 @@ class DeterministicMatchSimulation(
                 return@forEach
             }
             val target = lockedOrAcquireTarget(attacker, current)
+            val attackIntent: AttackIntent?
             if (target != null) {
                 if (attacker.combatState.targetId != target.id) {
                     emit { MatchEvent.TargetAcquired(it, matchId, simulationTimeMilliseconds, attacker.id, target.id) }
                 }
-            val groupId = if (attacker.type.attackType == AttackType.MELEE) {
-                AttackGroupId("melee-${target.id.value}")
-            } else {
-                null
-            }
-            val joinedGroup = groupId != null && attacker.combatState.attackGroupId != groupId
-            current[index] = attacker.copy(
-                combatState = attacker.combatState.copy(
-                    action = UnitActionState.SEEKING_TARGET,
-                    targetId = target.id,
-                    attackGroupId = groupId ?: attacker.combatState.attackGroupId,
-                ),
-            )
-            if (joinedGroup) {
-                emit {
-                    MatchEvent.AttackGroupJoined(
-                        it,
-                        matchId,
-                        simulationTimeMilliseconds,
-                        groupId!!.value,
-                        attacker.id,
-                        target.id,
-                    )
+                val groupId = if (attacker.type.attackType == AttackType.MELEE) {
+                    AttackGroupId("melee-${target.id.value}")
+                } else {
+                    null
                 }
-            }
-            when {
-                    attacker.type is SapperUnit -> Unit
+                val joinedGroup = groupId != null && attacker.combatState.attackGroupId != groupId
+                current[index] = attacker.copy(
+                    combatState = attacker.combatState.copy(
+                        action = UnitActionState.SEEKING_TARGET,
+                        targetId = target.id,
+                        attackGroupId = groupId ?: attacker.combatState.attackGroupId,
+                    ),
+                )
+                if (joinedGroup) {
+                    emit {
+                        MatchEvent.AttackGroupJoined(
+                            it,
+                            matchId,
+                            simulationTimeMilliseconds,
+                            groupId!!.value,
+                            attacker.id,
+                            target.id,
+                        )
+                    }
+                }
+                attackIntent = when {
+                    attacker.type is SapperUnit -> null
                     attacker.type.detonatesOnContact && contacted(attacker, target) ->
-                        startIntents += AttackIntent(attacker.id, target.id, AttackType.CONTACT_EXPLOSIVE)
+                        AttackIntent(attacker.id, target.id, AttackType.CONTACT_EXPLOSIVE)
                     attacker.type.attacksFromRange &&
                         kotlin.math.abs(target.position.x - attacker.position.x) <= attacker.type.attackRange ->
-                        startIntents += AttackIntent(attacker.id, target.id, AttackType.RANGED)
+                        AttackIntent(attacker.id, target.id, AttackType.RANGED)
                     !attacker.type.attacksFromRange && canMeleeAttack(attacker, target, current) ->
-                        startIntents += AttackIntent(attacker.id, target.id, AttackType.MELEE)
+                        AttackIntent(attacker.id, target.id, AttackType.MELEE)
+                    else -> null
                 }
             } else {
                 val enemyFortress = fortress(opposingTeam(attacker.team))
-                if (canAttackFortress(attacker, enemyFortress, current)) {
-                    startIntents += AttackIntent(attacker.id, enemyFortress.id, AttackType.SIEGE_MISSION)
+                attackIntent = if (canAttackFortress(attacker, enemyFortress, current)) {
+                    AttackIntent(attacker.id, enemyFortress.id, AttackType.SIEGE_MISSION)
+                } else {
+                    null
                 }
+            }
+            attackIntent?.let { intent ->
+                queueAttackAfterInitialDelay(
+                    current = current,
+                    unitIndex = index,
+                    deltaSeconds = deltaSeconds,
+                    intent = intent,
+                    startIntents = startIntents,
+                )
             }
         }
 
@@ -1118,6 +1138,40 @@ class DeterministicMatchSimulation(
             )
         }
         units = current.filter { it.isAlive }
+    }
+
+    private fun queueAttackAfterInitialDelay(
+        current: MutableList<Unit>,
+        unitIndex: Int,
+        deltaSeconds: Float,
+        intent: AttackIntent,
+        startIntents: MutableList<AttackIntent>,
+    ) {
+        val attacker = current[unitIndex]
+        val remainingDelay = attacker.combatState.firstAttackDelayRemainingSeconds
+        if (remainingDelay == null) {
+            val delay = combatRandom.nextFloat() *
+                attacker.type.attackCooldownSeconds *
+                MAX_INITIAL_ATTACK_DELAY_RATIO
+            current[unitIndex] = attacker.copy(
+                combatState = attacker.combatState.copy(
+                    firstAttackDelayRemainingSeconds = delay,
+                ),
+            )
+            if (delay <= 0f) startIntents += intent
+            return
+        }
+        if (remainingDelay <= 0f) {
+            startIntents += intent
+            return
+        }
+        val updatedDelay = (remainingDelay - deltaSeconds).coerceAtLeast(0f)
+        current[unitIndex] = attacker.copy(
+            combatState = attacker.combatState.copy(
+                firstAttackDelayRemainingSeconds = updatedDelay,
+            ),
+        )
+        if (updatedDelay <= 0f) startIntents += intent
     }
 
     private fun lockedOrAcquireTarget(attacker: Unit, candidates: List<Unit>): Unit? {
@@ -1164,7 +1218,7 @@ class DeterministicMatchSimulation(
             when (intent.type) {
                 AttackType.CONTACT_EXPLOSIVE -> detonateDemolisher(current, attackerIndex, attacker)
                 AttackType.MELEE, AttackType.RANGED -> {
-                    val roll = rollDamage(attacker)
+                    val roll = rollUnitDamage(attacker, attacker.type.attackDamage)
                     val members = meleeMembersForTarget(current, target.id)
                     val synergy = if (intent.type == AttackType.MELEE) {
                         min(1f + (members.size - 1) * 0.35f, 2f)
@@ -1333,14 +1387,20 @@ class DeterministicMatchSimulation(
     private fun attackMission(current: MutableList<Unit>, index: Int, attacker: Unit) {
         val behavior = attacker.type
         if (behavior !is SapperUnit) {
-            damageFortress(fortress(opposingTeam(attacker.team)), behavior.fortressDamage)
+            damageFortress(
+                fortress(opposingTeam(attacker.team)),
+                rollUnitDamage(attacker, behavior.fortressDamage),
+            )
             return
         }
         if (!attacker.sapperHasBomb) {
             current[index] = attacker.copy(returningToGarrison = true, inGarrison = false)
             return
         }
-        damageFortress(fortress(opposingTeam(attacker.team)), behavior.fortressDamage)
+        damageFortress(
+            fortress(opposingTeam(attacker.team)),
+            rollUnitDamage(attacker, behavior.fortressDamage),
+        )
         current[index] = attacker.copy(
             sapperHasBomb = false,
             returningToGarrison = true,
@@ -1348,16 +1408,15 @@ class DeterministicMatchSimulation(
         )
     }
 
-    private fun rollDamage(attacker: Unit): Int {
-        val luckBias = combatLuckByUnit.getOrPut(attacker.id) {
+    private fun rollUnitDamage(
+        attacker: Unit,
+        baseDamage: Int,
+        teamLuckBias: Float = 0f,
+    ): Int {
+        val unitBias = combatLuckByUnit.getOrPut(attacker.id) {
             (combatRandom.nextFloat() * 0.08f) - 0.04f
         }
-        val factor = (
-            0.90f +
-                combatRandom.nextFloat() * 0.20f +
-                luckBias
-            ).coerceIn(0.90f, 1.10f)
-        return (attacker.type.attackDamage * factor).toInt().coerceAtLeast(1)
+        return applyDamageVariance(baseDamage, damageVarianceFactor(unitBias + teamLuckBias))
     }
 
     private data class AttackIntent(val attackerId: EntityId, val targetId: EntityId, val type: AttackType)
@@ -1367,7 +1426,7 @@ class DeterministicMatchSimulation(
         attackerIndex: Int,
         attacker: Unit,
     ) {
-        val explosionDamage = rollExplosionDamage()
+        val explosionDamage = rollUnitDamage(attacker, DEMOLISHER_DAMAGE)
         emit {
             MatchEvent.ExplosionTriggered(
                 it,
@@ -1411,10 +1470,15 @@ class DeterministicMatchSimulation(
         )
     }
 
-    private fun rollExplosionDamage(): Int =
-        (DEMOLISHER_DAMAGE * (0.90f + combatRandom.nextFloat() * 0.20f))
-            .toInt()
-            .coerceAtLeast(1)
+    private fun damageVarianceFactor(teamLuckBias: Float = 0f): Float =
+        (MIN_DAMAGE_VARIANCE_FACTOR +
+            combatRandom.nextFloat() *
+            (MAX_DAMAGE_VARIANCE_FACTOR - MIN_DAMAGE_VARIANCE_FACTOR) +
+            teamLuckBias)
+            .coerceIn(MIN_DAMAGE_VARIANCE_FACTOR, MAX_DAMAGE_VARIANCE_FACTOR)
+
+    private fun applyDamageVariance(baseDamage: Int, factor: Float): Int =
+        if (baseDamage <= 0) 0 else (baseDamage * factor).toInt().coerceAtLeast(1)
 
     private fun contacted(first: Unit, second: Unit): Boolean =
         kotlin.math.abs(first.position.x - second.position.x) <= config.unitCollisionRadius
@@ -1509,8 +1573,13 @@ class DeterministicMatchSimulation(
         hitLayer: com.urkaaaz.domain.AmmunitionHitLayer? = null,
     ) {
         val definition = AmmunitionCatalog.definition(projectile.ammunition)
+        val damageFactor = damageVarianceFactor(teamLuckBias = 0f)
         when (val behavior = definition.behavior) {
             is com.urkaaaz.domain.AmmunitionImpactBehavior.LingeringArea -> {
+                val fortressDamagePerTick =
+                    applyDamageVariance(behavior.fortressDamagePerTick, damageFactor)
+                val unitDamagePerTick =
+                    applyDamageVariance(behavior.damagePerTick, damageFactor)
                 val effectCenter = if (behavior.followsTerrain) {
                     projectile.position.copy(
                         y = terrain.heightAt(projectile.position.x),
@@ -1521,9 +1590,9 @@ class DeterministicMatchSimulation(
                 applyDamageAt(
                     position = effectCenter,
                     radius = definition.damage.fortressRadius,
-                    damage = definition.damage.fortressDamage,
+                    damage = applyDamageVariance(definition.damage.fortressDamage, damageFactor),
                     sourceTeam = projectile.firedBy,
-                    unitDamage = behavior.damagePerTick,
+                    unitDamage = unitDamagePerTick,
                     status = behavior.status,
                     statusDurationSeconds = behavior.durationSeconds,
                     hitLayer = hitLayer,
@@ -1543,9 +1612,13 @@ class DeterministicMatchSimulation(
                     untilNextTickSeconds = behavior.tickIntervalSeconds,
                     status = behavior.status,
                     driftsWithWind = behavior.driftsWithWind,
+                    fortressDamagePerTick = fortressDamagePerTick,
+                    unitDamagePerTick = unitDamagePerTick,
                 )
             }
             is com.urkaaaz.domain.AmmunitionImpactBehavior.Explosion -> {
+                val fortressDamage =
+                    applyDamageVariance(definition.damage.fortressDamage, damageFactor)
                 emit {
                     MatchEvent.ExplosionTriggered(
                         it,
@@ -1555,15 +1628,15 @@ class DeterministicMatchSimulation(
                         projectile.position.x,
                         projectile.position.y,
                         behavior.radius,
-                        definition.damage.fortressDamage,
+                        fortressDamage,
                     )
                 }
                 applyDamageAt(
                     position = projectile.position,
                     radius = behavior.radius,
-                    damage = definition.damage.fortressDamage,
+                    damage = fortressDamage,
                     sourceTeam = projectile.firedBy,
-                    unitDamage = definition.damage.unitDamage,
+                    unitDamage = applyDamageVariance(definition.damage.unitDamage, damageFactor),
                     hitLayer = hitLayer,
                     sourceProjectileId = projectile.id,
                     minimumDamage = definition.damage.minimumDamage,
@@ -1574,9 +1647,9 @@ class DeterministicMatchSimulation(
                 applyDamageAt(
                     position = projectile.position,
                     radius = definition.damage.fortressRadius,
-                    damage = definition.damage.fortressDamage,
+                    damage = applyDamageVariance(definition.damage.fortressDamage, damageFactor),
                     sourceTeam = projectile.firedBy,
-                    unitDamage = definition.damage.unitDamage,
+                    unitDamage = applyDamageVariance(definition.damage.unitDamage, damageFactor),
                     hitLayer = hitLayer,
                     sourceProjectileId = projectile.id,
                     minimumDamage = definition.damage.minimumDamage,
@@ -1699,9 +1772,9 @@ class DeterministicMatchSimulation(
                 applyDamageAt(
                     position = effect.currentCenter,
                     radius = effect.radius,
-                    damage = behavior.fortressDamagePerTick,
+                    damage = effect.fortressDamagePerTick,
                     sourceTeam = effect.sourceTeam,
-                    unitDamage = behavior.damagePerTick,
+                    unitDamage = effect.unitDamagePerTick,
                     status = behavior.status,
                     statusDurationSeconds = behavior.durationSeconds,
                     sourceProjectileId = effect.sourceProjectileId,
@@ -1947,6 +2020,8 @@ class DeterministicMatchSimulation(
         val untilNextTickSeconds: Float,
         val status: UnitStatus?,
         val driftsWithWind: Boolean,
+        val fortressDamagePerTick: Int,
+        val unitDamagePerTick: Int,
     )
 
     private data class DefeatedUnit(
@@ -1963,6 +2038,9 @@ class DeterministicMatchSimulation(
     companion object {
         private const val MAX_SUPPLY = 10
         private const val SUPPLY_REGEN_INTERVAL_SECONDS = 3f
+        private const val MIN_DAMAGE_VARIANCE_FACTOR = 0.80f
+        private const val MAX_DAMAGE_VARIANCE_FACTOR = 1.20f
+        private const val MAX_INITIAL_ATTACK_DELAY_RATIO = 0.5f
         private const val UNIT_MOVEMENT_SPEED_MULTIPLIER = 2f
         private const val UNIT_MOVEMENT_SPEED_SCALE = 0.45f * UNIT_MOVEMENT_SPEED_MULTIPLIER
         private const val GARRISON_MOVEMENT_SPEED_SCALE = 0.22f * UNIT_MOVEMENT_SPEED_MULTIPLIER

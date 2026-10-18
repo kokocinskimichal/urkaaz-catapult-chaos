@@ -382,6 +382,14 @@ poziomowa i wspólna dla obu drużyn; AI nie obsługuje jeszcze ich aktywacji.
 `SimulationConfig` przenosi zatwierdzony loadout gracza i dostępność amunicji
 poziomu.
 
+`MatchSession` tworzy jawny seed przy każdym uruchomieniu i restarcie oraz
+przekazuje go do `SimulationConfig`. `MatchStarted` publikuje seed, a warstwa
+aplikacyjna przechwytuje go razem z początkową konfiguracją, komendami i
+przejściami pauzy/wznowienia/zatrzymania w `MatchReplay`. `MatchReplayPlayer`
+odtwarza ten zapis przez nową `MatchSession`. Zapis jest obecnie dostępny tylko
+w pamięci procesu; trwałe repozytorium replayów i UI pozostają przyszłym
+zakresem.
+
 ### Uruchomienie
 
 `MatchSession.start()`:
@@ -391,6 +399,9 @@ poziomu.
 3. publikuje `MatchStarted`;
 4. uruchamia zegar symulacji;
 5. umożliwia przyjmowanie komend.
+
+Seed nie jest wyprowadzany z `MatchId`: każdy nowy start i restart otrzymuje
+nową wartość. Odtworzenie replayu przekazuje zachowany seed w `MatchCommand.Start`.
 
 ### Aktualizacja
 
@@ -1256,7 +1267,7 @@ Dzięki temu:
 
 ### Kontrolowana losowość
 
-Losowość powinna mieć jawny seed meczu:
+Losowość symulacji musi mieć jawny seed meczu:
 
 - wiatr;
 - rozrzut;
@@ -1264,7 +1275,19 @@ Losowość powinna mieć jawny seed meczu:
 - warianty zachowania AI;
 - elementy zależne od losowania.
 
-Nie należy używać bezpośrednio globalnego `Random.Default` w regułach gry.
+`SimulationConfig.combatRandomSeed` inicjalizuje generator symulacji. Generator
+jest współdzielony przez losowe opóźnienie pierwszego ataku jednostki (0 do
+połowy cooldownu) oraz obrażenia. Obrażenia jednostek i amunicji są losowane w
+zakresie 80%-120% wartości bazowej, przed istniejącymi modyfikatorami
+synergii, odporności, minimalnych obrażeń i falloffu. Jeden rzut amunicji
+utrzymującej się w czasie jest używany przez wszystkie jej ticki. Teamowy
+`teamLuckBias` może w przyszłości przesunąć wynik w granicach 80%-120%;
+implementacja czaru LUCK nie istnieje.
+
+Seed generuje warstwa aplikacyjna, nie reguły symulacji. `MatchStarted`
+publikuje go, a rekord `MatchReplay` przechowuje seed, konfigurację meczu,
+komendy i przejścia lifecycle do deterministycznego odtworzenia. Nie należy
+używać globalnego `Random.Default` bezpośrednio w regułach gry.
 
 ---
 
@@ -1561,8 +1584,9 @@ PlayerSettingsEntity
 
 oraz jawne mapery do modeli aplikacyjnych.
 
-Przyszłe zapisanie replaya lub snapshotu meczu powinno być osobnym przypadkiem
-użycia, niezależnym od progresji kampanii.
+`MatchReplay` jest osobnym przypadkiem użycia aplikacyjnego, niezależnym od
+progresji kampanii. Obecna implementacja przechowuje rekord i odtwarzacz w
+pamięci; trwała serializacja replayów pozostaje osobnym zakresem.
 
 ---
 

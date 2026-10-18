@@ -113,10 +113,12 @@ class ContractsTest {
             eventId = EventId("event-1"),
             matchId = matchId,
             simulationTimeMilliseconds = 0,
+            randomSeed = 7L,
         )
 
         assertEquals(matchId, event.matchId)
         assertEquals(0, event.simulationTimeMilliseconds)
+        assertEquals(7L, event.randomSeed)
     }
 
     @Test
