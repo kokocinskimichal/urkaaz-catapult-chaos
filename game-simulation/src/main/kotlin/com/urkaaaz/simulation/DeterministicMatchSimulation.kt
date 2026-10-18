@@ -1926,7 +1926,11 @@ class DeterministicMatchSimulation(
         gold = 100,
         supply = MAX_SUPPLY,
         ammunition = AmmunitionType.entries
-            .filter { !it.unlimited }
+            .filter {
+                !it.unlimited &&
+                    (config.availableAmmunitionTypes.isEmpty() ||
+                        it.name in config.availableAmmunitionTypes)
+            }
             .associateWith { config.startingLimitedAmmunition },
     )
 
@@ -1957,7 +1961,7 @@ class DeterministicMatchSimulation(
     )
 
     companion object {
-        private const val MAX_SUPPLY = 20
+        private const val MAX_SUPPLY = 10
         private const val SUPPLY_REGEN_INTERVAL_SECONDS = 3f
         private const val UNIT_MOVEMENT_SPEED_MULTIPLIER = 2f
         private const val UNIT_MOVEMENT_SPEED_SCALE = 0.45f * UNIT_MOVEMENT_SPEED_MULTIPLIER

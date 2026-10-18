@@ -375,8 +375,12 @@ fortec ani systemów.
 
 W aktualnym kontrakcie scenariusz rozdziela dostępność jednostek, amunicji i
 czarów od opcjonalnego `PlayerLoadoutConfig`. `MatchSession` egzekwuje wybrane
-jednostki i amunicję przed przekazaniem komend do symulacji. `SimulationConfig`
-przenosi zatwierdzony loadout, ale obsługa czarów pozostaje niedokończona.
+jednostki gracza i poziomową dostępność jednostek obu drużyn przed przekazaniem
+komend do symulacji. Dostępność amunicji poziomu ogranicza wybory obu drużyn
+oraz początkowe zapasy amunicji limitowanej. Lista `availableSpells` jest
+poziomowa i wspólna dla obu drużyn; AI nie obsługuje jeszcze ich aktywacji.
+`SimulationConfig` przenosi zatwierdzony loadout gracza i dostępność amunicji
+poziomu.
 
 ### Uruchomienie
 

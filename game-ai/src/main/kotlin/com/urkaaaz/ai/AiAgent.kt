@@ -43,9 +43,11 @@ data class AiConfiguration(
     val aimErrorScale: Float = 1f,
     val allowedUnits: Set<UnitDefinition> = UnitFactory.all(),
     val randomSeed: Int = 0,
+    val allowedAmmunition: Set<AmmunitionType> = AmmunitionType.entries.toSet(),
 ) {
     init {
         require(aimErrorScale > 0f) { "aimErrorScale must be positive" }
+        require(allowedAmmunition.isNotEmpty()) { "AI must have allowed ammunition" }
     }
 }
 
@@ -76,6 +78,18 @@ class AiAgent(
 
     fun allowedUnitIds(): Set<String> = configuration.allowedUnits.map { it.id }.toSet()
 
+    fun setAllowedAmmunitionIds(allowedAmmunitionIds: Set<String>) {
+        val allowedAmmunition = allowedAmmunitionIds.map { id ->
+            AmmunitionType.entries.firstOrNull { it.name == id }
+                ?: error("unknown AI ammunition identifier: $id")
+        }.toSet()
+        require(allowedAmmunition.isNotEmpty()) { "AI must have allowed ammunition" }
+        configuration = configuration.copy(allowedAmmunition = allowedAmmunition)
+    }
+
+    fun allowedAmmunitionIds(): Set<String> =
+        configuration.allowedAmmunition.map { it.name }.toSet()
+
     fun waveThreshold(): Int = when (matchTemperament) {
         AiTemperament.AGGRESSIVE,
         AiTemperament.DESPERATE -> 1
@@ -90,7 +104,7 @@ class AiAgent(
         }
         val catapult = snapshot.catapults.firstOrNull { it.team == configuration.team }
             ?: return emptyList()
-        val ammunition = chooseAmmunition(snapshot)
+        val ammunition = chooseAmmunition(snapshot) ?: return emptyList()
         val reloadRemaining = snapshot
             .reloadRemainingSecondsByAmmunition[configuration.team]
             ?.get(ammunition)
@@ -145,16 +159,20 @@ class AiAgent(
         )
     }
 
-    private fun chooseAmmunition(snapshot: MatchSnapshot): String {
-        val available = (snapshot.resourcesByTeam[configuration.team]?.ammunition
+    private fun chooseAmmunition(snapshot: MatchSnapshot): String? {
+        val stocked = (snapshot.resourcesByTeam[configuration.team]?.ammunition
             ?: snapshot.resources.ammunition)
             .filter { (_, count) -> count > 0 }
             .keys
             .mapNotNull { runCatching { AmmunitionType.valueOf(it) }.getOrNull() }
-            .ifEmpty { listOf(AmmunitionType.ROCK) }
+            .filter { it in configuration.allowedAmmunition }
+        val available = stocked.ifEmpty {
+            configuration.allowedAmmunition.filter { it.unlimited }
+        }
+        if (available.isEmpty()) return null
         val fortressAmmo = available
             .filter { AmmunitionCatalog.definition(it).damage.fortressDamage > 0 }
-            .ifEmpty { listOf(AmmunitionType.ROCK) }
+            .ifEmpty { listOf(available.first()) }
 
         return when (effectiveTemperament(snapshot)) {
             AiTemperament.AGGRESSIVE,

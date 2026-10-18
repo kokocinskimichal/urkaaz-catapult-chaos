@@ -53,13 +53,15 @@ class MatchViewModel(
         ammunitionLogSink = ammunitionLogSink,
     ),
 ) {
-    val selectableAmmunitionTypes: Set<String>? = loadSelectedScenario(
+    private val campaignScenario = loadSelectedScenario(
         campaignLevel,
         demoMode,
         mapRepository,
         playerLoadout,
         playerId,
-    )?.let { scenario ->
+    )
+
+    val selectableAmmunitionTypes: Set<String>? = campaignScenario?.let { scenario ->
         playerLoadout?.ammunitionSlots
             ?.filterNotNull()
             ?.toSet()
@@ -87,6 +89,15 @@ class MatchViewModel(
         ),
     )
 
+    init {
+        campaignScenario?.availableUnits
+            ?.takeIf { it.isNotEmpty() }
+            ?.let { unitIds -> aiAgent.setAllowedUnitIds(unitIds.toSet()) }
+        campaignScenario?.availableAmmunition
+            ?.takeIf { it.isNotEmpty() }
+            ?.let { ammunitionIds -> aiAgent.setAllowedAmmunitionIds(ammunitionIds.toSet()) }
+    }
+
     var renderState: RenderState = RenderStateMapper.map(MatchSnapshot())
         private set
 
@@ -96,6 +107,9 @@ class MatchViewModel(
 
     fun aiAllowedUnitIds(): Set<String> =
         aiAgent.allowedUnitIds()
+
+    fun aiAllowedAmmunitionIds(): Set<String> =
+        aiAgent.allowedAmmunitionIds()
 
     fun setAiUnitAutomationEnabled(enabled: Boolean) {
         aiUnitAutomationEnabled = enabled

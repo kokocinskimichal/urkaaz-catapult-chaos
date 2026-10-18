@@ -11,6 +11,7 @@ import com.urkaaaz.contracts.Team
 import com.urkaaaz.contracts.WorldDimensions
 import com.urkaaaz.domain.AmmunitionType
 import com.urkaaaz.domain.UnitConfigurations
+import com.urkaaaz.domain.UnitDefinition
 import com.urkaaaz.domain.UnitFactory
 import com.urkaaaz.domain.WorldBounds
 import kotlin.math.abs
@@ -26,8 +27,11 @@ class DeterministicMatchSimulationTest {
         windAccelerationX = 2f,
     )
 
+    private fun freeUnit(type: UnitDefinition) =
+        UnitFactory.create(type.configuration.copy(supplyCost = 0))
+
     private fun durableDefender() =
-        UnitFactory.create(UnitConfigurations.DEFENDER.copy(maxHealth = 260))
+        UnitFactory.create(UnitConfigurations.DEFENDER.copy(maxHealth = 260, supplyCost = 0))
 
     @Test
     fun startProducesDeterministicLifecycleEventsAndSnapshot() {
@@ -367,16 +371,24 @@ class DeterministicMatchSimulationTest {
     }
 
     @Test
-    fun supplyRegeneratesByOneEveryThreeSecondsUpToTwenty() {
+    fun bothTeamsStartWithTenSupplyAndRegenerateUpToTen() {
         val simulation = DeterministicMatchSimulation(MatchId("supply-match"), config)
         simulation.start()
+
+        assertEquals(10, simulation.snapshot().resourcesByTeam[Team.BLUE]?.supply)
+        assertEquals(10, simulation.snapshot().resourcesByTeam[Team.RED]?.supply)
+
         simulation.deployUnit(com.urkaaaz.domain.UnitFactory.defender(), Team.BLUE)
 
-        assertEquals(15, simulation.snapshot().resourcesByTeam[Team.BLUE]?.supply)
+        assertEquals(5, simulation.snapshot().resourcesByTeam[Team.BLUE]?.supply)
         simulation.advance(2_999)
-        assertEquals(15, simulation.snapshot().resourcesByTeam[Team.BLUE]?.supply)
+        assertEquals(5, simulation.snapshot().resourcesByTeam[Team.BLUE]?.supply)
         simulation.advance(1)
-        assertEquals(16, simulation.snapshot().resourcesByTeam[Team.BLUE]?.supply)
+        assertEquals(6, simulation.snapshot().resourcesByTeam[Team.BLUE]?.supply)
+        simulation.advance(12_000)
+        assertEquals(10, simulation.snapshot().resourcesByTeam[Team.BLUE]?.supply)
+        simulation.advance(3_000)
+        assertEquals(10, simulation.snapshot().resourcesByTeam[Team.BLUE]?.supply)
     }
 
     @Test
@@ -429,7 +441,7 @@ class DeterministicMatchSimulationTest {
         simulation.sendWave(Team.BLUE)
         simulation.advance(1_000)
 
-        simulation.deployUnit(com.urkaaaz.domain.UnitFactory.sapper(), Team.BLUE)
+        simulation.deployUnit(freeUnit(com.urkaaaz.domain.UnitFactory.sapper()), Team.BLUE)
 
         val deployed = simulation.snapshot().units.first { it.unitType == "SAPPER" }
         assertEquals("GARRISONED", deployed.actionState)
@@ -446,12 +458,12 @@ class DeterministicMatchSimulationTest {
     fun deployingMultipleUnitsDuringAnActiveWaveShiftsOnlyGarrisonSlots() {
         val simulation = DeterministicMatchSimulation(MatchId("wave-garrison-slots-match"), config)
         simulation.start()
-        simulation.deployUnit(com.urkaaaz.domain.UnitFactory.defender(), Team.BLUE)
+        simulation.deployUnit(freeUnit(com.urkaaaz.domain.UnitFactory.defender()), Team.BLUE)
         simulation.sendWave(Team.BLUE)
         simulation.advance(1_000)
 
-        simulation.deployUnit(com.urkaaaz.domain.UnitFactory.sapper(), Team.BLUE)
-        simulation.deployUnit(com.urkaaaz.domain.UnitFactory.slingmaster(), Team.BLUE)
+        simulation.deployUnit(freeUnit(com.urkaaaz.domain.UnitFactory.sapper()), Team.BLUE)
+        simulation.deployUnit(freeUnit(com.urkaaaz.domain.UnitFactory.slingmaster()), Team.BLUE)
 
         val blueUnits = simulation.snapshot().units.filter { it.team == Team.BLUE }
         val activeDefender = blueUnits.first { it.unitType == "DEFENDER" }
@@ -480,7 +492,7 @@ class DeterministicMatchSimulationTest {
             )
             simulation.start()
             repeat(3) {
-                simulation.deployUnit(com.urkaaaz.domain.UnitFactory.defender(), team)
+                simulation.deployUnit(freeUnit(com.urkaaaz.domain.UnitFactory.defender()), team)
             }
             simulation.advance(20_000)
 
@@ -749,8 +761,8 @@ class DeterministicMatchSimulationTest {
     fun aFasterAlliedUnitCanOvertakeASlowerUnit() {
         val simulation = DeterministicMatchSimulation(MatchId("allied-overtake-match"), config)
         simulation.start()
-        simulation.deployUnit(com.urkaaaz.domain.UnitFactory.defender(), Team.BLUE)
-        simulation.deployUnit(com.urkaaaz.domain.UnitFactory.sapper(), Team.BLUE)
+        simulation.deployUnit(freeUnit(com.urkaaaz.domain.UnitFactory.defender()), Team.BLUE)
+        simulation.deployUnit(freeUnit(com.urkaaaz.domain.UnitFactory.sapper()), Team.BLUE)
         simulation.sendWave(Team.BLUE)
 
         repeat(20) { simulation.advance(100) }
@@ -800,7 +812,7 @@ class DeterministicMatchSimulationTest {
         val simulation = DeterministicMatchSimulation(MatchId("melee-formation-fortress-match"), config)
         simulation.start()
         repeat(3) {
-            simulation.deployUnit(com.urkaaaz.domain.UnitFactory.defender(), Team.BLUE)
+            simulation.deployUnit(freeUnit(com.urkaaaz.domain.UnitFactory.defender()), Team.BLUE)
         }
         simulation.sendWave(Team.BLUE)
 

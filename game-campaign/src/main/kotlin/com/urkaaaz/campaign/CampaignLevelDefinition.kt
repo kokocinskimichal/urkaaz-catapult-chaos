@@ -154,7 +154,7 @@ data class CampaignLevelDefinition(
                 availableAmmunition = buildSet {
                     add(AmmunitionType.ROCK)
                     add(AmmunitionType.SIEGE_BOMB)
-                    if (safeLevel >= 21) add(AmmunitionType.POWDER_BARREL)
+                    if (safeLevel >= 10) add(AmmunitionType.POWDER_BARREL)
                     if (safeLevel >= 31) add(AmmunitionType.FIRE_RAIN)
                     if (safeLevel >= 41) add(AmmunitionType.PLAGUE_CAULDRON)
                 },

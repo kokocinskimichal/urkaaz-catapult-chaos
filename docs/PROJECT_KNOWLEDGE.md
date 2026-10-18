@@ -20,10 +20,13 @@ The campaign screen intentionally reuses the legacy visual style only. Its
 level count and level selection are driven by the new
 `CampaignLevelDefinition` contract. `MatchScenario` carries level availability
 and an optional committed `PlayerLoadoutConfig` separately. `MatchSession`
-rejects blue-player unit/ammunition commands outside the scenario selection;
-AI remains unaffected. The match ammunition selector is filtered to level
-availability and the committed player's equipped slots, matching that
-validation boundary.
+limits campaign AI units to the level's `availableUnits`; the player's
+committed loadout may narrow that set further for BLUE. AI ammunition choices,
+RED ammunition commands, and both teams' limited ammunition inventories are
+restricted to the scenario's `availableAmmunition`. Campaign
+`availableSpells` are level-wide in the scenario, but AI spell casting is not
+implemented yet. The match ammunition selector is filtered to level
+availability and the committed player's equipped slots.
 
 `game-application/application/loadout` owns the canonical immutable
 `MatchLoadout`, deterministic defaults, stored-selection normalization,
@@ -231,6 +234,8 @@ RED team's supply, followed by `SendWave` after three recruited units finish
 entering the garrison. The AI now also randomizes its match temperament,
 uses defensive SAPPER counter-selection, and varies the wave threshold
 (`1/2/3`) like legacy instead of limiting the opponent to projectile fire.
+- BLUE and RED both start with 10 supply and regenerate one supply every three
+  seconds, up to a shared cap of 10.
 - Fortress and unit HP bars share one renderer style: a rounded dark track,
 8-unit height, and green above 60% health, orange from 30% through 60%, or
 red below 30%. Zero health leaves the dark track unfilled.

@@ -21,6 +21,7 @@ data class SimulationConfig(
     val matchDurationMilliseconds: Long = 300_000L,
     val mapDefinition: MapDefinition? = null,
     val playerLoadout: PlayerLoadoutConfig? = null,
+    val availableAmmunitionTypes: Set<String> = emptySet(),
 ) {
     init {
         require(gravityAccelerationY >= 0f) { "gravity must not be negative" }

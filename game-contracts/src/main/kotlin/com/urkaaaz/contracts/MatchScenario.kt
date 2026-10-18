@@ -1,5 +1,9 @@
 package com.urkaaaz.contracts
 
+/**
+ * Campaign-level unit, ammunition and spell availability is shared by both teams.
+ * [playerLoadout] further narrows the BLUE player's available selections.
+ */
 data class MatchScenario(
     val scenarioId: String,
     val battlefield: BattlefieldConfig,

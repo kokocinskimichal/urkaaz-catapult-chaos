@@ -1,5 +1,16 @@
 # Changelog
 
+## 2026-10-19
+
+### Changed
+
+- Reduced initial and maximum supply from 20 to 10 for both teams; supply
+  continues to regenerate by one every three seconds.
+- Campaign `POWDER_BARREL` ammunition now unlocks at level 10.
+- Campaign opponents now use only units and ammunition available on the
+  selected level; the player's committed loadout may further restrict the BLUE
+  team.
+
 ## 2026-10-17
 
 ### Added

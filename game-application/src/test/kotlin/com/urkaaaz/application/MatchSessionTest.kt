@@ -141,7 +141,7 @@ class MatchSessionTest {
 
         assertEquals(1, snapshot.units.size)
         assertEquals("DEFENDER", snapshot.units.single().unitType)
-        assertEquals(15, snapshot.resourcesByTeam[com.urkaaaz.contracts.Team.BLUE]?.supply)
+        assertEquals(5, snapshot.resourcesByTeam[com.urkaaaz.contracts.Team.BLUE]?.supply)
         assertTrue(session.consumeEvents().any { it is com.urkaaaz.contracts.MatchEvent.UnitDeployed })
     }
 
@@ -219,6 +219,73 @@ class MatchSessionTest {
         assertEquals(supplyBefore, session.snapshot().resourcesByTeam[Team.BLUE]?.supply)
         assertTrue(session.canDeployUnit(Team.BLUE, "DEFENDER"))
         assertTrue(!session.canDeployUnit(Team.BLUE, "SAPPER"))
+    }
+
+    @Test
+    fun campaignAvailabilityAlsoRestrictsEnemyUnitDeployment() {
+        val playerId = PlayerId("player")
+        val enemyId = PlayerId("local-ai")
+        val session = MatchSession(
+            scenario = MatchScenario(
+                scenarioId = "campaign-enemy-units",
+                battlefield = BattlefieldConfig(100, 100),
+                players = listOf(
+                    PlayerConfig(playerId, Team.BLUE),
+                    PlayerConfig(enemyId, Team.RED),
+                ),
+                availableUnits = listOf("DEFENDER"),
+            ),
+        )
+        session.dispatch(MatchCommand.Start(CommandId("start-enemy-units"), MatchId("m"), playerId))
+
+        assertTrue(session.canDeployUnit(Team.RED, "DEFENDER"))
+        assertTrue(!session.canDeployUnit(Team.RED, "SAPPER"))
+        assertFailsWith<LoadoutCommandRejectedException> {
+            session.dispatch(
+                MatchCommand.DeployUnit(
+                    CommandId("deploy-enemy-sapper"),
+                    MatchId("m"),
+                    enemyId,
+                    "SAPPER",
+                ),
+            )
+        }.also { assertEquals(LoadoutError.UNIT_UNAVAILABLE, it.error) }
+    }
+
+    @Test
+    fun campaignAvailabilityRestrictsEnemyAmmunitionAndInventory() {
+        val playerId = PlayerId("player")
+        val enemyId = PlayerId("local-ai")
+        val matchId = MatchId("campaign-enemy-ammo")
+        val session = MatchSession(
+            scenario = MatchScenario(
+                scenarioId = "campaign-enemy-ammo",
+                battlefield = BattlefieldConfig(100, 100),
+                players = listOf(
+                    PlayerConfig(playerId, Team.BLUE),
+                    PlayerConfig(enemyId, Team.RED),
+                ),
+                availableAmmunition = listOf("ROCK", "SIEGE_BOMB"),
+            ),
+        )
+        val snapshot = session.dispatch(
+            MatchCommand.Start(CommandId("start-enemy-ammo"), matchId, playerId),
+        )
+
+        assertTrue(
+            snapshot.resourcesByTeam[Team.RED]?.ammunition
+                ?.containsKey("POWDER_BARREL") == false,
+        )
+        assertFailsWith<LoadoutCommandRejectedException> {
+            session.dispatch(
+                MatchCommand.SelectAmmo(
+                    CommandId("select-enemy-unavailable-ammo"),
+                    matchId,
+                    enemyId,
+                    "POWDER_BARREL",
+                ),
+            )
+        }.also { assertEquals(LoadoutError.AMMUNITION_UNAVAILABLE, it.error) }
     }
 
     @Test

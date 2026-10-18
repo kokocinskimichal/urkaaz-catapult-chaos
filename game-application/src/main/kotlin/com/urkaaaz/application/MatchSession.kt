@@ -121,12 +121,14 @@ class MatchSession(
 
     fun canDeployUnit(team: Team, unitType: String): Boolean {
         val matchScenario = scenario
-        if (team == Team.BLUE && matchScenario != null) {
+        if (matchScenario != null) {
             if (matchScenario.availableUnits.isNotEmpty() &&
                 unitType !in matchScenario.availableUnits
             ) return false
-            val loadout = matchScenario.playerLoadout
-            if (loadout != null && unitType !in loadout.unitTypes) return false
+            if (team == Team.BLUE) {
+                val loadout = matchScenario.playerLoadout
+                if (loadout != null && unitType !in loadout.unitTypes) return false
+            }
         }
         val definition = runCatching { UnitFactory.byId(unitType) }.getOrNull() ?: return false
         val resources = latestSnapshot.resourcesByTeam[team] ?: return false
@@ -154,6 +156,7 @@ class MatchSession(
                 blueFortressMaxHealth = blueFortressMaxHealth,
                 mapDefinition = mapDefinition,
                 playerLoadout = scenario?.playerLoadout,
+                availableAmmunitionTypes = scenario?.availableAmmunition?.toSet().orEmpty(),
             ),
             combatLogSink = combatLogSink,
             ammunitionLogSink = ammunitionLogSink,
@@ -177,12 +180,12 @@ class MatchSession(
         unitType: String,
     ) {
         val matchScenario = scenario ?: return
-        if (teamForPlayer(playerId) != Team.BLUE) return
         if (matchScenario.availableUnits.isNotEmpty() &&
             unitType !in matchScenario.availableUnits
         ) {
             throw LoadoutCommandRejectedException(LoadoutError.UNIT_UNAVAILABLE)
         }
+        if (teamForPlayer(playerId) != Team.BLUE) return
         val loadout = matchScenario.playerLoadout
         if (loadout?.playerId == playerId && unitType !in loadout.unitTypes) {
             throw LoadoutCommandRejectedException(LoadoutError.UNIT_UNAVAILABLE)
@@ -194,12 +197,12 @@ class MatchSession(
         ammunitionType: String,
     ) {
         val matchScenario = scenario ?: return
-        if (teamForPlayer(playerId) != Team.BLUE) return
         if (matchScenario.availableAmmunition.isNotEmpty() &&
             ammunitionType !in matchScenario.availableAmmunition
         ) {
             throw LoadoutCommandRejectedException(LoadoutError.AMMUNITION_UNAVAILABLE)
         }
+        if (teamForPlayer(playerId) != Team.BLUE) return
         val loadout = matchScenario.playerLoadout
         if (loadout?.playerId == playerId &&
             ammunitionType !in loadout.ammunitionSlots.filterNotNull()

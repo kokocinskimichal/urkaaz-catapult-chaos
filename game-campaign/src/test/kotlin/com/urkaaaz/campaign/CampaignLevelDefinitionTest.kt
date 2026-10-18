@@ -19,8 +19,25 @@ class CampaignLevelDefinitionTest {
         assertTrue(level.availableUnits.any { it.id == UnitFactory.defender().id })
         assertFalse(level.availableUnits.any { it.id == UnitFactory.sapper().id })
         assertFalse(AmmunitionType.POWDER_BARREL in level.availableAmmunition)
+        assertEquals(
+            setOf(AmmunitionType.ROCK, AmmunitionType.SIEGE_BOMB),
+            level.availableAmmunition,
+        )
+        assertEquals(setOf(SpellType.FORTRESS_SHIELD), level.availableSpells)
         assertFalse(SpellType.ICE_TRAP in level.availableSpells)
         assertTrue(level.tutorial.enabled)
+    }
+
+    @Test
+    fun powderBarrelBecomesAvailableAtLevelTen() {
+        assertFalse(
+            AmmunitionType.POWDER_BARREL in
+                CampaignLevelDefinition.forLevel(9).availableAmmunition,
+        )
+        assertTrue(
+            AmmunitionType.POWDER_BARREL in
+                CampaignLevelDefinition.forLevel(10).availableAmmunition,
+        )
     }
 
     @Test
@@ -95,6 +112,10 @@ class CampaignLevelDefinitionTest {
         )
 
         assertEquals(listOf("DEFENDER", "DEMOLISHER", "SAPPER"), scenario.availableUnits)
+        assertEquals(
+            level.availableSpells.map { it.name }.sorted(),
+            scenario.availableSpells,
+        )
         assertEquals(listOf("DEFENDER"), scenario.playerLoadout?.unitTypes)
         assertEquals(listOf("HASTE"), scenario.playerLoadout?.spellTypes)
     }

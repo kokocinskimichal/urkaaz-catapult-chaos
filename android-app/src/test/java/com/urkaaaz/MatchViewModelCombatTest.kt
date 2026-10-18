@@ -39,6 +39,30 @@ class MatchViewModelCombatTest {
     }
 
     @Test
+    fun campaignAiUsesLevelUnitsRatherThanThePlayersSelectedLoadout() {
+        val loadout = PlayerLoadoutConfig(
+            playerId = PlayerId("player"),
+            unitTypes = listOf("DEFENDER"),
+            ammunitionSlots = listOf("ROCK", "SIEGE_BOMB", null),
+            spellTypes = listOf("FORTRESS_SHIELD", "HASTE"),
+        )
+
+        val viewModel = MatchViewModel(campaignLevel = 8, playerLoadout = loadout)
+
+        assertEquals(
+            setOf("DEFENDER", "SAPPER", "DEMOLISHER"),
+            viewModel.aiAllowedUnitIds(),
+        )
+    }
+
+    @Test
+    fun levelOneCampaignAiUsesOnlyLevelAmmunition() {
+        val viewModel = MatchViewModel(campaignLevel = 1)
+
+        assertEquals(setOf("ROCK", "SIEGE_BOMB"), viewModel.aiAllowedAmmunitionIds())
+    }
+
+    @Test
     fun defenderHealthChangesThroughTheAndroidMatchPipeline() {
         val viewModel = MatchViewModel(demoMode = true)
 

@@ -79,6 +79,30 @@ class AiAgentTest {
     }
 
     @Test
+    fun aiSelectsOnlyAmmunitionAvailableOnItsCampaignLevel() {
+        val agent = AiAgent(
+            AiConfiguration(
+                playerId = PlayerId("ai-player"),
+                team = Team.RED,
+                temperament = AiTemperament.AGGRESSIVE,
+            ),
+        )
+        agent.setAllowedAmmunitionIds(setOf("ROCK", "SIEGE_BOMB"))
+        val restrictedSnapshot = snapshot.copy(
+            resources = snapshot.resources.copy(
+                ammunition = mapOf("POWDER_BARREL" to 2, "SIEGE_BOMB" to 1),
+            ),
+        )
+
+        val selected = agent.decide(restrictedSnapshot)
+            .filterIsInstance<MatchCommand.SelectAmmo>()
+            .single()
+
+        assertEquals("SIEGE_BOMB", selected.ammunitionType)
+        assertEquals(setOf("ROCK", "SIEGE_BOMB"), agent.allowedAmmunitionIds())
+    }
+
+    @Test
     fun lowHealthChangesTemperamentToDesperateAndCanDeployUnit() {
         val lowHealth = snapshot.copy(
             fortresses = snapshot.fortresses.map {
