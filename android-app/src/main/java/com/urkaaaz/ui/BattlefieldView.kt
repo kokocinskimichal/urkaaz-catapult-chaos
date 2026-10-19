@@ -5,7 +5,6 @@ import android.graphics.Canvas
 import android.graphics.Color
 import android.graphics.Paint
 import android.graphics.RectF
-import android.graphics.Typeface
 import android.os.SystemClock
 import android.view.View
 import android.view.MotionEvent
@@ -96,7 +95,7 @@ class BattlefieldView(context: Context) : View(context) {
     private val debugCoordinateTextPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         color = Color.WHITE
         textSize = 12f * resources.displayMetrics.scaledDensity
-        typeface = Typeface.MONOSPACE
+        typeface = UiTypography.typeface(context)
     }
     private var pinchActive = false
     private val scaleDetector = ScaleGestureDetector(
@@ -124,6 +123,7 @@ class BattlefieldView(context: Context) : View(context) {
     )
     private val renderer = BattlefieldRenderer(
         assets = assets,
+        textTypeface = UiTypography.typeface(context),
         drawTiledTexture = ::drawTiledTexture,
         drawTexture = ::drawTexture,
         drawTextureAtBaseline = ::drawTextureAtBaseline,
@@ -572,7 +572,7 @@ class BattlefieldView(context: Context) : View(context) {
             color = Color.WHITE
             textAlign = Paint.Align.CENTER
             textSize = 10f
-            typeface = Typeface.DEFAULT_BOLD
+            typeface = UiTypography.typeface(context)
         }
         canvas.drawText(
             if (ready) "OK" else kotlin.math.ceil(remainingSeconds).toInt().coerceAtLeast(1).toString(),

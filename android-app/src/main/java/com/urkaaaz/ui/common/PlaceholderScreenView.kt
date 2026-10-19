@@ -2,7 +2,6 @@ package com.urkaaaz.ui.common
 
 import android.content.Context
 import android.graphics.Color
-import android.graphics.Typeface
 import android.view.Gravity
 import android.widget.LinearLayout
 import android.widget.TextView
@@ -20,7 +19,6 @@ class PlaceholderScreenView(
         addView(TextView(context).apply {
             text = title
             textSize = 24f
-            typeface = Typeface.DEFAULT_BOLD
             gravity = Gravity.CENTER
             setTextColor(Color.rgb(239, 220, 179))
         })

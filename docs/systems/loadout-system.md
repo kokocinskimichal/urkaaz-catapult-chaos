@@ -510,6 +510,25 @@ uzupełnienie kontraktu uruchomienia meczu i podłączenie go do obecnego
 - Nie implementować `CastSpell` ani zakupów w ramach podłączenia assetów;
   grafika zaklęcia nie jest deklaracją aktywnego efektu gameplayowego.
 
+### Pomysł na przyszłość: czasowe bonusy amunicji
+
+To pomysł, nie zaimplementowana ani zatwierdzona funkcja/balans. System
+progresji mógłby przyznawać po określonym działaniu gracza czasowe uprawnienie
+do wybranego typu amunicji, na przykład efektywnie nieograniczony zapas przez
+15 minut.
+
+- `AmmunitionType.unlimited` i katalog balansu pozostają niezmienną bazową
+  definicją; bonus nie powinien modyfikować globalnej cechy typu.
+- Progresja powinna być właścicielem przyznania i wygaśnięcia bonusu oraz
+  dostarczać Loadout i konfiguracji meczu niemutowalny snapshot aktywnych
+  uprawnień.
+- Walidacja Loadoutu i runtime meczu muszą stosować tę samą efektywną regułę
+  zapasu, tak aby czasowy unlimited nie zużywał ograniczonego stocku.
+- Do ustalenia pozostają: moment rozpoczęcia czasu, zaufane źródło zegara,
+  odnowienie/nakładanie bonusów, zachowanie zapisanego Loadoutu po wygaśnięciu
+  oraz to, czy bonus wygasa natychmiast w trwającym meczu, czy dopiero po jego
+  zakończeniu.
+
 Najważniejsze zaimplementowane pliki to
 `game-application/.../loadout/MatchLoadout.kt`,
 `LoadoutContracts.kt`, `LoadoutUseCases.kt`,

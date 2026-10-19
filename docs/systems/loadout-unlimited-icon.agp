@@ -1,0 +1,33 @@
+Create one small, transparent UI icon for the Urkaaaz Loadout ammunition
+cards. The icon represents ammunition with unlimited stock.
+
+## Visual direction
+
+- Use a clearly readable infinity symbol as the sole visual motif.
+- Match the existing Loadout title strip and the warm gold/ivory treatment of
+  `assets_src/loadout/ui/loadout_info_icon.png` and
+  `assets_src/loadout/ui/loadout_selected_badge.png`.
+- Keep the symbol clean and compact, with enough stroke weight to remain
+  legible when rendered at 16–20 dp.
+- Use a subtle warm highlight if needed, but do not add a circular badge,
+  border, backing plate, glow that obscures the silhouette, or ornamental
+  details.
+- Preserve transparency around the symbol. Do not include words, numbers,
+  ammunition art, a card, screenshot, watermark, or additional UI.
+
+## Output
+
+- Output exactly one PNG: `loadout_unlimited_icon.png`.
+- Canvas: 128 x 128 pixels, RGBA, transparent background.
+- Center the infinity symbol and keep all visible pixels inside the canvas
+  with a small transparent margin.
+- Save the file for review under `assets_src/loadout/ui/`.
+- Do not copy it into Android resources until the user approves the preview.
+
+## Review checklist
+
+- Verify the file is a 128 x 128 RGBA PNG with transparent background.
+- Check that the infinity symbol is recognizable at 16 dp on both a dark and
+  a bright background.
+- Ensure the icon remains visually consistent with the supplied Loadout UI
+  assets and contains no unintended marks or text.

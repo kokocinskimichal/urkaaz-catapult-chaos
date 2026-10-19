@@ -1,0 +1,93 @@
+Generate a cohesive family of full-bleed Urkaaaz Loadout ammunition-card
+illustrations.
+
+Create five separate images, with one image-generation request per ammunition
+type. Do not combine the outputs into a grid, montage, contact sheet, collage,
+or sprite sheet.
+
+## Reference inputs
+
+- Attach the Urkaaaz main-menu background as the primary palette and
+  atmosphere reference. Use its blue sky, warm clouds, golden light, green
+  landscape, and earthy materials without copying the complete composition
+  into every card.
+- Attach the current icon for each ammunition type. Each icon is the
+  authoritative identity reference for that card's projectile or ammunition
+  object. Preserve its recognizable design, silhouette, colors, and defining
+  details; do not redesign the item.
+- Attach one approved Urkaaaz unit-card illustration as a secondary style and
+  scale reference so the ammunition cards belong to the same Loadout art
+  family.
+- The current icon can use a different pose or camera angle, but do not invent
+  ammunition types, gameplay effects, abilities, faction marks, or defining
+  equipment absent from its reference.
+
+## Art direction
+
+- Each image is a portrait, full-bleed illustration intended to fill one
+  complete Loadout carousel card. Make the referenced ammunition item large,
+  central, and immediately recognizable at mobile-card size.
+- Match the approved unit-card finish: painterly fantasy-game rendering,
+  dimensional hand-painted forms, warm cinematic light, controlled
+  saturation, clear silhouettes, and detailed but uncluttered materials.
+- Keep all five cards visually cohesive in camera distance, subject scale,
+  lighting direction, contrast, detail density, and background palette.
+- Use a soft-focus battlefield or campaign setting inspired by the supplied
+  main-menu background. Keep scenery subdued behind the ammunition item.
+- Compose for a narrow portrait card. Keep the main object and its defining
+  silhouette inside the central 80% of the image; do not crop important
+  features at the edges.
+- Reserve the lower 22% for a darker, low-detail area behind Android's
+  slightly translucent title strip. The item name and any stock or cost
+  metadata are live UI text; do not bake text into the illustration.
+- Keep the upper-left and upper-right corners visually simple for Android's
+  separate information and selected-check icons.
+- The illustration fills the whole card but must contain no card frame,
+  border, selected outline, check badge, information button, lock icon, text,
+  or control. Android renders those layers separately.
+- Do not reproduce the supplied icon as a small inset badge. Integrate the
+  referenced ammunition object into the full-card composition while
+  preserving its identity.
+
+## Output format
+
+- Produce exactly one independent PNG per ammunition type, at exactly
+  512 x 720 pixels.
+- Use full-bleed opaque backgrounds, portrait composition, and clean edges.
+- Never include transparent checkerboards, empty margins, a tiled background,
+  or a neighboring card in the output.
+- Save generated files for review under:
+  `assets_src/loadout/ammunition-cards/`
+- Do not copy generated images into Android resources until the user approves
+  the reviewed previews.
+- These are presentation illustrations only. Do not change ammunition
+  balance, projectile behavior, simulation visuals, or gameplay assets.
+
+## Output files
+
+1. `loadout_ammunition_rock_card.png` — `ROCK`; use the supplied ROCK icon as
+   the exact identity reference.
+2. `loadout_ammunition_siege_bomb_card.png` — `SIEGE_BOMB`; use the supplied
+   Siege Bomb icon as the exact identity reference.
+3. `loadout_ammunition_powder_barrel_card.png` — `POWDER_BARREL`; use the
+   supplied Powder Barrel icon as the exact identity reference.
+4. `loadout_ammunition_fire_rain_card.png` — `FIRE_RAIN`; use the supplied
+   Fire Rain icon as the exact identity reference.
+5. `loadout_ammunition_plague_cauldron_card.png` — `PLAGUE_CAULDRON`; use the
+   supplied Plague Cauldron icon as the exact identity reference.
+
+## Review checklist
+
+- Verify that all five files are valid 512 x 720 PNGs with opaque,
+  full-bleed backgrounds.
+- Check that every ammunition type is recognizable at carousel-card size and
+  remains consistent with its supplied icon.
+- Check that the set matches the supplied background and approved unit-card
+  art without copying either reference composition.
+- Confirm that the lower title-strip area and both top icon areas remain
+  unobstructed.
+- Ensure that no image contains text, card trim, icons, controls, watermark,
+  or unintended game content.
+
+Show all five assets individually for review. Do not integrate them into
+Android resources until approved.

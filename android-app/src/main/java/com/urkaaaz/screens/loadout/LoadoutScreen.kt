@@ -1,16 +1,13 @@
 package com.urkaaaz.screens.loadout
 
 import android.content.Context
-import android.graphics.Canvas
 import android.graphics.Color
-import android.graphics.ColorFilter
-import android.graphics.Paint
-import android.graphics.PixelFormat
-import android.graphics.RectF
+import android.graphics.ColorMatrix
+import android.graphics.ColorMatrixColorFilter
 import android.graphics.Typeface
-import android.graphics.drawable.Drawable
 import android.graphics.drawable.GradientDrawable
 import android.text.TextUtils
+import android.util.TypedValue
 import android.view.Gravity
 import android.view.View
 import android.widget.Button
@@ -20,6 +17,8 @@ import android.widget.ImageView
 import android.widget.LinearLayout
 import android.widget.ScrollView
 import android.widget.TextView
+import androidx.core.content.res.ResourcesCompat
+import androidx.core.widget.TextViewCompat
 import com.urkaaaz.android.R
 import com.urkaaaz.application.loadout.LoadoutCategory
 import com.urkaaaz.application.loadout.LoadoutAmmunitionEffect
@@ -48,6 +47,14 @@ class LoadoutScreen(
     private val onStart: (PlayerLoadoutConfig) -> Unit,
 ) : ScreenContent {
     private val viewModel = LoadoutViewModel(campaignLevel, loadoutUseCases)
+    private val unavailableArtworkFilter = ColorMatrixColorFilter(
+        ColorMatrix().apply { setSaturation(0f) },
+    )
+    private val unitNameTypeface = requireNotNull(
+        ResourcesCompat.getFont(context, R.font.cinzel_semibold),
+    ) {
+        "Cinzel SemiBold font resource could not be loaded"
+    }
     private var screenScope: CoroutineScope? = null
     private var hasLoaded = false
     private var isShopPlaceholderVisible = false
@@ -70,6 +77,11 @@ class LoadoutScreen(
     private lateinit var spellCountView: TextView
     private lateinit var startButton: Button
     private lateinit var detailsContent: LinearLayout
+
+    private data class MetadataIcon(
+        val drawableId: Int,
+        val contentDescription: String,
+    )
 
     override val view: View = createView(context)
 
@@ -260,7 +272,7 @@ class LoadoutScreen(
             content(this)
         }
         scroll.addView(columnContent)
-        addView(scroll, LinearLayout.LayoutParams(-1, 0, 1f))
+        addView(scroll, LinearLayout.LayoutParams(-1, -2))
     }
 
     private fun createCarousel(
@@ -274,7 +286,7 @@ class LoadoutScreen(
     }
 
     private fun columnParams(context: Context) =
-        LinearLayout.LayoutParams(0, -1, 1f).apply {
+        LinearLayout.LayoutParams(0, -2, 1f).apply {
             val gap = dp(context, 5)
             marginStart = gap
             marginEnd = gap
@@ -304,24 +316,33 @@ class LoadoutScreen(
                     setOnClickListener { closeDetails() }
                 }, wrap())
             }
-            val title = LinearLayout(context).apply {
-                orientation = LinearLayout.VERTICAL
-                gravity = Gravity.CENTER
+            val title = FrameLayout(context).apply {
+                addView(ImageView(context).apply {
+                    setImageResource(LoadoutAssetCatalog.headerFrame())
+                    scaleType = ImageView.ScaleType.FIT_CENTER
+                    contentDescription = null
+                }, FrameLayout.LayoutParams(-1, -1))
                 addView(TextView(context).apply {
                     text = context.getString(R.string.loadout_title)
-                    textSize = 21f
+                    textSize = 17f
                     setTypeface(typeface, Typeface.BOLD)
                     setTextColor(Color.rgb(255, 211, 106))
                     gravity = Gravity.CENTER
-                }, wrap())
+                    setShadowLayer(3f, 0f, 1f, Color.BLACK)
+                }, FrameLayout.LayoutParams(-1, dp(context, 26), Gravity.TOP).apply {
+                    topMargin = dp(context, 30)
+                })
                 addView(TextView(context).apply {
                     text = context.getString(R.string.loadout_level, viewModel.state.level)
-                    textSize = 11f
-                    setTextColor(Color.LTGRAY)
+                    textSize = 10f
+                    setTextColor(Color.rgb(239, 220, 179))
                     gravity = Gravity.CENTER
-                }, wrap())
+                    setShadowLayer(2f, 0f, 1f, Color.BLACK)
+                }, FrameLayout.LayoutParams(-1, dp(context, 18), Gravity.TOP).apply {
+                    topMargin = dp(context, 56)
+                })
             }
-            addView(title, LinearLayout.LayoutParams(0, -2, 1f))
+            addView(title, LinearLayout.LayoutParams(0, dp(context, 96), 1f))
             val headerGold = TextView(context).apply {
                 textSize = 12f
                 setTextColor(Color.rgb(255, 211, 106))
@@ -390,11 +411,26 @@ class LoadoutScreen(
                     item = reference,
                     status = viewModel.optionStatus(reference),
                     isFixed = ammunition.id == MatchLoadout.ROCK,
-                    trailingText = if (ammunition.unlimited) {
-                        mainContent.context.getString(R.string.loadout_unlimited)
-                    } else {
-                        ammunitionStockLabel(reference)
-                    },
+                    trailingIcons = listOfNotNull(
+                        if (ammunition.unlimited) {
+                            MetadataIcon(
+                                LoadoutAssetCatalog.unlimitedIcon(),
+                                mainContent.context.getString(R.string.loadout_unlimited),
+                            )
+                        } else {
+                            null
+                        },
+                        if (ammunition.id == MatchLoadout.ROCK) {
+                            MetadataIcon(
+                                LoadoutAssetCatalog.rockFixedIcon(),
+                                mainContent.context.getString(R.string.loadout_state_fixed),
+                            )
+                        } else {
+                            null
+                        },
+                    ),
+                    trailingText = if (ammunition.unlimited) null
+                    else ammunitionStockLabel(reference),
                 ) {
                     val selected =
                         ammunition.id in viewModel.state.draft?.ammunitionSlots.orEmpty()
@@ -485,12 +521,13 @@ class LoadoutScreen(
         item: LoadoutItemReference,
         status: LoadoutOptionStatus,
         isFixed: Boolean = false,
+        trailingIcons: List<MetadataIcon> = emptyList(),
         trailingText: String? = null,
         onSelect: () -> Unit,
     ): View {
         val isSelected = status == LoadoutOptionStatus.SELECTED
-        val isFullCardUnit = item is LoadoutItemReference.Unit
-        val density = context.resources.displayMetrics.density
+        val isLocked = status == LoadoutOptionStatus.UNAVAILABLE ||
+            status == LoadoutOptionStatus.LOCKED
         val card = FrameLayout(context).apply {
             background = GradientDrawable().apply {
                 cornerRadius = dp(context, 7).toFloat()
@@ -501,20 +538,13 @@ class LoadoutScreen(
                 status == LoadoutOptionStatus.LOCKED ||
                 status == LoadoutOptionStatus.OUT_OF_STOCK
             ) 0.68f else 1f
-            foreground = if (isSelected) {
-                GoldGlowDrawable(
-                    density = density,
-                    fillColor = null,
-                    cornerRadius = dp(context, 7).toFloat(),
-                )
-            } else {
+            foreground = if (isSelected) null else {
                 GradientDrawable().apply {
                     cornerRadius = dp(context, 7).toFloat()
                     setColor(Color.TRANSPARENT)
                     setStroke(dp(context, 1), Color.argb(155, 145, 130, 111))
                 }
             }
-            if (isSelected) setLayerType(View.LAYER_TYPE_SOFTWARE, null)
         }
         val canEdit = !isFixed && viewModel.state.draft != null &&
             status in setOf(LoadoutOptionStatus.SELECTED, LoadoutOptionStatus.AVAILABLE)
@@ -525,146 +555,158 @@ class LoadoutScreen(
 
         val textColumn = LinearLayout(context).apply {
             orientation = LinearLayout.VERTICAL
+            gravity = Gravity.CENTER
             setPadding(dp(context, 2), dp(context, 2), dp(context, 2), dp(context, 2))
             addView(TextView(context).apply {
                 text = context.getString(itemNameResource(item))
-                textSize = 11f
-                setTypeface(typeface, Typeface.BOLD)
-                setTextColor(Color.WHITE)
-                maxLines = 2
-                ellipsize = TextUtils.TruncateAt.END
-                if (isFullCardUnit) setShadowLayer(2f, 0f, 1f, Color.BLACK)
-            }, wrap())
-            addView(TextView(context).apply {
-                text = when {
-                    isFixed -> context.getString(R.string.loadout_state_fixed)
-                    status == LoadoutOptionStatus.SELECTED -> ""
-                    else -> statusLabel(context, status)
-                }
-                textSize = 9f
-                setTypeface(typeface, Typeface.BOLD)
-                setTextColor(statusColor(status))
-                setPadding(0, dp(context, 3), 0, 0)
-                minHeight = dp(context, 13)
+                textSize = 10f
+                typeface = unitNameTypeface
+                gravity = Gravity.CENTER
+                setTextColor(Color.rgb(255, 242, 218))
                 maxLines = 1
                 ellipsize = TextUtils.TruncateAt.END
-                if (status == LoadoutOptionStatus.SELECTED) {
+                setShadowLayer(2f, 0f, 1f, Color.BLACK)
+                TextViewCompat.setAutoSizeTextTypeUniformWithConfiguration(
+                    this,
+                    7,
+                    10,
+                    1,
+                    TypedValue.COMPLEX_UNIT_SP,
+                )
+            }, matchWrap())
+            val statusText = if (status == LoadoutOptionStatus.OUT_OF_STOCK) {
+                statusLabel(context, status)
+            } else {
+                ""
+            }
+            val metadataText = listOf(statusText, trailingText.orEmpty())
+                .filter(String::isNotBlank)
+                .joinToString(" \u2022 ")
+            val metadataRow = LinearLayout(context).apply {
+                orientation = LinearLayout.HORIZONTAL
+                gravity = Gravity.CENTER
+                minimumHeight = dp(context, 10)
+                if (status == LoadoutOptionStatus.SELECTED &&
+                    trailingIcons.isEmpty() &&
+                    metadataText.isBlank()
+                ) {
                     contentDescription =
                         context.getString(R.string.loadout_card_selected_accessibility)
                 }
-                if (isFullCardUnit) setShadowLayer(2f, 0f, 1f, Color.BLACK)
-            }, wrap())
-            if (trailingText != null) {
-                addView(TextView(context).apply {
-                    text = trailingText
-                    textSize = 9f
-                    setTextColor(Color.rgb(255, 211, 106))
-                    maxLines = 1
-                    if (isFullCardUnit) setShadowLayer(2f, 0f, 1f, Color.BLACK)
-                }, wrap())
+                trailingIcons.forEachIndexed { index, trailingIcon ->
+                    addView(ImageView(context).apply {
+                        setImageResource(trailingIcon.drawableId)
+                        scaleType = ImageView.ScaleType.FIT_CENTER
+                        contentDescription = listOfNotNull(
+                            if (index == 0 && status == LoadoutOptionStatus.SELECTED) {
+                                context.getString(R.string.loadout_card_selected_accessibility)
+                            } else {
+                                null
+                            },
+                            trailingIcon.contentDescription,
+                        ).joinToString(", ")
+                    }, LinearLayout.LayoutParams(dp(context, 16), dp(context, 16)).apply {
+                        if (index > 0) marginStart = dp(context, 2)
+                    })
+                }
+                if (metadataText.isNotBlank()) {
+                    addView(TextView(context).apply {
+                        text = metadataText
+                        textSize = 7f
+                        setTypeface(typeface, Typeface.BOLD)
+                        gravity = Gravity.CENTER
+                        setTextColor(statusColor(status))
+                        maxLines = 1
+                        ellipsize = TextUtils.TruncateAt.END
+                        if (status == LoadoutOptionStatus.SELECTED) {
+                            contentDescription =
+                                context.getString(R.string.loadout_card_selected_accessibility)
+                        }
+                        setShadowLayer(2f, 0f, 1f, Color.BLACK)
+                    }, wrap())
+                }
             }
+            addView(metadataRow, matchWrap())
         }
 
-        if (isFullCardUnit) {
-            when (val art = LoadoutAssetCatalog.carouselArtwork(item)) {
-                is LoadoutAssetLookup.Found -> card.addView(
-                    ImageView(context).apply {
-                        setImageResource(art.drawableId)
-                        scaleType = ImageView.ScaleType.CENTER_CROP
-                        contentDescription = context.getString(itemNameResource(item))
-                    },
-                    FrameLayout.LayoutParams(-1, -1),
+        when (val art = LoadoutAssetCatalog.carouselArtwork(item)) {
+            is LoadoutAssetLookup.Found -> card.addView(
+                ImageView(context).apply {
+                    setImageResource(art.drawableId)
+                    scaleType = ImageView.ScaleType.CENTER_CROP
+                    contentDescription = context.getString(itemNameResource(item))
+                    if (isLocked) colorFilter = unavailableArtworkFilter
+                },
+                FrameLayout.LayoutParams(-1, -1),
+            )
+            LoadoutAssetLookup.Missing -> Unit
+        }
+        card.addView(
+            View(context).apply {
+                background = GradientDrawable(
+                    GradientDrawable.Orientation.TOP_BOTTOM,
+                    intArrayOf(
+                        Color.argb(175, 12, 10, 9),
+                        Color.argb(205, 12, 10, 9),
+                    ),
                 )
-                LoadoutAssetLookup.Missing -> Unit
-            }
-            card.addView(
-                View(context).apply {
-                    background = GradientDrawable(
-                        GradientDrawable.Orientation.TOP_BOTTOM,
-                        intArrayOf(
-                            Color.TRANSPARENT,
-                            Color.argb(150, 12, 10, 9),
-                            Color.argb(235, 12, 10, 9),
-                        ),
-                    )
-                },
-                FrameLayout.LayoutParams(-1, dp(context, 58), Gravity.BOTTOM),
-            )
-            card.addView(
-                textColumn,
-                FrameLayout.LayoutParams(-1, -2, Gravity.BOTTOM).apply {
-                    marginStart = dp(context, 4)
-                    marginEnd = dp(context, 4)
-                    bottomMargin = dp(context, 3)
-                },
-            )
-            card.addView(createInfoButton(context, item), FrameLayout.LayoutParams(
-                dp(context, 24),
-                dp(context, 24),
-                Gravity.TOP or Gravity.START,
-            ).apply {
-                topMargin = dp(context, 2)
-                marginStart = dp(context, 2)
-            })
-        } else {
-            val cardContent = LinearLayout(context).apply {
-                orientation = LinearLayout.VERTICAL
-                gravity = Gravity.TOP
-                setPadding(dp(context, 5), dp(context, 6), dp(context, 5), dp(context, 7))
-                val cardTop = FrameLayout(context)
-                when (val illustration = LoadoutAssetCatalog.illustration(item)) {
-                    is LoadoutAssetLookup.Found -> cardTop.addView(
-                        ImageView(context).apply {
-                            setImageResource(illustration.drawableId)
-                            scaleType = ImageView.ScaleType.FIT_CENTER
-                            contentDescription = context.getString(itemNameResource(item))
-                        },
-                        FrameLayout.LayoutParams(-1, dp(context, 42)),
-                    )
-                    LoadoutAssetLookup.Missing -> cardTop.addView(
-                        View(context),
-                        FrameLayout.LayoutParams(-1, dp(context, 42)),
-                    )
-                }
-                cardTop.addInfoButton(item)
-                addView(cardTop, matchWrap())
-                addView(textColumn, matchWrap())
-            }
-            card.addView(cardContent, FrameLayout.LayoutParams(-1, -1))
+            },
+            FrameLayout.LayoutParams(-1, dp(context, 40), Gravity.BOTTOM),
+        )
+        card.addView(
+            textColumn,
+            FrameLayout.LayoutParams(-1, dp(context, 40), Gravity.BOTTOM),
+        )
+
+        if (isLocked) {
+            card.addView(ImageView(context).apply {
+                setImageResource(LoadoutAssetCatalog.lockedIcon())
+                scaleType = ImageView.ScaleType.FIT_CENTER
+                colorFilter = unavailableArtworkFilter
+                contentDescription = context.getString(
+                    if (status == LoadoutOptionStatus.LOCKED) {
+                        R.string.loadout_card_locked_accessibility
+                    } else {
+                        R.string.loadout_card_unavailable_accessibility
+                    },
+                )
+                importantForAccessibility = View.IMPORTANT_FOR_ACCESSIBILITY_YES
+            }, FrameLayout.LayoutParams(
+                dp(context, 42),
+                dp(context, 42),
+                Gravity.CENTER,
+            ))
         }
 
         if (isSelected) {
-            card.addView(TextView(context).apply {
-                text = "✓"
-                textSize = 14f
-                setTypeface(typeface, Typeface.BOLD)
-                gravity = Gravity.CENTER
-                setTextColor(Color.rgb(255, 232, 166))
-                setShadowLayer(
-                    dp(context, 4).toFloat(),
-                    0f,
-                    0f,
-                    Color.rgb(255, 176, 25),
-                )
-                background = GoldGlowDrawable(
-                    density = context.resources.displayMetrics.density,
-                    fillColor = Color.argb(235, 40, 29, 15),
-                    cornerRadius = dp(context, 11).toFloat(),
-                    oval = true,
-                )
-                setLayerType(View.LAYER_TYPE_SOFTWARE, null)
-                isFocusable = false
-                isClickable = false
+            card.addView(ImageView(context).apply {
+                setImageResource(R.drawable.loadout_card_selected_frame)
+                scaleType = ImageView.ScaleType.FIT_XY
+                scaleX = 1.12f
+                scaleY = 1.25f
+                importantForAccessibility = View.IMPORTANT_FOR_ACCESSIBILITY_NO
+            }, FrameLayout.LayoutParams(-1, -1))
+            card.addView(ImageView(context).apply {
+                setImageResource(R.drawable.loadout_card_selected_badge)
+                scaleType = ImageView.ScaleType.FIT_CENTER
                 importantForAccessibility = View.IMPORTANT_FOR_ACCESSIBILITY_NO
             }, FrameLayout.LayoutParams(
-                dp(context, 22),
-                dp(context, 22),
+                dp(context, 30),
+                dp(context, 30),
                 Gravity.TOP or Gravity.END,
             ).apply {
                 topMargin = dp(context, 2)
                 marginEnd = dp(context, 2)
             })
         }
+        card.addView(createInfoButton(context, item), FrameLayout.LayoutParams(
+            dp(context, 24),
+            dp(context, 24),
+            Gravity.TOP or Gravity.START,
+        ).apply {
+            topMargin = dp(context, 2)
+            marginStart = dp(context, 2)
+        })
         card.isClickable = canEdit || canOpenShop
         card.isFocusable = canEdit || canOpenShop
         if (canEdit) card.setOnClickListener { onSelect() }
@@ -676,34 +718,18 @@ class LoadoutScreen(
         return card
     }
 
-    private fun FrameLayout.addInfoButton(item: LoadoutItemReference) {
-        addView(createInfoButton(context, item), FrameLayout.LayoutParams(
-            dp(context, 24),
-            dp(context, 24),
-            Gravity.TOP or Gravity.START,
-        ).apply {
-            topMargin = dp(context, 2)
-            marginStart = dp(context, 2)
-        })
-    }
-
     private fun createInfoButton(
         context: Context,
         item: LoadoutItemReference,
-    ): TextView = TextView(context).apply {
-        text = "ⓘ"
-        textSize = 17f
-        gravity = Gravity.CENTER
-        setTextColor(Color.rgb(255, 211, 106))
-        background = GradientDrawable().apply {
-            shape = GradientDrawable.OVAL
-            setColor(Color.argb(205, 25, 23, 21))
-            setStroke(dp(context, 1), Color.rgb(255, 211, 106))
-        }
+    ): ImageView = ImageView(context).apply {
+        setImageResource(R.drawable.loadout_card_info)
+        scaleType = ImageView.ScaleType.FIT_CENTER
         contentDescription = context.getString(
             R.string.loadout_open_details,
             context.getString(itemNameResource(item)),
         )
+        isClickable = true
+        isFocusable = true
         setOnClickListener { showDetails(item) }
     }
 
@@ -1160,75 +1186,3 @@ class LoadoutScreen(
 
 private fun dp(context: Context, value: Int): Int =
     (value * context.resources.displayMetrics.density).toInt()
-
-private class GoldGlowDrawable(
-    private val density: Float,
-    private val fillColor: Int?,
-    private val cornerRadius: Float,
-    private val oval: Boolean = false,
-) : Drawable() {
-    private val fillPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-        color = fillColor ?: Color.TRANSPARENT
-        style = Paint.Style.FILL
-    }
-    private val glowPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-        color = Color.rgb(255, 190, 45)
-        style = Paint.Style.STROKE
-        strokeWidth = 2f * density
-        setShadowLayer(5f * density, 0f, 0f, Color.argb(230, 255, 145, 0))
-    }
-    private val outerBorderPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-        color = Color.rgb(255, 187, 31)
-        style = Paint.Style.STROKE
-        strokeWidth = 2f * density
-    }
-    private val innerBorderPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-        color = Color.rgb(255, 235, 170)
-        style = Paint.Style.STROKE
-        strokeWidth = density
-    }
-
-    override fun draw(canvas: Canvas) {
-        val bounds = RectF(getBounds())
-        if (fillColor != null) {
-            drawShape(canvas, bounds, fillPaint, cornerRadius)
-        }
-
-        val borderBounds = RectF(bounds).apply {
-            inset(3f * density, 3f * density)
-        }
-        val borderRadius = (cornerRadius - 3f * density).coerceAtLeast(0f)
-        drawShape(canvas, borderBounds, glowPaint, borderRadius)
-        drawShape(canvas, borderBounds, outerBorderPaint, borderRadius)
-
-        val innerBounds = RectF(borderBounds).apply {
-            inset(density, density)
-        }
-        drawShape(canvas, innerBounds, innerBorderPaint, (borderRadius - density).coerceAtLeast(0f))
-    }
-
-    private fun drawShape(canvas: Canvas, bounds: RectF, paint: Paint, radius: Float) {
-        if (oval) {
-            canvas.drawOval(bounds, paint)
-        } else {
-            canvas.drawRoundRect(bounds, radius, radius, paint)
-        }
-    }
-
-    override fun setAlpha(alpha: Int) {
-        fillPaint.alpha = alpha
-        glowPaint.alpha = alpha
-        outerBorderPaint.alpha = alpha
-        innerBorderPaint.alpha = alpha
-    }
-
-    override fun setColorFilter(colorFilter: ColorFilter?) {
-        fillPaint.colorFilter = colorFilter
-        glowPaint.colorFilter = colorFilter
-        outerBorderPaint.colorFilter = colorFilter
-        innerBorderPaint.colorFilter = colorFilter
-    }
-
-    @Suppress("DEPRECATION")
-    override fun getOpacity(): Int = PixelFormat.TRANSLUCENT
-}

@@ -15,6 +15,7 @@ import com.urkaaaz.contracts.WorldScale
 
 class BattlefieldRenderer(
     private val assets: BattlefieldAssetCatalog,
+    private val textTypeface: Typeface,
     private val drawTiledTexture: (Canvas, Bitmap?, Float, Float, Float, Int) -> Unit,
     private val drawTexture: (Canvas, Bitmap?, Float, Float, Float) -> Unit,
     private val drawTextureAtBaseline: (Canvas, Bitmap?, Float, Float, Float) -> Unit,
@@ -906,7 +907,7 @@ class BattlefieldRenderer(
                     val paint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
                         color = Color.rgb(255, 224, 120)
                         textSize = 28f
-                        typeface = Typeface.DEFAULT_BOLD
+                        typeface = textTypeface
                         setShadowLayer(4f, 1f, 1f, Color.BLACK)
                     }
 
@@ -941,7 +942,7 @@ class BattlefieldRenderer(
                     val paint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
                         color = Color.rgb(160, 235, 255)
                         textSize = 18f
-                        typeface = Typeface.DEFAULT_BOLD
+                        typeface = textTypeface
                         setShadowLayer(3f, 1f, 1f, Color.BLACK)
                     }
                     canvas.drawText("GROUP", x - 28f, y - 105f, paint)
@@ -959,7 +960,7 @@ class BattlefieldRenderer(
         val paint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
             color = if (hasBomb) Color.rgb(255, 205, 65) else Color.GRAY
             textSize = 16f
-            typeface = Typeface.DEFAULT_BOLD
+            typeface = textTypeface
             setShadowLayer(3f, 1f, 1f, Color.BLACK)
         }
         canvas.drawText(if (hasBomb) "BOMB" else "EMPTY", centerX - 24f, centerY, paint)
@@ -1060,7 +1061,7 @@ class BattlefieldRenderer(
         val paint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
             color = Color.WHITE
             textSize = 14f
-            typeface = Typeface.DEFAULT_BOLD
+            typeface = textTypeface
             setShadowLayer(4f, 1f, 1f, Color.BLACK)
         }
         paint.textAlign = Paint.Align.LEFT
@@ -1094,7 +1095,7 @@ class BattlefieldRenderer(
             color = Color.WHITE
             textSize = 42f
             textAlign = Paint.Align.CENTER
-            typeface = Typeface.DEFAULT_BOLD
+            typeface = textTypeface
         }
         val result = when (outcome) {
             "BLUE_WIN" -> "VICTORY"

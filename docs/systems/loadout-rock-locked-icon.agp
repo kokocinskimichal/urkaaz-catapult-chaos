@@ -1,0 +1,53 @@
+Create one compact status icon for the mandatory, fixed ROCK ammunition card
+in the Urkaaaz Loadout.
+
+## References
+
+- Attach `assets_src/loadout/ui/loadout_unlimited_icon.png` as the primary
+  visual-style reference. Match its compact scale, warm gold/ivory palette,
+  clean silhouette, and transparent treatment.
+- Attach `assets_src/loadout/ui/loadout_card_locked.png` only as a reference
+  for the recognizable padlock shape. Do not copy its grayscale treatment,
+  large overlay scale, or card-overlay composition.
+- The output is a small fixed-slot marker for ROCK. It does not mean that ROCK
+  is unavailable, level-locked, or inaccessible.
+
+## Art direction
+
+- Draw one clearly recognizable, closed padlock as the only motif.
+- Use a polished warm-gold and ivory finish consistent with the infinity
+  icon, with enough contrast to remain legible at 16-20 dp on dark card art.
+- Keep the lock simple and compact. Use a solid, readable body and shackle;
+  avoid delicate lines that disappear when scaled down.
+- Center the icon and leave a small, even transparent margin on every side.
+- Preserve clean edges and full transparency outside the icon.
+- Do not add a circle, badge, border, backing plate, card, glow that obscures
+  the silhouette, text, letters, numbers, keyhole lettering, or extra ornament.
+- The icon is presentation-only. It must not imply that ROCK is unavailable
+  or change any Loadout selection behavior.
+
+## Output
+
+- Output exactly one PNG: `loadout_rock_locked_icon.png`.
+- Canvas: 128 x 128 pixels, RGBA, transparent background.
+- Save the file for review under `assets_src/loadout/ui/`.
+- Do not copy it into Android resources until the user approves the preview.
+
+## Review checklist
+
+- Verify the output is a valid 128 x 128 RGBA PNG with transparent background.
+- Confirm the padlock is immediately recognizable at 16 dp on both dark and
+  bright card backgrounds.
+- Check that its visual weight and gold/ivory treatment match the infinity
+  icon without being mistaken for the centered grayscale unavailable-lock
+  overlay.
+- Ensure the image contains no text, background, UI, watermark, or stray marks.
+- Show the icon preview for user review before Android integration.
+
+## Negative prompt
+
+text, letters, numbers, words, infinity symbol, key, open lock, padlock with
+tiny unreadable details, circle, badge, border, backing plate, card frame,
+UI, screenshot, gray unavailable overlay, background, opaque canvas, glow
+obscuring silhouette, watermark, signature, extra symbols, unrelated
+franchise, photorealism, 3D UI mockup

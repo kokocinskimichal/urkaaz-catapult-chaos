@@ -1,126 +1,133 @@
-Generate a consistent family of Urkaaaz Loadout spell-card illustrations.
-Use the attached user-provided Loadout screenshot as the visual reference for
-the card artwork's painterly fantasy quality, contrast, warm highlights, and
-rich but readable materials. The screenshot's spell names and depicted effects
-are not Urkaaaz content; use only the spell concepts listed here.
+Generate a cohesive family of original, full-bleed Urkaaaz Loadout spell-card
+illustrations.
 
-Run one separate image-generation request for each numbered output below,
-using the same visual reference and prompt each time. Each request must produce
-only its one named PNG; do not ask the image generator to return an 11-image
-grid or montage.
+Create eleven separate images, with one image-generation request per spell.
+Never combine outputs into a grid, montage, contact sheet, collage, or sprite
+sheet. No reference images will be supplied: create complete, original
+illustrations from the direction below.
 
-THEMATICS
+## Spell identity and visual concepts
 
-- Each illustration represents exactly one existing Urkaaaz `SpellType`.
-- The art is a static selection-card illustration. It does not depict a new
-  gameplay rule, spell activation sequence, UI, or status badge.
-- Keep spell effects recognizable at small card size, with one clear focal
-  subject and a simple background.
-- Keep faction/unit silhouettes consistent with the supplied Urkaaaz unit
-  images when they are provided. Do not design new unit classes.
+Use the stable spell IDs below as the authoritative output mapping. The concept
+notes describe visual metaphors for existing spells; they are not permission
+to invent or change gameplay, spell balance, targets, or effects. Keep each
+image centered on one spell idea and make the spells immediately distinguishable
+from one another.
 
-VISUAL STYLE
+1. `ICE_TRAP` — a dramatic frost rune-trap embedded in battlefield ground, with
+   jagged ice converging around a clear central point; cold cyan and glacial
+   blue light.
+2. `RUNIC_BASTION` — a compact, imposing stone-and-rune gate bastion, with
+   luminous carved runes and a grounded defensive silhouette; slate, bronze,
+   and restrained teal light.
+3. `HASTE` — allied silhouettes surging forward through sweeping golden-blue
+   wind trails and light; communicate speed and momentum without motion blur
+   obscuring the figures.
+4. `HEAL` — wounded living allies receiving a warm emerald-and-gold
+   restorative glow, with gentle radiant motes; communicate recovery without
+   medical symbols, gore, or resurrection.
+5. `FORTRESS_SHIELD` — a fortress protected by a brilliant, translucent
+   blue-gold energy barrier; make the barrier the focal point while keeping
+   the fortress readable beneath it.
+6. `CATAPULT_LOCK` — an enemy siege catapult held still by luminous arcane
+   restraints or interlocking runic bands; make the catapult recognizable and
+   the immobilizing spell clear without depicting damage.
+7. `SLOWING_FIELD` — a low, broad field of violet-blue magic spreading over
+   the ground around enemy silhouettes, with suspended particles and softened
+   motion cues; keep it distinct from an ice trap.
+8. `VAMPIRIC_BANNER` — a striking crimson battle banner releasing elegant
+   dark-red energy toward wounded allied silhouettes; evocative and fantastical,
+   with no blood, gore, or horror imagery.
+9. `STONE_SKIN` — an allied warrior with a protective stone-like surface,
+   muted gray mineral facets, and a subtle warm magical edge; do not add
+   weapons or equipment.
+10. `SIEGE_FRENZY` — allied silhouettes rallied by a focused amber-red surge
+    of energy, conveying forceful momentum and resolve without explosions,
+    weapons, or unsupported combat effects.
+11. `BERSERKER` — one powerful frontline defender in a controlled berserker
+    moment, with an intense pose and concentrated ember-red aura; keep the
+    character readable and avoid gore, monstrous transformation, or invented
+    equipment.
 
-- Match the attached Loadout reference's polished painterly fantasy-game
-  direction: dimensional hand-painted forms, warm cinematic lighting,
-  saturated but controlled magical effects, dark readable edges, and
-  restrained gold/brass accents.
-- Keep the artwork cohesive in camera distance, contrast, detail density, and
-  palette across all spells.
-- Landscape 4:3 composition. Center the main symbol/effect and leave the
-  outermost 8% visually quiet so Android card cropping does not hide the
-  subject.
-- Full-bleed image to all canvas edges. The card frame, selection border,
-  title, cost, lock, and stock indicators are rendered by Android and must not
-  appear in these images.
-- The screenshot is a style reference, not a request to copy its exact spell
-  pictures or fictional game content.
+## Art direction
 
-HUMOROUS ACCENTS
+- Each image is a portrait, full-bleed illustration intended to fill one
+  complete Loadout carousel card. Make its spell subject large, central, and
+  recognizable at mobile-card size.
+- Establish a polished painterly fantasy-game style: dimensional hand-painted
+  forms, expressive lighting, rich material detail, clear silhouettes, and
+  cinematic depth. Make the set feel like one art family while giving each
+  spell its own dominant palette and visual rhythm.
+- Use original Urkaaaz-inspired campaign scenery: blue sky, warm clouds,
+  golden light, green landscape, and earthy medieval-fantasy materials. Treat
+  scenery as soft-focus atmosphere, not as a repeated full scene.
+- Keep camera distance, subject scale, lighting quality, contrast, and detail
+  density consistent across all eleven cards.
+- Compose for a narrow portrait card. Keep the subject and defining visual
+  elements within the central 80%; do not clip important silhouettes at the
+  edges.
+- Reserve the lower 22% for a darker, low-detail area behind Android's
+  slightly translucent title strip. Spell names and metadata are live UI text;
+  never bake them into the art.
+- Keep both upper corners visually simple for Android's separate information
+  and selected-check icons.
+- The illustration fills the whole card but must contain no card frame,
+  border, selected outline, check badge, information button, lock icon, text,
+  label, cost, or control. Android renders those layers separately.
+- No reference images will be attached. Do not imitate a known franchise,
+  existing commercial artwork, or a real-world game's specific visual identity.
+- These are presentation illustrations only. Do not alter spell behavior,
+  targets, balance, simulation effects, or battlefield assets.
 
-- No added joke or text. Keep the existing Urkaaaz playful-fantasy tone through
-  expressive but non-comedic details only; gameplay meaning takes priority.
+## Output format
 
-REFERENCE IMAGE INPUT
+- Produce exactly one independent PNG per spell, at exactly 512 x 720 pixels.
+- Use a full-bleed opaque background, portrait composition, and clean edges.
+- Do not use transparent checkerboards, empty margins, tiled backgrounds, or
+  neighboring-card content.
+- Save generated files for review under:
+  `assets_src/loadout/spell-cards/`
+- Do not copy generated images into Android resources until the user approves
+  the reviewed previews.
 
-- Use the attached user-provided Loadout screenshot for visual direction only.
-- When available, use existing Urkaaaz unit icon/sprite images as references
-  for recognizable allied or enemy silhouettes.
-- Do not copy the screenshot's FIRE STRIKE, WIND BLAST, or EARTH SHIELD art.
-- Do not create any art for invented unit or ammunition names.
+## Output files
 
-OUTPUT FILES
+1. `loadout_spell_ice_trap_card.png` — `ICE_TRAP`.
+2. `loadout_spell_runic_bastion_card.png` — `RUNIC_BASTION`.
+3. `loadout_spell_haste_card.png` — `HASTE`.
+4. `loadout_spell_heal_card.png` — `HEAL`.
+5. `loadout_spell_fortress_shield_card.png` — `FORTRESS_SHIELD`.
+6. `loadout_spell_catapult_lock_card.png` — `CATAPULT_LOCK`.
+7. `loadout_spell_slowing_field_card.png` — `SLOWING_FIELD`.
+8. `loadout_spell_vampiric_banner_card.png` — `VAMPIRIC_BANNER`.
+9. `loadout_spell_stone_skin_card.png` — `STONE_SKIN`.
+10. `loadout_spell_siege_frenzy_card.png` — `SIEGE_FRENZY`.
+11. `loadout_spell_berserker_card.png` — `BERSERKER`.
 
-Across the 11 separate requests, export exactly these 11 independent PNGs.
-Each is a separate 512 x 384 image; never combine them into a contact sheet,
-atlas, collage, or sprite sheet.
+## Review checklist
 
-1. `loadout_spell_ice_trap.png` — `ICE_TRAP`: an icy rune trap emerging from
-   battlefield soil, with sharp blue-white crystals and a clear ground-snare
-   silhouette.
-2. `loadout_spell_runic_bastion.png` — `RUNIC_BASTION`: a sturdy runic stone
-   barrier/gate placed on a battlefield, with readable protective runes.
-3. `loadout_spell_haste.png` — `HASTE`: recognizable allied units moving
-   forward with concise golden wind trails, communicating increased speed.
-4. `loadout_spell_heal.png` — `HEAL`: wounded allied units receiving warm
-   restorative light; communicate healing, not resurrection.
-5. `loadout_spell_fortress_shield.png` — `FORTRESS_SHIELD`: a fortress under
-   a translucent protective shield, with the fortress clearly the focal point.
-6. `loadout_spell_catapult_lock.png` — `CATAPULT_LOCK`: an enemy catapult
-   restrained by visible magical runes or chains; no damage or destruction.
-7. `loadout_spell_slowing_field.png` — `SLOWING_FIELD`: an enemy group moving
-   through a cool-colored field that visibly impedes their movement.
-8. `loadout_spell_vampiric_banner.png` — `VAMPIRIC_BANNER`: a dark crimson
-   allied banner with subtle red energy returning from combat to wounded
-   allies; avoid gore.
-9. `loadout_spell_stone_skin.png` — `STONE_SKIN`: an allied unit protected
-   by a readable layer of stone plates, communicating defense and weight.
-10. `loadout_spell_siege_frenzy.png` — `SIEGE_FRENZY`: allied fighters with a
-    red-gold battle surge and stronger attack posture; no new unit design.
-11. `loadout_spell_berserker.png` — `BERSERKER`: the existing Defender unit
-    empowered by a restrained crimson aura; use the supplied Defender art as
-    the identity reference and do not depict a different unit.
+- Verify exactly eleven independent files exist and their filenames match the
+  output list.
+- Verify every file is a valid opaque 512 x 720 PNG with a full-bleed
+  background.
+- Confirm that each spell is clearly distinguishable, matches its named
+  concept, and remains consistent with the existing spell identity.
+- Review each image at card aspect ratio and mobile display size; ensure the
+  lower title strip and both upper icon areas remain unobstructed.
+- Compare the whole set for consistent painterly rendering, subject scale,
+  lighting, contrast, and art direction.
+- Ensure there is no text, UI, card frame, badge, watermark, signature, gore,
+  unintended gameplay effect, or unsupported equipment.
+- Show all eleven assets individually for user review. Do not integrate them
+  into Android resources before approval.
 
-Stage/archive destination before approval:
-`assets_src/loadout/spell-cards/`
+## Negative prompt
 
-Android runtime destination after validation and approval:
-`android-app/src/main/res/drawable-nodpi/`
-
-MUST-HAVE
-
-- Exactly one spell concept per generation request, matching its exact
-  filename and `SpellType` above.
-- PNG format, exact 512 x 384 dimensions, full-bleed 4:3 artwork.
-- Distinct focal art, readable when shown in a small mobile card.
-- No lettering, words, numbers, UI, card borders, selection glows, locks,
-  coins, inventory markers, logo, watermark, or signature.
-- No unsupported effects: `HASTE` affects allies; `HEAL` restores living allies;
-  `FORTRESS_SHIELD` protects a fortress; `CATAPULT_LOCK` disables an enemy
-  siege engine; `SLOWING_FIELD` slows enemies; `VAMPIRIC_BANNER` and
-  `SIEGE_FRENZY` affect allied forces; `BERSERKER` depicts a Defender.
-- These images are presentation assets only. Do not imply that `CastSpell`
-  gameplay is implemented.
-
-MUST-HAVE VALIDATION BEFORE DELIVERY
-
-- Verify exactly 11 files exist and filenames match the list exactly.
-- Verify every file is a valid PNG at exactly 512 x 384 pixels.
-- Open every image and confirm the depicted effect matches its listed spell.
-- Confirm no text, UI, watermark, unintended cropping, wrong unit, or
-  unsupported effect appears.
-- Compare all images as a set for consistent scale, lighting, contrast, and
-  visual style.
-- Reject/regenerate any failed image. Show previews only after all checks pass.
-- Do not copy any image into Android resources until the user accepts the
-  validated previews.
-
-NEGATIVE PROMPT
-
-text, letters, words, numbers, UI, HUD, card frame, border, selected outline,
-check mark, lock icon, coin, price, stock count, logo, watermark, signature,
-contact sheet, collage, sprite sheet, atlas, multiple spell effects in one
-image, invented units, invented ammunition, invented spells, FIRE STRIKE,
-WIND BLAST, EARTH SHIELD, gore, blood, photorealistic device screenshot,
-low-contrast focal subject, unreadable tiny details, clipped subject, wrong
-spell effect, duplicate composition, unrelated franchise, unrelated art style
+text, letters, numbers, logos, watermark, signature, UI, HUD, spell name,
+availability label, information icon, selection checkmark, selected border,
+card frame, badge, stat symbols, price, mana cost, inventory count,
+transparent checkerboard, blank border, cropped subject, tiny subject,
+unrelated character, unsupported weapon, unsupported equipment, invented
+gameplay effect, gore, blood, photorealism, flat vector art, noisy background,
+unrelated franchise, copied commercial artwork, collage, contact sheet,
+sprite sheet

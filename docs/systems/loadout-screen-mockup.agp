@@ -51,13 +51,26 @@ MAIN CONTENT:
   within each group and refresh the order when selection or progression status
   changes.
 - Use the same card proportions, illustration area, title/status treatment,
-  selected border, and separate "i" affordance in all three carousels.
-- Show selection with a bright, glowing gold card border and a dark-centered
-  gold check badge with a matching glow in the upper-right corner instead of
-  the visible word "SELECTED". Keep the separate "i" control in the upper-left
-  so the controls never overlap. Avoid a flat, non-glowing yellow outline.
+  selected-frame asset, and separate information-icon asset in all three
+  carousels.
+- Fill each card with its item illustration and use the same dark,
+  slightly translucent bottom strip across all categories. Center the item
+  name in Cinzel SemiBold and compact status or item metadata beneath it.
+  Keep illustration and text as separate runtime views.
+- Show selection with the reusable glowing gold frame asset and a separate
+  dark-centered gold check-badge asset in the upper-right corner instead of
+  the visible word "SELECTED". Keep the information-icon asset in the
+  upper-left so the controls never overlap. Avoid a flat, non-glowing yellow
+  outline.
 - Every card must use the same fixed width and height across all categories;
-  longer labels must truncate or wrap within the card rather than resize it.
+  reduce the title font size when needed to fit longer names, then truncate
+  only if the minimum readable size still cannot fit.
+- Cards unavailable on the selected level and locked spells must be desaturated
+  and dimmed, with a centered grayscale lock icon. Do not show "NOT AVAILABLE
+  ON THIS LEVEL", "AVAILABLE", "LOCKED", "FIXED", or "UNLIMITED" text on the
+  card. Out-of-stock items may retain their stock status. Represent unlimited
+  ammunition with a small infinity icon instead of an "UNLIMITED" text label
+  once the approved icon asset is available.
 - Keep any category-specific controls compact and outside the item cards.
 - Keep the footer summary and START MATCH action visible at the bottom without
   scrolling.
@@ -67,15 +80,19 @@ UNITS:
 - Do not show a unit purchase cost, supply-cost badge, resource icon, or
   currency amount on a unit card. Unit selection has no Loadout purchase cost.
 - Unit names are UI text, not part of generated artwork.
+- Use the shared bottom-strip card treatment. Center the unit name horizontally
+  in Cinzel SemiBold; keep it as live UI text and do not bake it into the
+  illustration. Center any unit availability status beneath the name without
+  replacing or moving the title.
 - Show three portrait cards side by side in the horizontal carousel, with selected,
   unselected, and optionally disabled states. Selection is an illustrative
   design state only. Use a sample count of "2 / 3 SELECTED" to match the
   reference; real counts come from the current draft.
 - The visible cards are a viewport into the actual five-unit catalog; do not
   imply that only three unit types exist.
-- Give each card a small, visually separate circular "i" information button.
-  Tapping the card body selects it; tapping "i" opens its item-details screen.
-  Do not make the information button look like a selection checkmark.
+- Give each card a small, visually separate circular information-icon asset.
+  Tapping the card body selects it; tapping the asset opens its item-details
+  screen. Do not make the information button look like a selection checkmark.
 
 AMMUNITION:
 - Use one horizontal carousel, styled exactly like the UNITS and SPELLS
@@ -92,7 +109,7 @@ AMMUNITION:
   Finite stock values are supplied dynamically by the app and must not be
   invented in this mockup.
 - Do not use the fictional FIRE ROCK or SPIKE BALL from the reference.
-- Give every ammunition card a small, separate "i" information button that
+- Give every ammunition card a small, separate information-icon asset that
   opens the shared ammunition-details screen without changing selection.
 
 SPELLS:
@@ -110,7 +127,7 @@ SPELLS:
 - Selected/locked states in the mockup demonstrate visual states only. Do not
   claim that a spell is unlocked for a specific level or profile.
 - Do not use the fictional FIRE STRIKE, WIND BLAST, or EARTH SHIELD.
-- Give each spell card a small, separate "i" information button that opens the
+- Give each spell card a small, separate information-icon asset that opens the
   shared spell-details screen without changing selection.
 
 Footer:
@@ -129,11 +146,13 @@ ASSET REUSE AND SEPARATION
   sprites or animation art.
 - Match existing Urkaaaz art for the five ammunition types; do not generate
   replacement projectile art.
-- Keep panels, selected borders, lock/stock markers, labels, and counters as
-  separate native UI layers. Existing Android assets include the dashboard
-  header panel, portrait frame, back button, and HUD panel.
-- Render each card's "i" affordance as a separate native control. It must be
-  distinct from selection and route to the shared full-screen detail page.
+- Keep panels, lock/stock markers, labels, and counters as separate native UI
+  layers. Use reusable graphic assets for selected frames, check badges, and
+  information icons; do not draw these treatments with native shapes or text
+  glyphs. Existing Android assets include the dashboard header panel, portrait
+  frame, back button, and HUD panel.
+- Render each information-icon asset as a separate clickable control. It must
+  be distinct from selection and route to the shared full-screen detail page.
 - Spell illustrations will be generated separately under the spell-card-art
   AGP.
 

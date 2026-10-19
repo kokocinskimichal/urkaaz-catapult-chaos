@@ -1,0 +1,63 @@
+Create one decorative title frame for the Urkaaaz Loadout screen.
+
+## Reference
+
+- Attach the full-screen Loadout screenshot as the primary visual reference.
+- Match its dark translucent panels, warm gold trim, softly rounded corners,
+  painterly fantasy atmosphere, and restrained highlights.
+- Treat the screenshot as a style and proportion reference only. Do not copy
+  its card art, characters, text, icons, or complete screen composition.
+
+## Composition and use
+
+- Create one compact, wide horizontal banner intended to sit above the three
+  Loadout category panels on a landscape Android screen.
+- Give the frame two centered, vertically stacked text areas:
+  - a prominent title line for `LOADOUT`;
+  - a smaller subtitle line for `CAMPAIGN LEVEL` followed by the current
+    campaign level number.
+- The level number is dynamic (`X` is a placeholder), so do not bake any
+  number or lettering into the image. Keep both text areas clear and dark
+  enough for Android to render the exact live strings over them in the game's
+  Cinzel SemiBold font.
+- Keep the banner visually balanced and compact. Its outer trim must not
+  dominate the text or intrude into the category panels below it.
+- Use a subtly textured, dark translucent interior with fine warm-gold edging
+  and restrained corner ornaments. Keep the center uncluttered for legible
+  live text.
+- Make the banner's silhouette and ornamentation consistent with the
+  screenshot's Loadout panels and selected-card accents, but do not imitate a
+  card frame or add selected-state decoration.
+- The banner should read clearly over both bright and dark areas of the
+  existing background.
+
+## Output
+
+- Output exactly one PNG: `loadout_header_frame.png`.
+- Canvas: 1024 x 256 pixels, RGBA with transparent pixels outside the frame.
+- Use a centered, wide composition with even transparent margins.
+- Save the file for review under `assets_src/loadout/ui/`.
+- Do not copy it into Android resources until the user approves the preview.
+- The image is a presentation asset only; do not change screen behavior or
+  encode a fixed campaign level in the artwork.
+
+## Review checklist
+
+- Verify the file is a valid 1024 x 256 RGBA PNG with transparency outside the
+  banner.
+- Preview it over the full-screen Loadout screenshot at its intended size.
+- Confirm there is a clear title area for `LOADOUT` and a separate subtitle
+  area for `CAMPAIGN LEVEL` plus a live level number.
+- Check that margins and ornaments are balanced and that the frame does not
+  crowd the category panels.
+- Ensure there is no text, number, logo, card art, icon, watermark, or
+  signature baked into the asset.
+- Show the preview for user review before Android integration.
+
+## Negative prompt
+
+text, letters, numbers, words, fixed campaign level, logo, watermark,
+signature, screenshot, full-screen composition, card grid, ammunition art,
+spell art, unit art, selected border, checkmark, infinity icon, lock icon,
+oversized heavy frame, busy center, opaque rectangular background, uneven
+transparent margins, unrelated franchise, photorealistic UI mockup

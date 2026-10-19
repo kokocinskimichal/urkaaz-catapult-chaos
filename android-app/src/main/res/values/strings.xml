@@ -31,6 +31,8 @@
     <string name="loadout_unlimited">Unlimited</string>
     <string name="loadout_state_selected">SELECTED</string>
     <string name="loadout_card_selected_accessibility">Selected</string>
+    <string name="loadout_card_unavailable_accessibility">Unavailable on this level</string>
+    <string name="loadout_card_locked_accessibility">Locked</string>
     <string name="loadout_state_available">AVAILABLE</string>
     <string name="loadout_state_unavailable">NOT AVAILABLE ON THIS LEVEL</string>
     <string name="loadout_state_locked">LOCKED</string>

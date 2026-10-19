@@ -1,5 +1,18 @@
 # Changelog
 
+## 2026-10-20
+
+### Added
+
+- Added generation prompts for all 11 spell-card illustrations, the Loadout
+  header frame, and the fixed ROCK icon.
+
+### Changed
+
+- Completed the Loadout visual update with dedicated ammunition-card art,
+  ROCK's fixed-slot marker, a framed live title/level header, global Cinzel
+  SemiBold typography, and category panels sized to their cards.
+
 ## 2026-10-19
 
 ### Added
@@ -8,6 +21,7 @@
   Winning levels unlock the next campaign level and apply Haste/Heal milestones
   at levels 5/7, with the spells available from levels 6/8.
 - Loadout unit carousels now use five dedicated full-card illustrations.
+- Loadout ammunition carousels now use five dedicated full-card illustrations.
 - Campaign opponents now use extensible CADET, VETERAN and ELITE AI profiles,
   assembled from registry-selected catapult, recruitment and wave strategies.
   ELITE progression is bounded through level 100 without resource or unit-stat
@@ -18,11 +32,32 @@
 
 ### Changed
 
+- Applied the Loadout cards' Cinzel SemiBold font across Android game text,
+  including custom Canvas labels and match HUD overlays.
+- Resized Loadout category panels to fit their headers and card rows, retaining
+  evenly spaced horizontal margins.
 - Loadout unit, ammunition and spell options now share horizontal carousels
   with equal-sized cards and available options first. ROCK stays fixed in the
   first ammunition slot; other ammunition uses the same toggle selection
   behavior as units and spells. Selected cards use a glowing gold frame and
   check mark.
+- Loadout selection frames, check badges and information buttons now use
+  supplied transparent PNG artwork instead of vector placeholders.
+- Removed the stray cropped line from the left edge of the Loadout check badge.
+- Removed the visible "AVAILABLE", "FIXED" and "UNLIMITED" labels from
+  Loadout cards and prepared an asset-generation prompt for an
+  unlimited-ammunition icon.
+- Integrated the supplied infinity icon for unlimited ammunition cards.
+- Added the supplied fixed-slot lock icon after ROCK's unlimited marker.
+- Added the supplied Loadout header frame and aligned the title and live level
+  label with its separate text areas.
+- Removed obsolete duplicate unit-animation frame sequences that are no longer
+  loaded by the battlefield asset catalog.
+- Unit, ammunition and spell cards now share a centered Cinzel SemiBold title
+  over a slightly translucent dark bottom strip; long names reduce their font
+  size before truncation.
+- Level-unavailable and locked Loadout cards are desaturated and show the
+  supplied grayscale lock icon instead of availability/locked labels.
 - The match unit panel hides unit icons unavailable to the selected campaign
   level or committed player loadout.
 - Increased CADET AI aim error to ±18° and ±30 power so its shots are less

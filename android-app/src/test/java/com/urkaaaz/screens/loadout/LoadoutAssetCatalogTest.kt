@@ -7,6 +7,32 @@ import org.junit.Test
 
 class LoadoutAssetCatalogTest {
     @Test
+    fun unavailableCardLockUsesTheSuppliedAsset() {
+        assertEquals(R.drawable.loadout_card_locked, LoadoutAssetCatalog.lockedIcon())
+    }
+
+    @Test
+    fun unlimitedAmmunitionUsesTheSuppliedIcon() {
+        assertEquals(
+            R.drawable.loadout_unlimited_icon,
+            LoadoutAssetCatalog.unlimitedIcon(),
+        )
+    }
+
+    @Test
+    fun fixedRockAmmunitionUsesTheSuppliedLockIcon() {
+        assertEquals(
+            R.drawable.loadout_rock_locked_icon,
+            LoadoutAssetCatalog.rockFixedIcon(),
+        )
+    }
+
+    @Test
+    fun loadoutHeaderUsesTheSuppliedFrameAsset() {
+        assertEquals(R.drawable.loadout_header_frame, LoadoutAssetCatalog.headerFrame())
+    }
+
+    @Test
     fun existingUnitAndAmmunitionIllustrationsAreMappedExplicitly() {
         assertEquals(
             LoadoutAssetLookup.Found(R.drawable.defender_icon),
@@ -32,6 +58,26 @@ class LoadoutAssetCatalogTest {
             assertEquals(
                 LoadoutAssetLookup.Found(drawableId),
                 LoadoutAssetCatalog.carouselArtwork(LoadoutItemReference.Unit(unitId)),
+            )
+        }
+    }
+
+    @Test
+    fun everyAmmunitionTypeUsesItsDedicatedFullCardArtworkInTheCarousel() {
+        val expectedArt = mapOf(
+            "ROCK" to R.drawable.loadout_ammunition_rock_card,
+            "SIEGE_BOMB" to R.drawable.loadout_ammunition_siege_bomb_card,
+            "POWDER_BARREL" to R.drawable.loadout_ammunition_powder_barrel_card,
+            "FIRE_RAIN" to R.drawable.loadout_ammunition_fire_rain_card,
+            "PLAGUE_CAULDRON" to R.drawable.loadout_ammunition_plague_cauldron_card,
+        )
+
+        expectedArt.forEach { (ammunitionId, drawableId) ->
+            assertEquals(
+                LoadoutAssetLookup.Found(drawableId),
+                LoadoutAssetCatalog.carouselArtwork(
+                    LoadoutItemReference.Ammunition(ammunitionId),
+                ),
             )
         }
     }

@@ -1,0 +1,128 @@
+Generate a cohesive set of three standalone graphic assets for the Urkaaaz
+Loadout selection cards. These replace the current vector-drawn selected
+frame, check badge, and information button. Match the attached selected-card
+reference: a near-perimeter luminous gold frame and an oversized dark circular
+check medallion overlapping its upper-right corner. Do not generate a screen
+mockup or combine the assets into one image.
+
+## Reference inputs
+
+- Attach the user's screenshot of the selected unit card with the bright gold
+  frame and check medallion. This is the primary visual reference for the
+  frame's edge placement, glow, gold/bronze contrast, badge size, and overlap.
+- Attach the current Loadout card screenshot only to communicate the actual
+  app card's boundaries and content. Do not copy its current vector treatment.
+- Attach one approved Urkaaaz unit-card illustration and the main-menu
+  background as secondary palette and material references.
+- The approved transparent lock image at
+  `assets_src/loadout/ui/loadout_card_locked.png` is a separate availability
+  overlay supplied by the user. Do not regenerate it or incorporate it into
+  any of the three requested assets.
+- Preserve the reference's brighter, cleaner gold treatment: a luminous
+  yellow-gold rim, dark bronze edge/shadow, warm ivory highlights, and a
+  visible amber glow. Do not substitute a flat yellow line or a bulky,
+  ornamental frame.
+
+## Shared art direction
+
+- Create three independent transparent PNG assets that read clearly at small
+  mobile-card sizes.
+- Match the attached reference's metallic depth, contrast, outline weight,
+  roundness, and warm glow. Keep the three assets in one coherent visual
+  family, not generic flat icons.
+- Keep the structural edges crisp and the glow soft. The bright gold should
+  remain visible over the supplied unit art, including bright sky areas.
+- Use transparent backgrounds. Do not include a card image, screenshot,
+  panel, scenery, text label, or any UI beyond the individual requested asset.
+- The semi-transparent unit-title strip and its live Cinzel SemiBold label
+  are rendered separately by Android; do not include them in any of these
+  three asset files.
+- Keep edge glow inside the image bounds; do not rely on content outside the
+  PNG canvas.
+- Do not introduce game logos, faction symbols, invented currency, or
+  decorative details that obscure the function of the asset.
+
+## Asset 1: selected card frame
+
+- Output filename: `loadout_selected_frame.png`
+- Canvas: exactly 512 x 720 pixels, RGBA PNG.
+- Draw a complete portrait-card frame with a fully transparent center.
+- The frame must closely follow the card's perimeter. Keep its visible
+  structural rim about 3-5% inward from the canvas edge, matching the
+  reference; do not leave a wide transparent margin that makes it appear
+  smaller than the illustration.
+- Reproduce the reference's continuous bright yellow-gold rim: a narrow
+  luminous inner highlight, a warm saturated gold body, a dark bronze outer
+  bevel/shadow, and a soft amber glow around the edge. Keep the edge weight
+  balanced and consistent on all four sides.
+- Use rounded corners matching the portrait card. Keep them smooth,
+  symmetrical, and close to the reference. Do not add corner medallions,
+  rivets, gemstones, arrows, symbols, or extra ornaments.
+- The entire interior must remain transparent, including any space between
+  the inner rim and the unit illustration. Do not add a tint or panel fill.
+- Do not include a check badge; it is a separate overlay.
+
+## Asset 2: selected check badge
+
+- Output filename: `loadout_selected_badge.png`
+- Canvas: exactly 256 x 256 pixels, RGBA PNG.
+- Create the reference's prominent circular medallion: a dark, nearly black
+  brown center, a thick luminous yellow-gold ring, warm ivory-gold highlights,
+  and a clearly readable centered check.
+- Give the badge a soft, strong amber halo. Its gold rim should remain visible
+  while overlapping the selected frame and bright card art.
+- The badge is positioned by Android so it overlaps the card frame at the
+  upper-right corner, as in the reference. Draw the complete circle and its
+  glow inside this standalone asset; do not draw any part of the card frame.
+- Keep the check mark bold and unmistakable at small size. Do not use the
+  letter "V" as a substitute.
+- Keep the badge centered with a small transparent safety margin for its
+  glow. Do not add text, numbers, stars, or secondary symbols.
+
+## Asset 3: information button
+
+- Output filename: `loadout_info_icon.png`
+- Canvas: exactly 256 x 256 pixels, RGBA PNG.
+- Create a circular information button with a dark, nearly black brown
+  center, a luminous yellow-gold rim, warm ivory-gold highlights, and a
+  centered lowercase "i" glyph.
+- Match the selected badge's metal, lighting, contrast, and glow, but keep
+  this control visually distinct from the larger check medallion.
+- Keep the glyph simple and crisp at small size. No words, labels, question
+  marks, check marks, or other symbols.
+- Keep the button centered with a small transparent safety margin for its
+  glow.
+
+## Negative requirements
+
+- No opaque background, checkerboard, card mockup, illustration, screenshot,
+  text, labels, extra controls, logo, watermark, signature, or contact sheet.
+- No inset frame with a wide transparent border; the selected frame must
+  follow the near-perimeter placement in the reference.
+- No flat yellow strokes, default platform icons, thin unreadable marks,
+  excessive bloom, jagged outlines, bulky ornate trim, asymmetric frame, or
+  uneven corners.
+- Do not place the check badge or information icon inside the frame image.
+
+## Output and review
+
+Return exactly three independent PNG files with the exact filenames,
+dimensions, and alpha transparency specified above. Save them for review under:
+
+```text
+assets_src/loadout/ui/
+```
+
+Before delivery, verify that:
+
+- all three files are valid RGBA PNGs with the exact specified dimensions;
+- the frame alpha channel is transparent throughout its center and its rim
+  follows the near-perimeter inset shown in the reference;
+- the badge and information icon remain distinct and legible when reduced to
+  their small on-card sizes, with the badge visually larger and more luminous;
+- the frame, badge, and information icon match the reference's bright
+  yellow-gold, dark bronze, and warm amber treatment;
+- no asset contains any unintended text, background, UI, or watermark.
+
+Show all three assets on both a dark and a bright card background for visual
+approval. Do not integrate them into Android resources until approved.

@@ -1,3 +1,5 @@
 <resources>
-    <style name="Theme.Urkaaaz" parent="android:style/Theme.Material.Light.NoActionBar" />
+    <style name="Theme.Urkaaaz" parent="android:style/Theme.Material.Light.NoActionBar">
+        <item name="android:fontFamily">@font/cinzel_semibold</item>
+    </style>
 </resources>

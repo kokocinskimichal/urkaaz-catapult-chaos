@@ -39,9 +39,11 @@ ART DIRECTION
 - Compose for a narrow portrait card. Keep the face, defining equipment, and
   silhouette inside the central 80% of the image. Do not crop the head,
   hands, weapon, mount, or other defining features at the edges.
-- Reserve the lower 22% for a darker, low-detail area so Android can overlay
-  the unit name and availability status legibly. Keep the upper-right corner
-  visually simple for the native information button.
+- Reserve the lower 22% for a darker, low-detail area behind a slightly
+  translucent, full-width title strip. Android will overlay the centered unit
+  name in Cinzel SemiBold and any availability status as live UI text. Keep
+  this area unobstructed and do not bake text into the illustration. Keep the
+  upper-right corner visually simple for the information-button asset.
 - The art may fill the whole card, but the image itself must contain no card
   frame, border, selected outline, badge, text, or control. Android renders
   those layers separately.

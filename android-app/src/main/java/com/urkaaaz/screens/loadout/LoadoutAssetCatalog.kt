@@ -8,6 +8,11 @@ sealed interface LoadoutAssetLookup {
 }
 
 internal object LoadoutAssetCatalog {
+    fun lockedIcon(): Int = R.drawable.loadout_card_locked
+    fun unlimitedIcon(): Int = R.drawable.loadout_unlimited_icon
+    fun rockFixedIcon(): Int = R.drawable.loadout_rock_locked_icon
+    fun headerFrame(): Int = R.drawable.loadout_header_frame
+
     fun carouselArtwork(item: LoadoutItemReference): LoadoutAssetLookup =
         when (item) {
             is LoadoutItemReference.Unit -> when (item.identifier) {
@@ -16,6 +21,14 @@ internal object LoadoutAssetCatalog {
                 "DEMOLISHER" -> LoadoutAssetLookup.Found(R.drawable.loadout_unit_demolisher_card)
                 "RAGING_BOAR" -> LoadoutAssetLookup.Found(R.drawable.loadout_unit_raging_boar_card)
                 "SLINGMASTER" -> LoadoutAssetLookup.Found(R.drawable.loadout_unit_slingmaster_card)
+                else -> LoadoutAssetLookup.Missing
+            }
+            is LoadoutItemReference.Ammunition -> when (item.identifier) {
+                "ROCK" -> LoadoutAssetLookup.Found(R.drawable.loadout_ammunition_rock_card)
+                "SIEGE_BOMB" -> LoadoutAssetLookup.Found(R.drawable.loadout_ammunition_siege_bomb_card)
+                "POWDER_BARREL" -> LoadoutAssetLookup.Found(R.drawable.loadout_ammunition_powder_barrel_card)
+                "FIRE_RAIN" -> LoadoutAssetLookup.Found(R.drawable.loadout_ammunition_fire_rain_card)
+                "PLAGUE_CAULDRON" -> LoadoutAssetLookup.Found(R.drawable.loadout_ammunition_plague_cauldron_card)
                 else -> LoadoutAssetLookup.Missing
             }
             else -> illustration(item)

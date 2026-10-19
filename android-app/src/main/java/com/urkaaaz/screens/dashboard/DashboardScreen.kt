@@ -2,7 +2,6 @@ package com.urkaaaz.screens.dashboard
 
 import android.content.Context
 import android.graphics.Color
-import android.graphics.Typeface
 import android.view.Gravity
 import android.view.View
 import android.widget.Button
@@ -153,7 +152,6 @@ class DashboardScreen(
         textSize = size
         gravity = Gravity.CENTER
         includeFontPadding = false
-        typeface = Typeface.DEFAULT_BOLD
         setTextColor(Color.WHITE)
     }
 

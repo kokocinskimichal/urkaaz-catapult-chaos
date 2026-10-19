@@ -17,12 +17,12 @@ class SupplyGaugeView(context: Context) : View(context) {
     private val numberPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         color = Color.WHITE
         textAlign = Paint.Align.CENTER
-        typeface = android.graphics.Typeface.DEFAULT_BOLD
+        typeface = UiTypography.typeface(context)
     }
     private val labelPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         color = Color.rgb(225, 193, 119)
         textAlign = Paint.Align.CENTER
-        typeface = android.graphics.Typeface.DEFAULT_BOLD
+        typeface = UiTypography.typeface(context)
     }
     private var supply = 0f
     private val maximum = 20f

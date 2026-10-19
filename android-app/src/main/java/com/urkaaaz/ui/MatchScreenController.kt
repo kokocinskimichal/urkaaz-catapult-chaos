@@ -121,7 +121,7 @@ class MatchScreenController(
             text = "RESTART MATCH"
             setTextColor(Color.WHITE)
             textSize = 16f
-            setTypeface(Typeface.DEFAULT, Typeface.BOLD)
+            setTypeface(typeface, Typeface.BOLD)
             gravity = Gravity.CENTER
             setPadding(dp(20), dp(12), dp(20), dp(12))
             setBackgroundResource(com.urkaaaz.android.R.drawable.bg_hud_panel)

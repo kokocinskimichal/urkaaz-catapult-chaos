@@ -160,6 +160,15 @@ Each ammunition type defines:
 Campaign progression decides when ammunition is available. The domain type
 defines what the ammunition does, not which level unlocks it.
 
+Future idea, not implemented: progression may grant a time-limited effective
+unlimited entitlement for an otherwise limited ammunition type (for example,
+15 minutes after a qualifying player action). Keep the catalog's
+`AmmunitionType.unlimited` value as immutable base balance; represent such a
+grant as separate progression state with an expiry and project it consistently
+into Loadout validation and match inventory rules. See
+`docs/systems/loadout-system.md`; grant timing, clock authority, stacking and
+expiry during an active match remain open decisions.
+
 ### 5.2 Reload and inventory
 
 Each type defines its own reload duration. Reload state belongs to the used
