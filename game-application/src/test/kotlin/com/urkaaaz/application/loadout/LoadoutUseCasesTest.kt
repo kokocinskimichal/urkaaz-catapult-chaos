@@ -71,6 +71,36 @@ class LoadoutUseCasesTest {
     }
 
     @Test
+    fun campaignPreferredSpellsComeFirstOnlyInGeneratedDefaults() {
+        val progression = snapshot().copy(defaultSpellTypes = setOf("HASTE", "HEAL"))
+
+        val defaults = MatchLoadout.defaults(availability, progression)
+
+        assertEquals(listOf("HASTE", "HEAL", "ICE_TRAP"), defaults.spellTypes)
+    }
+
+    @Test
+    fun savedLoadoutIsNotAppendedWithNewCampaignDefaultSpells() = runBlocking {
+        val repository = FakeRepository(
+            StoredLoadoutSelection(
+                unitTypes = listOf("DEFENDER"),
+                ammunitionSlots = listOf("ROCK", null, null),
+                spellTypes = listOf("FORTRESS_SHIELD"),
+            ),
+        )
+        val useCases = useCases(
+            progression = FakeProgression(
+                snapshot().copy(defaultSpellTypes = setOf("HASTE", "HEAL")),
+            ),
+            repository = repository,
+        )
+
+        val result = assertIs<LoadoutOpenResult.Opened>(useCases.open(availability))
+
+        assertEquals(listOf("FORTRESS_SHIELD"), result.draft.spellTypes)
+    }
+
+    @Test
     fun openNormalizesStaleStoredValuesAndReportsEachCorrection() {
         val repository = FakeRepository(
             StoredLoadoutSelection(
@@ -135,6 +165,113 @@ class LoadoutUseCasesTest {
         assertEquals(LoadoutError.AMMUNITION_OUT_OF_STOCK, ammoResult.error)
         assertEquals(draft, unitResult.draft)
         assertEquals(draft, ammoResult.draft)
+    }
+
+    @Test
+    fun ammunitionToggleUsesFirstEmptySlotAndRemovesSelectionWithoutMovingOtherTypes() {
+        val useCases = useCases()
+        val initial = MatchLoadout(
+            unitTypes = listOf("DEFENDER"),
+            ammunitionSlots = listOf("ROCK", null, null),
+            spellTypes = listOf("FORTRESS_SHIELD"),
+        )
+        val progression = snapshot(ammoStock = mapOf("POWDER_BARREL" to 2))
+
+        val withSiegeBomb = assertIs<LoadoutEditResult.Accepted>(
+            useCases.edit(
+                initial,
+                LoadoutEditAction.ToggleAmmunition("SIEGE_BOMB", selected = true),
+                availability,
+                progression,
+            ),
+        ).draft
+        val withPowderBarrel = assertIs<LoadoutEditResult.Accepted>(
+            useCases.edit(
+                withSiegeBomb,
+                LoadoutEditAction.ToggleAmmunition("POWDER_BARREL", selected = true),
+                availability,
+                progression,
+            ),
+        ).draft
+        val withoutSiegeBomb = assertIs<LoadoutEditResult.Accepted>(
+            useCases.edit(
+                withPowderBarrel,
+                LoadoutEditAction.ToggleAmmunition("SIEGE_BOMB", selected = false),
+                availability,
+                progression,
+            ),
+        ).draft
+        val filledFirstSlot = assertIs<LoadoutEditResult.Accepted>(
+            useCases.edit(
+                withoutSiegeBomb,
+                LoadoutEditAction.ToggleAmmunition("SIEGE_BOMB", selected = true),
+                availability,
+                progression,
+            ),
+        ).draft
+
+        assertEquals(listOf("ROCK", "SIEGE_BOMB", null), withSiegeBomb.ammunitionSlots)
+        assertEquals(
+            listOf("ROCK", "SIEGE_BOMB", "POWDER_BARREL"),
+            withPowderBarrel.ammunitionSlots,
+        )
+        assertEquals(listOf("ROCK", null, "POWDER_BARREL"), withoutSiegeBomb.ammunitionSlots)
+        assertEquals(
+            listOf("ROCK", "SIEGE_BOMB", "POWDER_BARREL"),
+            filledFirstSlot.ammunitionSlots,
+        )
+    }
+
+    @Test
+    fun ammunitionToggleKeepsRockFixedAndEnforcesStockAndSelectionLimit() {
+        val useCases = useCases()
+        val draft = MatchLoadout(
+            unitTypes = listOf("DEFENDER"),
+            ammunitionSlots = listOf("ROCK", "SIEGE_BOMB", "POWDER_BARREL"),
+            spellTypes = listOf("FORTRESS_SHIELD"),
+        )
+        val progression = snapshot(ammoStock = mapOf("POWDER_BARREL" to 1))
+
+        val rockResult = useCases.edit(
+            draft,
+            LoadoutEditAction.ToggleAmmunition("ROCK", selected = false),
+            availability,
+            progression,
+        )
+        val fullResult = useCases.edit(
+            draft,
+            LoadoutEditAction.ToggleAmmunition("FIRE_RAIN", selected = true),
+            availability,
+            progression.copy(
+                ammunitionStocks = mapOf(
+                    "POWDER_BARREL" to 1,
+                    "FIRE_RAIN" to 1,
+                ),
+            ),
+        )
+        val stockResult = useCases.edit(
+            MatchLoadout(
+                unitTypes = listOf("DEFENDER"),
+                ammunitionSlots = listOf("ROCK", null, null),
+                spellTypes = listOf("FORTRESS_SHIELD"),
+            ),
+            LoadoutEditAction.ToggleAmmunition("FIRE_RAIN", selected = true),
+            availability,
+            progression,
+        )
+
+        assertEquals(
+            LoadoutError.ROCK_SLOT_FIXED,
+            assertIs<LoadoutEditResult.Rejected>(rockResult).error,
+        )
+        assertEquals(
+            LoadoutError.SELECTION_LIMIT_REACHED,
+            assertIs<LoadoutEditResult.Rejected>(fullResult).error,
+        )
+        assertEquals(
+            LoadoutError.AMMUNITION_OUT_OF_STOCK,
+            assertIs<LoadoutEditResult.Rejected>(stockResult).error,
+        )
     }
 
     @Test

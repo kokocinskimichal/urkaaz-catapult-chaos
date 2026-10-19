@@ -5,6 +5,9 @@ import androidx.datastore.preferences.core.PreferenceDataStoreFactory
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.intPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
+import com.urkaaaz.application.campaign.CampaignProgress
+import com.urkaaaz.application.campaign.CampaignProgressFailure
+import com.urkaaaz.application.campaign.CampaignProgressRepositoryResult
 import com.urkaaaz.application.loadout.LoadoutProgressionRead
 import com.urkaaaz.application.loadout.LoadoutProgressionSnapshot
 import com.urkaaaz.application.loadout.LoadoutStorageFailure
@@ -68,6 +71,82 @@ class DataStoreRepositoriesTest {
                 PlayerProgressionRepositoryResult.Available(initialSnapshot),
                 DataStorePlayerProgressionRepository(store.dataStore)
                     .loadOrInitialize(initialSnapshot.copy(goldBalance = 999)),
+            )
+        }
+    }
+
+    @Test
+    fun campaignProgressInitializesAndAtomicallyRoundTripsWithoutTouchingProfile() = runBlocking {
+        testStore().use { store ->
+            val playerRepository = DataStorePlayerProgressionRepository(store.dataStore)
+            val initialProfile = initialProfile()
+            assertEquals(
+                PlayerProgressionRepositoryResult.Available(initialProfile),
+                playerRepository.loadOrInitialize(initialProfile),
+            )
+
+            val repository = DataStoreCampaignProgressRepository(store.dataStore)
+            assertEquals(
+                CampaignProgressRepositoryResult.Available(CampaignProgress.INITIAL),
+                repository.loadOrInitialize(),
+            )
+            val expected = CampaignProgress(
+                highestUnlockedLevel = 6,
+                completedLevels = setOf(5),
+                appliedMilestoneIds = setOf("campaign_spell_haste"),
+            )
+            assertEquals(
+                CampaignProgressRepositoryResult.Available(expected),
+                repository.update {
+                    it.copy(
+                        highestUnlockedLevel = 6,
+                        completedLevels = it.completedLevels + 5,
+                        appliedMilestoneIds = it.appliedMilestoneIds + "campaign_spell_haste",
+                    )
+                },
+            )
+            assertEquals(
+                CampaignProgressRepositoryResult.Available(expected),
+                DataStoreCampaignProgressRepository(store.dataStore).loadOrInitialize(),
+            )
+            assertEquals(
+                PlayerProgressionRepositoryResult.Available(initialProfile),
+                playerRepository.loadOrInitialize(initialProfile),
+            )
+        }
+    }
+
+    @Test
+    fun partialAndUnsupportedCampaignProgressAreNotReplaced() = runBlocking {
+        testStore().use { store ->
+            store.dataStore.updateData { current ->
+                current.toMutablePreferences().apply {
+                    this[intPreferencesKey("campaign.highest_unlocked_level")] = 4
+                }
+            }
+            val repository = DataStoreCampaignProgressRepository(store.dataStore)
+            assertEquals(
+                CampaignProgressRepositoryResult.Failure(CampaignProgressFailure.INVALID_DATA),
+                repository.loadOrInitialize(),
+            )
+            assertEquals(
+                CampaignProgressRepositoryResult.Failure(CampaignProgressFailure.INVALID_DATA),
+                repository.update { it.copy(highestUnlockedLevel = 5) },
+            )
+        }
+
+        testStore().use { store ->
+            store.dataStore.updateData { current ->
+                current.toMutablePreferences().apply {
+                    this[intPreferencesKey("campaign.schema_version")] = 99
+                }
+            }
+            val repository = DataStoreCampaignProgressRepository(store.dataStore)
+            assertEquals(
+                CampaignProgressRepositoryResult.Failure(
+                    CampaignProgressFailure.UNSUPPORTED_VERSION,
+                ),
+                repository.loadOrInitialize(),
             )
         }
     }
@@ -227,6 +306,18 @@ class DataStoreRepositoriesTest {
         assertEquals(
             LoadoutStorageWriteResult.Failure(LoadoutStorageFailure.STORAGE_UNAVAILABLE),
             DataStoreLoadoutRepository(failingStore).save(1, validLoadout()),
+        )
+        assertEquals(
+            CampaignProgressRepositoryResult.Failure(
+                CampaignProgressFailure.STORAGE_UNAVAILABLE,
+            ),
+            DataStoreCampaignProgressRepository(failingStore).loadOrInitialize(),
+        )
+        assertEquals(
+            CampaignProgressRepositoryResult.Failure(
+                CampaignProgressFailure.STORAGE_UNAVAILABLE,
+            ),
+            DataStoreCampaignProgressRepository(failingStore).update { it },
         )
     }
 

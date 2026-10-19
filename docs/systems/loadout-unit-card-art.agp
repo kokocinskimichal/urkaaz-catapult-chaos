@@ -1,0 +1,106 @@
+Generate a cohesive family of full-bleed Urkaaaz Loadout unit-card
+illustrations.
+
+Create five separate images, one image-generation request per unit. Do not
+combine the outputs into a grid, montage, contact sheet, collage, or sprite
+sheet.
+
+REFERENCE INPUTS
+
+- Attach the previously supplied Loadout screenshot as the primary reference
+  for the full-card character scale, painterly fantasy-game finish, and
+  rich-but-readable treatment. Use it for visual direction only; do not copy
+  its fictional units or exact card art.
+- Attach each current Urkaaaz unit icon. These are the authoritative identity
+  references for that unit's face, silhouette, armor, clothing, colors, and
+  equipment. Preserve the recognizable design; do not redesign the unit.
+- Attach the current main-menu background as the palette and atmosphere
+  reference. Use its bright blue sky, warm cream clouds, golden sunlight,
+  green landscape, and earthy materials as a shared color family. Do not
+  reproduce the complete background composition inside every card.
+
+ART DIRECTION
+
+- Each image is a portrait, full-bleed illustration intended to fill one
+  complete Loadout carousel card. The character must be much larger than the
+  current small icon and remain immediately recognizable at mobile-card size.
+- The unit does not need to keep the pose shown in its icon. Choose a new,
+  expressive pose that fits the portrait composition and conveys the unit's
+  personality; use the icon to preserve identity, not to copy its pose.
+- Match the screenshot's polished painterly fantasy style: dimensional
+  hand-painted forms, expressive character rendering, warm cinematic light,
+  controlled saturation, clear silhouettes, and detailed but uncluttered
+  materials.
+- Keep all five illustrations visually cohesive in camera distance, character
+  scale, lighting direction, contrast, detail density, and background palette.
+- Use a soft-focus battlefield background inspired by the supplied main-menu
+  background. Keep scenery subdued behind the character so each card feels
+  connected to the home screen without competing with the unit.
+- Compose for a narrow portrait card. Keep the face, defining equipment, and
+  silhouette inside the central 80% of the image. Do not crop the head,
+  hands, weapon, mount, or other defining features at the edges.
+- Reserve the lower 22% for a darker, low-detail area so Android can overlay
+  the unit name and availability status legibly. Keep the upper-right corner
+  visually simple for the native information button.
+- The art may fill the whole card, but the image itself must contain no card
+  frame, border, selected outline, badge, text, or control. Android renders
+  those layers separately.
+- Do not add gameplay effects, props, equipment, faction marks, or unit
+  abilities not visible in the supplied icon. The icon is the source of truth
+  for the unit's identity and equipment, while pose, expression, and camera
+  angle may be adapted to make a stronger card illustration.
+
+OUTPUT FORMAT
+
+- Produce exactly one independent PNG per unit, at exactly 512 x 720 pixels.
+- Use full-bleed opaque backgrounds, portrait composition, and clean edges.
+- Never include transparent checkerboards, empty margins, a tiled background,
+  or a neighboring card in the output.
+- Save generated files for review/staging under:
+  `assets_src/loadout/unit-cards/`
+- Do not copy generated images into Android resources until the user approves
+  the reviewed previews.
+- After approval, runtime resources belong under:
+  `android-app/src/main/res/drawable-nodpi/`
+- These are presentation illustrations only. Do not change battlefield
+  sprites, animation frames, hitboxes, or gameplay balance.
+
+OUTPUT FILES
+
+1. `loadout_unit_defender_card.png` — `DEFENDER`; use the supplied Defender
+   icon as the exact identity reference.
+2. `loadout_unit_sapper_card.png` — `SAPPER`; use the supplied Sapper icon as
+   the exact identity reference.
+3. `loadout_unit_demolisher_card.png` — `DEMOLISHER`; use the supplied
+   Demolisher icon as the exact identity reference.
+4. `loadout_unit_raging_boar_card.png` — `RAGING_BOAR`; preserve the exact
+   goblin-and-boar identity from the supplied icon.
+5. `loadout_unit_slingmaster_card.png` — `SLINGMASTER`; preserve the exact
+   goblin identity and sling equipment from the supplied icon.
+
+MUST-HAVE VALIDATION BEFORE DELIVERY
+
+- Verify exactly five independent files exist and filenames match the list.
+- Verify every file is a valid PNG with dimensions exactly 512 x 720.
+- Preview each image at the actual narrow Loadout-card aspect ratio and at a
+  small mobile display size.
+- Confirm each character is recognizable against its supplied icon and that
+  no defining feature is clipped or obscured by the reserved UI areas.
+- Compare all five images as one set for consistent character scale, lighting,
+  painterly rendering, contrast, and main-menu-inspired palette.
+- Confirm the images contain no text, UI, card frame, badge, watermark,
+  signature, unrelated character, unsupported equipment, or gameplay effect.
+- Reject and regenerate any output that fails validation. Show the previews
+  for approval before Android integration.
+
+NEGATIVE PROMPT
+
+text, letters, numbers, logos, watermark, signature, UI, HUD, item name,
+availability label, information icon, selection checkmark, selected border,
+card frame, rivets, badge, stat symbols, price, inventory count, transparent
+checkerboard, blank border, cropped face, cropped defining equipment, tiny
+character, distant group, multiple units, unrelated unit, redesigned armor,
+invented weapon, invented gameplay ability, unsupported magical aura,
+photorealism, flat vector art, low contrast, noisy background, unrelated
+franchise, copied screenshot character, pose copied from identity icon,
+collage, contact sheet, sprite sheet

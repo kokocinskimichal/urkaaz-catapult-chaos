@@ -43,6 +43,16 @@ class CampaignLevelDefinitionTest {
     }
 
     @Test
+    fun milestoneSpellsBecomeAvailableAtTheirConfiguredLevels() {
+        assertFalse(SpellType.HASTE in CampaignLevelDefinition.forLevel(5).availableSpells)
+        assertTrue(SpellType.HASTE in CampaignLevelDefinition.forLevel(6).availableSpells)
+        assertTrue(SpellType.HASTE in CampaignLevelDefinition.forLevel(7).availableSpells)
+        assertFalse(SpellType.HEAL in CampaignLevelDefinition.forLevel(7).availableSpells)
+        assertTrue(SpellType.HEAL in CampaignLevelDefinition.forLevel(8).availableSpells)
+        assertTrue(SpellType.HEAL in CampaignLevelDefinition.forLevel(9).availableSpells)
+    }
+
+    @Test
     fun chapterOneLevelThreeUsesImportedMapWithoutOverridingCampaignSettings() {
         val level = CampaignLevelDefinition.forLevel(3)
 

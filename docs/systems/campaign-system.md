@@ -1,301 +1,175 @@
 # CampaignSystem
 
-## 1. Cel i zakres
+## Status
 
-`CampaignSystem` ma przenieść przebieg kampanii z legacy do warstw nowego
-projektu: od wejścia z Dashboardu, przez wybór odblokowanego poziomu i
-przekazanie go do loadoutu oraz meczu, po obsługę wyniku i aktualizację
-odblokowań. System koordynuje przypadki użycia kampanii; nie jest ekranem,
-nawigatorem ani silnikiem meczu.
+**Campaign progression and spell milestone rewards are implemented locally.**
+Campaign selection is authorized by persisted progress, and only a canonical
+`MatchEvent.MatchFinished` with `MatchOutcome.BLUE_WIN` records a completion.
+Haste is awarded for level 5 and available from level 6; Heal is awarded for
+level 7 and available from level 8. TutorialSystem, a dedicated result-screen
+flow, cloud sync, and legacy-install migration are not implemented.
 
-Wzorcem funkcjonalnym jest przepływ legacy:
+Detailed decisions and scope are recorded in
+[`campaign-milestones-plan.md`](campaign-milestones-plan.md); execution
+instructions are in
+[`campaign-milestones-implementation-prompt.md`](campaign-milestones-implementation-prompt.md).
 
-```text
-Dashboard → kampania → wybór poziomu → loadout → mecz
-          → wynik → następny poziom albo powrót
-```
+## Ownership and boundaries
 
-System obejmuje wyłącznie dostępność poziomów i postęp kampanii. Złoto i
-nagrody, życia, sklep oraz loadout pozostają odrębnymi systemami. CampaignSystem
-może przekazać im wybrany poziom i sterować kolejnością ekranów przez wynik
-przypadku użycia, ale nie przejmuje ich danych ani reguł.
-
-Aktualna nawigacja prowadzi z `CampaignScreen` do `LoadoutScreen`. Lokalny
-profil progresji i zapis loadoutu pozwalają uruchomić mecz po poprawnej
-walidacji oraz zapisie. CampaignScreen nadal udostępnia wszystkie poziomy
-testowo; autoryzacja wyboru poziomu, `highestUnlockedLevel` i zapis postępu
-kampanii pozostają niedokończone.
-
-## 2. Poza zakresem
-
-- Stan runtime meczu, jego ticki, pauza, restart i reguły zwycięstwa.
-- Złoto, obliczanie nagród, życia, sklep, zakupy i odblokowania przedmiotów.
-- Wybór i zapis loadoutu; loadout jest osobnym systemem.
-- Rendering, assety, Androidowe widoki, `AppNavigator` i zarządzanie lifecycle
-  Activity.
-- Konto online, synchronizacja chmurowa i wspólny postęp między urządzeniami.
-- Migracja postępu bezpośrednio z instalacji legacy; kompatybilność zapisów
-  legacy wymaga osobnej decyzji.
-
-CampaignSystem nie kopiuje implementacji legacy ani nie umieszcza logiki
-progresji w `MainActivity`.
-
-## 3. Właściciel i zależności
-
-Właścicielem przypadków użycia CampaignSystem jest `game-application`. To
-warstwa koordynująca żądania UI, definicje poziomów, wynik meczu i zapis
-postępu. Moduł pozostaje niezależny od Androida.
-
-Istniejący `game-campaign` pozostaje jedynym właścicielem statycznych definicji,
-`CampaignLevelRegistry`, map oraz walidacji `CampaignLevelDefinition`.
-CampaignSystem korzysta z tych kontraktów, zamiast tworzyć drugi katalog
-poziomów lub kopiować konfigurację kampanii.
-
-Docelowy kierunek zależności:
-
-```text
-android-app
-  ├── game-application (CampaignSystem i port persystencji)
-  │     ├── game-campaign (definicje, rejestr i walidacja poziomów)
-  │     ├── game-contracts (MatchFinished, MatchOutcome, MatchScenario)
-  │     └── istniejące moduły meczu
-  └── adaptery Androida (nawigacja i lokalny zapis)
-```
-
-Dodanie zależności `game-application → game-campaign` jest proponowane dla
-przyszłej implementacji. Nie może powstać zależność odwrotna ani import
-Androida w modułach core. Port repozytorium postępu należy do warstwy
-aplikacyjnej; jego adapter z lokalną persystencją należy do `android-app`.
-
-## 4. Wejścia i wyjścia
-
-### Wejścia
-
-- Niemutowalny postęp gracza: najwyższy odblokowany poziom, początkowo `1`.
-- Żądanie otwarcia kampanii z Dashboardu.
-- Żądanie wyboru numeru poziomu.
-- Kontekst wybranego poziomu przekazany przez aplikację przy starcie meczu.
-- Wynik ukończonego meczu. Kanonicznym źródłem przejścia jest istniejący
-  `MatchEvent.MatchFinished` z `MatchOutcome`; `MatchSnapshot.outcome` pozostaje
-  read modelem do prezentacji i nie może drugi raz uruchamiać tej samej zmiany
-  postępu.
-- Odczyt i zapis postępu przez jawny port repozytorium.
-
-Nie ma potrzeby dodawać eventu symulacji ani zmieniać `MatchOutcome`; oba
-kontrakty istnieją już w `game-contracts`.
-
-### Wyjścia
-
-- Niemutowalny widok postępu potrzebny do pokazania poziomów odblokowanych i
-  zablokowanych.
-- Jawny rezultat wyboru: zaakceptowany poziom jako istniejący
-  `CampaignLevelDefinition` (oraz wynikowy `MatchScenario`, gdy potrzebuje go
-  przypadek użycia startu meczu) albo typowane odrzucenie.
-- Jawny rezultat ukończenia, zawierający zaktualizowany postęp i informację,
-  czy istnieje następny poziom.
-- Dane potrzebne adapterowi Androida do przejścia do loadoutu, meczu, wyniku
-  albo z powrotem. Typy `AppScreen`, `Context` i inne Androidowe klasy nie
-  przekraczają granicy modułu.
-
-Nie należy wprowadzać nowego eventu gameplayowego dla odblokowania. Zapis
-postępu jest skutkiem przypadku użycia aplikacji, a nie mutacją stanu
-symulacji.
-
-## 5. Stan i persystencja
-
-CampaignSystem jest bezstanowym koordynatorem przypadków użycia: nie przechowuje
-własnego runtime state wyboru, aktywnego meczu ani postępu. Wybrany poziom
-przechodzi jawnie w kontekście żądania i jest przekazywany do kolejnych ekranów.
-
-Jedynym stanem trwałym tego zakresu jest monotoniczny `highestUnlockedLevel`,
-przechowywany lokalnie przez adapter repozytorium. Zapis nie należy do
-symulacji ani do `CampaignUiState`. Implementacja przejściowo może użyć
-Androidowej lokalnej persystencji, ale logika domenowa i kontrakt repozytorium
-nie mogą zależeć od `Context` ani `SharedPreferences`.
-
-Wartość musi należeć do zakresu `1..CampaignLevelDefinition.MAX_LEVELS`.
-Nieprawidłowy lub nieczytelny zapis jest jawnie raportowany; nie należy
-po cichu udawać postępu domyślnego ani udostępniać wszystkich poziomów.
-
-## 6. Cykl życia i przepływ
-
-CampaignSystem nie ma własnych operacji utworzenia, pauzy, restartu ani
-zakończenia meczu. Lifecycle meczu pozostaje w `MatchSession` i istniejącym
-gatewayu.
-
-1. Dashboard wysyła intencję otwarcia kampanii.
-2. Przypadek użycia odczytuje trwały postęp i przygotowuje listę na podstawie
-   `CampaignLevelRegistry`.
-3. Campaign screen renderuje stan i wysyła żądanie wyboru poziomu.
-4. System odrzuca poziom nieznany lub zablokowany; zaakceptowaną definicję
-   przekazuje do niezależnego loadoutu.
-5. Loadout przekazuje wybraną definicję/scenariusz do match screen; match
-   korzysta z istniejącej konfiguracji scenariusza.
-6. Po `MatchFinished` warstwa aplikacyjna przekazuje wynik wraz z poziomem
-   kontekstu do przypadku użycia ukończenia kampanii.
-7. Tylko `BLUE_WIN` zapisuje odblokowanie następnego poziomu. Pozostałe wyniki
-   (`RED_WIN`, `DRAW`, `SURRENDER`) nie zmieniają odblokowań.
-8. Wynik przypadku użycia kieruje adapter Androida do prezentacji wyniku i
-   następnej dostępnej akcji. Na ostatnim poziomie nie ma akcji „następny
-   poziom”.
-
-Powrót do ekranu kampanii ponownie odczytuje postęp z repozytorium; aplikacja
-nie polega na lokalnej kopii w ViewModelu. Obsługa retry pozostaje własnością
-match screen/gateway i nie zmienia postępu.
-
-## 7. Determinizm, czas i replay
-
-CampaignSystem nie uczestniczy w tickach symulacji, nie losuje i nie używa
-czasu ściennego. Wynik dla tych samych definicji, postępu, żądania i wyniku
-meczu jest taki sam.
-
-Aktualizacja postępu musi być monotoniczna i idempotentna: ponowne dostarczenie
-tego samego `MatchFinished` nie może cofnąć postępu ani powodować dodatkowych
-skutków ubocznych. Właściwość zapewnia zapis najwyższego odblokowanego poziomu;
-ekonomia i nagrody nie są uruchamiane przez ten system. Replay symulacji nie
-zapisuje ani nie odtwarza persystencji kampanii.
-
-## 8. Integracja i kolejność odpowiedzialności
-
-```text
-Dashboard UI
-  → CampaignSystem: odczyt postępu
-  → CampaignScreen: wybór
-  → CampaignSystem: walidacja poziomu i definicja
-  → osobny LoadoutSystem / ekran loadoutu
-  → MatchScreen → LocalMatchGateway → MatchSession / symulacja
-  → MatchFinished
-  → CampaignSystem: odblokowanie po zwycięstwie
-  → ResultScreen / CampaignScreen przez AppNavigator
-```
-
-Podział odpowiedzialności:
-
-| Odpowiedzialność | Właściciel |
+| Responsibility | Owner |
 |---|---|
-| Definicje, rejestr, walidacja map i `MatchScenario` | `game-campaign` |
-| Przypadki użycia wyboru, postępu i ukończenia kampanii | `game-application.CampaignSystem` |
-| Trwały zapis postępu | port aplikacyjny i adapter persystencji w `android-app` |
-| Kliknięcia, nawigacja i wyświetlenie odblokowań | campaign screen i `AppNavigator` |
-| Wynik, stan runtime, restart i symulacja meczu | istniejące moduły meczu |
-| Loadout, złoto/nagrody, życia i sklep | ich odrębne systemy |
+| Static campaign level definitions, registry, and milestone reward catalog | `game-campaign` |
+| Progress contracts, level selection/completion use cases, entitlement projection | `game-application.application.campaign` |
+| Atomic local progress persistence | `android-app.persistence.DataStoreCampaignProgressRepository` |
+| Campaign selector rendering and user input | `CampaignScreen` / `CampaignViewModel` |
+| Match runtime and canonical finish event | existing match application/simulation |
+| Player profile and committed per-level selection | PlayerProgressionSystem / LoadoutSystem |
+| Tutorial content and tutorial state | future, game-wide TutorialSystem |
 
-`MainActivity` pozostaje cienkim entry pointem. Może składać zależności i
-przekazywać callbacki ekranom, ale nie odczytuje ani nie aktualizuje reguł
-postępu.
+`game-application` depends on `game-campaign` and match contracts. Core modules
+do not import Android. Campaign progress is never copied into simulation
+runtime state, `MatchSession`, or replay data. The player profile does not
+persist a second copy of campaign spell unlocks.
 
-## 9. Błędy, odrzucenia i przypadki brzegowe
+## Definitions and progress state
 
-- Nieznany numer lub brak definicji poziomu: jawny błąd/odrzucenie, bez
-  zastępowania poziomem demonstracyjnym.
-- Zablokowany poziom: jawne odrzucenie wyboru i brak nawigacji do meczu.
-- Poziom poza zakresem rejestru: jawne odrzucenie; walidator poziomów pozostaje
-  właścicielem poprawności definicji map.
-- Błąd odczytu albo zapisu: jawny błąd przypadku użycia; UI nie może wyświetlić
-  sukcesu ani użyć niezweryfikowanego postępu.
-- Porażka, remis lub poddanie: brak odblokowania.
-- Ukończenie ostatniego poziomu: zapis pozostaje w granicy maksimum, bez
-  przepełnienia ani następnego poziomu.
-- Powtórne ukończenie już odblokowanego poziomu: operacja jest idempotentna i
-  nie cofa postępu.
-- Niezgodny/stary wynik meczu: odrzucenie przez walidację kontekstu poziomu i
-  meczu w warstwie aplikacyjnej; nie zmienia innego postępu.
+`CampaignLevelRegistry` remains the only level registry.
+`CampaignMilestoneRegistry` in `game-campaign` is the source for campaign spell
+milestones and the availability thresholds of milestone spells:
 
-Nie stosować szerokich `catch`, cichych fallbacków ani stanów sukcesopodobnych.
+| Milestone ID | Winning completion | First available level | Granted spell | Preferred in a new default loadout |
+|---|---:|---:|---|---|
+| `campaign_spell_haste` | 5 | 6 | `HASTE` | Yes |
+| `campaign_spell_heal` | 7 | 8 | `HEAL` | Yes |
 
-## 10. Android UI i assety
+Definitions are immutable and use stable IDs. The catalog is extensible for
+future campaign rewards; it does not contain tutorial fields.
 
-Używane są istniejące `DashboardScreen`, `CampaignScreen`, `LoadoutScreen`,
-`MatchScreen`, `ResultScreen`, `AppScreen` i `AppNavigator`. Docelowy przepływ
-ma odtworzyć kolejność znaną z legacy, ale bez przenoszenia jego implementacji
-widoków lub logiki do `MainActivity`.
+`CampaignProgress` is the durable, immutable record:
 
-Campaign screen konsumuje niemutowalny stan postępu, a kliknięcia przekazuje
-jako intencje do ViewModelu/przypadku użycia. Ekran nie waliduje definicji,
-nie zapisuje odblokowań i nie mutuje stanu domenowego. Wybór poziomu pozostaje
-typowanym `CampaignLevelDefinition`, zgodnie z istniejącą integracją match
-screen.
+- `highestUnlockedLevel`, initialized to `1` and kept within the registry;
+- `completedLevels`;
+- `appliedMilestoneIds`.
 
-Nie są wymagane nowe assety ani debug overlay. Istniejący legacy visual
-language może pozostać bez zmian.
+Missing data initializes once to the initial state. Partial, malformed,
+unknown-milestone, and unsupported-version data is a typed failure; it is not
+replaced with defaults and cannot expose all levels.
 
-## 11. Plan testów i kryteria akceptacji
+## Application contract
 
-### Testy przyszłej implementacji
+`CampaignSystem` provides:
 
-- Walidacja zakresu odblokowanego poziomu i zachowania dla pustego/niepoprawnego
-  zapisu.
-- Lista poprawnie oznacza poziomy odblokowane i zablokowane.
-- Wybór poprawnego odblokowanego poziomu zwraca definicję z istniejącego
-  rejestru; poziom zablokowany/nieznany jest jawnie odrzucony.
-- `BLUE_WIN` odblokowuje kolejny poziom, zapis jest monotoniczny, ponowienie
-  operacji idempotentne, a maksimum nie przekracza 100.
-- `RED_WIN`, `DRAW` i `SURRENDER` nie odblokowują poziomu.
-- Błędy repozytorium odczytu i zapisu nie są ukrywane ani mapowane na sukces.
-- Integracja przekazuje tę samą definicję/scenariusz przez loadout i start
-  meczu; istniejąca definicja pozostaje deterministyczna.
-- Test adaptera persystencji potwierdza odtworzenie postępu po ponownym
-  utworzeniu adaptera oraz obsługę nieprawidłowych danych.
-- Test granicy Androida sprawdza wejście z Dashboardu, wybór, odmowę wejścia
-  do zablokowanego poziomu, obsługę wyniku i nawigację dalej/powrót.
-- Testy architektury potwierdzają brak Androida w `game-application` i brak
-  logiki progresji w `MainActivity`/rendererze.
-- Brak drugiego katalogu poziomów oraz brak wpływu progresji na runtime state
-  meczu, replay i symulację.
+- `progress()` — reads/initializes progress and validates it against the
+  current level and milestone registries;
+- `selectLevel(level)` — returns a registered level definition only if the
+  level is unlocked;
+- `completeLevel(level, MatchEvent.MatchFinished)` — records a valid win and
+  its rewards;
+- `loadoutRewards(level)` — projects earned spell grants and eligible default
+  preferences for a selected level.
 
-### Kryteria akceptacji
+Invalid and locked selections are typed rejections. Storage errors and invalid
+persisted progress are typed failures. No level lookup may treat
+`CampaignLevelDefinition.forLevel` clamping as authorization.
 
-- Postęp kampanii jest lokalny i trwały, początkowo od poziomu 1.
-- Dostępność poziomów wynika z repozytorium postępu, a nie tymczasowego
-  odblokowania wszystkich wpisów.
-- Tylko zwycięstwo gracza odblokowuje kolejny poziom; porażka, remis i
-  poddanie nie modyfikują odblokowań.
-- Pełny przepływ UI zachowuje granice osobnego loadoutu, meczu i prezentacji
-  wyniku.
-- Definicje pochodzą z `CampaignLevelRegistry`, zapis z adaptera Androida,
-  a reguły/use case’y z `game-application`.
-- Brak importów Androida w core, gameplayu w UI i mutacji stanu meczu przez
-  CampaignSystem.
-- Złoto, nagrody, życia, sklep i loadout pozostają poza zakresem jego
-  odpowiedzialności.
+Only `BLUE_WIN` changes progress. `RED_WIN`, `DRAW`, and `SURRENDER` return an
+explicit no-progress result. A missing/aborted match does not emit a finish
+event and therefore cannot advance the campaign.
 
-## 12. Otwarte decyzje
+For a winning completion of an unlocked level, the application update:
 
-- Czy istniejące dane postępu z osobnej instalacji legacy trzeba importować.
-  Obecny plan zakłada nowy lokalny zapis bez migracji między aplikacjami.
-- Czy ekran wyniku ma zastąpić obecny overlay match screen, czy być osobnym
-  ekranem; plan wymaga obsługi przejść, nie wyboru szczegółowego UX.
-- Czy w przyszłości postęp obejmie więcej niż najwyższy odblokowany poziom
-  (np. ukończenie każdego poziomu osobno); obecny zakres odtwarza monotoniczne
-  odblokowanie kolejnego poziomu.
+1. marks the level completed;
+2. monotonically unlocks the following level, capped at the maximum;
+3. adds all matching, unapplied milestone IDs;
+4. persists all changes through one atomic repository update.
 
-## 13. Proponowana lista plików do przyszłej implementacji
+The set-based update is idempotent. Re-delivering a finish event does not
+duplicate rewards or lower progress. A completion of an already completed
+level can apply a matching milestone that is not yet present in the record.
 
-Lista jest orientacyjna; nie oznacza, że pliki mają powstać w ramach tego
-dokumentu.
+## Persistence
 
-| Obszar | Proponowane pliki |
+`DataStoreCampaignProgressRepository` uses the existing AndroidX Preferences
+DataStore backend with a separate `campaign.*` namespace and schema version.
+Profile, loadout, and campaign values remain distinct but are preserved by
+each atomic DataStore update.
+
+The adapter initializes only when all campaign keys are absent. It returns
+explicit failures for partial data, invalid values, unsupported schema, I/O,
+and corruption. Campaign completion, level unlock, and milestone IDs share a
+single record update; no partial profile unlock write is required.
+
+No campaign persistence is stored in `CampaignUiState`, match snapshots,
+runtime simulation, or replay. Returning to the campaign screen reloads the
+repository.
+
+## Integration flow
+
+```text
+Dashboard
+  → CampaignScreen / CampaignViewModel
+  → CampaignSystem: read progress and validate selection
+  → LoadoutSystem: campaign-aware progression snapshot
+  → MatchScreen → LocalMatchGateway → MatchSession / simulation
+  → MatchEvent.MatchFinished
+  → CampaignSystem: atomic completion + milestone update
+  → CampaignScreen reloads durable progress on return
+```
+
+The match screen forwards finish events with their selected campaign level.
+Demo-mode matches are excluded. The callback uses the event, not
+`MatchSnapshot.outcome`, as the completion trigger. Repeated delivery is
+additionally safe through idempotent progress sets.
+
+The existing simplified result presentation remains on the match screen.
+`ResultScreen` is still a placeholder; no new result navigation or reward
+animation is part of this implementation. A campaign persistence failure is
+reported explicitly and can be retried by completing the level again.
+
+## Loadout entitlement projection
+
+`CampaignAwareLoadoutProgressionPort` combines the existing player profile
+snapshot with earned campaign grants:
+
+- `unlockedSpellTypes` is the union of profile unlocks and earned campaign
+  spell rewards;
+- `defaultSpellTypes` is a derived, non-persisted preference for spells whose
+  milestone has been earned and whose availability level has been reached.
+
+`MatchLoadout.defaults` places those eligible preferences first, then fills
+the remaining slots in the established spell order. This only affects a
+new/default selection. An existing saved per-level loadout is normalized by
+the existing rules and is not appended to or overwritten by the milestone.
+Ordinary availability checks still apply, so entitlement does not make a spell
+usable on a level where it is unavailable.
+
+## Tutorials and other non-goals
+
+Campaign milestones contain no tutorial configuration and CampaignProgress
+stores no tutorial flags. The existing level-one tutorial parameters remain
+untouched. A future TutorialSystem will own tutorial observation, state,
+presentation, and progression across the game; it may consume campaign events
+or milestone IDs through an explicit contract.
+
+CampaignSystem does not own player gold, purchases, ammunition/spell stock
+consumption, shop behavior, spell casting/effects, account sync, or legacy
+save migration. It does not add controls to `MainActivity`.
+
+## Tests and implementation files
+
+Focused tests cover milestone definitions and thresholds, win and non-win
+outcomes, locked/invalid selection, monotonic/idempotent updates, terminal
+level bounds, progress read failures, campaign-aware loadout projection,
+default spell preference, saved-loadout preservation, event forwarding/demo
+exclusion, and DataStore initialization/round-trip/failure behavior.
+
+Key files:
+
+| Area | Files |
 |---|---|
-| Zależność aplikacyjna | `game-application/build.gradle.kts` |
-| Use case i porty | `game-application/src/main/kotlin/com/urkaaaz/application/campaign/CampaignSystem.kt`, `CampaignProgressRepository.kt` oraz niemutowalne typy wyniku/postępu w tym samym pakiecie |
-| Testy use case | `game-application/src/test/kotlin/com/urkaaaz/application/campaign/CampaignSystemTest.kt` |
-| Adapter postępu | nowy adapter repozytorium w `android-app/src/main/java/com/urkaaaz/campaign/` |
-| Integracja UI | istniejące `MainActivity.kt`, `AppScreen.kt`, campaign screen/ViewModel oraz punkty wejścia/wyjścia match i result |
-| Testy Androida | test integracji nawigacji i adaptera persystencji w `android-app/src/test/` |
-
-`game-campaign` nie wymaga nowego katalogu poziomów ani drugiego modelu
-`CampaignLevelDefinition`; istniejące testy definicji i rejestru pozostają
-testami regresji dla dostarczanych scenariuszy.
-
-## 14. Rozważone warianty
-
-| Wariant | Czytelność | Wydajność | Testowalność | Koszt integracji |
-|---|---|---|---|---|
-| `game-application` koordynuje use case’y; `game-campaign` dostarcza definicje; Android implementuje port zapisu | Wyraźny podział przepływu, danych i platformy | Odczyt/zapis lokalny i lookup rejestru; pomijalny koszt w tej skali | Wysoka: reguły można testować z repozytorium fake bez Androida | Średni: dodać zależność aplikacja→kampania i adapter |
-| Umieścić cały system w `game-campaign` | Łatwo znaleźć reguły obok definicji, ale miesza statyczny authoring z orkiestracją i persystencją aplikacyjną | Taki sam runtime koszt | Dobra dla reguł czystych; gorsza granica przypadków użycia i repozytorium | Średni; może wymagać przeniesienia koordynacji do Androida/aplikacji |
-| Koordynować kampanię w `android-app`/`MainActivity` | Początkowo proste do podłączenia, szybko skupia za dużo odpowiedzialności w UI | Taki sam runtime koszt | Niska: testowanie wymaga adapterów Androida i UI | Niski na start, wysoki przy rozwoju i refaktorze |
-
-Rekomendowany jest pierwszy wariant. Oddziela flow aplikacyjne od
-niemutowalnych definicji poziomów i od persystencji platformowej, pozostawia
-istniejący `game-campaign` single source of truth oraz umożliwia testowanie
-reguł bez Androida.
+| Milestones and level availability | `game-campaign/.../CampaignMilestoneDefinition.kt`, `CampaignLevelDefinition.kt` |
+| Progress and application use cases | `game-application/.../application/campaign/CampaignProgressRepository.kt`, `CampaignSystem.kt` |
+| Loadout projection | `game-application/.../progression/CampaignAwareLoadoutProgressionPort.kt`, `application/loadout/LoadoutContracts.kt`, `MatchLoadout.kt` |
+| Persistence | `android-app/.../persistence/DataStoreCampaignProgressRepository.kt` |
+| UI and event wiring | `android-app/.../screens/campaign/`, `ui/MatchViewModel.kt`, `MainActivity.kt` |
+| Plan and execution prompt | `campaign-milestones-plan.md`, `campaign-milestones-implementation-prompt.md` |

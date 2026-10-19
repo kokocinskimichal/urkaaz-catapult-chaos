@@ -60,7 +60,15 @@ data class MatchLoadout(
                 spellTypes = SpellType.values()
                     .asSequence()
                     .map { it.name }
+                    .filter { it in progression.defaultSpellTypes }
                     .filter { it.isAllowedSpell(availability, progression) }
+                    .plus(
+                        SpellType.values()
+                            .asSequence()
+                            .map { it.name }
+                            .filter { it !in progression.defaultSpellTypes }
+                            .filter { it.isAllowedSpell(availability, progression) },
+                    )
                     .take(MAX_SPELLS)
                     .toList(),
             )

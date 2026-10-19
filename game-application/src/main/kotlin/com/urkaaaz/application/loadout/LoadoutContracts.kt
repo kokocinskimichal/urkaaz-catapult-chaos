@@ -23,10 +23,14 @@ data class LoadoutProgressionSnapshot(
     val ammunitionStocks: Map<String, Int>,
     val specialSpellStocks: Map<String, Int>,
     val goldBalance: Int,
+    val defaultSpellTypes: Set<String> = emptySet(),
 ) {
     init {
         require(unlockedSpellTypes.all(String::isNotBlank)) {
             "spell identifiers must not be blank"
+        }
+        require(defaultSpellTypes.all(String::isNotBlank)) {
+            "default spell identifiers must not be blank"
         }
         require(ammunitionStocks.keys.all(String::isNotBlank)) {
             "ammunition identifiers must not be blank"
@@ -80,6 +84,7 @@ enum class LoadoutCorrectionReason {
 
 enum class LoadoutProgressionFailure {
     INVALID_LEVEL,
+    CAMPAIGN_LEVEL_LOCKED,
     STORAGE_UNAVAILABLE,
     INVALID_PROFILE,
     UNSUPPORTED_PROFILE_VERSION,
@@ -100,6 +105,7 @@ enum class LoadoutError {
     UNKNOWN_AMMUNITION,
     AMMUNITION_UNAVAILABLE,
     AMMUNITION_OUT_OF_STOCK,
+    ROCK_SLOT_FIXED,
     UNKNOWN_SPELL,
     SPELL_UNAVAILABLE,
     SPELL_LOCKED,
@@ -158,6 +164,10 @@ sealed interface LoadoutOpenResult {
 sealed interface LoadoutEditAction {
     data class SelectUnit(val unitType: String, val selected: Boolean) : LoadoutEditAction
     data class SetAmmunition(val slot: Int, val ammunitionType: String?) : LoadoutEditAction
+    data class ToggleAmmunition(
+        val ammunitionType: String,
+        val selected: Boolean,
+    ) : LoadoutEditAction
     data class ToggleSpell(val spellType: String, val selected: Boolean) : LoadoutEditAction
 }
 

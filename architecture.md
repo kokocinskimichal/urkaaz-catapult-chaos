@@ -1496,15 +1496,20 @@ strategii zaklęć jest przyszłym rozszerzeniem registry.
 Kampania i progresja są kontekstem aplikacyjnym, a nie częścią symulacji.
 
 ```text
-application.campaign
-├── CampaignDefinition
-├── CampaignLevel
-├── CampaignProgress
-└── RewardCalculator
+game-campaign
+├── CampaignLevelDefinition
+├── CampaignLevelRegistry
+└── CampaignMilestoneRegistry
+
+game-application.application.campaign
+├── CampaignSystem
+├── CampaignProgressRepository (port)
+└── CampaignProgress / milestone result contracts
 
 application.loadout
 ├── MatchLoadout
 ├── LoadoutUseCases
+├── LoadoutCatalog (read-only presentation projection)
 ├── LoadoutProgressionPort
 └── LoadoutRepository
 
@@ -1514,12 +1519,16 @@ application.progression
 
 android-app.persistence
 ├── DataStorePlayerProgressionRepository
-└── DataStoreLoadoutRepository
+├── DataStoreLoadoutRepository
+└── DataStoreCampaignProgressRepository
 ```
 
 Profil i zatwierdzony loadout są zapisywane asynchronicznie w osobnych
-namespace'ach wersjonowanego AndroidX DataStore. Adaptery pozostają w
-`android-app`; core zna wyłącznie porty.
+namespace'ach wersjonowanego AndroidX DataStore. CampaignProgress zapisuje
+ukończone poziomy, najwyższy odblokowany poziom i przyznane milestone-ID w
+trzecim, osobnym namespace. Adaptery pozostają w `android-app`; core zna
+wyłącznie porty. CampaignSystem atomowo aktualizuje postęp i milestone'y
+tylko po `MatchEvent.MatchFinished(BLUE_WIN)`.
 
 Poziom kampanii tworzy konfigurację meczu:
 
@@ -1572,13 +1581,14 @@ Persystencja mobilna przechowuje dane aplikacyjne. Obecny zakres implementacji
 to wersjonowany lokalny profil progresji i zatwierdzony loadout w AndroidX
 DataStore. Profil przechowuje odblokowane czary, zapasy ograniczonej amunicji
 i czarów specjalnych oraz saldo; zakupy i rozliczanie stocku pozostają poza
-obecną implementacją. Zapis kampanii, żyć, ustawień i tutoriali pozostaje
-przyszłą pracą:
+obecną implementacją. CampaignSystem zapisuje `CampaignProgress` w osobnym,
+wersjonowanym namespace DataStore: ukończone poziomy, najwyższy odblokowany
+poziom i zastosowane milestone-ID. Tylko `BLUE_WIN` atomowo zapisuje
+ukończenie, następny poziom i nagrody.
 
-- progres kampanii;
-- życia;
-- ustawienia;
-- tutorial progress.
+Lives, ustawienia oraz tutorial progress pozostają przyszłą pracą.
+Milestone'y kampanii nie zapisują tutorial flags; przyszły TutorialSystem
+będzie ich właścicielem.
 
 Nie należy zapisywać bezpośrednio obiektów silnika przez serializację całego
 grafu obiektów.
@@ -1749,15 +1759,17 @@ MainActivity
 
 `AppScreen` jest jedynym kontraktem identyfikującym ekran. `AppNavigator`
 zarządza bieżącym ekranem i stosem Back, a `ScreenHost` podmienia aktywny
-`ScreenContent`. Ekrany nie powinny dodawać widoków bezpośrednio do
-`MainActivity`.
+`ScreenContent`. Aktywny ekran może najpierw obsłużyć systemowy Back przez
+`ScreenContent.onBackPressed()` dla własnej podstrony; dopiero nieobsłużony
+Back przechodzi do stosu `AppNavigator`. Ekrany nie powinny dodawać widoków
+bezpośrednio do `MainActivity`.
 
 Aktualne ekrany:
 
 - `DashboardScreen` — placeholder;
 - `CampaignScreen` — wybór poziomu z nawigacją;
-- `LoadoutScreen` — asynchronicznie odczytuje i waliduje draft; uruchamia mecz
-  dopiero po udanym zapisie;
+- `LoadoutScreen` — asynchronicznie odczytuje i edytuje draft; szczegóły
+  elementu są podstroną ekranu i Back zamyka je przed nawigacją;
 - `ShopScreen` — placeholder;
 - `MatchScreen` — działający ekran meczu;
 - `ResultScreen` — placeholder.
@@ -1767,3 +1779,16 @@ Pozostałe placeholdery korzystają ze wspólnego `PlaceholderScreenView`.
 z lifecycle ekranu. `MainActivity` składa zależności DataStore, ale nie
 przechowuje stanu progresji ani reguł loadoutu. Ekran meczu zachowuje własny
 `MatchScreenController`, HUD i panel amunicji.
+
+Aplikacja jest zablokowana w orientacji landscape przez deklarację
+`MainActivity` w manifeście. `LoadoutScreen` układa jednostki, amunicję i
+czary w trzech sąsiadujących panelach; każda lista jest poziomą karuzelą
+pokazującą trzy kafelki i przewijaną niezależnie. Podsumowanie wyboru i akcja
+startu pozostają w dolnym pasku. Kafelki karuzel są wizualnie wspólne;
+`ROCK` jest stale wybraną kartą, a pozostałe typy amunicji dodają się do
+pierwszego wolnego slotu.
+
+`LoadoutCatalog` w `game-application` jest niemutowalną, read-only projekcją
+konfiguracji domenowych dla szczegółów prezentowanych przez Android UI. Nie
+duplikuje balansu i nie daje UI prawa do mutacji domeny; `android-app` nie
+zależy bezpośrednio od `game-domain`.

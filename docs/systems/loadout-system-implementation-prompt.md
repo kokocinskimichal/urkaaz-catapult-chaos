@@ -4,14 +4,32 @@ Skopiuj prompt poniżej do zadania implementacyjnego w repozytorium Urkaaaz.
 
 ---
 
+### Later scope clarification
+
+The approved Campaign milestone work in
+[`campaign-milestones-plan.md`](campaign-milestones-plan.md) supersedes the
+tutorial requirements below: do not implement level 6/8 tutorials, tutorial
+metadata, flags, or tutorial UI as part of LoadoutSystem. A future cross-game
+TutorialSystem will own those responsibilities. Campaign milestones remain
+authorized by CampaignSystem and affect campaign spell entitlement and
+new-default-loadout projection only.
+
 ## Prompt
 
 Zaimplementuj kompletny, rozszerzalny **LoadoutSystem** dla jednostek,
 amunicji i czarów zgodnie z:
 
 - `docs/systems/loadout-system.md` — zaakceptowaną architekturą, regułami
-  parytetu legacy, granicami odpowiedzialności, integracją i kryteriami
-  akceptacji;
+  parytetu legacy, granicami odpowiedzialności, integracją, planem assetów i
+  ekranem szczegółów otwieranym z Loadoutu;
+- `docs/systems/loadout-screen-mockup.agp`,
+  `docs/systems/loadout-item-detail-mockup.agp` i
+  `docs/systems/loadout-spell-card-art.agp` — wizualnym kierunkiem oraz
+  przyszłymi grafikami; w tym zadaniu nie generuj ani nie dodawaj tych
+  grafik;
+- zrzutem ekranu Loadoutu dostarczonym przez użytkownika — układ landscape
+  16:9, trzy sąsiadujące panele jednostek/amunicji/czarów oraz stały dolny
+  pasek z podsumowaniem i akcją startu; nie kopiuj fikcyjnej zawartości;
 - `architecture.md`, `AGENTS.md`, `AI_IMPLEMENTATION_RULES.md`,
   `AI_PROJECT_MAP.md` i `docs/PROJECT_KNOWLEDGE.md` — aktualną architekturą,
   workflow i stanem repozytorium;
@@ -41,6 +59,30 @@ blocker wymagający decyzji użytkownika.
 - Poziom 6 zachowuje odblokowanie/dodanie Haste i tutorial loadoutu; poziom 8
   zachowuje odblokowanie/dodanie Heal, dodanie dostępnego Demolishera i
   tutorial loadoutu.
+- Karta elementu Loadoutu ma osobne `ⓘ`: jej główna powierzchnia zmienia
+  wybór, a `ⓘ` otwiera wspólną, pełnoekranową podstronę szczegółów. Powrót
+  zachowuje niezapisany draft i scroll.
+- Cała gra, w tym Loadout, działa w orientacji landscape. Ekran główny ma
+  responsywny układ trzech paneli obok siebie i stale widoczny dolny pasek.
+  Kafle każdej kategorii tworzą osobną karuzelę poziomą: trzy widoczne naraz,
+  pozostałe wybierane gestem lewo/prawo. Wszystkie trzy karuzele używają
+  jednakowego wyglądu kafli. ROCK jest pierwszą, stale wybraną kartą amunicji;
+  kliknięcie pozostałych typów zaznacza je do pierwszego wolnego slotu, a
+  ponowne kliknięcie usuwa je. Nie pokazuj osobnego wyboru aktywnego slotu ani
+  drugiej karuzeli amunicji.
+- We wszystkich karuzelach pokazuj najpierw zaznaczone i dostępne opcje,
+  następnie niedostępne, zablokowane i bez stocku; zachowuj kolejność katalogu
+  wewnątrz grup i przeliczaj ją po każdej zmianie stanu.
+- Utrzymuj identyczny, stały rozmiar kafli we wszystkich karuzelach. Długie
+  nazwy i statusy zawijaj lub obcinaj, nie zwiększaj przez nie wymiarów kafla.
+- Wybrany kafelek oznacz świecącym złotym obramowaniem i ciemnym, złoto
+  obwiedzionym tickiem w prawym górnym rogu zamiast widocznego napisu
+  `SELECTED`. Osobny przycisk `ⓘ` umieść po lewej stronie, bez nakładania
+  obu kontrolek.
+- Użytkownik wygeneruje grafiki z istniejących promptów AGP i doda je później.
+  W tej implementacji użyj istniejących zasobów, nie twórz ani nie
+  referencjonuj nieistniejących drawable i nie blokuj działania ekranu z
+  powodu brakujących ilustracji.
 - Zakupy i progresja pozostają własnością progresji/sklepu. Nie odejmuj złota
   ani nie zmieniaj stocku bez jawnego use case’u/portu właściciela progresji.
 - Nie implementuj efektów gameplayowych czarów jako części LoadoutSystemu.
@@ -106,10 +148,11 @@ Na początku sprawdź bieżące implementacje:
 2. Jeśli progresja nie istnieje, zdefiniuj wyłącznie minimalne, typowane
    porty/snapshoty niezbędne dla LoadoutSystemu i testuj je przez fake’i.
    Nie twórz niejawnej ani sukcesopodobnej implementacji produkcyjnej.
-3. Jeżeli parytet poziomów 6/8 lub zakupów czarów wymaga nowego właściciela
-   progresji i nie da się go podłączyć bez rozszerzenia zakresu, zatrzymaj się
-   przed implementacją tej części i zadaj jedno konkretne pytanie o zakres.
-   Nie przenoś odblokowań ani transakcji złota do ViewModelu lub LoadoutSystemu.
+3. Jeżeli parytet poziomów 6/8 wymaga brakującego kontraktu, sprawdź jego
+   właściwego właściciela i dodaj tylko minimalne, typowane rozszerzenie po
+   tej stronie, z testami. Nie przenoś odblokowań do ViewModelu ani
+   LoadoutSystemu. Zakupy pozostają poza zakresem; jeśli nie ma działającej
+   transakcji, nie udawaj jej sukcesu i opisz konkretny blocker.
 4. Sprawdź SpellSystem. Jeśli jego runtime nie istnieje, LoadoutSystem ma
    dostarczyć wybrany zestaw czarów w kontrakcie startu meczu, lecz nie może
    udawać, że aktywacja czarów działa.
@@ -226,6 +269,9 @@ ViewModelem, który:
 
 - pokazuje podsumowania/liczniki jednostek, amunicji i czarów;
 - umożliwia wybór kategorii w legacy flow i pokazuje opisy/informacje;
+- udostępnia wspólny pełnoekranowy widok szczegółów jednostki, amunicji lub
+  czaru; dane i opis wybiera po stabilnym ID i korzysta z kanonicznych
+  konfiguracji zamiast kopiować balans;
 - prezentuje dostępność, unlock, stock i saldo z read modelu aplikacji;
 - umożliwia użycie istniejących ikon/assetów i lokalizacji;
 - blokuje wybór niedostępnych typów, ale prezentuje typowany błąd;
@@ -238,9 +284,28 @@ ViewModelem, który:
 
 UI wysyła typowane akcje; nie filtruje dostępności samodzielnie, nie
 odejmuje złota, nie zmienia stocku i nie tworzy kopii `MatchLoadout`.
-Używaj istniejących zasobów Urkaaaz. Nie dodawaj nowych grafik bez zgody.
-Jeśli brakuje assetu lub lokalizacji, opisz konkretny brak i nie ukrywaj go
-losowym placeholderem.
+Karty muszą oddzielić kliknięcie wyboru od przycisku `ⓘ`. `ⓘ` otwiera
+szczegóły, nie zmienia draftu i nie staje się globalną trasą nawigacji;
+podstrona należy do przepływu Loadout. Strzałka oraz systemowy Back zamykają
+szczegóły jako pierwsze i przywracają ten sam draft, scroll oraz stan
+prezentacyjny. Nie przebudowuj ekranu w sposób, który ponownie wczyta zapis i
+zgubi niezapisane wybory.
+
+Szczegóły prezentują nazwę, krótki prawdziwy opis, właściwości ze źródeł
+autorytatywnych i stan dostępności. Nie wymyślaj mechaniki ani statystyk; nie
+przedstawiaj efektów SpellSystemu, których runtime nie obsługuje, jako
+działającej funkcji. Oglądanie nie kupuje, nie odblokowuje, nie wybiera ani
+nie aktywuje elementu.
+
+**Grafiki będą dodane później przez użytkownika.** Wykorzystaj tylko zasoby,
+które istnieją w repozytorium. Nie generuj, nie pobieraj ani nie dodawaj
+nowych obrazów i nie wpisuj do kodu nazw brakujących `R.drawable`. Zaimplementuj
+pełną funkcjonalność na obecnych zasobach. Gdy ilustracji brakuje, pokaż
+poprawną, natywną kartę opartą na nazwie/tekście bez udawania, że obraz
+istnieje; wynik mapowania assetu ma pozostać jawny i testowalny. Nie używaj
+losowej ani błędnej grafiki jako placeholdera. Dodanie ilustracji z promptów
+AGP ma później wymagać jedynie uzupełnienia androidowego mapowania assetów.
+Brak tłumaczenia również nie może być ukryty przez niepowiązany tekst.
 
 ### Etap 5 — testy
 
@@ -266,6 +331,12 @@ istniejących wzorców. Sprawdź co najmniej:
 - restart z zachowaniem tej samej zatwierdzonej konfiguracji;
 - ekran: start przy pustym wyborze, liczniki, back/discard draft, raporty
   walidacji i dostępność tutoriala;
+- szczegóły otwierane dla jednostki, amunicji i czaru; osobny hit target `ⓘ`
+  nie zmienia selekcji; zamknięcie strzałką i systemowym Back zachowuje draft
+  oraz pozycję scrolla;
+- brak ilustracji zaklęć nie odwołuje się do brakujących zasobów, nie psuje
+  kompilacji ani działania selektorów; brakujące mapowanie jest jawnie
+  raportowane/testowane;
 - brak importów Android w core i brak reguł gameplayu/progresji w UI.
 
 Testy sprawdzają konkretne wyniki, nie tylko utworzenie klas lub wywołanie
@@ -274,7 +345,9 @@ metod. Nie wyłączaj testów ani nie osłabiaj asercji, aby ukryć brak funkcji
 ### Etap 6 — dokumentacja i stan wiedzy
 
 Zaktualizuj `docs/systems/loadout-system.md`, tak aby odróżniał pierwotny plan
-od faktycznie zaimplementowanych kontraktów i zachowań. Zaktualizuj też
+od faktycznie zaimplementowanych kontraktów i zachowań. Zachowaj link do tego
+promptu oraz do plików AGP; odnotuj, że grafiki są oczekiwane w osobnym kroku.
+Zaktualizuj też
 `docs/PROJECT_KNOWLEDGE.md`, `AI_PROJECT_MAP.md`, `architecture.md` i/lub
 `GLOSSARY.md` tylko tam, gdzie implementacja wprowadza trwałą zmianę
 odpowiedzialności, przepływu lub nowy termin.
@@ -324,6 +397,7 @@ Nie commituj ani nie pushuj. W końcowym podsumowaniu podaj:
 - listę zmienionych plików;
 - wynik testów, buildu i `git diff --check`;
 - nierozwiązane integracje lub blockery;
+- potwierdzenie, że w tym zadaniu nie generowano ani nie dodawano grafik;
 - bieżącą gałąź oraz potwierdzenie braku commita i pushu.
 
 ---

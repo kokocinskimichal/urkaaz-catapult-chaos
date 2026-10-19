@@ -3,6 +3,7 @@ package com.urkaaaz.screens.match
 import android.app.Activity
 import android.view.View
 import com.urkaaaz.navigation.ScreenContent
+import com.urkaaaz.contracts.MatchEvent
 import com.urkaaaz.contracts.PlayerLoadoutConfig
 import com.urkaaaz.ui.MatchScreenController
 
@@ -13,6 +14,7 @@ class MatchScreen(
     demoMode: Boolean = false,
     onBackClicked: () -> Unit,
     openDebugOnStart: Boolean = false,
+    onMatchFinished: (Int, MatchEvent.MatchFinished) -> Unit = { _, _ -> },
 ) : ScreenContent {
     private val controller = MatchScreenController(
         activity = activity,
@@ -21,6 +23,7 @@ class MatchScreen(
         demoMode = demoMode,
         onBackClicked = onBackClicked,
         openDebugOnStart = openDebugOnStart,
+        onMatchFinished = onMatchFinished,
     )
 
     override val view: View = controller.createView()

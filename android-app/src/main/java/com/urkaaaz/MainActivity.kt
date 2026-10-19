@@ -6,17 +6,21 @@ import androidx.activity.OnBackPressedCallback
 import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.WindowInsetsControllerCompat
+import com.urkaaaz.application.campaign.CampaignSystem
 import com.urkaaaz.application.loadout.LoadoutUseCases
+import com.urkaaaz.application.progression.CampaignAwareLoadoutProgressionPort
 import com.urkaaaz.application.progression.PlayerProgressionUseCases
 import com.urkaaaz.navigation.AppNavigator
 import com.urkaaaz.navigation.AppScreen
 import com.urkaaaz.navigation.ScreenHost
+import com.urkaaaz.persistence.DataStoreCampaignProgressRepository
 import com.urkaaaz.persistence.DataStoreLoadoutRepository
 import com.urkaaaz.persistence.DataStorePlayerProgressionRepository
 import com.urkaaaz.persistence.urkaazPreferencesDataStore
 import com.urkaaaz.screens.campaign.CampaignScreen
 import com.urkaaaz.screens.dashboard.DashboardScreen
 import com.urkaaaz.screens.loadout.LoadoutScreen
+import com.urkaaaz.screens.match.CampaignCompletionPresenter
 import com.urkaaaz.screens.match.MatchScreen
 import com.urkaaaz.screens.result.ResultScreen
 import com.urkaaaz.screens.shop.ShopScreen
@@ -26,11 +30,24 @@ class MainActivity : ComponentActivity() {
     private lateinit var screenHost: ScreenHost
     private lateinit var navigator: AppNavigator
     private var activityResumed = false
+    private val campaignCompletionPresenter by lazy {
+        CampaignCompletionPresenter(this, campaignSystem)
+    }
+    private val campaignSystem by lazy {
+        CampaignSystem(
+            DataStoreCampaignProgressRepository(
+                applicationContext.urkaazPreferencesDataStore,
+            ),
+        )
+    }
     private val loadoutUseCases by lazy {
         val dataStore = applicationContext.urkaazPreferencesDataStore
         LoadoutUseCases(
-            progression = PlayerProgressionUseCases(
-                DataStorePlayerProgressionRepository(dataStore),
+            progression = CampaignAwareLoadoutProgressionPort(
+                playerProgression = PlayerProgressionUseCases(
+                    DataStorePlayerProgressionRepository(dataStore),
+                ),
+                campaignSystem = campaignSystem,
             ),
             repository = DataStoreLoadoutRepository(dataStore),
         )
@@ -48,7 +65,7 @@ class MainActivity : ComponentActivity() {
         navigator = AppNavigator(::showScreen)
         onBackPressedDispatcher.addCallback(this, object : OnBackPressedCallback(true) {
             override fun handleOnBackPressed() {
-                if (!navigator.back()) {
+                if (!screenHost.handleBackPressed() && !navigator.back()) {
                     finish()
                 }
             }
@@ -67,6 +84,14 @@ class MainActivity : ComponentActivity() {
         activityResumed = false
         screenHost.pauseActiveScreen()
         super.onPause()
+    }
+
+    override fun onDestroy() {
+        if (::screenHost.isInitialized) {
+            screenHost.pauseActiveScreen()
+        }
+        campaignCompletionPresenter.onDestroy()
+        super.onDestroy()
     }
 
     private fun showScreen(screen: AppScreen) {
@@ -88,6 +113,7 @@ class MainActivity : ComponentActivity() {
             )
             AppScreen.Campaign -> CampaignScreen(
                 context = this,
+                campaignSystem = campaignSystem,
                 onBack = { navigator.back() },
                 onLevelSelected = { level ->
                     navigator.navigate(
@@ -122,6 +148,7 @@ class MainActivity : ComponentActivity() {
                     }
                 },
                 openDebugOnStart = screen.levelId == "DEMO_LEVEL",
+                onMatchFinished = campaignCompletionPresenter::onMatchFinished,
             )
             is AppScreen.Result -> ResultScreen(this)
         }

@@ -90,6 +90,43 @@ class LoadoutUseCases(
                     },
                 )
             }
+            is LoadoutEditAction.ToggleAmmunition -> {
+                if (action.ammunitionType == MatchLoadout.ROCK) {
+                    return rejected(draft, LoadoutError.ROCK_SLOT_FIXED)
+                }
+                if (action.selected) {
+                    val ammunition = AmmunitionType.values()
+                        .firstOrNull { it.name == action.ammunitionType }
+                        ?: return rejected(draft, LoadoutError.UNKNOWN_AMMUNITION)
+                    if (action.ammunitionType !in availability.ammunitionTypes) {
+                        return rejected(draft, LoadoutError.AMMUNITION_UNAVAILABLE)
+                    }
+                    if (action.ammunitionType in draft.ammunitionSlots) {
+                        return rejected(draft, LoadoutError.DUPLICATE_SELECTION)
+                    }
+                    if (!ammunition.unlimited &&
+                        snapshot.ammunitionStock(action.ammunitionType) <= 0
+                    ) {
+                        return rejected(draft, LoadoutError.AMMUNITION_OUT_OF_STOCK)
+                    }
+                    val slot = (1 until MatchLoadout.AMMUNITION_SLOT_COUNT)
+                        .firstOrNull { draft.ammunitionSlots[it] == null }
+                        ?: return rejected(draft, LoadoutError.SELECTION_LIMIT_REACHED)
+                    draft.copy(
+                        ammunitionSlots = draft.ammunitionSlots.toMutableList().also {
+                            it[slot] = action.ammunitionType
+                        },
+                    )
+                } else {
+                    val slot = draft.ammunitionSlots.indexOf(action.ammunitionType)
+                    if (slot <= 0) return LoadoutEditResult.Accepted(draft)
+                    draft.copy(
+                        ammunitionSlots = draft.ammunitionSlots.toMutableList().also {
+                            it[slot] = null
+                        },
+                    )
+                }
+            }
             is LoadoutEditAction.ToggleSpell -> {
                 if (action.selected) {
                     val spell = SpellType.values().firstOrNull { it.name == action.spellType }

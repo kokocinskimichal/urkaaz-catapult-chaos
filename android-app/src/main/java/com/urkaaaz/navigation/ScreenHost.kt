@@ -10,6 +10,8 @@ interface ScreenContent {
     fun onResume() = Unit
 
     fun onPause() = Unit
+
+    fun onBackPressed(): Boolean = false
 }
 
 class ScreenHost(context: Context) : FrameLayout(context) {
@@ -29,4 +31,7 @@ class ScreenHost(context: Context) : FrameLayout(context) {
     fun pauseActiveScreen() {
         activeContent?.onPause()
     }
+
+    fun handleBackPressed(): Boolean =
+        activeContent?.onBackPressed() == true
 }

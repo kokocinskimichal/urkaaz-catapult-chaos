@@ -16,6 +16,7 @@ import android.widget.CheckBox
 import android.widget.ScrollView
 import android.widget.TextView
 import com.urkaaaz.campaign.MapDefinitionRepository
+import com.urkaaaz.contracts.MatchEvent
 import com.urkaaaz.contracts.PlayerLoadoutConfig
 
 class MatchScreenController(
@@ -25,6 +26,7 @@ class MatchScreenController(
     private val demoMode: Boolean = false,
     private val onBackClicked: () -> Unit,
     private val openDebugOnStart: Boolean = false,
+    onMatchFinished: (Int, MatchEvent.MatchFinished) -> Unit = { _, _ -> },
 ) {
     private val viewModel = MatchViewModel(
         campaignLevel = campaignLevel,
@@ -33,6 +35,7 @@ class MatchScreenController(
         mapRepository = MapDefinitionRepository { path -> activity.assets.open(path) },
         combatLogSink = AndroidCombatLogSink(),
         ammunitionLogSink = AndroidAmmunitionLogSink(),
+        onMatchFinished = onMatchFinished,
     )
     private val gameHandler = Handler(Looper.getMainLooper())
     private lateinit var battlefieldView: BattlefieldView

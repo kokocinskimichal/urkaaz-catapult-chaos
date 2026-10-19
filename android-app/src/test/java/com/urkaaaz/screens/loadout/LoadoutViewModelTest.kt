@@ -5,6 +5,8 @@ import com.urkaaaz.application.loadout.LoadoutProgressionRead
 import com.urkaaaz.application.loadout.LoadoutProgressionSnapshot
 import com.urkaaaz.application.loadout.LoadoutPurchaseResult
 import com.urkaaaz.application.loadout.LoadoutRepository
+import com.urkaaaz.application.loadout.LoadoutEditAction
+import com.urkaaaz.application.loadout.LoadoutError
 import com.urkaaaz.application.loadout.LoadoutStorageResult
 import com.urkaaaz.application.loadout.LoadoutStorageWriteResult
 import com.urkaaaz.application.loadout.LoadoutUseCases
@@ -14,12 +16,33 @@ import kotlinx.coroutines.awaitCancellation
 import kotlinx.coroutines.cancelAndJoin
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
+import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class LoadoutViewModelTest {
+    @Test
+    fun availableOptionsSortBeforeUnavailableOptionsAndKeepCatalogOrder() {
+        val options = listOf("unavailable", "available", "selected", "locked", "outOfStock")
+        val statuses = mapOf(
+            "unavailable" to LoadoutOptionStatus.UNAVAILABLE,
+            "available" to LoadoutOptionStatus.AVAILABLE,
+            "selected" to LoadoutOptionStatus.SELECTED,
+            "locked" to LoadoutOptionStatus.LOCKED,
+            "outOfStock" to LoadoutOptionStatus.OUT_OF_STOCK,
+        )
+
+        val sorted = availableOptionsFirst(options) { statuses.getValue(it) }
+
+        assertEquals(
+            listOf("available", "selected", "unavailable", "locked", "outOfStock"),
+            sorted,
+        )
+    }
+
     @Test
     fun validatedLocalProfileUnlocksStartOnlyAfterLoadoutIsPersisted() = runBlocking {
         val repository = FakeRepository()
@@ -51,7 +74,7 @@ class LoadoutViewModelTest {
         viewModel.load()
 
         assertFalse(viewModel.state.canStart)
-        assertTrue(viewModel.state.errorMessage?.contains("unavailable") == true)
+        assertTrue(viewModel.state.failure is LoadoutUiFailure.Storage)
     }
 
     @Test
@@ -67,7 +90,7 @@ class LoadoutViewModelTest {
         assertTrue(viewModel.commit() == null)
         assertFalse(viewModel.state.canStart)
         assertTrue(viewModel.state.committedLoadout == null)
-        assertTrue(viewModel.state.errorMessage?.contains("unavailable") == true)
+        assertTrue(viewModel.state.failure is LoadoutUiFailure.Storage)
     }
 
     @Test
@@ -87,6 +110,68 @@ class LoadoutViewModelTest {
 
         assertFalse(viewModel.state.canStart)
         assertTrue(viewModel.state.isLoading)
+    }
+
+    @Test
+    fun detailBackKeepsDraftAndOnlyConsumesBackWhenDetailsAreOpen() = runBlocking {
+        val viewModel = LoadoutViewModel(
+            campaignLevel = 8,
+            useCases = LoadoutUseCases(FakeProgression(), FakeRepository()),
+        )
+        viewModel.load()
+        val draftBeforeDetails = viewModel.state.draft
+
+        viewModel.showDetails(LoadoutItemReference.Unit("DEFENDER"))
+
+        assertTrue(viewModel.handleBackPressed())
+        assertNull(viewModel.state.detailItem)
+        assertEquals(draftBeforeDetails, viewModel.state.draft)
+        assertFalse(viewModel.handleBackPressed())
+    }
+
+    @Test
+    fun rejectedEditIsVisibleButDoesNotBlockAValidDraft() = runBlocking {
+        val viewModel = LoadoutViewModel(
+            campaignLevel = 8,
+            useCases = LoadoutUseCases(FakeProgression(), FakeRepository()),
+        )
+        viewModel.load()
+
+        viewModel.edit(LoadoutEditAction.SelectUnit("UNKNOWN_UNIT", selected = true))
+
+        assertEquals(
+            LoadoutUiFailure.Edit(LoadoutError.UNKNOWN_UNIT),
+            viewModel.state.failure,
+        )
+        assertTrue(viewModel.state.canStart)
+        assertEquals(
+            LoadoutOptionStatus.LOCKED,
+            viewModel.optionStatus(LoadoutItemReference.Spell("HASTE")),
+        )
+    }
+
+    @Test
+    fun cancellingPendingCommitRestoresRetryableDraftState() = runBlocking {
+        val enteredCommitValidation = CompletableDeferred<Unit>()
+        val viewModel = LoadoutViewModel(
+            campaignLevel = 8,
+            useCases = LoadoutUseCases(
+                BlockingCommitProgression(enteredCommitValidation),
+                FakeRepository(),
+            ),
+        )
+        viewModel.load()
+        val draft = viewModel.state.draft
+        val commit = launch { viewModel.commit() }
+
+        enteredCommitValidation.await()
+        assertTrue(viewModel.state.isSaving)
+        viewModel.cancelPendingCommit()
+        commit.cancelAndJoin()
+
+        assertFalse(viewModel.state.isSaving)
+        assertTrue(viewModel.state.canStart)
+        assertEquals(draft, viewModel.state.draft)
     }
 
     private class FakeProgression : LoadoutProgressionPort {
@@ -110,6 +195,24 @@ class LoadoutViewModelTest {
         override suspend fun snapshot(level: Int): LoadoutProgressionRead {
             enteredRead.complete(Unit)
             awaitCancellation()
+        }
+
+        override suspend fun purchaseSpell(spellType: String): LoadoutPurchaseResult =
+            LoadoutPurchaseResult.Blocked
+    }
+
+    private class BlockingCommitProgression(
+        private val enteredCommitValidation: CompletableDeferred<Unit>,
+    ) : LoadoutProgressionPort {
+        private var reads = 0
+
+        override suspend fun snapshot(level: Int): LoadoutProgressionRead {
+            reads += 1
+            if (reads > 1) {
+                enteredCommitValidation.complete(Unit)
+                awaitCancellation()
+            }
+            return FakeProgression().snapshot(level)
         }
 
         override suspend fun purchaseSpell(spellType: String): LoadoutPurchaseResult =

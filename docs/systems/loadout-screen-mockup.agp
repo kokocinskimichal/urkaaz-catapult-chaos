@@ -1,0 +1,155 @@
+REFERENCE IMAGE INPUT
+
+- Attach the user-provided Loadout screenshot as the primary composition and
+  material reference. Match its 16:9 landscape composition: a full-bleed scenic
+  background, compact top header, three side-by-side dark iron panels, carved
+  wood/metal accents, gold selected borders, persistent bottom selection
+  summary, and a large START MATCH action.
+- Use existing Urkaaaz biome backgrounds and unit/ammunition images as
+  secondary content references when available. Do not redraw those assets.
+- The screenshot is a style reference only. Its invented game content,
+  selected state, and displayed quantities are not Urkaaaz data.
+
+HARD REQUIREMENTS
+
+- Generate one static Android landscape-screen mockup, 1920 x 1080 px, aspect
+  ratio 16:9.
+- Show screen content only: no phone frame, no hand, no presentation board,
+  no alternate variants, no captions outside the UI, and no watermark.
+- This is a layout/design reference. Do not treat the output as a production
+  bitmap or flatten controls and text into a runtime background.
+- Preserve the screenshot's visual direction: painterly campaign landscape,
+  layered dark iron/wood panels, restrained metal rivets, warm gold highlights,
+  readable pale text, and strong separation between the interface and scene.
+- Keep text, card art, status badges, panel surfaces, and background visually
+  separable so developers can rebuild the screen with native Android views and
+  individual resources.
+- Use only Urkaaaz content listed below. Do not invent units, ammunition,
+  spells, prices, unlocks, or game rules.
+
+SCREEN CONTENT
+
+Header:
+- Back action on the left and title "LOADOUT".
+- Subtitle "CAMPAIGN · LEVEL 06", matching the attached reference.
+- A compact "GOLD" balance readout on the right with no plus button or purchase
+  action. Show the balance as a dynamic UI value, not generated artwork; do not
+  invent a balance amount.
+- Keep the title centered in the upper scenic header, with the back action and
+  balance aligned to the far left and right as in the reference.
+
+MAIN CONTENT:
+- Use three equal-width panels across the screen, ordered UNITS, AMMUNITION,
+  SPELLS from left to right.
+- Keep each panel's title and selection count visible above its content.
+- Each panel's item cards form a horizontal carousel: show three cards at once
+  and allow left/right swipes to browse the rest of that category. Do not
+  shrink every catalog item into one static row or move the catalogs to
+  vertical lists.
+- In all three carousels, show selected and available options first, followed
+  by unavailable, locked, and out-of-stock options. Preserve catalog order
+  within each group and refresh the order when selection or progression status
+  changes.
+- Use the same card proportions, illustration area, title/status treatment,
+  selected border, and separate "i" affordance in all three carousels.
+- Show selection with a bright, glowing gold card border and a dark-centered
+  gold check badge with a matching glow in the upper-right corner instead of
+  the visible word "SELECTED". Keep the separate "i" control in the upper-left
+  so the controls never overlap. Avoid a flat, non-glowing yellow outline.
+- Every card must use the same fixed width and height across all categories;
+  longer labels must truncate or wrap within the card rather than resize it.
+- Keep any category-specific controls compact and outside the item cards.
+- Keep the footer summary and START MATCH action visible at the bottom without
+  scrolling.
+
+UNITS:
+- Use only DEFENDER, SAPPER, DEMOLISHER, RAGING BOAR, and SLINGMASTER.
+- Do not show a unit purchase cost, supply-cost badge, resource icon, or
+  currency amount on a unit card. Unit selection has no Loadout purchase cost.
+- Unit names are UI text, not part of generated artwork.
+- Show three portrait cards side by side in the horizontal carousel, with selected,
+  unselected, and optionally disabled states. Selection is an illustrative
+  design state only. Use a sample count of "2 / 3 SELECTED" to match the
+  reference; real counts come from the current draft.
+- The visible cards are a viewport into the actual five-unit catalog; do not
+  imply that only three unit types exist.
+- Give each card a small, visually separate circular "i" information button.
+  Tapping the card body selects it; tapping "i" opens its item-details screen.
+  Do not make the information button look like a selection checkmark.
+
+AMMUNITION:
+- Use one horizontal carousel, styled exactly like the UNITS and SPELLS
+  carousels; do not add a second, lower carousel or a separate slot picker.
+- Show ROCK first as a selected, fixed card representing slot 1. It cannot be
+  deselected or replaced.
+- Show the other ammunition types as ordinary selectable cards. Tapping one
+  toggles it into or out of the next available optional slot; do not show a
+  separate active-slot prompt or require a slot-selection step.
+- The loadout still has exactly three slots total, including fixed ROCK.
+- The other valid types are SIEGE BOMB, POWDER BARREL, FIRE RAIN, and
+  PLAGUE CAULDRON. Tapping an already-selected type removes it from its slot.
+- ROCK and SIEGE BOMB are unlimited. Do not print fabricated quantities.
+  Finite stock values are supplied dynamically by the app and must not be
+  invented in this mockup.
+- Do not use the fictional FIRE ROCK or SPIKE BALL from the reference.
+- Give every ammunition card a small, separate "i" information button that
+  opens the shared ammunition-details screen without changing selection.
+
+SPELLS:
+- Use only FORTRESS SHIELD, ICE TRAP, RUNIC BASTION, HASTE, HEAL,
+  CATAPULT LOCK, SLOWING FIELD, VAMPIRIC BANNER, STONE SKIN, SIEGE FRENZY,
+  and BERSERKER.
+- Spell names, gold costs, lock badges, and selection counts are native UI
+  overlays. Do not bake them into the artwork.
+- Use a sample count of "2 / 3 SELECTED" to match the reference; real counts
+  and lock states come from the current draft and progression.
+- The visible cards are a viewport into the actual spell catalog; do not imply
+  that only three spell types exist.
+- Place all spell choices in the horizontal carousel and allow left/right
+  swipes to reach cards beyond the first three.
+- Selected/locked states in the mockup demonstrate visual states only. Do not
+  claim that a spell is unlocked for a specific level or profile.
+- Do not use the fictional FIRE STRIKE, WIND BLAST, or EARTH SHIELD.
+- Give each spell card a small, separate "i" information button that opens the
+  shared spell-details screen without changing selection.
+
+Footer:
+- A persistent summary with live-style counters for UNITS, AMMO, and SPELLS.
+- A prominent gold START MATCH button.
+- Do not add a shop button, gold-purchase plus button, tutorial, or result UI.
+- Do not show invented stock figures such as "8 / 10" or "3 / 10".
+
+ASSET REUSE AND SEPARATION
+
+- Use the supplied background reference only for atmosphere. In the real app,
+  the background will be selected from the existing level-biome backgrounds.
+- Use the five full-card unit illustrations generated with
+  `loadout-unit-card-art.agp` when supplied. Their character identities must
+  match the five existing Urkaaaz unit icons; do not change battlefield
+  sprites or animation art.
+- Match existing Urkaaaz art for the five ammunition types; do not generate
+  replacement projectile art.
+- Keep panels, selected borders, lock/stock markers, labels, and counters as
+  separate native UI layers. Existing Android assets include the dashboard
+  header panel, portrait frame, back button, and HUD panel.
+- Render each card's "i" affordance as a separate native control. It must be
+  distinct from selection and route to the shared full-screen detail page.
+- Spell illustrations will be generated separately under the spell-card-art
+  AGP.
+
+NEGATIVE REQUIREMENTS
+
+- No fictional content from the reference screenshot.
+- No made-up currency, prices, inventory counts, unlock rules, or card names.
+- No spell gameplay animation or battlefield effects presented as implemented.
+- No text, labels, logo, watermark, signature, or interface baked into card art.
+- No giant flattened background containing the UI.
+- No extra buttons, tutorials, store links, AI controls, or campaign-progress
+  indicators.
+- The per-card "i" detail affordances are the only additional controls beyond
+  the described Loadout layout.
+
+OUTPUT
+
+Return exactly one 1920 x 1080 landscape design mockup. Use it only to guide
+native screen composition; do not import it as a single Android drawable.

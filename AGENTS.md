@@ -24,8 +24,8 @@ layer and **campaign level** for the selected level definition.
 | `game-contracts` | Immutable snapshots, commands, events and scenario contracts |
 | `game-domain` | Game rules and domain state |
 | `game-simulation` | Deterministic simulation, physics and terrain state |
-| `game-application` | Match session and local application gateway |
-| `game-campaign` | Campaign definitions and progression rules |
+| `game-application` | Match session/gateway and campaign/loadout use cases |
+| `game-campaign` | Campaign level and milestone definitions |
 | `game-ai` | AI decisions based on game state |
 | `android-app` | Android lifecycle, navigation, screens and rendering |
 
@@ -45,9 +45,10 @@ Available screens:
 
 - `StartScreen` — legacy-style start menu;
 - `DashboardScreen` — legacy-style dashboard, wired to navigation;
-- `CampaignScreen` — legacy-style campaign level selector, wired to navigation;
-- `LoadoutScreen` — reads and validates a saved draft, then starts a match
-  only after successful persistence; interactive editors remain incomplete;
+- `CampaignScreen` — legacy-style selector backed by persisted
+  `CampaignProgress`;
+- `LoadoutScreen` — reads profile and campaign spell entitlements, preserves
+  saved per-level choices, and starts only after successful validation/save;
 - `ShopScreen` — placeholder;
 - `MatchScreen` — working match screen;
 - `ResultScreen` — placeholder.

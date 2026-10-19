@@ -4,6 +4,10 @@
 
 ### Added
 
+- Campaign progress is now stored independently from player loadout data.
+  Winning levels unlock the next campaign level and apply Haste/Heal milestones
+  at levels 5/7, with the spells available from levels 6/8.
+- Loadout unit carousels now use five dedicated full-card illustrations.
 - Campaign opponents now use extensible CADET, VETERAN and ELITE AI profiles,
   assembled from registry-selected catapult, recruitment and wave strategies.
   ELITE progression is bounded through level 100 without resource or unit-stat
@@ -14,6 +18,11 @@
 
 ### Changed
 
+- Loadout unit, ammunition and spell options now share horizontal carousels
+  with equal-sized cards and available options first. ROCK stays fixed in the
+  first ammunition slot; other ammunition uses the same toggle selection
+  behavior as units and spells. Selected cards use a glowing gold frame and
+  check mark.
 - The match unit panel hides unit icons unavailable to the selected campaign
   level or committed player loadout.
 - Increased CADET AI aim error to ±18° and ±30 power so its shots are less

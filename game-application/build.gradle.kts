@@ -8,6 +8,7 @@ kotlin {
 
 dependencies {
     implementation(project(":game-contracts"))
+    implementation(project(":game-campaign"))
     implementation(project(":game-domain"))
     implementation(project(":game-simulation"))
     implementation(project(":game-ai"))

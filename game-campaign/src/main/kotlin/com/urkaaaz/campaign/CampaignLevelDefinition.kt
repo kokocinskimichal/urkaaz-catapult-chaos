@@ -104,8 +104,9 @@ data class CampaignLevelDefinition(
                 },
                 availableSpells = buildSet {
                     add(SpellType.FORTRESS_SHIELD)
-                    if (safeLevel >= 6) add(SpellType.HASTE)
-                    if (safeLevel >= 8) add(SpellType.HEAL)
+                    CampaignMilestoneRegistry.default()
+                        .milestonesAvailableAt(safeLevel)
+                        .forEach { add(it.spellType) }
                     if (safeLevel >= 11) add(SpellType.ICE_TRAP)
                     if (safeLevel >= 21) add(SpellType.RUNIC_BASTION)
                 },

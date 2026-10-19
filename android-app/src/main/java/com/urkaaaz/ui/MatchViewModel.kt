@@ -7,7 +7,9 @@ import com.urkaaaz.campaign.MapDefinitionRepository
 import com.urkaaaz.application.LocalMatchGateway
 import com.urkaaaz.application.MatchReplay
 import com.urkaaaz.contracts.CommandId
+import com.urkaaaz.contracts.EventId
 import com.urkaaaz.contracts.MatchCommand
+import com.urkaaaz.contracts.MatchEvent
 import com.urkaaaz.contracts.MatchId
 import com.urkaaaz.contracts.MatchSnapshot
 import com.urkaaaz.contracts.PlayerId
@@ -26,14 +28,15 @@ import com.urkaaaz.simulation.NoOpAmmunitionLogSink
  * snapshot data to views.
  */
 class MatchViewModel(
-    campaignLevel: Int = 1,
-    demoMode: Boolean = false,
+    private val campaignLevel: Int = 1,
+    private val demoMode: Boolean = false,
     playerLoadout: PlayerLoadoutConfig? = null,
     mapRepository: MapDefinitionRepository = MapDefinitionRepository.bundled,
     private val combatLogSink: CombatLogSink = NoOpCombatLogSink,
     private val ammunitionLogSink: AmmunitionLogSink = NoOpAmmunitionLogSink,
     private val matchId: MatchId = MatchId("local-match"),
     private val playerId: PlayerId = playerLoadout?.playerId ?: PlayerId("local-player"),
+    private val onMatchFinished: (Int, MatchEvent.MatchFinished) -> Unit = { _, _ -> },
     private val gateway: LocalMatchGateway = LocalMatchGateway(
         loadSelectedDefinition(campaignLevel, demoMode, mapRepository).biome.name,
         loadSelectedDefinition(campaignLevel, demoMode, mapRepository).initialWind,
@@ -87,6 +90,7 @@ class MatchViewModel(
     private var matchGeneration = 0L
     private var paused = false
     private var selectedAmmunition = "ROCK"
+    private val forwardedCampaignCompletions = mutableSetOf<Triple<Long, MatchId, EventId>>()
 
     var renderState: RenderState = RenderStateMapper.map(MatchSnapshot())
         private set
@@ -248,10 +252,23 @@ class MatchViewModel(
 
     private fun mapRenderState(
         snapshot: MatchSnapshot,
-        events: List<com.urkaaaz.contracts.MatchEvent> = emptyList(),
-    ): RenderState = RenderStateMapper.map(snapshot, events).copy(
-        matchGeneration = matchGeneration,
-    )
+        events: List<MatchEvent> = emptyList(),
+    ): RenderState {
+        forwardCampaignCompletionEvents(events)
+        return RenderStateMapper.map(snapshot, events).copy(
+            matchGeneration = matchGeneration,
+        )
+    }
+
+    internal fun forwardCampaignCompletionEvents(events: List<MatchEvent>) {
+        if (demoMode) return
+        events.filterIsInstance<MatchEvent.MatchFinished>().forEach { event ->
+            val delivery = Triple(matchGeneration, event.matchId, event.eventId)
+            if (forwardedCampaignCompletions.add(delivery)) {
+                onMatchFinished(campaignLevel, event)
+            }
+        }
+    }
 
     private fun selectedAmmunitionIsAvailable(): Boolean =
         renderState.playerAmmunition[selectedAmmunition]?.let { it > 0 } ?: true

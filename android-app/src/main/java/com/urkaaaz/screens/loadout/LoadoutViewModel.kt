@@ -2,9 +2,11 @@ package com.urkaaaz.screens.loadout
 
 import com.urkaaaz.application.loadout.LoadoutAvailability
 import com.urkaaaz.application.loadout.LoadoutCommitResult
+import com.urkaaaz.application.loadout.LoadoutCatalog
 import com.urkaaaz.application.loadout.LoadoutCorrection
 import com.urkaaaz.application.loadout.LoadoutEditAction
 import com.urkaaaz.application.loadout.LoadoutEditResult
+import com.urkaaaz.application.loadout.LoadoutError
 import com.urkaaaz.application.loadout.LoadoutOpenResult
 import com.urkaaaz.application.loadout.LoadoutProgressionFailure
 import com.urkaaaz.application.loadout.LoadoutProgressionSnapshot
@@ -25,11 +27,56 @@ data class LoadoutUiState(
     val draft: MatchLoadout? = null,
     val corrections: List<LoadoutCorrection> = emptyList(),
     val progression: LoadoutProgressionSnapshot? = null,
-    val errorMessage: String? = null,
+    val failure: LoadoutUiFailure? = null,
+    val validationError: LoadoutError? = null,
+    val detailItem: LoadoutItemReference? = null,
     val committedLoadout: PlayerLoadoutConfig? = null,
 ) {
     val canStart: Boolean
-        get() = !isLoading && !isSaving && draft != null && errorMessage == null
+        get() = !isLoading &&
+            !isSaving &&
+            draft != null &&
+            progression != null &&
+            validationError == null &&
+            failure !is LoadoutUiFailure.Progression &&
+            failure !is LoadoutUiFailure.Commit &&
+            failure !is LoadoutUiFailure.Storage
+}
+
+sealed interface LoadoutUiFailure {
+    data class Edit(val error: LoadoutError) : LoadoutUiFailure
+    data class Commit(val error: LoadoutError) : LoadoutUiFailure
+    data class Progression(val reason: LoadoutProgressionFailure) : LoadoutUiFailure
+    data class Storage(val reason: LoadoutStorageFailure) : LoadoutUiFailure
+}
+
+sealed interface LoadoutItemReference {
+    val identifier: String
+
+    data class Unit(override val identifier: String) : LoadoutItemReference
+    data class Ammunition(override val identifier: String) : LoadoutItemReference
+    data class Spell(override val identifier: String) : LoadoutItemReference
+}
+
+enum class LoadoutOptionStatus {
+    SELECTED,
+    AVAILABLE,
+    UNAVAILABLE,
+    LOCKED,
+    OUT_OF_STOCK,
+}
+
+internal fun <T> availableOptionsFirst(
+    options: List<T>,
+    statusOf: (T) -> LoadoutOptionStatus,
+): List<T> = options.sortedBy { option ->
+    when (statusOf(option)) {
+        LoadoutOptionStatus.SELECTED,
+        LoadoutOptionStatus.AVAILABLE -> false
+        LoadoutOptionStatus.UNAVAILABLE,
+        LoadoutOptionStatus.LOCKED,
+        LoadoutOptionStatus.OUT_OF_STOCK -> true
+    }
 }
 
 class LoadoutViewModel(
@@ -47,9 +94,15 @@ class LoadoutViewModel(
 
     var state = LoadoutUiState(
         level = definition.level,
-        availableUnits = scenario.availableUnits,
-        availableAmmunition = scenario.availableAmmunition,
-        availableSpells = scenario.availableSpells,
+        availableUnits = LoadoutCatalog.units
+            .map { it.id }
+            .filter { it in availability.unitTypes },
+        availableAmmunition = LoadoutCatalog.ammunition
+            .map { it.id }
+            .filter { it in availability.ammunitionTypes },
+        availableSpells = LoadoutCatalog.spells
+            .map { it.id }
+            .filter { it in availability.spellTypes },
     )
         private set
 
@@ -60,33 +113,30 @@ class LoadoutViewModel(
             draft = null,
             corrections = emptyList(),
             progression = null,
-            errorMessage = null,
+            failure = null,
+            validationError = null,
+            detailItem = null,
             committedLoadout = null,
         )
         state = when (val result = useCases.open(availability)) {
-            is LoadoutOpenResult.Opened -> {
-                val validationError = useCases.validateDraft(
+            is LoadoutOpenResult.Opened -> state.copy(
+                isLoading = false,
+                draft = result.draft,
+                corrections = result.corrections,
+                progression = result.progression,
+                validationError = useCases.validateDraft(
                     result.draft,
                     availability,
                     result.progression,
-                )
-                state.copy(
-                    isLoading = false,
-                    draft = result.draft,
-                    corrections = result.corrections,
-                    progression = result.progression,
-                    errorMessage = validationError?.let {
-                        "Loadout cannot be started: $it."
-                    },
-                )
-            }
+                ),
+            )
             is LoadoutOpenResult.ProgressionBlocked -> state.copy(
                 isLoading = false,
-                errorMessage = progressionFailureMessage(result.reason),
+                failure = LoadoutUiFailure.Progression(result.reason),
             )
             is LoadoutOpenResult.StorageFailure -> state.copy(
                 isLoading = false,
-                errorMessage = storageFailureMessage(result.reason),
+                failure = LoadoutUiFailure.Storage(result.reason),
             )
         }
     }
@@ -104,14 +154,82 @@ class LoadoutViewModel(
         ) {
             is LoadoutEditResult.Accepted -> state = state.copy(
                 draft = result.draft,
-                errorMessage = useCases.validateDraft(
+                failure = null,
+                validationError = useCases.validateDraft(
                     result.draft,
                     availability,
                     progression,
-                )?.let { "Loadout cannot be started: $it." },
+                ),
             )
-            is LoadoutEditResult.Rejected ->
-                state = state.copy(errorMessage = "Loadout change rejected: ${result.error}.")
+            is LoadoutEditResult.Rejected -> state = state.copy(
+                failure = LoadoutUiFailure.Edit(result.error),
+            )
+        }
+    }
+
+    fun optionStatus(item: LoadoutItemReference): LoadoutOptionStatus {
+        val draft = state.draft
+        val progression = state.progression
+        return when (item) {
+            is LoadoutItemReference.Unit -> when {
+                LoadoutCatalog.findUnit(item.identifier) == null ->
+                    LoadoutOptionStatus.UNAVAILABLE
+                item.identifier in draft?.unitTypes.orEmpty() -> LoadoutOptionStatus.SELECTED
+                item.identifier !in availability.unitTypes -> LoadoutOptionStatus.UNAVAILABLE
+                else -> LoadoutOptionStatus.AVAILABLE
+            }
+            is LoadoutItemReference.Ammunition -> {
+                val ammunition = LoadoutCatalog.findAmmunition(item.identifier)
+                    ?: return LoadoutOptionStatus.UNAVAILABLE
+                when {
+                    item.identifier == MatchLoadout.ROCK -> LoadoutOptionStatus.SELECTED
+                    item.identifier in draft?.ammunitionSlots.orEmpty() ->
+                        LoadoutOptionStatus.SELECTED
+                    item.identifier !in availability.ammunitionTypes ->
+                        LoadoutOptionStatus.UNAVAILABLE
+                    !ammunition.unlimited &&
+                        (progression?.ammunitionStock(item.identifier) ?: 0) <= 0 ->
+                        LoadoutOptionStatus.OUT_OF_STOCK
+                    else -> LoadoutOptionStatus.AVAILABLE
+                }
+            }
+            is LoadoutItemReference.Spell -> {
+                val spell = LoadoutCatalog.findSpell(item.identifier)
+                    ?: return LoadoutOptionStatus.UNAVAILABLE
+                when {
+                    item.identifier in draft?.spellTypes.orEmpty() ->
+                        LoadoutOptionStatus.SELECTED
+                    spell.special &&
+                        (progression?.specialSpellStock(item.identifier) ?: 0) <= 0 ->
+                        LoadoutOptionStatus.OUT_OF_STOCK
+                    !spell.special && item.identifier !in availability.spellTypes ->
+                        LoadoutOptionStatus.UNAVAILABLE
+                    !spell.special &&
+                        item.identifier !in progression?.unlockedSpellTypes.orEmpty() ->
+                        LoadoutOptionStatus.LOCKED
+                    else -> LoadoutOptionStatus.AVAILABLE
+                }
+            }
+        }
+    }
+
+    fun showDetails(item: LoadoutItemReference) {
+        state = state.copy(detailItem = item)
+    }
+
+    fun closeDetails() {
+        state = state.copy(detailItem = null)
+    }
+
+    fun handleBackPressed(): Boolean {
+        if (state.detailItem == null) return false
+        closeDetails()
+        return true
+    }
+
+    fun cancelPendingCommit() {
+        if (state.isSaving) {
+            state = state.copy(isSaving = false)
         }
     }
 
@@ -119,7 +237,7 @@ class LoadoutViewModel(
         val draft = state.draft ?: return null
         if (!state.canStart) return null
 
-        state = state.copy(isSaving = true, errorMessage = null)
+        state = state.copy(isSaving = true, failure = null, committedLoadout = null)
         state = when (
             val result = useCases.commit(
                 draft = draft,
@@ -130,44 +248,24 @@ class LoadoutViewModel(
             is LoadoutCommitResult.Committed -> state.copy(
                 isSaving = false,
                 committedLoadout = result.playerLoadout,
+                validationError = null,
             )
             is LoadoutCommitResult.Rejected -> state.copy(
                 isSaving = false,
-                errorMessage = "Loadout cannot be saved: ${result.error}.",
+                failure = LoadoutUiFailure.Commit(result.error),
+                validationError = result.error,
             )
             is LoadoutCommitResult.ProgressionBlocked -> state.copy(
                 isSaving = false,
-                errorMessage = progressionFailureMessage(result.reason),
+                failure = LoadoutUiFailure.Progression(result.reason),
             )
             is LoadoutCommitResult.StorageFailure -> state.copy(
                 isSaving = false,
-                errorMessage = storageFailureMessage(result.reason),
+                failure = LoadoutUiFailure.Storage(result.reason),
             )
         }
         return state.committedLoadout
     }
-
-    private fun progressionFailureMessage(reason: LoadoutProgressionFailure): String =
-        when (reason) {
-            LoadoutProgressionFailure.INVALID_LEVEL -> "This campaign level is invalid."
-            LoadoutProgressionFailure.STORAGE_UNAVAILABLE ->
-                "Progression data is unavailable. Match start is blocked."
-            LoadoutProgressionFailure.INVALID_PROFILE ->
-                "Progression data is invalid. Match start is blocked."
-            LoadoutProgressionFailure.UNSUPPORTED_PROFILE_VERSION ->
-                "Progression data uses an unsupported version. Match start is blocked."
-        }
-
-    private fun storageFailureMessage(reason: LoadoutStorageFailure): String =
-        when (reason) {
-            LoadoutStorageFailure.INVALID_LEVEL -> "This campaign level is invalid."
-            LoadoutStorageFailure.STORAGE_UNAVAILABLE ->
-                "Saved loadout data is unavailable. Match start is blocked."
-            LoadoutStorageFailure.INVALID_DATA ->
-                "Saved loadout data is invalid. Match start is blocked."
-            LoadoutStorageFailure.UNSUPPORTED_VERSION ->
-                "Saved loadout data uses an unsupported version. Match start is blocked."
-        }
 
     private companion object {
         const val PLAYER_ID = "player"

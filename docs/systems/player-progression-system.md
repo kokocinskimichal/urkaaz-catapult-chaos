@@ -6,8 +6,9 @@
 port i use case'y profilu oparte na istniejącym `LoadoutProgressionSnapshot`.
 `android-app` zapisuje wersjonowany profil i zatwierdzony loadout w AndroidX
 DataStore, a ekran rozpoczyna mecz dopiero po odczycie, walidacji i udanym
-zapisie. Zakupy, autoryzowane milestone'y kampanii, rozliczanie stocku i
-CampaignSystem pozostają poza wdrożonym zakresem.
+zapisie. CampaignSystem zapisuje osobno postęp i przyznane milestone'y, a
+read model loadoutu łączy jego czary z profilem. Zakupy i rozliczanie stocku
+pozostają poza wdrożonym zakresem.
 
 ## 1. Cel i zakres
 
@@ -66,7 +67,8 @@ ani nie podejmuje decyzji o odblokowaniach.
 `game-application/application/loadout/LoadoutContracts.kt` zawiera już:
 
 - `LoadoutProgressionSnapshot` z `unlockedSpellTypes`,
-  `ammunitionStocks`, `specialSpellStocks` i `goldBalance`;
+  `ammunitionStocks`, `specialSpellStocks`, `goldBalance` oraz pochodnym
+  `defaultSpellTypes`;
 - `LoadoutProgressionPort` do odczytu snapshotu oraz żądania zakupu czaru;
 - `LoadoutRepository` do odczytu i zapisu wyboru dla poziomu;
 - typowane wyniki dla blokady progresji i błędów zapisu.
@@ -76,9 +78,11 @@ zatwierdzaniu i zwraca `PlayerLoadoutConfig`. Należy rozszerzyć lub
 asynchronicznie dostosować te kontrakty, a nie tworzyć drugi snapshot
 progresji, drugi katalog odblokowań ani osobne API startu meczu.
 
-`CampaignSystem` ma już dokument architektury i własność `highestUnlockedLevel`.
-`CampaignLevelDefinition` definiuje dostępność zawartości danego poziomu.
-System progresji profilu nie zastępuje żadnej z tych odpowiedzialności.
+`CampaignSystem` w `game-application` jest właścicielem trwałego postępu,
+autoryzacji poziomu i milestone'ów opisanych w
+`docs/systems/campaign-system.md`. `CampaignLevelDefinition` nadal definiuje
+dostępność zawartości na poziomie. Profil nie przechowuje kopii
+kampanijnych odblokowań.
 
 ## 5. Wejścia i wyjścia
 
@@ -114,6 +118,11 @@ ograniczonej amunicji, stock czarów specjalnych i saldo. Schemat przechowuje
 stabilne identyfikatory tekstowe, a adapter mapuje je na istniejące katalogi;
 nie kopiuje balansu ani definicji.
 
+`defaultSpellTypes` jest pochodnym polem read modelu, nie zapisanym profilem.
+`CampaignAwareLoadoutProgressionPort` dodaje do snapshotu odblokowania
+CampaignProgress i preferencje nowych domyślnych loadoutów. Nie zapisuje
+kampanijnych nagród do `profile.unlocked_spells`.
+
 Pierwszy profil jest inicjalizowany atomowo wyłącznie wtedy, gdy brak danych
 profilu. Potwierdzony seed legacy zawiera `FORTRESS_SHIELD`, saldo `0` oraz
 pusty stock ograniczonej amunicji i czarów specjalnych (czyli zero sztuk).
@@ -131,8 +140,9 @@ kluczy ani zapisów z osobnej instalacji legacy.
 Lokalny zapis używa AndroidX Preferences DataStore i atomowych aktualizacji.
 `DataStorePlayerProgressionRepository` inicjalizuje/odczytuje profil, a
 `DataStoreLoadoutRepository` odczytuje i zapisuje wyłącznie zatwierdzony wybór.
-Oba adaptery współdzielą backend, zachowując osobne klucze i wersje. Typy
-DataStore, Flow i Context nie przekraczają granicy `android-app`.
+`DataStoreCampaignProgressRepository` zapisuje niezależny, wersjonowany
+CampaignProgress. Adaptery współdzielą backend, zachowując osobne klucze i
+wersje. Typy DataStore, Flow i Context nie przekraczają granicy `android-app`.
 
 Zatwierdzony loadout jest osobną kategorią danych i pozostaje własnością
 `LoadoutRepository`. Adaptery mogą korzystać ze wspólnego mechanizmu DataStore,
@@ -186,22 +196,20 @@ CampaignLevelDefinition
 7. Błąd odczytu, niepoprawny profil, brak wymaganej pozycji albo błąd zapisu
    pozostawia start zablokowany.
 
-`CampaignScreen` obecnie udostępnia wszystkie poziomy testowo. Zastąpienie
-tego zachowania trwałym odblokowaniem należy do osobnego zakresu
-`CampaignSystem`; `PlayerProgressionSystem` nie powinien udawać, że poziom
-jest odblokowany.
+`CampaignScreen` odczytuje trwały `CampaignProgress` i umożliwia wybór tylko
+odblokowanych poziomów. `CampaignAwareLoadoutProgressionPort` łączy snapshot
+profilu z nagrodami kampanii; błąd kampanii jawnie blokuje loadout.
 
 ## 9. Milestone'y i integracja z czarami
 
-Zachować udokumentowane reguły legacy: Haste ma być dostępny przed loadoutem
-poziomu 6, a Heal przed loadoutem poziomu 8. Ich dostępność na poziomie nadal
-pochodzi z `CampaignLevelDefinition`; ich odblokowanie musi wynikać z
-potwierdzonego zestawu startowego lub jawnej reguły progresji, nie z ViewModelu.
-Dokładny moment aktualizacji profilu nie może omijać walidacji postępu
-kampanii. Jeśli do bezpiecznej aktywacji milestone'u wymagane jest
-`CampaignSystem`, integracja musi użyć jego jawnego wyniku/portu albo pozostać
-blokadą — nie należy odblokowywać czaru jedynie dlatego, że UI otworzyło
-dowolny poziom.
+Haste jest przyznawany po zwycięstwie na poziomie 5 i dostępny od poziomu 6;
+Heal — po zwycięstwie na poziomie 7 i dostępny od poziomu 8.
+`CampaignMilestoneRegistry` jest źródłem progów i nagród. CampaignSystem
+zapisuje milestone-ID atomowo z ukończeniem/odblokowaniem, a
+`CampaignAwareLoadoutProgressionPort` łączy wynik z profilem wyłącznie w
+read modelu. `defaultSpellTypes` jest pochodną wyboru nowego domyślnego
+loadoutu, nie polem trwałego profilu. Zapisany wybór dla poziomu pozostaje
+zachowany. Zakupy nadal należą do systemu sklepu/progresji.
 
 Przekazanie czarów w `PlayerLoadoutConfig` nie oznacza obsługi `CastSpell`.
 SpellSystem nie jest implementowany przez ten system.
@@ -232,8 +240,10 @@ wersjonowanego profilu i poziomu jego snapshot oraz wynik walidacji są
 deterministyczne. DataStore odpowiada za atomową aktualizację jednego zapisu;
 nie jest źródłem kolejności symulacji ani częścią replayu.
 
-Ta faza nie pobiera `MatchFinished` do aktualizacji stocku, nagród lub
-poziomów. Nie wolno deklarować zapasów z loadoutu jako rozliczonych po meczu.
+PlayerProgressionSystem nie aktualizuje profilu na podstawie
+`MatchFinished`. CampaignSystem odbiera kanoniczny event wyłącznie do własnego
+postępu i milestone'ów; nie rozlicza stocku ani salda profilu. Zapasów z
+loadoutu nie wolno deklarować jako rozliczonych po meczu.
 
 ## 12. Plan testów i kryteria akceptacji
 
@@ -247,8 +257,9 @@ poziomów. Nie wolno deklarować zapasów z loadoutu jako rozliczonych po meczu.
   zachowują znane wartości.
 - Nieobsługiwana wersja, uszkodzone dane i błąd DataStore zwracają jawny
   status; nigdy nie zamieniają się w pełny odblokowany profil.
-- `LoadoutProgressionPort` dostarcza prawidłowy snapshot dla danego poziomu;
-  zakupy są jawnie zablokowane, jeśli StoreSystem nie należy do zakresu.
+- `LoadoutProgressionPort` dostarcza snapshot z profilem i kampanijnymi
+  odblokowaniami; niedostępna kampania blokuje odczyt, a zakupy pozostają
+  jawnie zablokowane, jeśli StoreSystem nie należy do zakresu.
 - Asynchroniczny LoadoutSystem otwiera ekran, filtruje zapis, ponownie
   waliduje świeży stan, zapisuje zatwierdzony wybór i zwraca konfigurację
   tylko po sukcesie.
@@ -262,6 +273,9 @@ poziomów. Nie wolno deklarować zapasów z loadoutu jako rozliczonych po meczu.
   `PlayerLoadoutConfig` po anulowaniu lub błędzie.
 - Test granicy architektonicznej: DataStore/Android nie trafia do core;
   UI nie przyznaje odblokowań i nie mutuje profilu bez use case'u.
+- CampaignSystem testuje poziom początkowy, walidację wyboru, BLUE_WIN,
+  wyniki bez postępu, idempotencję, zapis nagród i read model czarów dla
+  LoadoutSystemu.
 
 ### Kryteria akceptacji
 
@@ -275,8 +289,9 @@ poziomów. Nie wolno deklarować zapasów z loadoutu jako rozliczonych po meczu.
   zatwierdzeniu i udanym zapisie.
 - Wszystkie moduły core pozostają niezależne od Androida; nie powstaje nowy
   moduł ani drugi katalog balansu/progresji.
-- Dokumentacja jasno oznacza, że zakupy, CampaignSystem, rozliczenie stocku
-  i gameplay czarów pozostają poza tym zakresem.
+- Dokumentacja jasno oznacza, że zakupy, rozliczenie stocku i gameplay
+  czarów pozostają poza tym zakresem; odblokowania kampanijne są własnością
+  CampaignSystemu.
 
 ## 13. Pliki aktualnej implementacji
 
@@ -307,13 +322,11 @@ synchronicznego cache'u.
 
 ## 15. Otwarte blokery
 
-- `CampaignSystem` nadal musi zapewnić produkcyjne ograniczenie wyboru poziomów
-  i jawne źródło postępu. Obecny selector kampanii nadal jest konfiguracją
-  testową i udostępnia wszystkie poziomy.
-- Milestone'y Haste/Heal poziomów 6/8 nie są przyznawane na podstawie numeru
-  poziomu; wymagają autoryzacji CampaignSystem.
+- Campaign milestone'y są wdrożone i nie są przyznawane przez sam numer
+  otwartego poziomu. Tutoriale poziomów 6/8 pozostają poza zakresem i należą
+  do przyszłego TutorialSystem.
 - Ekran pokazuje i zatwierdza deterministyczny draft, ale interaktywne
-  kontrolki edycji loadoutu oraz tutoriale poziomów 6/8 pozostają do wdrożenia.
+  kontrolki edycji loadoutu pozostają do wdrożenia.
 - Należy ustalić późniejszy właścicielski przepływ zakupów/nagród i rozliczeń
   stocku po meczu przed przedstawieniem tych funkcji jako produkcyjnych.
 - `CastSpell` i efekty czarów pozostają niezależnym blokerem gameplayu.

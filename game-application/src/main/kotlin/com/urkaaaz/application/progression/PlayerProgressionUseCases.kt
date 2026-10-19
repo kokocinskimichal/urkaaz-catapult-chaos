@@ -47,6 +47,7 @@ class PlayerProgressionUseCases(
         return unlockedSpellTypes.all { id ->
             knownSpells[id]?.special == false
         } &&
+            defaultSpellTypes.isEmpty() &&
             ammunitionStocks.all { (id, count) ->
                 knownAmmunition[id]?.unlimited == false && count >= 0
             } &&

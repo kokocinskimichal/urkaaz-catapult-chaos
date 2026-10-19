@@ -1,0 +1,65 @@
+Generate one static portrait Android screen mockup for the shared Urkaaaz
+Loadout item-details page. It is opened from a small information button on a
+unit, ammunition, or spell card.
+
+The page is one reusable layout. Its title, illustration, description,
+properties, and availability state change to match the selected item type.
+For this design mockup, show a DEFENDER unit example; do not imply that this
+unit is selected or unlocked for a particular campaign level or profile.
+
+VISUAL STYLE
+
+- Match `loadout-screen-mockup.agp` and the attached user-provided Loadout
+  screenshot: painterly campaign atmosphere, dark iron/wood panels, restrained
+  rivets, warm gold accents, readable pale text, and clear visual hierarchy.
+- Use existing Urkaaaz background and Defender artwork as references when
+  available. Do not invent replacement unit art.
+- Keep the page native-UI-friendly: background, image, text, property rows,
+  controls, and availability state must remain visually separable.
+- Full-screen Android portrait composition, 1080 x 2400 px, aspect ratio 9:20.
+- Screen content only; no phone frame, hand, presentation board, extra
+  variants, captions outside the UI, or watermark.
+
+PAGE CONTENT
+
+- A clear back arrow and "ITEM DETAILS" header.
+- The item type is visibly identified as "UNIT"; the title is "DEFENDER".
+- A large existing Defender illustration is the visual focal point.
+- Include one short factual description: "A close-range unit that advances
+  toward the enemy and attacks enemy units and fortresses."
+- Use a concise "DETAILS" section with no fabricated numeric stats, prices,
+  inventory, level unlocks, or status claims.
+- Add a persistent "BACK TO LOADOUT" action at the bottom.
+- An optional "SELECT UNIT" action may be shown only as a native UI control;
+  it is illustrative and must not imply that selection bypasses Loadout
+  validation or that the unit is available on the displayed level.
+- This is a reusable layout: ammunition details will use the selected ammo
+  icon and its real effect/reload/balance data; spell details will use the
+  selected spell illustration and its real category/effect description. Do
+  not show ammunition or spell examples on this Defender page.
+
+NAVIGATION BEHAVIOR TO COMMUNICATE
+
+- The page was opened by tapping the separate "i" control on a Loadout card.
+- The "i" control is not the card's select/deselect action.
+- Returning closes the detail page and reveals the exact prior Loadout state,
+  including its uncommitted draft and scroll position.
+- The system Back action and the visible back arrow both return to Loadout.
+- Viewing details does not buy, unlock, equip, cast, or otherwise mutate an
+  item.
+
+NEGATIVE REQUIREMENTS
+
+- Do not add invented item names, unit classes, mechanics, statistics,
+  prices, inventory counts, unlock claims, or currency.
+- Do not show a shop action, purchase action, campaign progression,
+  battlefield runtime effects, or a match screen.
+- Do not bake text, buttons, badges, borders, or UI into the unit illustration.
+- Do not show spells or ammunition in the selected Defender example.
+- Do not copy fictional names or effects from the reference screenshot.
+
+OUTPUT
+
+Return exactly one 1080 x 2400 portrait mockup of the shared item-details page,
+using DEFENDER as the illustrative example. This is a visual reference only;
+do not import the flattened mockup as an Android drawable.

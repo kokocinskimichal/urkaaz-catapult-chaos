@@ -17,8 +17,8 @@ Android jest nazywana **match screen**, a wybrana definicja kampanii —
 | `game-contracts` | stabilne, niemutowalne kontrakty komunikacji | komendy, snapshoty, eventy, scenariusze, identyfikatory |
 | `game-domain` | reguły i stan domeny gry | `Match`, fortece, jednostki, amunicja, obrażenia, konfiguracje |
 | `game-simulation` | deterministyczne wykonywanie meczu | ticki, pociski, kolizje, teren, wiatr, jednostki, eventy |
-| `game-application` | cykl życia meczu, lokalny gateway i przypadki użycia loadoutu | `MatchSession`, `LocalMatchGateway`, `application.loadout` |
-| `game-campaign` | definicje poziomów i konfiguracja kampanii | `CampaignLevelDefinition`, biom, wiatr, scenariusz |
+| `game-application` | cykl życia meczu, lokalny gateway, loadout i przypadki użycia kampanii | `MatchSession`, `LocalMatchGateway`, `application.loadout`, `application.campaign` |
+| `game-campaign` | definicje poziomów, milestone'ów i konfiguracja kampanii | `CampaignLevelDefinition`, `CampaignMilestoneRegistry`, biom, wiatr, scenariusz |
 | `game-ai` | decyzje AI na podstawie snapshotu | `AiAgent`, rekrutacja, dobór kontr, wysyłanie fal |
 | `android-app` | lifecycle, nawigacja, input i renderowanie | `MainActivity`, ekrany, ViewModel, HUD, battlefield |
 
@@ -30,7 +30,8 @@ android-app
   │     ├── game-simulation
   │     │     ├── game-domain
   │     │     └── game-contracts
-  │     └── game-contracts
+  │     ├── game-contracts
+  │     └── game-campaign
   ├── game-campaign
   └── game-contracts
 
@@ -72,8 +73,12 @@ przez komendy i granice domeny/aplikacji.
 6. Snapshot jest mapowany na niemutowalny stan prezentacji.
 7. Ekran meczu obsługuje lifecycle, pauzę, restart, celowanie, amunicję,
    jednostki, HUD i debug overlay.
-8. Wynik meczu jest prezentowany przez istniejący uproszczony overlay; pełny
-   ekran wyniku i zapis progresji pozostają niedokończone.
+8. `MatchEvent.MatchFinished` wraz z poziomem kampanii trafia do
+   `CampaignSystem`. Tylko `BLUE_WIN` atomowo zapisuje ukończenie, następny
+   poziom i milestone'y; demo, porażka, remis i poddanie nie zmieniają postępu.
+9. Powrót do CampaignScreen odczytuje trwały postęp. Wynik nadal jest
+   prezentowany przez uproszczony overlay; pełny ekran wyniku pozostaje
+   placeholderem.
 
 ## Android i nawigacja
 
@@ -89,7 +94,8 @@ Dostępne ekrany:
 - `StartScreen` — styl startowego menu;
 - `DashboardScreen` — dashboard;
 - `CampaignScreen` — wybór poziomu kampanii;
-- `LoadoutScreen` — pokazuje dostępność, draft i stan walidacji/zapisu;
+- `LoadoutScreen` — edytuje jednostki, sloty amunicji i czary; wewnętrzne
+  szczegóły zachowują draft/scroll, a start wymaga udanego zapisu;
 - `ShopScreen` — placeholder;
 - `MatchScreen` — działający ekran meczu;
 - `ResultScreen` — placeholder.
@@ -148,6 +154,14 @@ Logowanie amunicji jest host-independent i nie może zmieniać stanu gry.
 sesję do `SimulationConfig`. `WindSystem` posiada stan dynamicznych zmian
 wiatru; Android wyłącznie renderuje bieżący snapshot.
 
+`CampaignSystem` w `game-application` waliduje dostęp do poziomów i zapisuje
+`CampaignProgress` w AndroidX DataStore przez port. `CampaignMilestoneRegistry`
+w `game-campaign` definiuje Haste (ukończenie 5, dostępny od 6) i Heal
+(ukończenie 7, dostępny od 8). `CampaignAwareLoadoutProgressionPort` łączy
+kampanijne odblokowania z profilem wyłącznie w read modelu. Domyślne wybory
+milestone'ów stosują się do nowego loadoutu, nie nadpisują istniejącego.
+Tutoriale są poza tym zakresem i należą do przyszłego TutorialSystem.
+
 ## Kluczowe pliki
 
 | Ścieżka | Rola |
@@ -162,7 +176,7 @@ wiatru; Android wyłącznie renderuje bieżący snapshot.
 | `android-app/src/main/java/com/urkaaaz/ui/RenderStateMapper.kt` | snapshot → render state |
 | `game-application/src/main/kotlin/com/urkaaaz/application/MatchSession.kt` | sesja meczu |
 | `game-application/src/main/kotlin/com/urkaaaz/application/LocalMatchGateway.kt` | lokalny gateway |
-| `game-application/src/main/kotlin/com/urkaaaz/application/loadout/` | loadout, walidacja i jawne porty progresji/zapisu |
+| `game-application/src/main/kotlin/com/urkaaaz/application/loadout/` | loadout, walidacja, jawne porty progresji/zapisu i read-only projekcja katalogów dla Android UI |
 | `game-application/src/main/kotlin/com/urkaaaz/application/progression/PlayerProgressionUseCases.kt` | inicjalizacja i walidacja snapshotu profilu |
 | `android-app/src/main/java/com/urkaaaz/persistence/DataStorePlayerProgressionRepository.kt` | wersjonowany adapter profilu |
 | `android-app/src/main/java/com/urkaaaz/persistence/DataStoreLoadoutRepository.kt` | wersjonowany adapter loadoutu |
