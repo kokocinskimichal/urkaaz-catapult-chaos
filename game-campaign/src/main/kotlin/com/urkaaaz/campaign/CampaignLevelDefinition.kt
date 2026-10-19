@@ -1,6 +1,8 @@
 package com.urkaaaz.campaign
 
 import com.urkaaaz.contracts.BattlefieldConfig
+import com.urkaaaz.contracts.AiProfileId
+import com.urkaaaz.contracts.AiProfileSelection
 import com.urkaaaz.contracts.MatchScenario
 import com.urkaaaz.contracts.MapDefinition
 import com.urkaaaz.contracts.PlayerConfig
@@ -16,36 +18,15 @@ import com.urkaaaz.domain.SpellType
 import com.urkaaaz.domain.UnitDefinition
 import com.urkaaaz.domain.UnitFactory
 
-/** Campaign-only difficulty tier consumed by the future AI module. */
-enum class CampaignAiDifficulty {
-    EASY,
-    MEDIUM,
-    HARD,
-}
-
 /** Tutorial instructions are data and do not contain Android views or resource IDs. */
 data class TutorialParameters(
     val enabled: Boolean,
     val stepKeys: List<String> = emptyList(),
 )
 
-/** Enemy tuning kept with a level definition rather than with UI or persistence. */
 data class EnemyConfiguration(
-    val difficulty: CampaignAiDifficulty,
-    val aimErrorScale: Float,
-    val unitDecisionDelayMilliseconds: Long,
-    val healthMultiplier: Float,
-    val fortressScale: Float,
-) {
-    init {
-        require(aimErrorScale > 0f) { "aimErrorScale must be positive" }
-        require(unitDecisionDelayMilliseconds >= 0) {
-            "unitDecisionDelayMilliseconds must not be negative"
-        }
-        require(healthMultiplier > 0f) { "healthMultiplier must be positive" }
-        require(fortressScale > 0f) { "fortressScale must be positive" }
-    }
-}
+    val aiProfile: AiProfileSelection = AiProfileSelection(),
+)
 
 /**
  * Complete static definition of one campaign level.
@@ -93,6 +74,7 @@ data class CampaignLevelDefinition(
         wind = initialWind,
         victoryRules = VictoryRulesConfig(defeatAllOpponents = true),
         mapDefinition = mapDefinition,
+        aiProfile = enemy.aiProfile,
     )
 
     companion object {
@@ -103,47 +85,9 @@ data class CampaignLevelDefinition(
             mapRepository: MapDefinitionRepository = MapDefinitionRepository.bundled,
         ): CampaignLevelDefinition {
             val safeLevel = level.coerceIn(1, MAX_LEVELS)
-            val milestone = (safeLevel - 1) / 10
             return CampaignLevelDefinition(
                 level = safeLevel,
-                enemy = EnemyConfiguration(
-                    difficulty = difficultyFor(safeLevel),
-                    aimErrorScale = when (safeLevel) {
-                        1 -> 1.25f
-                        2 -> 1.10f
-                        3 -> 1.00f
-                        4 -> 0.92f
-                        6 -> 1.00f
-                        7 -> 0.88f
-                        8 -> 0.76f
-                        9 -> 0.64f
-                        else -> 1f
-                    },
-                    unitDecisionDelayMilliseconds =
-                        (1_100L - milestone * 90L).coerceAtLeast(180L),
-                    healthMultiplier = when (safeLevel) {
-                        1 -> 0.60f
-                        2 -> 0.68f
-                        3 -> 0.78f
-                        4 -> 0.88f
-                        6 -> 0.86f
-                        7 -> 0.96f
-                        8 -> 1.06f
-                        9 -> 1.16f
-                        else -> (0.60f + milestone * 0.08f).coerceAtMost(1.35f)
-                    },
-                    fortressScale = when (safeLevel) {
-                        1 -> 0.70f
-                        2 -> 0.76f
-                        3 -> 0.82f
-                        4 -> 0.88f
-                        6 -> 0.86f
-                        7 -> 0.94f
-                        8 -> 1.02f
-                        9 -> 1.10f
-                        else -> (0.70f + milestone * 0.10f).coerceAtMost(1.50f)
-                    },
-                ),
+                enemy = EnemyConfiguration(aiProfile = aiProfileFor(safeLevel)),
                 availableUnits = buildSet {
                     add(UnitFactory.defender())
                     if (safeLevel >= 5) add(UnitFactory.sapper())
@@ -188,12 +132,23 @@ data class CampaignLevelDefinition(
             )
         }
 
-        private fun difficultyFor(level: Int): CampaignAiDifficulty = when {
-            level in setOf(3, 4, 6, 7) -> CampaignAiDifficulty.MEDIUM
-            level in setOf(8, 9) -> CampaignAiDifficulty.HARD
-            level <= 10 -> CampaignAiDifficulty.EASY
-            level <= 30 -> CampaignAiDifficulty.MEDIUM
-            else -> CampaignAiDifficulty.HARD
+        private fun aiProfileFor(level: Int): AiProfileSelection {
+            val profileId = when {
+                level in setOf(3, 4, 6, 7) -> AiProfileId.VETERAN
+                level in setOf(8, 9) -> AiProfileId.ELITE
+                level <= 10 -> AiProfileId.CADET
+                level <= 30 -> AiProfileId.VETERAN
+                else -> AiProfileId.ELITE
+            }
+            val progression = if (profileId == AiProfileId.ELITE && level >= 31) {
+                ((level - 31) * 100) / (MAX_LEVELS - 31)
+            } else {
+                0
+            }
+            return AiProfileSelection(
+                profileId = profileId,
+                progressionPercent = progression,
+            )
         }
 
         private const val CHAPTER_ONE_LEVEL_THREE = 3

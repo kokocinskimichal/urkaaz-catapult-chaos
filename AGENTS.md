@@ -142,6 +142,12 @@ Also review changed code against `architecture.md`, especially:
 5. Run the validation gate.
 6. Only commit or push when the user explicitly asks, or says `wypchnij`.
 
+For prompts that request a new game or a substantial gameplay change, check
+whether the core player loop, success and failure conditions, difficulty
+progression, responsiveness, readability/input feedback, and scope priorities
+are clear. If important details are missing, point that out before proceeding;
+ask a focused question when the ambiguity materially affects behavior or scope.
+
 The command `wypchnij` means: stage all changes, run the validation gate, create
 a commit with the required Copilot co-author trailer, and push `develop`.
 

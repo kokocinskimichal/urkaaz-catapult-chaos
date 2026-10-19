@@ -545,6 +545,16 @@ flowchart LR
 AI nie ma specjalnej ścieżki omijającej walidację. Jeżeli AI ma wykonać strzał,
 wysyła dokładnie taką samą komendę jak gracz.
 
+`game-ai` podejmuje decyzje wyłącznie na podstawie `MatchSnapshot` i składa
+strategie katapulty/amunicji, rekrutacji oraz fal przez `AiStrategyRegistry`.
+Profil jest wybierany przez typowane `MatchScenario.aiProfile`; `AiProfileCatalog`
+mapuje profil na zarejestrowane strategie i parametry jakości decyzji.
+`AiMatchCoordinator` w `game-application` posiada lifecycle agenta i zegar
+reakcji, a Android jedynie pobiera jego komendy i wysyła je przez
+`LocalMatchGateway`. Seed meczu inicjalizuje losowość AI, a wygenerowane komendy
+zostają zapisane w replayu. AI nie otrzymuje dodatkowych zasobów ani bonusów
+statystyk.
+
 Tutorial również wysyła zwykłe komendy. Specjalne ograniczenia tutoriala są
 częścią `MatchScenario` albo konfiguracji reguł, a nie bezpośrednim dostępem
 do silnika.
@@ -1452,33 +1462,32 @@ Renderer nie powinien otrzymywać ani `GameEngine`, ani `Match`, ani `GameView`.
 
 ## 26. AI
 
-AI powinno być uczestnikiem meczu, a nie częścią `MainActivity`.
+AI jest uczestnikiem meczu, nie elementem Android UI ani symulacji.
+`AiMatchCoordinator` w `game-application` tworzy agenta dla scenariusza,
+przekazuje seed meczu i ogranicza częstotliwość decyzji według profilu.
+`AiAgent` w `game-ai` konsumuje niemutowalny `MatchSnapshot` i zwraca
+`MatchCommand`; nie mutuje runtime state ani nie omija walidacji sesji.
 
-```text
-interface MatchAgent {
-    fun decide(snapshot: MatchSnapshot): List<MatchCommand>
-}
-```
+`AiStrategyRegistry` składa niezależne strategie dla strzału/amunicji,
+rekrutacji i wysyłania fal. `AiProfileCatalog` wybiera ich identyfikatory i
+parametry:
 
-Implementacje:
+- `CADET` używa prostych heurystyk;
+- `VETERAN` ocenia sytuację meczu;
+- `ELITE` wybiera cele i jednostki kontrujące zagrożenia.
 
-```text
-HumanInputAgent
-AiAgent
-ReplayAgent
-TestAgent
-```
+`AiProfileSelection` jest częścią `MatchScenario`, domyślnie wskazuje
+`VETERAN`, a kampania ustawia profil w definicji poziomu. Kampania zachowuje
+dotychczasowe przypisanie poziomów do trzech tierów; `ELITE` na poziomach 31–100
+ma ograniczony postęp jakości, celności i czasu reakcji. Postęp nie zwiększa
+zasobów ani statystyk jednostek. Profile ustawiają bazowy błąd celowania
+CADET/VETERAN/ELITE odpowiednio na ±18°/±30, ±3°/±6 i ±1,25°/±2,5 oraz
+częstotliwość decyzji 1100/700/400 ms. Postęp ELITE do poziomu 100 zmniejsza
+błąd o maksymalnie 50% i reakcję do minimum 200 ms.
 
-AI:
-
-- czyta snapshot;
-- tworzy komendy;
-- nie mutuje meczu;
-- nie ma dostępu do prywatnego stanu;
-- używa tej samej walidacji komend co UI.
-
-To pozwoli później uruchomić AI lokalnie, na serwerze albo w testach bez zmian
-w domenie.
+Kampania nie przechowuje już nieużywanych mnożników zdrowia/rozmiaru fortecy
+ani osobnych nadpisań błędu i opóźnienia AI. AI nie rzuca czarów; dodanie
+strategii zaklęć jest przyszłym rozszerzeniem registry.
 
 ---
 

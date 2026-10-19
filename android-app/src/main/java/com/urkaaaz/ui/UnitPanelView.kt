@@ -10,7 +10,10 @@ import android.widget.LinearLayout
 import com.urkaaaz.android.R
 
 /** Legacy-style supply, unit deployment and send-wave controls. */
-class UnitPanelView(context: Context) : LinearLayout(context) {
+class UnitPanelView(
+    context: Context,
+    private val selectableUnitTypes: Set<String>? = null,
+) : LinearLayout(context) {
     var onUnitSelected: ((String) -> Unit)? = null
     var onSendWave: (() -> Unit)? = null
 
@@ -76,7 +79,10 @@ class UnitPanelView(context: Context) : LinearLayout(context) {
     fun render(state: RenderState) {
         supplyGauge.setSupply(state.playerSupply.toFloat())
         buttons.forEach { (option, button) ->
-            val enabled = state.statusLabel == "RUNNING" &&
+            val available = selectableUnitTypes?.contains(option.type) ?: true
+            button.visibility = if (available) VISIBLE else GONE
+            val enabled = available &&
+                state.statusLabel == "RUNNING" &&
                 state.outcomeLabel == null &&
                 state.playerSupply >= option.cost
             button.isEnabled = enabled

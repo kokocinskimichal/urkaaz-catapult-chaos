@@ -1,7 +1,8 @@
 package com.urkaaaz.ai
 
+import com.urkaaaz.contracts.AiProfileId
+import com.urkaaaz.contracts.AiProfileSelection
 import com.urkaaaz.contracts.CommandId
-import com.urkaaaz.contracts.EntityId
 import com.urkaaaz.contracts.MatchCommand
 import com.urkaaaz.contracts.MatchPhase
 import com.urkaaaz.contracts.MatchSnapshot
@@ -9,63 +10,159 @@ import com.urkaaaz.contracts.MatchStatus
 import com.urkaaaz.contracts.PlayerId
 import com.urkaaaz.contracts.Team
 import com.urkaaaz.domain.AmmunitionType
-import com.urkaaaz.domain.AmmunitionCatalog
 import com.urkaaaz.domain.UnitDefinition
 import com.urkaaaz.domain.UnitFactory
-import kotlin.math.atan2
-import kotlin.math.abs
-import kotlin.math.roundToInt
 import kotlin.random.Random
 
-enum class AiDifficulty(
-    val angleStep: Int,
-    val powerStep: Int,
-    val angleError: Float,
-    val powerError: Float,
-) {
-    EASY(angleStep = 8, powerStep = 10, angleError = 7f, powerError = 12f),
-    MEDIUM(angleStep = 4, powerStep = 5, angleError = 3f, powerError = 6f),
-    HARD(angleStep = 2, powerStep = 2, angleError = 1.25f, powerError = 2.5f),
+@JvmInline
+value class AiStrategyId(val value: String) {
+    init {
+        require(value.isNotBlank()) { "AI strategy ID must not be blank" }
+    }
 }
 
-enum class AiTemperament {
-    AGGRESSIVE,
-    CAUTIOUS,
-    CHAOTIC,
-    DESPERATE,
+data class AiProfileDefinition(
+    val profileId: AiProfileId,
+    val catapultStrategy: AiStrategyId,
+    val recruitmentStrategy: AiStrategyId,
+    val waveStrategy: AiStrategyId,
+    val angleErrorDegrees: Float,
+    val powerError: Float,
+    val reactionIntervalMilliseconds: Long,
+    val progressionErrorReduction: Float = 0f,
+    val progressionReactionReduction: Float = 0f,
+) {
+    init {
+        require(angleErrorDegrees >= 0f) { "angle error must not be negative" }
+        require(powerError >= 0f) { "power error must not be negative" }
+        require(reactionIntervalMilliseconds > 0) {
+            "reaction interval must be positive"
+        }
+        require(progressionErrorReduction in 0f..1f) {
+            "profile progression error reduction must be between 0 and 1"
+        }
+        require(progressionReactionReduction in 0f..1f) {
+            "profile progression reaction reduction must be between 0 and 1"
+        }
+    }
+}
+
+data class AiProfileTuning(
+    val catapultStrategy: AiStrategyId,
+    val recruitmentStrategy: AiStrategyId,
+    val waveStrategy: AiStrategyId,
+    val angleErrorDegrees: Float,
+    val powerError: Float,
+    val reactionIntervalMilliseconds: Long,
+)
+
+class AiProfileCatalog(definitions: List<AiProfileDefinition>) {
+    private val definitionsById = definitions.associateBy(AiProfileDefinition::profileId)
+
+    init {
+        require(definitions.isNotEmpty()) { "AI profile catalog must not be empty" }
+        require(definitionsById.size == definitions.size) {
+            "AI profile IDs must be unique"
+        }
+    }
+
+    fun tuning(selection: AiProfileSelection): AiProfileTuning {
+        val definition = definitionsById[selection.profileId]
+            ?: error("unknown AI profile '${selection.profileId.value}'")
+        require(
+            selection.progressionPercent == 0 ||
+                definition.progressionErrorReduction > 0f ||
+                definition.progressionReactionReduction > 0f,
+        ) {
+            "AI profile does not support campaign progression"
+        }
+        val progression = selection.progressionPercent / 100f
+        val errorScale = 1f - progression * definition.progressionErrorReduction
+        val reactionReduction =
+            definition.reactionIntervalMilliseconds *
+                definition.progressionReactionReduction *
+                progression
+
+        return AiProfileTuning(
+            catapultStrategy = definition.catapultStrategy,
+            recruitmentStrategy = definition.recruitmentStrategy,
+            waveStrategy = definition.waveStrategy,
+            angleErrorDegrees = definition.angleErrorDegrees * errorScale,
+            powerError = definition.powerError * errorScale,
+            reactionIntervalMilliseconds = (
+                definition.reactionIntervalMilliseconds - reactionReduction
+                ).toLong().coerceAtLeast(
+                    (definition.reactionIntervalMilliseconds *
+                        (1f - definition.progressionReactionReduction))
+                        .toLong(),
+                ),
+        )
+    }
+
+    companion object {
+        fun standard(): AiProfileCatalog = AiProfileCatalog(
+            listOf(
+                AiProfileDefinition(
+                    profileId = AiProfileId.CADET,
+                    catapultStrategy = AiStrategyId("simple"),
+                    recruitmentStrategy = AiStrategyId("simple"),
+                    waveStrategy = AiStrategyId("simple"),
+                    angleErrorDegrees = 18f,
+                    powerError = 30f,
+                    reactionIntervalMilliseconds = 1_100L,
+                ),
+                AiProfileDefinition(
+                    profileId = AiProfileId.VETERAN,
+                    catapultStrategy = AiStrategyId("situational"),
+                    recruitmentStrategy = AiStrategyId("situational"),
+                    waveStrategy = AiStrategyId("situational"),
+                    angleErrorDegrees = 3f,
+                    powerError = 6f,
+                    reactionIntervalMilliseconds = 700L,
+                ),
+                AiProfileDefinition(
+                    profileId = AiProfileId.ELITE,
+                    catapultStrategy = AiStrategyId("counterplay"),
+                    recruitmentStrategy = AiStrategyId("counterplay"),
+                    waveStrategy = AiStrategyId("counterplay"),
+                    angleErrorDegrees = 1.25f,
+                    powerError = 2.5f,
+                    reactionIntervalMilliseconds = 400L,
+                    progressionErrorReduction = 0.5f,
+                    progressionReactionReduction = 0.5f,
+                ),
+            ),
+        )
+    }
 }
 
 data class AiConfiguration(
     val playerId: PlayerId,
     val team: Team,
-    val difficulty: AiDifficulty = AiDifficulty.MEDIUM,
-    val temperament: AiTemperament = AiTemperament.CAUTIOUS,
-    val aimErrorScale: Float = 1f,
+    val profile: AiProfileSelection = AiProfileSelection(),
     val allowedUnits: Set<UnitDefinition> = UnitFactory.all(),
-    val randomSeed: Int = 0,
+    val randomSeed: Long = 0L,
     val allowedAmmunition: Set<AmmunitionType> = AmmunitionType.entries.toSet(),
 ) {
     init {
-        require(aimErrorScale > 0f) { "aimErrorScale must be positive" }
+        require(allowedUnits.isNotEmpty()) { "AI must have at least one allowed unit" }
         require(allowedAmmunition.isNotEmpty()) { "AI must have allowed ammunition" }
     }
 }
 
-/**
- * Snapshot-only AI decision maker.
- *
- * The agent has no simulation reference and only returns commands for the
- * application layer to validate and execute.
- */
 class AiAgent(
     private var configuration: AiConfiguration,
+    private val strategies: AiStrategyRegistry = AiStrategyRegistry.standard(),
 ) {
     private val random = Random(configuration.randomSeed)
-    private val matchTemperament = if (configuration.temperament == AiTemperament.CAUTIOUS) {
-        AiTemperament.entries[random.nextInt(AiTemperament.entries.size)]
-    } else {
-        configuration.temperament
-    }
+    private var commandSequence = 0L
+    private val tuning = strategies.profiles.tuning(configuration.profile)
+    private val catapultStrategy = strategies.catapult(tuning.catapultStrategy)
+    private val recruitmentStrategy = strategies.recruitment(tuning.recruitmentStrategy)
+    private val waveStrategy = strategies.wave(tuning.waveStrategy)
+
+    val reactionIntervalMilliseconds: Long
+        get() = tuning.reactionIntervalMilliseconds
 
     fun setAllowedUnits(allowedUnits: Set<UnitDefinition>) {
         require(allowedUnits.isNotEmpty()) { "AI must have at least one allowed unit" }
@@ -90,171 +187,49 @@ class AiAgent(
     fun allowedAmmunitionIds(): Set<String> =
         configuration.allowedAmmunition.map { it.name }.toSet()
 
-    fun waveThreshold(): Int = when (matchTemperament) {
-        AiTemperament.AGGRESSIVE,
-        AiTemperament.DESPERATE -> 1
-        AiTemperament.CAUTIOUS -> 3
-        AiTemperament.CHAOTIC -> 2
-    }
-
-    fun decide(snapshot: MatchSnapshot): List<MatchCommand> {
+    fun decide(
+        snapshot: MatchSnapshot,
+        includeUnitActions: Boolean = true,
+    ): List<MatchCommand> {
         val matchId = snapshot.matchId ?: return emptyList()
         if (snapshot.status != MatchStatus.RUNNING || snapshot.phase == MatchPhase.FINISHED) {
             return emptyList()
         }
-        val catapult = snapshot.catapults.firstOrNull { it.team == configuration.team }
-            ?: return emptyList()
-        val ammunition = chooseAmmunition(snapshot) ?: return emptyList()
-        val reloadRemaining = snapshot
-            .reloadRemainingSecondsByAmmunition[configuration.team]
-            ?.get(ammunition)
-            ?: snapshot.reloadRemainingSeconds[configuration.team]
-            ?: 0f
-        if (reloadRemaining > 0f || configuration.team in snapshot.activeProjectileTeams) {
-            return emptyList()
-        }
-        val target = snapshot.catapults.firstOrNull { it.team != configuration.team }
-            ?: return emptyList()
-        val (angle, power) = aimAt(catapult.x, catapult.y, target.x, target.y, snapshot)
-        val commandPrefix = "ai-${matchId.value}-${snapshot.terrain.revision}"
-
-        return listOf(
-            MatchCommand.SelectAmmo(
-                commandId = CommandId("$commandPrefix-select"),
-                matchId = matchId,
-                playerId = configuration.playerId,
-                ammunitionType = ammunition,
-            ),
-            MatchCommand.Aim(
-                commandId = CommandId("$commandPrefix-aim"),
-                matchId = matchId,
-                playerId = configuration.playerId,
-                catapultId = catapult.entityId,
-                directionDegrees = angle,
-                power = power,
-            ),
-            MatchCommand.Fire(
-                commandId = CommandId("$commandPrefix-fire"),
-                matchId = matchId,
-                playerId = configuration.playerId,
-                catapultId = catapult.entityId,
-            ),
-        )
-    }
-
-    fun chooseDeployment(snapshot: MatchSnapshot): MatchCommand.DeployUnit? {
-        val matchId = snapshot.matchId ?: return null
-        if (snapshot.status != MatchStatus.RUNNING ||
-            (snapshot.resourcesByTeam[configuration.team]?.supply
-                ?: snapshot.resources.supply) < minimumUnitCost()
-        ) {
-            return null
-        }
-        val unit = chooseUnit(snapshot) ?: return null
-        return MatchCommand.DeployUnit(
-            commandId = CommandId("ai-${matchId.value}-deploy-${snapshot.units.size}"),
-            matchId = matchId,
+        val context = AiStrategyContext(
+            snapshot = snapshot,
             playerId = configuration.playerId,
-            unitType = unit.id,
+            team = configuration.team,
+            allowedUnits = configuration.allowedUnits,
+            allowedAmmunition = configuration.allowedAmmunition,
+            tuning = tuning,
+            random = random,
+            commandIdFactory = { action ->
+                CommandId("ai-${matchId.value}-$action-${++commandSequence}")
+            },
         )
-    }
-
-    private fun chooseAmmunition(snapshot: MatchSnapshot): String? {
-        val stocked = (snapshot.resourcesByTeam[configuration.team]?.ammunition
-            ?: snapshot.resources.ammunition)
-            .filter { (_, count) -> count > 0 }
-            .keys
-            .mapNotNull { runCatching { AmmunitionType.valueOf(it) }.getOrNull() }
-            .filter { it in configuration.allowedAmmunition }
-        val available = stocked.ifEmpty {
-            configuration.allowedAmmunition.filter { it.unlimited }
-        }
-        if (available.isEmpty()) return null
-        val fortressAmmo = available
-            .filter { AmmunitionCatalog.definition(it).damage.fortressDamage > 0 }
-            .ifEmpty { listOf(available.first()) }
-
-        return when (effectiveTemperament(snapshot)) {
-            AiTemperament.AGGRESSIVE,
-            AiTemperament.DESPERATE -> fortressAmmo.maxBy {
-                val definition = AmmunitionCatalog.definition(it)
-                definition.damage.fortressDamage + definition.damage.fortressRadius.toInt()
-            }.name
-            AiTemperament.CAUTIOUS -> fortressAmmo.minBy {
-                AmmunitionCatalog.definition(it).damage.fortressRadius
-            }.name
-            AiTemperament.CHAOTIC -> available[random.nextInt(available.size)].name
-        }
-    }
-
-    private fun chooseUnit(snapshot: MatchSnapshot): UnitDefinition? {
-        val availableSupply = snapshot.resourcesByTeam[configuration.team]?.supply
-            ?: snapshot.resources.supply
-        val affordable = configuration.allowedUnits.filter {
-            it.supplyCost <= availableSupply &&
-                (it.id != UnitFactory.sapper().id ||
-                    snapshot.units.none {
-                        it.team == configuration.team &&
-                            it.unitType == UnitFactory.sapper().id &&
-                            it.health > 0
-                    })
-        }
-        if (affordable.isEmpty()) return null
-        val enemyHasSapper = snapshot.units.any {
-            it.team != configuration.team && it.unitType == UnitFactory.sapper().id
-        }
-        val defender = affordable.firstOrNull { it.id == UnitFactory.defender().id }
-        if (enemyHasSapper && defender != null) {
-            return defender
-        }
-        return when (effectiveTemperament(snapshot)) {
-            AiTemperament.AGGRESSIVE,
-            AiTemperament.DESPERATE -> affordable.maxBy {
-                it.attackDamage + it.speed.roundToInt()
+        return buildList {
+            addAll(catapultStrategy.decide(context))
+            if (includeUnitActions) {
+                recruitmentStrategy.chooseUnit(context)?.let { unit ->
+                    add(
+                        MatchCommand.DeployUnit(
+                            commandId = context.commandId("deploy"),
+                            matchId = matchId,
+                            playerId = configuration.playerId,
+                            unitType = unit.id,
+                        ),
+                    )
+                }
+                if (waveStrategy.shouldSend(context)) {
+                    add(
+                        MatchCommand.SendWave(
+                            commandId = context.commandId("send-wave"),
+                            matchId = matchId,
+                            playerId = configuration.playerId,
+                        ),
+                    )
+                }
             }
-            AiTemperament.CAUTIOUS -> affordable.minBy { it.supplyCost }
-            AiTemperament.CHAOTIC -> affordable[random.nextInt(affordable.size)]
         }
     }
-
-    private fun aimAt(
-        ownX: Float,
-        ownY: Float,
-        targetX: Float,
-        targetY: Float,
-        snapshot: MatchSnapshot,
-    ): Pair<Float, Float> {
-        val horizontalDistance = abs(targetX - ownX).coerceAtLeast(1f)
-        val angleFromHorizontal = Math.toDegrees(
-            atan2(abs(targetY - ownY).toDouble(), horizontalDistance.toDouble()),
-        ).toFloat()
-        // The simulation applies the team direction separately. The AI therefore
-        // supplies the local launch angle for both teams instead of mirroring
-        // the red team's angle a second time.
-        val baseAngle = (angleFromHorizontal + 42f).coerceIn(28f, 68f)
-        val basePower = (horizontalDistance / 12f).coerceIn(65f, 96f)
-        val desperateBonus = if (effectiveTemperament(snapshot) == AiTemperament.DESPERATE) 10f else 0f
-        val cautiousPenalty = if (effectiveTemperament(snapshot) == AiTemperament.CAUTIOUS) 7f else 0f
-        return (
-            baseAngle + randomOffset(configuration.difficulty.angleError * configuration.aimErrorScale)
-        ).coerceIn(0f, 180f) to (
-            basePower + desperateBonus - cautiousPenalty +
-                randomOffset(configuration.difficulty.powerError * configuration.aimErrorScale)
-        ).coerceIn(0f, 100f)
-    }
-
-    private fun effectiveTemperament(snapshot: MatchSnapshot): AiTemperament {
-        val fortress = snapshot.fortresses.firstOrNull { it.team == configuration.team }
-        return if (fortress != null && fortress.health <= fortress.maxHealth * 0.35f) {
-            AiTemperament.DESPERATE
-        } else {
-            matchTemperament
-        }
-    }
-
-    private fun minimumUnitCost(): Int =
-        configuration.allowedUnits.minOfOrNull { it.supplyCost } ?: Int.MAX_VALUE
-
-    private fun randomOffset(maximum: Float): Float =
-        if (maximum == 0f) 0f else random.nextFloat() * maximum * 2f - maximum
 }

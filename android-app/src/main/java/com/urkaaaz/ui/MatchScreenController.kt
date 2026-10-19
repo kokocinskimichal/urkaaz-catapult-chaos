@@ -84,7 +84,10 @@ class MatchScreenController(
                 render(viewModel.dispatch(MatchUiAction.SelectAmmo(ammunitionType)))
             }
         }
-        unitPanel = UnitPanelView(activity).apply {
+        unitPanel = UnitPanelView(
+            activity,
+            viewModel.selectableUnitTypes,
+        ).apply {
             onUnitSelected = { unitType ->
                 render(viewModel.dispatch(MatchUiAction.DeployUnit(unitType)))
             }

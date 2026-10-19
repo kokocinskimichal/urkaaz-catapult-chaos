@@ -26,7 +26,6 @@ dependencies {
     implementation(project(":game-assets"))
     implementation(project(":game-application"))
     implementation(project(":game-campaign"))
-    implementation(project(":game-ai"))
     implementation(project(":game-contracts"))
     implementation(project(":game-simulation"))
     implementation("androidx.core:core-ktx:1.13.1")

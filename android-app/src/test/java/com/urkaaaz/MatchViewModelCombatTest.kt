@@ -48,6 +48,33 @@ class MatchViewModelCombatTest {
     }
 
     @Test
+    fun campaignMatchOnlyShowsUnitsAvailableAtTheSelectedLevel() {
+        val viewModel = MatchViewModel(campaignLevel = 1)
+
+        assertEquals(setOf("DEFENDER"), viewModel.selectableUnitTypes)
+    }
+
+    @Test
+    fun campaignMatchUnitAvailabilityIsRestrictedByTheCommittedLoadout() {
+        val loadout = PlayerLoadoutConfig(
+            playerId = PlayerId("player"),
+            unitTypes = listOf("DEFENDER"),
+            ammunitionSlots = listOf("ROCK", null, null),
+            spellTypes = listOf("FORTRESS_SHIELD"),
+        )
+        val viewModel = MatchViewModel(campaignLevel = 8, playerLoadout = loadout)
+
+        assertEquals(setOf("DEFENDER"), viewModel.selectableUnitTypes)
+    }
+
+    @Test
+    fun demoMatchDoesNotFilterUnitTypesByCampaignAvailability() {
+        val viewModel = MatchViewModel(demoMode = true)
+
+        assertEquals(null, viewModel.selectableUnitTypes)
+    }
+
+    @Test
     fun campaignAiUsesLevelUnitsRatherThanThePlayersSelectedLoadout() {
         val loadout = PlayerLoadoutConfig(
             playerId = PlayerId("player"),

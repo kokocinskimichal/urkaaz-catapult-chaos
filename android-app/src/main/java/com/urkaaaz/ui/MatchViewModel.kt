@@ -6,10 +6,6 @@ import com.urkaaaz.campaign.DemoLevelDefinitions
 import com.urkaaaz.campaign.MapDefinitionRepository
 import com.urkaaaz.application.LocalMatchGateway
 import com.urkaaaz.application.MatchReplay
-import com.urkaaaz.ai.AiAgent
-import com.urkaaaz.ai.AiConfiguration
-import com.urkaaaz.ai.AiDifficulty
-import com.urkaaaz.ai.AiTemperament
 import com.urkaaaz.contracts.CommandId
 import com.urkaaaz.contracts.MatchCommand
 import com.urkaaaz.contracts.MatchId
@@ -74,52 +70,45 @@ class MatchViewModel(
             ?: scenario.availableAmmunition.toSet()
     }
 
+    val selectableUnitTypes: Set<String>? = campaignScenario?.let { scenario ->
+        val levelUnitTypes = scenario.availableUnits
+            .takeIf { it.isNotEmpty() }
+            ?.toSet()
+        val loadoutUnitTypes = scenario.playerLoadout?.unitTypes?.toSet()
+        when {
+            levelUnitTypes != null && loadoutUnitTypes != null ->
+                levelUnitTypes intersect loadoutUnitTypes
+            levelUnitTypes != null -> levelUnitTypes
+            else -> loadoutUnitTypes
+        }
+    }
+
     private var commandSequence = 0
     private var matchGeneration = 0L
     private var paused = false
     private var selectedAmmunition = "ROCK"
-    private var aiUnitAutomationEnabled = true
-    private var aiUnitDecisionElapsedMilliseconds = 0L
-    private val aiAgent = AiAgent(
-        AiConfiguration(
-            playerId = PlayerId("local-ai"),
-            team = com.urkaaaz.contracts.Team.RED,
-            difficulty = AiDifficulty.EASY,
-            temperament = AiTemperament.CAUTIOUS,
-            randomSeed = 7,
-        ),
-    )
-
-    init {
-        campaignScenario?.availableUnits
-            ?.takeIf { it.isNotEmpty() }
-            ?.let { unitIds -> aiAgent.setAllowedUnitIds(unitIds.toSet()) }
-        campaignScenario?.availableAmmunition
-            ?.takeIf { it.isNotEmpty() }
-            ?.let { ammunitionIds -> aiAgent.setAllowedAmmunitionIds(ammunitionIds.toSet()) }
-    }
 
     var renderState: RenderState = RenderStateMapper.map(MatchSnapshot())
         private set
 
     fun setAiAllowedUnitIds(unitIds: Set<String>) {
-        aiAgent.setAllowedUnitIds(unitIds)
+        gateway.setAiAllowedUnitIds(unitIds)
     }
 
     fun aiAllowedUnitIds(): Set<String> =
-        aiAgent.allowedUnitIds()
+        gateway.aiAllowedUnitIds()
 
     fun aiAllowedAmmunitionIds(): Set<String> =
-        aiAgent.allowedAmmunitionIds()
+        gateway.aiAllowedAmmunitionIds()
 
     fun recordedReplay(): MatchReplay? = gateway.replay()
 
     fun setAiUnitAutomationEnabled(enabled: Boolean) {
-        aiUnitAutomationEnabled = enabled
+        gateway.setAiUnitAutomationEnabled(enabled)
     }
 
     fun debugRecruitEnemyUnit(unitId: String): RenderState {
-        if (unitId !in aiAgent.allowedUnitIds() ||
+        if (unitId !in gateway.aiAllowedUnitIds() ||
             !gateway.canDeployUnit(com.urkaaaz.contracts.Team.RED, unitId)
         ) {
             return renderState
@@ -162,7 +151,6 @@ class MatchViewModel(
         var snapshot = when (action) {
             MatchUiAction.StartMatch -> {
                 paused = false
-                aiUnitDecisionElapsedMilliseconds = 0L
                 matchGeneration += 1L
                 gateway.dispatch(
                     MatchCommand.Start(
@@ -174,7 +162,6 @@ class MatchViewModel(
             }
             MatchUiAction.RestartMatch -> {
                 paused = false
-                aiUnitDecisionElapsedMilliseconds = 0L
                 matchGeneration += 1L
                 selectedAmmunition = "ROCK"
                 gateway.restart(matchId, playerId)
@@ -251,36 +238,9 @@ class MatchViewModel(
         if (action == MatchUiAction.AdvanceSimulation &&
             snapshot.status == com.urkaaaz.contracts.MatchStatus.RUNNING
         ) {
-            aiAgent.decide(snapshot).forEach { command ->
+            gateway.aiCommands(snapshot, elapsedMilliseconds = 33L).forEach { command ->
                 snapshot = gateway.dispatch(command)
-            }
-            presentationEvents += gateway.consumeEvents()
-            if (aiUnitAutomationEnabled) {
-                aiUnitDecisionElapsedMilliseconds += 33L
-            }
-            if (aiUnitAutomationEnabled &&
-                aiUnitDecisionElapsedMilliseconds >= AI_UNIT_DECISION_INTERVAL_MILLISECONDS
-            ) {
-                aiUnitDecisionElapsedMilliseconds = 0L
-                aiAgent.chooseDeployment(snapshot)?.let { command ->
-                    snapshot = gateway.dispatch(command)
-                    presentationEvents += gateway.consumeEvents()
-                }
-                val redUnits = snapshot.units.filter {
-                    it.team == com.urkaaaz.contracts.Team.RED
-                }
-                if (redUnits.size >= aiAgent.waveThreshold() &&
-                    redUnits.none { it.moving }
-                ) {
-                    snapshot = gateway.dispatch(
-                        MatchCommand.SendWave(
-                            commandId = CommandId("ai-${matchId.value}-send-wave-${snapshot.units.size}"),
-                            matchId = matchId,
-                            playerId = PlayerId("local-ai"),
-                        ),
-                    )
-                    presentationEvents += gateway.consumeEvents()
-                }
+                presentationEvents += gateway.consumeEvents()
             }
         }
         return mapRenderState(snapshot, presentationEvents).also { renderState = it }
@@ -297,7 +257,6 @@ class MatchViewModel(
         renderState.playerAmmunition[selectedAmmunition]?.let { it > 0 } ?: true
 
     private companion object {
-        const val AI_UNIT_DECISION_INTERVAL_MILLISECONDS = 1_000L
         const val DEFAULT_FORTRESS_MAX_HEALTH = 500
         const val DEMO_BLUE_FORTRESS_MAX_HEALTH = DEFAULT_FORTRESS_MAX_HEALTH * 10
     }

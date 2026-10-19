@@ -122,3 +122,22 @@ należy wykonać `git diff --check`.
 4. Dodać lub zaktualizować testy i dokumentację.
 5. Uruchomić walidację.
 6. Nie commitować ani nie pushować bez wyraźnej prośby użytkownika.
+
+## Doprecyzowanie promptów gameplayowych
+
+Przy prośbie o stworzenie gry, nowej pętli rozgrywki lub istotną zmianę
+gameplayu sprawdzić, czy prompt określa:
+
+- powtarzaną czynność gracza i podstawowy cel;
+- warunki sukcesu i porażki;
+- sposób narastania trudności;
+- wymagania responsywności sterowania;
+- czytelność: kamerę, priorytet UI, sposób sterowania, kontrast i widoczną
+  informację zwrotną;
+- priorytety pierwszej wersji oraz elementy, których nie należy przedwcześnie
+  rozbudowywać, np. menu, fabuły czy dekoracyjnych efektów.
+
+Jeśli któregoś ważnego elementu brakuje, zwrócić na to uwagę użytkownikowi.
+Zadać krótkie pytanie tylko wtedy, gdy brakująca decyzja istotnie wpływa na
+zachowanie gry lub zakres implementacji. Nie wymagać tego checklistu przy
+małych, jednoznacznych poprawkach technicznych.

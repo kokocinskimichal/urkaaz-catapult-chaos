@@ -3,6 +3,7 @@ package com.urkaaaz.contracts
 /**
  * Campaign-level unit, ammunition and spell availability is shared by both teams.
  * [playerLoadout] further narrows the BLUE player's available selections.
+ * [aiProfile] selects the opponent's decision profile without changing match resources.
  */
 data class MatchScenario(
     val scenarioId: String,
@@ -17,6 +18,7 @@ data class MatchScenario(
     val wind: WindSnapshot = WindSnapshot(),
     val victoryRules: VictoryRulesConfig = VictoryRulesConfig(),
     val mapDefinition: MapDefinition? = null,
+    val aiProfile: AiProfileSelection = AiProfileSelection(),
 ) {
     init {
         require(scenarioId.isNotBlank()) { "scenarioId must not be blank" }

@@ -4,12 +4,20 @@
 
 ### Added
 
+- Campaign opponents now use extensible CADET, VETERAN and ELITE AI profiles,
+  assembled from registry-selected catapult, recruitment and wave strategies.
+  ELITE progression is bounded through level 100 without resource or unit-stat
+  bonuses.
 - Match sessions now capture a versioned, deterministic replay with its
   explicit random seed, initial configuration, accepted commands and lifecycle
   transitions; the replay can be run again in-process.
 
 ### Changed
 
+- The match unit panel hides unit icons unavailable to the selected campaign
+  level or committed player loadout.
+- Increased CADET AI aim error to ±18° and ±30 power so its shots are less
+  accurate.
 - Unit attacks and ammunition now use seeded damage variation clamped to
   80%-120% of base damage. Lingering ammunition effects reuse their impact
   roll for every tick.

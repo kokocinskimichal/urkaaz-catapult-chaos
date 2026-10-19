@@ -1,8 +1,10 @@
 package com.urkaaaz.ai
 
+import com.urkaaaz.contracts.AiProfileId
+import com.urkaaaz.contracts.AiProfileSelection
 import com.urkaaaz.contracts.CatapultSnapshot
+import com.urkaaaz.contracts.CommandId
 import com.urkaaaz.contracts.EntityId
-import com.urkaaaz.contracts.FortressSnapshot
 import com.urkaaaz.contracts.MatchCommand
 import com.urkaaaz.contracts.MatchId
 import com.urkaaaz.contracts.MatchPhase
@@ -11,9 +13,14 @@ import com.urkaaaz.contracts.MatchStatus
 import com.urkaaaz.contracts.PlayerId
 import com.urkaaaz.contracts.ResourceSnapshot
 import com.urkaaaz.contracts.Team
+import com.urkaaaz.contracts.UnitSnapshot
+import com.urkaaaz.domain.AmmunitionType
+import com.urkaaaz.domain.UnitDefinition
 import com.urkaaaz.domain.UnitFactory
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertNotEquals
+import kotlin.test.assertNotNull
 import kotlin.test.assertTrue
 
 class AiAgentTest {
@@ -21,14 +28,10 @@ class AiAgentTest {
         status = MatchStatus.RUNNING,
         matchId = MatchId("match-1"),
         phase = MatchPhase.PLAYER_TURN,
-        activeTeam = Team.RED,
+        activeTeam = Team.BLUE,
         catapults = listOf(
             CatapultSnapshot(EntityId("blue-catapult"), Team.BLUE, 100f, 400f),
             CatapultSnapshot(EntityId("red-catapult"), Team.RED, 900f, 400f),
-        ),
-        fortresses = listOf(
-            FortressSnapshot(EntityId("blue-fortress"), Team.BLUE, 500, 500),
-            FortressSnapshot(EntityId("red-fortress"), Team.RED, 500, 500),
         ),
         resources = ResourceSnapshot(
             gold = 10,
@@ -38,63 +41,58 @@ class AiAgentTest {
     )
 
     @Test
-    fun aiReturnsHumanCompatibleCommandsFromSnapshotOnly() {
+    fun cadetProducesValidatedCatapultCommandsFromSnapshot() {
         val commands = AiAgent(
             AiConfiguration(
                 playerId = PlayerId("ai-player"),
                 team = Team.RED,
-                randomSeed = 42,
+                profile = AiProfileSelection(AiProfileId.CADET),
+                randomSeed = 42L,
             ),
-        ).decide(snapshot)
+        ).decide(snapshot, includeUnitActions = false)
 
         assertEquals(3, commands.size)
         assertTrue(commands[0] is MatchCommand.SelectAmmo)
         assertTrue(commands[1] is MatchCommand.Aim)
         assertTrue(commands[2] is MatchCommand.Fire)
         val aim = commands[1] as MatchCommand.Aim
-        assertTrue(aim.directionDegrees in 28f..68f)
-        assertTrue(aim.power in 55f..96f)
+        assertTrue(aim.directionDegrees in 0f..180f)
+        assertTrue(aim.power in 0f..100f)
         assertTrue(commands.all { it.matchId == MatchId("match-1") })
+        assertEquals(3, commands.map { it.commandId }.distinct().size)
     }
 
     @Test
-    fun aiAvoidsAmmunitionThatCannotDamageTheTargetFortress() {
-        val ammunitionSnapshot = snapshot.copy(
-            resources = snapshot.resources.copy(
-                ammunition = mapOf("PLAGUE_CAULDRON" to 1, "SIEGE_BOMB" to 1),
-            ),
-        )
-        val commands = AiAgent(
+    fun seededAimIsReproducible() {
+        fun commands() = AiAgent(
             AiConfiguration(
                 playerId = PlayerId("ai-player"),
                 team = Team.RED,
-                temperament = AiTemperament.AGGRESSIVE,
+                profile = AiProfileSelection(AiProfileId.VETERAN),
+                randomSeed = 42L,
             ),
-        ).decide(ammunitionSnapshot)
+        ).decide(snapshot, includeUnitActions = false)
 
-        assertEquals(
-            "SIEGE_BOMB",
-            (commands.first() as MatchCommand.SelectAmmo).ammunitionType,
-        )
+        assertEquals(commands(), commands())
     }
 
     @Test
-    fun aiSelectsOnlyAmmunitionAvailableOnItsCampaignLevel() {
+    fun aiUsesOnlyAllowedAmmunitionAndPrefersFortressDamageWhenAvailable() {
         val agent = AiAgent(
             AiConfiguration(
                 playerId = PlayerId("ai-player"),
                 team = Team.RED,
-                temperament = AiTemperament.AGGRESSIVE,
+                profile = AiProfileSelection(AiProfileId.VETERAN),
+                allowedAmmunition = setOf(AmmunitionType.ROCK, AmmunitionType.SIEGE_BOMB),
             ),
         )
-        agent.setAllowedAmmunitionIds(setOf("ROCK", "SIEGE_BOMB"))
         val restrictedSnapshot = snapshot.copy(
             resources = snapshot.resources.copy(
-                ammunition = mapOf("POWDER_BARREL" to 2, "SIEGE_BOMB" to 1),
+                ammunition = mapOf("PLAGUE_CAULDRON" to 2, "SIEGE_BOMB" to 1),
             ),
         )
 
-        val selected = agent.decide(restrictedSnapshot)
+        val selected = agent.decide(restrictedSnapshot, includeUnitActions = false)
             .filterIsInstance<MatchCommand.SelectAmmo>()
             .single()
 
@@ -103,56 +101,224 @@ class AiAgentTest {
     }
 
     @Test
-    fun lowHealthChangesTemperamentToDesperateAndCanDeployUnit() {
-        val lowHealth = snapshot.copy(
-            fortresses = snapshot.fortresses.map {
-                if (it.team == Team.RED) it.copy(health = 100) else it
-            },
-        )
-        val deployment = AiAgent(
+    fun simpleRecruitmentChoosesAnAffordableUnitAndHonorsSapperLimit() {
+        val allowed = setOf(UnitFactory.defender(), UnitFactory.sapper())
+        val agent = AiAgent(
             AiConfiguration(
                 playerId = PlayerId("ai-player"),
                 team = Team.RED,
-                temperament = AiTemperament.CAUTIOUS,
-                allowedUnits = setOf(UnitFactory.sapper()),
+                profile = AiProfileSelection(AiProfileId.CADET),
+                allowedUnits = allowed,
             ),
-        ).chooseDeployment(lowHealth)
+        )
+        val deployment = agent.decide(
+            snapshot.copy(resources = snapshot.resources.copy(supply = UnitFactory.defender().supplyCost)),
+            includeUnitActions = true,
+        ).filterIsInstance<MatchCommand.DeployUnit>().single()
 
-        assertEquals("SAPPER", deployment?.unitType)
-    }
+        assertEquals(UnitFactory.defender().id, deployment.unitType)
 
-    @Test
-    fun aiDoesNotDeploySecondActiveSapper() {
         val withSapper = snapshot.copy(
             units = listOf(
-                com.urkaaaz.contracts.UnitSnapshot(
+                UnitSnapshot(
                     entityId = EntityId("red-sapper-1"),
                     team = Team.RED,
                     unitType = UnitFactory.sapper().id,
                     x = 700f,
                     y = 400f,
                     health = UnitFactory.sapper().maxHealth,
-                    maxHealth = UnitFactory.sapper().maxHealth,
                 ),
             ),
         )
+        val noSecondSapper = AiAgent(
+            AiConfiguration(
+                playerId = PlayerId("ai-player"),
+                team = Team.RED,
+                profile = AiProfileSelection(AiProfileId.CADET),
+                allowedUnits = setOf(UnitFactory.sapper()),
+            ),
+        ).decide(withSapper).filterIsInstance<MatchCommand.DeployUnit>()
+
+        assertTrue(noSecondSapper.isEmpty())
+    }
+
+    @Test
+    fun veteranRecruitmentSelectsDefenderToCounterEnemySapper() {
         val deployment = AiAgent(
             AiConfiguration(
                 playerId = PlayerId("ai-player"),
                 team = Team.RED,
-                allowedUnits = setOf(UnitFactory.sapper()),
+                profile = AiProfileSelection(AiProfileId.VETERAN),
+                allowedUnits = setOf(UnitFactory.defender(), UnitFactory.sapper()),
             ),
-        ).chooseDeployment(withSapper)
+        ).decide(
+            snapshot.copy(
+                units = listOf(
+                    UnitSnapshot(
+                        entityId = EntityId("blue-sapper"),
+                        team = Team.BLUE,
+                        unitType = UnitFactory.sapper().id,
+                        x = 300f,
+                        y = 400f,
+                        health = UnitFactory.sapper().maxHealth,
+                    ),
+                ),
+            ),
+        ).filterIsInstance<MatchCommand.DeployUnit>().single()
 
-        assertEquals(null, deployment)
+        assertEquals(UnitFactory.defender().id, deployment.unitType)
     }
 
     @Test
-    fun aiDoesNotDecideWhenItIsNotItsTurn() {
-        val commands = AiAgent(
-            AiConfiguration(PlayerId("ai-player"), Team.RED),
-        ).decide(snapshot.copy(activeTeam = Team.BLUE))
+    fun profileProgressionIsBoundedAndImprovesEliteAccuracyAndReaction() {
+        val catalog = AiProfileCatalog.standard()
+        val start = catalog.tuning(AiProfileSelection(AiProfileId.ELITE))
+        val end = catalog.tuning(AiProfileSelection(AiProfileId.ELITE, progressionPercent = 100))
 
-        assertEquals(3, commands.size)
+        assertEquals(400L, start.reactionIntervalMilliseconds)
+        assertEquals(200L, end.reactionIntervalMilliseconds)
+        assertEquals(start.angleErrorDegrees * 0.5f, end.angleErrorDegrees)
+        assertEquals(start.powerError * 0.5f, end.powerError)
+        assertNotEquals(start, end)
+    }
+
+    @Test
+    fun cadetHasWiderAimErrorThanHigherProfiles() {
+        val catalog = AiProfileCatalog.standard()
+        val cadet = catalog.tuning(AiProfileSelection(AiProfileId.CADET))
+        val veteran = catalog.tuning(AiProfileSelection(AiProfileId.VETERAN))
+        val elite = catalog.tuning(AiProfileSelection(AiProfileId.ELITE))
+
+        assertEquals(18f, cadet.angleErrorDegrees)
+        assertEquals(30f, cadet.powerError)
+        assertEquals(3f, veteran.angleErrorDegrees)
+        assertEquals(6f, veteran.powerError)
+        assertEquals(1.25f, elite.angleErrorDegrees)
+        assertEquals(2.5f, elite.powerError)
+    }
+
+    @Test
+    fun eliteLeadsMovingThreatsByItsReactionHorizon() {
+        val stationaryThreat = UnitSnapshot(
+            entityId = EntityId("blue-threat"),
+            team = Team.BLUE,
+            unitType = UnitFactory.defender().id,
+            x = 300f,
+            y = 400f,
+            health = UnitFactory.defender().maxHealth,
+            actionState = "SEEKING_TARGET",
+        )
+        val movingThreat = stationaryThreat.copy(moving = true)
+        fun aimPower(threat: UnitSnapshot): Float =
+            AiAgent(
+                AiConfiguration(
+                    playerId = PlayerId("ai-player"),
+                    team = Team.RED,
+                    profile = AiProfileSelection(AiProfileId.ELITE),
+                    randomSeed = 51L,
+                ),
+            ).decide(
+                snapshot.copy(units = listOf(threat)),
+                includeUnitActions = false,
+            ).filterIsInstance<MatchCommand.Aim>().single().power
+
+        assertTrue(aimPower(movingThreat) < aimPower(stationaryThreat))
+    }
+
+    @Test
+    fun registryCanComposeCustomStrategiesWithoutChangingTheAgent() {
+        val customProfile = AiProfileId("test-profile")
+        var calls = 0
+        val noOpCatapult = object : CatapultDecisionStrategy {
+            override val id = AiStrategyId("test-catapult")
+
+            override fun decide(context: AiStrategyContext): List<MatchCommand> {
+                calls += 1
+                return emptyList()
+            }
+        }
+        val noOpRecruitment = object : UnitRecruitmentStrategy {
+            override val id = AiStrategyId("test-recruitment")
+            override fun chooseUnit(context: AiStrategyContext): UnitDefinition? = null
+        }
+        val noOpWave = object : WaveDispatchStrategy {
+            override val id = AiStrategyId("test-wave")
+            override fun shouldSend(context: AiStrategyContext) = false
+        }
+        val registry = AiStrategyRegistry(
+            catapultStrategies = listOf(noOpCatapult),
+            recruitmentStrategies = listOf(noOpRecruitment),
+            waveStrategies = listOf(noOpWave),
+            profiles = AiProfileCatalog(
+                listOf(
+                    AiProfileDefinition(
+                        profileId = customProfile,
+                        catapultStrategy = noOpCatapult.id,
+                        recruitmentStrategy = noOpRecruitment.id,
+                        waveStrategy = noOpWave.id,
+                        angleErrorDegrees = 0f,
+                        powerError = 0f,
+                        reactionIntervalMilliseconds = 500L,
+                    ),
+                ),
+            ),
+        )
+        val agent = AiAgent(
+            AiConfiguration(
+                playerId = PlayerId("ai-player"),
+                team = Team.RED,
+                profile = AiProfileSelection(customProfile),
+            ),
+            strategies = registry,
+        )
+
+        assertTrue(agent.decide(snapshot, includeUnitActions = false).isEmpty())
+        assertEquals(1, calls)
+    }
+
+    @Test
+    fun profileRejectsMissingStrategyWithAnExplicitError() {
+        val profile = AiProfileId("missing-strategy")
+        val registry = AiStrategyRegistry(
+            catapultStrategies = emptyList(),
+            recruitmentStrategies = emptyList(),
+            waveStrategies = emptyList(),
+            profiles = AiProfileCatalog(
+                listOf(
+                    AiProfileDefinition(
+                        profileId = profile,
+                        catapultStrategy = AiStrategyId("absent"),
+                        recruitmentStrategy = AiStrategyId("absent"),
+                        waveStrategy = AiStrategyId("absent"),
+                        angleErrorDegrees = 0f,
+                        powerError = 0f,
+                        reactionIntervalMilliseconds = 500L,
+                    ),
+                ),
+            ),
+        )
+
+        kotlin.test.assertFailsWith<IllegalStateException> {
+            AiAgent(
+                AiConfiguration(
+                    playerId = PlayerId("ai-player"),
+                    team = Team.RED,
+                    profile = AiProfileSelection(profile),
+                ),
+                strategies = registry,
+            )
+        }
+    }
+
+    @Test
+    fun noAvailableDecisionIsReturnedForUnstartedMatches() {
+        val agent = AiAgent(
+            AiConfiguration(
+                playerId = PlayerId("ai-player"),
+                team = Team.RED,
+            ),
+        )
+
+        assertTrue(agent.decide(MatchSnapshot()).isEmpty())
     }
 }

@@ -63,7 +63,7 @@ kontrakty są wyraźnie oddzielone.
 | **DS** | **Damage System** | Rozstrzyganie obrażeń jednostek, fortec, terenu i efektów obszarowych. | Działa jako część symulacji i CS/AS. |
 | **WS** | **Wind System** | Początkowy wiatr, opóźnienie, przejścia i deterministyczne zmiany siły oraz kierunku. | Działa. |
 | **US** | **Unit System** | Rekrutacja, supply, garnizon, fale, ruch, konfiguracje i interakcje jednostek. | Działa dla obecnych jednostek. |
-| **AIS** | **AI System** | Decyzje AI na podstawie snapshotów, rekrutacja, dobór kontr, fale i temperament. | Działa w obecnym zakresie. Właściciel: `game-ai`. |
+| **AIS** | **AI System** | Profile kampanii i registry wymiennych strategii katapulty/amunicji, rekrutacji i fal; decyzje bazują na snapshotach i wspólnych komendach. | Działa dla CADET/VETERAN/ELITE; postęp ELITE jest ograniczony, zaklęcia AI nie są obsługiwane. Właściciel decyzji: `game-ai`; lifecycle: `game-application`. |
 | **CaS** | **Campaign System** | Poziomy, chaptery, odblokowania, cele, modyfikatory i postęp kampanii. | Częściowy; definicje poziomów działają, persystencja progresji jest planowana. Właściciel: `game-campaign`. |
 | **SS** | **Spell System** | Definicje czarów, mana, aktywacja, efekty, cooldowny, dostępność i integracja z walką. | Planowany; `CastSpell` i efekty nie są obsługiwane. |
 | **TutS** | **Tutorial System** | Kroki tutoriala, hinty, spotlighty, cele, odblokowywanie paneli i ograniczenia AI. | Planowany. |

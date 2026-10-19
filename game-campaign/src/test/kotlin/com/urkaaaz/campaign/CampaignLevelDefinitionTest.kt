@@ -2,6 +2,7 @@ package com.urkaaaz.campaign
 
 import com.urkaaaz.contracts.PlayerId
 import com.urkaaaz.contracts.PlayerLoadoutConfig
+import com.urkaaaz.contracts.AiProfileId
 import com.urkaaaz.domain.AmmunitionType
 import com.urkaaaz.domain.SpellType
 import com.urkaaaz.domain.UnitFactory
@@ -26,6 +27,7 @@ class CampaignLevelDefinitionTest {
         assertEquals(setOf(SpellType.FORTRESS_SHIELD), level.availableSpells)
         assertFalse(SpellType.ICE_TRAP in level.availableSpells)
         assertTrue(level.tutorial.enabled)
+        assertEquals(AiProfileId.CADET, level.enemy.aiProfile.profileId)
     }
 
     @Test
@@ -45,7 +47,8 @@ class CampaignLevelDefinitionTest {
         val level = CampaignLevelDefinition.forLevel(3)
 
         assertEquals("chapter1-level3", level.mapDefinition.mapId)
-        assertEquals(CampaignAiDifficulty.MEDIUM, level.enemy.difficulty)
+        assertEquals(AiProfileId.VETERAN, level.enemy.aiProfile.profileId)
+        assertEquals(0, level.enemy.aiProfile.progressionPercent)
         assertEquals(12, level.startingAmmunition)
         assertEquals(1f, level.initialWind.direction)
         assertEquals(0.55f, level.initialWind.strength)
@@ -57,10 +60,7 @@ class CampaignLevelDefinitionTest {
         val level = CampaignLevelDefinition.forLevel(4)
 
         assertEquals("chapter1-level4", level.mapDefinition.mapId)
-        assertEquals(CampaignAiDifficulty.MEDIUM, level.enemy.difficulty)
-        assertEquals(0.92f, level.enemy.aimErrorScale)
-        assertEquals(0.88f, level.enemy.healthMultiplier)
-        assertEquals(0.88f, level.enemy.fortressScale)
+        assertEquals(AiProfileId.VETERAN, level.enemy.aiProfile.profileId)
         assertEquals(14, level.startingAmmunition)
         assertEquals(-1f, level.initialWind.direction)
         assertEquals(0.7f, level.initialWind.strength, 0.0001f)
@@ -76,7 +76,10 @@ class CampaignLevelDefinitionTest {
         assertTrue(level.availableUnits.any { it.id == UnitFactory.slingmaster().id })
         assertTrue(AmmunitionType.PLAGUE_CAULDRON in level.availableAmmunition)
         assertTrue(SpellType.RUNIC_BASTION in level.availableSpells)
-        assertEquals(CampaignAiDifficulty.HARD, level.enemy.difficulty)
+        assertEquals(AiProfileId.ELITE, level.enemy.aiProfile.profileId)
+        assertEquals(14, level.enemy.aiProfile.progressionPercent)
+        assertEquals(0, CampaignLevelDefinition.forLevel(31).enemy.aiProfile.progressionPercent)
+        assertEquals(100, CampaignLevelDefinition.forLevel(100).enemy.aiProfile.progressionPercent)
     }
 
     @Test
@@ -93,6 +96,7 @@ class CampaignLevelDefinitionTest {
         assertTrue(scenario.initialUnits.isEmpty())
         assertTrue("SIEGE_BOMB" in scenario.availableAmmunition)
         assertTrue(scenario.initialResources.ammunition.isNotEmpty())
+        assertEquals(AiProfileId.VETERAN, scenario.aiProfile.profileId)
     }
 
     @Test

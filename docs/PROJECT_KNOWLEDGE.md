@@ -19,7 +19,8 @@ selected campaign data is a **campaign level**.
 The campaign screen intentionally reuses the legacy visual style only. Its
 level count and level selection are driven by the new
 `CampaignLevelDefinition` contract. `MatchScenario` carries level availability
-and an optional committed `PlayerLoadoutConfig` separately. `MatchSession`
+and an optional committed `PlayerLoadoutConfig` separately, plus a typed
+`AiProfileSelection`. `MatchSession`
 limits campaign AI units to the level's `availableUnits`; the player's
 committed loadout may narrow that set further for BLUE. AI ammunition choices,
 RED ammunition commands, and both teams' limited ammunition inventories are
@@ -27,6 +28,24 @@ restricted to the scenario's `availableAmmunition`. Campaign
 `availableSpells` are level-wide in the scenario, but AI spell casting is not
 implemented yet. The match ammunition selector is filtered to level
 availability and the committed player's equipped slots.
+
+`game-ai` separates catapult/ammunition, recruitment and wave decisions into
+registry-selected strategies. `AiProfileCatalog` maps `CADET` to simple
+heuristics, `VETERAN` to situational evaluation and `ELITE` to counterplay.
+`AiMatchCoordinator` in `game-application` owns the agent lifecycle and
+simulation-time reaction cadence; `MatchViewModel` dispatches the resulting
+commands through `LocalMatchGateway`. Campaign profile assignment preserves
+the previous level mapping: levels 3, 4, 6, 7 and 11–30 use VETERAN; 8–9 and
+31–100 use ELITE; remaining levels use CADET. ELITE progression is 0% at
+level 31 and 100% at level 100, with bounded interpolation between. AI uses
+the match seed, leads moving counterplay targets by movement speed times its
+reaction interval, gets no resource or unit-stat bonuses, and does not cast
+spells. The unused campaign enemy health/fortress multipliers and separate
+aim-error/reaction overrides were removed; profile tuning is the single source
+for those AI parameters. Base aim errors are ±18°/±30 power for CADET, ±3°/±6
+for VETERAN, and ±1.25°/±2.5 for ELITE.
+The match unit panel hides unit icons not available to the campaign level or
+committed player loadout; insufficient supply still disables available units.
 
 `game-application/application/loadout` owns the canonical immutable
 `MatchLoadout`, deterministic defaults, stored-selection normalization,
@@ -242,11 +261,10 @@ not truncated to a subset; unit frame playback advances at approximately
   transparent frames let the defeated unit disappear.
 - Unit sprite and animation bitmaps are cached by the asset catalog; rendering
 does not decode the full animation set again for every frame or every unit.
-- Realtime AI decisions now include unit recruitment every second using the
-RED team's supply, followed by `SendWave` after three recruited units finish
-entering the garrison. The AI now also randomizes its match temperament,
-uses defensive SAPPER counter-selection, and varies the wave threshold
-(`1/2/3`) like legacy instead of limiting the opponent to projectile fire.
+- Realtime AI uses `AiMatchCoordinator` and deterministic, profile-selected
+  strategies for artillery, recruitment and wave dispatch. Its reaction
+  interval and aim error are bounded by the campaign profile; it uses only
+  RED's available supply and has no resource/stat bonuses.
 - BLUE and RED both start with 10 supply and regenerate one supply every three
   seconds, up to a shared cap of 10.
 - Fortress and unit HP bars share one renderer style: a rounded dark track,
@@ -391,12 +409,22 @@ must go through commands and domain/application boundaries.
 | `android-app/.../ui/RenderStateMapper.kt` | Snapshot-to-render mapping |
 | `game-application/.../MatchSession.kt` | Application match lifecycle |
 | `game-application/.../MatchReplay.kt` | In-memory replay recording and playback |
+| `game-application/.../AiMatchCoordinator.kt` | AI lifecycle and decision cadence |
 | `game-application/.../LocalMatchGateway.kt` | Android/application boundary |
+| `game-ai/.../AiAgent.kt` | Profile tuning and strategy composition |
+| `game-ai/.../AiStrategies.kt` | Strategy contracts, registry and built-in strategies |
+| `game-contracts/.../AiProfile.kt` | Typed AI profile selection |
 | `game-simulation/.../DeterministicMatchSimulation.kt` | Deterministic match execution |
 | `game-contracts/.../MatchSnapshot.kt` | Immutable gameplay read model |
 
 ## Known decisions
 
+- **Gameplay prompts:** For a new game, core loop, or substantial gameplay
+  change, check for a defined player loop, success/failure conditions,
+  difficulty progression, responsive controls, readability and feedback, and
+  scope priorities. Flag important omissions; ask a focused question only
+  when the missing decision changes behavior or scope. Do not apply this
+  checklist to small, unambiguous technical fixes.
 - **Unit purchase icons:** `UnitPanelView` keeps all five buttons at 48dp and
   uses 1dp image padding for the Slingmaster (4dp for the others) so its
   smaller artwork has a matching visible size without cropping the icon.

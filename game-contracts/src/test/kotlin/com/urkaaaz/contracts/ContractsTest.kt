@@ -58,6 +58,32 @@ class ContractsTest {
     }
 
     @Test
+    fun scenarioCarriesTypedAiProfileSelection() {
+        val scenario = MatchScenario(
+            scenarioId = "ai-profile",
+            battlefield = BattlefieldConfig(width = 100, height = 100),
+            players = listOf(PlayerConfig(playerId, Team.BLUE)),
+            aiProfile = AiProfileSelection(
+                profileId = AiProfileId.ELITE,
+                progressionPercent = 45,
+            ),
+        )
+
+        assertEquals(AiProfileId.ELITE, scenario.aiProfile.profileId)
+        assertEquals(45, scenario.aiProfile.progressionPercent)
+    }
+
+    @Test
+    fun aiProfileSelectionValidatesBoundedProgression() {
+        assertFailsWith<IllegalArgumentException> {
+            AiProfileSelection(progressionPercent = 101)
+        }
+        assertFailsWith<IllegalArgumentException> {
+            AiProfileSelection(profileId = AiProfileId.CADET, progressionPercent = -1)
+        }
+    }
+
+    @Test
     fun playerLoadoutIsValidatedAndSeparateFromScenarioAvailability() {
         val loadout = PlayerLoadoutConfig(
             playerId = playerId,

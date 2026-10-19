@@ -32,8 +32,13 @@ kampanię, AI oraz działający match screen. Gałąź robocza: `develop`.
   mnożnika `2.0`.
 - Interakcje jednostek: melee, ataki dystansowe, detonacja Demolishera i atak
   Sapera na fortecę.
-- AI rekrutuje jednostki, wysyła fale, dobiera kontrę Sapera i zmienia
-  temperament oraz próg fali.
+- AI używa typowanych profili `CADET`, `VETERAN` i `ELITE` z kampanii.
+  Strategie katapulty/amunicji, rekrutacji i fal są składane przez
+  `AiStrategyRegistry`; ELITE leaduje ruchome cele i kontruje zagrożenia.
+  `AiMatchCoordinator` w aplikacji zarządza seedem i reakcją; postęp ELITE
+  jest ograniczony do poziomu 100 i nie przyznaje bonusów zasobów ani statystyk.
+  CADET ma błąd celowania ±18°/±30 mocy, aby jego strzały były wyraźnie mniej
+  celne.
 - Legacy-style sprite'y, animacje idle/walk, HP bary jednostek, cache assetów
   i zakotwiczenie stóp do wspólnej linii terenu.
 - Debug panel z `Show hitboxes` i trybem `SNAPSHOT`.
@@ -69,10 +74,10 @@ kampanię, AI oraz działający match screen. Gałąź robocza: `develop`.
 
 Kolejne większe funkcjonalności będą projektowane jako niezależne podsystemy,
 z własną odpowiedzialnością, kontraktami, stanem, eventami, testami i
-integracją z pozostałymi warstwami. Dotyczy to między innymi planowanych
-`SpellSystem`, `TutorialSystem`, `AISystem` i `CampaignSystem`. `AISystem`
-pozostaje właścicielem logiki decyzji AI w `game-ai`, a `CampaignSystem`
-odpowiedzialnością kampanii w `game-campaign`; nazwa podsystemu nie oznacza
+integracją z pozostałymi warstwami. Rozszerzenia AI, takie jak strategie
+zaklęć, dołączają przez registry; `SpellSystem`, `TutorialSystem` i pełna
+`CampaignSystem` pozostają kolejnymi obszarami. Decyzje AI należą do `game-ai`,
+a lifecycle agenta do `game-application`; nazwa podsystemu nie oznacza
 automatycznie nowego modułu Gradle. Podsystemy mają korzystać z komend,
 snapshotów i eventów zamiast mutować bezpośrednio stan innych podsystemów.
 
