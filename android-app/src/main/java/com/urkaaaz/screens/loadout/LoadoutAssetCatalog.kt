@@ -12,6 +12,13 @@ internal object LoadoutAssetCatalog {
     fun unlimitedIcon(): Int = R.drawable.loadout_unlimited_icon
     fun rockFixedIcon(): Int = R.drawable.loadout_rock_locked_icon
     fun headerFrame(): Int = R.drawable.loadout_header_frame
+    fun summaryUnitsIcon(): Int = R.drawable.loadout_summary_units
+    fun summaryAmmunitionIcon(): Int = R.drawable.loadout_summary_ammunition
+    fun summarySpellsIcon(): Int = R.drawable.loadout_summary_spells
+    fun backButtonBackground(): Int = R.drawable.loadout_start_match_button_xs_short
+    fun nextLevelButtonBackground(): Int = R.drawable.loadout_start_match_button_xs_normal
+    fun startMatchButtonBackground(): Int = R.drawable.loadout_start_match_button
+    fun longButtonBackground(): Int = R.drawable.loadout_start_match_button_xs_long
 
     fun carouselArtwork(item: LoadoutItemReference): LoadoutAssetLookup =
         when (item) {
@@ -52,6 +59,26 @@ internal object LoadoutAssetCatalog {
                 "PLAGUE_CAULDRON" -> LoadoutAssetLookup.Found(R.drawable.plague_cauldron_icon)
                 else -> LoadoutAssetLookup.Missing
             }
-            is LoadoutItemReference.Spell -> LoadoutAssetLookup.Missing
+            is LoadoutItemReference.Spell -> when (item.identifier) {
+                "ICE_TRAP" -> LoadoutAssetLookup.Found(R.drawable.loadout_spell_ice_trap_card)
+                "RUNIC_BASTION" ->
+                    LoadoutAssetLookup.Found(R.drawable.loadout_spell_runic_bastion_card)
+                "HASTE" -> LoadoutAssetLookup.Found(R.drawable.loadout_spell_haste_card)
+                "HEAL" -> LoadoutAssetLookup.Found(R.drawable.loadout_spell_heal_card)
+                "FORTRESS_SHIELD" ->
+                    LoadoutAssetLookup.Found(R.drawable.loadout_spell_fortress_shield_card)
+                "CATAPULT_LOCK" ->
+                    LoadoutAssetLookup.Found(R.drawable.loadout_spell_catapult_lock_card)
+                "SLOWING_FIELD" ->
+                    LoadoutAssetLookup.Found(R.drawable.loadout_spell_slowing_field_card)
+                "VAMPIRIC_BANNER" ->
+                    LoadoutAssetLookup.Found(R.drawable.loadout_spell_vampiric_banner_card)
+                "STONE_SKIN" ->
+                    LoadoutAssetLookup.Found(R.drawable.loadout_spell_stone_skin_card)
+                "SIEGE_FRENZY" ->
+                    LoadoutAssetLookup.Found(R.drawable.loadout_spell_siege_frenzy_card)
+                "BERSERKER" -> LoadoutAssetLookup.Found(R.drawable.loadout_spell_berserker_card)
+                else -> LoadoutAssetLookup.Missing
+            }
         }
 }

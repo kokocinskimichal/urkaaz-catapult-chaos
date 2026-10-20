@@ -1,0 +1,138 @@
+Create a cohesive family of reusable Urkaaaz gold button backgrounds, based
+on the approved Loadout `START MATCH` button design. Use the same visual
+family for all button roles, including compact navigation such as `BACK`.
+Generate five sizes and two interaction states for each size.
+
+## Reference
+
+- Attach the Loadout screenshot showing the Start Match button as the primary
+  reference for its wide gold silhouette, bevels, decorative side details,
+  contrast, and placement.
+- Attach the approved `loadout_start_match_button_normal.png` and
+  `loadout_start_match_button_pressed.png` as the definitive shape and state
+  references. Preserve their design rather than inventing a new button style.
+- Use approved Urkaaaz Loadout panels and buttons as secondary references for
+  metal, wood, lighting, and finish.
+- Match the existing Urkaaaz visual language: polished fantasy-game
+  craftsmanship, strong gold face, darker bronze bevels, and restrained
+  highlights. Do not copy unrelated screen content.
+
+## Output
+
+- Generate exactly ten separate transparent PNG files: one normal and one
+  pressed asset for each size in the table below.
+- All canvases are RGBA PNGs with a 4:1 aspect ratio. The pixel dimensions
+  are 4x the target display dimensions; the UI will render each asset at its
+  corresponding dp size.
+
+| Size | Target display size | PNG canvas size |
+|---|---:|---:|
+| XS | 128 x 32 dp | 512 x 128 px |
+| S | 176 x 44 dp | 704 x 176 px |
+| M | 220 x 55 dp | 880 x 220 px |
+| L | 280 x 70 dp | 1120 x 280 px |
+| XL | 360 x 90 dp | 1440 x 360 px |
+
+- The M size is the reference size and closely matches the current 220 x 54 dp
+  Loadout button.
+- Use these exact filenames:
+  - `loadout_start_match_button_xs_normal.png`
+  - `loadout_start_match_button_xs_pressed.png`
+  - `loadout_start_match_button_s_normal.png`
+  - `loadout_start_match_button_s_pressed.png`
+  - `loadout_start_match_button_m_normal.png`
+  - `loadout_start_match_button_m_pressed.png`
+  - `loadout_start_match_button_l_normal.png`
+  - `loadout_start_match_button_l_pressed.png`
+  - `loadout_start_match_button_xl_normal.png`
+  - `loadout_start_match_button_xl_pressed.png`
+- Save all ten files for review under `assets_src/loadout/ui/`.
+- Keep the outer silhouette, gold palette, bevels, ornament positions, and
+  center text safe area consistent across all ten files. Within each size,
+  the normal and pressed states must be pixel-aligned in geometry.
+- These are background assets only. Do not copy them into Android resources
+  until the user approves the preview.
+
+## Shared design
+
+- Create a broad, landscape-oriented button plate with a luminous warm-gold
+  face, a substantial darker bronze/gold bevel, and a clear edge against the
+  dark Loadout footer.
+- Use a refined fantasy-game finish with controlled highlights and subtle
+  dimensionality. The button should feel important and tappable without
+  overpowering the rest of the Loadout screen.
+- Keep the same gold face, bevel, silhouette language, and state treatment for
+  primary, secondary, and navigation buttons. Do not create a separate plain,
+  silver, blue, or text-only button style for `BACK`.
+- The XS background is intended for compact controls such as `BACK`. Its
+  plate may be wider than the former text-only Back label; that is deliberate
+  so the control belongs to the same button family. Render the live label
+  centered on the plate.
+- Small symmetrical diamond, rivet, or carved-metal accents may frame the
+  far left and right sides. Keep them outside the center text safe area.
+- Keep the central face spacious, simple, and evenly lit so Android can draw
+  the live `START MATCH` label over it with strong contrast.
+- Use transparent pixels outside the button silhouette. Keep even safety
+  margins so the plate can be scaled to the existing wide button proportion
+  without clipping its corners or glow.
+- The M background must remain legible at the existing approximate
+  220 x 54 dp button size.
+- Adjust proportions and detail density for each target size without changing
+  the shared design. Keep the central text-safe area proportional and large
+  enough for a short live button label.
+- Keep the XS artwork simple enough to remain crisp at 128 x 32 dp. The app
+  should provide an accessible touch target separately if that visual size is
+  used for an interactive control.
+
+## Unpressed assets
+
+- Make the gold face bright, inviting, and clearly raised above the footer.
+- Show a crisp upper bevel, warm gold highlights, and a restrained outer
+  highlight or glow.
+- Keep the silhouette and center text area calm; avoid reflections that could
+  reduce the readability of the live label.
+
+## Pressed assets
+
+- For every size, preserve the exact geometry and ornament placement of its
+  matching unpressed asset.
+- Make the face look physically pressed inward: reduce the raised bevel and
+  outer glow, slightly deepen the gold/bronze shadows, and lower or compress
+  the inner face subtly while preserving the outer bounds.
+- Keep the pressed state clearly distinguishable at a glance, but retain
+  enough gold brightness and contrast to read as the same enabled action.
+- Do not make it red, disabled, broken, selected, or permanently depressed.
+
+## Runtime separation
+
+- Do not include `START MATCH`, letters, numbers, icons, arrows, labels,
+  watermark, signature, or any other text in any PNG.
+- Android renders live button labels separately and switches between the
+  matching size's normal and pressed assets.
+- Do not add a disabled-state asset, loading indicator, spinner, or extra
+  action; those are outside this ten-file request.
+- Do not flatten the footer or any other UI into either button background.
+
+## Negative prompt
+
+text, letters, numbers, words, logo, watermark, signature, opaque background,
+full-screen UI, screenshot, phone frame, rectangular image backdrop, card
+frame, overly ornate scrollwork, tiny unreadable details, asymmetrical
+ornaments, different geometry between states, clipped bevel, excessive bloom,
+red pressed state, disabled state, loading state, extra icon, extra button
+
+## Review checklist
+
+- Confirm there are exactly ten PNG files with the specified filenames and
+  exact dimensions.
+- Confirm all files are RGBA with transparency outside the button silhouette.
+- Compare each normal/pressed pair as an overlay: geometry and ornament
+  placement should align exactly.
+- Confirm all five sizes form one consistent family and that larger sizes do
+  not introduce extra decoration or different button proportions.
+- Confirm each pressed state is visibly lower and less luminous while
+  remaining clearly enabled.
+- Review each size at its target dp dimensions against the dark Loadout
+  footer, including the central live-text area.
+- Show all five normal/pressed pairs individually for review before Android
+  integration.

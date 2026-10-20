@@ -148,7 +148,16 @@ class MainActivity : ComponentActivity() {
                     }
                 },
                 openDebugOnStart = screen.levelId == "DEMO_LEVEL",
-                onMatchFinished = campaignCompletionPresenter::onMatchFinished,
+                onMatchFinished = { level, event, onCompletionRecorded ->
+                    campaignCompletionPresenter.onMatchFinished(
+                        level,
+                        event,
+                        onCompletionRecorded,
+                    )
+                },
+                onNextLevelClicked = { nextLevel ->
+                    navigator.replace(AppScreen.Loadout(nextLevel))
+                },
             )
             is AppScreen.Result -> ResultScreen(this)
         }

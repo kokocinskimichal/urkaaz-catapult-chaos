@@ -1,0 +1,106 @@
+Create six coordinated XS Urkaaaz button backgrounds: three widths, each in
+normal and pressed states. Keep them text-free so Android can render live
+labels over them. Use the approved gold Loadout button family; do not introduce
+a separate visual style for compact navigation such as `BACK`.
+
+## Reference
+
+- Attach the approved `loadout_start_match_button_xs_normal.png` and
+  `loadout_start_match_button_xs_pressed.png` as the definitive visual and
+  interaction-state references.
+- Attach the Loadout screen screenshot to check how a compact button fits
+  beside the existing header and content. Use it as a composition reference;
+  labels rendered over these assets by the game must be dark and bold.
+- Preserve the shared gold face, bronze bevels, silhouette language, and
+  restrained highlights. The width changes; the button family does not.
+
+## Output
+
+- Generate exactly six separate transparent PNG files: one normal and one
+  pressed background for each of the three XS widths. Do not render labels,
+  letters, icons, or any other text into the PNGs.
+- All canvases are RGBA PNGs rendered at 4x the target dp dimensions.
+
+| Length | Target display size | PNG canvas size |
+|---|---:|---:|
+| Short | 96 x 32 dp | 384 x 128 px |
+| Normal | 128 x 32 dp | 512 x 128 px |
+| Long | 160 x 32 dp | 640 x 128 px |
+
+- Filenames use the order `<size>_<length>_<interaction-state>`. Thus
+  `xs_normal_normal` means XS size, Normal length, normal interaction state.
+- Use these exact filenames:
+  - `loadout_start_match_button_xs_short_normal.png`
+  - `loadout_start_match_button_xs_short_pressed.png`
+  - `loadout_start_match_button_xs_normal_normal.png`
+  - `loadout_start_match_button_xs_normal_pressed.png`
+  - `loadout_start_match_button_xs_long_normal.png`
+  - `loadout_start_match_button_xs_long_pressed.png`
+- Save all six files for review under `assets_src/loadout/ui/`.
+- Do not copy these variants into Android resources until the user approves
+  the preview.
+
+## Shared visual design
+
+- Keep the same warm-gold face, dark bronze/gold bevels, transparent outer
+  margins, and restrained edge lighting as the approved XS reference.
+- Keep the height, border thickness, corner treatment, lighting direction, and
+  state styling consistent across all three widths.
+- Adapt the center plate to each width instead of cropping the reference.
+  Keep the side bevels and any diamond accents proportional and fully visible;
+  do not squeeze the ornaments into the text-safe area.
+- Keep the center area clear of ornaments so Android-rendered text can be
+  centered on the gold face with strong contrast.
+- The game renders these live labels in its existing typeface, bold and dark:
+  Short `BACK`, Normal `NEXT LEVEL`, and Long `RESTART MATCH`. This mapping is
+  contextual guidance only; do not include the labels in the PNG assets.
+- Keep the gold treatment consistent for primary, secondary, and navigation
+  actions. A compact `BACK` button may use the Short variant, but must not
+  switch to a different color or unrelated button design.
+- These button images are 32 dp high. The app must provide an accessible touch
+  target separately when the background is used for an interactive control.
+
+## Length variants
+
+- **Short (96 x 32 dp):** leave a center area suitable for short labels such
+  as `BACK`. Keep the side details small and outside the text area.
+- **Normal (128 x 32 dp):** match the approved XS proportions and detailing;
+  preserve room for a compact live label such as `NEXT LEVEL`.
+- **Long (160 x 32 dp):** extend the center plate horizontally; do not enlarge
+  the height or make the bevels look heavier; it supports a longer live label
+  such as `RESTART MATCH`.
+- All three sizes must look like the same button at different widths when
+  displayed side by side.
+
+## Interaction states
+
+- **Normal:** bright raised gold face, crisp upper bevel, and a restrained
+  outer highlight.
+- **Pressed:** same exact outer geometry and ornament positions as its
+  matching normal asset. Slightly darken the face, reduce the raised bevel
+  and glow, and make the inner face feel gently pressed inward.
+- Make every pressed state clearly distinct while still looking enabled and
+  unmistakably part of the same gold button family.
+- Do not add a disabled, selected, loading, focus, or hover variation.
+
+## Negative prompt
+
+extra text, incorrect label, misspelled label, extra letters or numbers, logo,
+watermark, signature, opaque background, full-screen UI, screenshot, phone
+frame, clipped corners, cropped bevel,
+stretched or compressed ornaments, decorative detail inside the text-safe
+area, a different style for BACK, a different color for pressed, disabled
+state, loading state, extra icons, extra buttons
+
+## Review checklist
+
+- Confirm exactly six files exist with the specified names and pixel sizes.
+- Confirm all are RGBA PNGs with transparency outside the button.
+- Compare each normal/pressed pair as an overlay; their geometry must align.
+- Confirm Short, Normal, and Long retain the same height and visual style,
+  changing only their width and proportional center plate.
+- Confirm the PNGs are text-free. Preview them in the game with their live
+  labels (`BACK`, `NEXT LEVEL`, `RESTART MATCH`) in the existing dark, bold
+  typeface; check centering and readability at target dp size.
+- Preview all six assets against the dark Loadout footer and show each pair
+  individually for review before Android integration.

@@ -14,7 +14,9 @@ class MatchScreen(
     demoMode: Boolean = false,
     onBackClicked: () -> Unit,
     openDebugOnStart: Boolean = false,
-    onMatchFinished: (Int, MatchEvent.MatchFinished) -> Unit = { _, _ -> },
+    onMatchFinished: (Int, MatchEvent.MatchFinished, (Boolean) -> Unit) -> Unit =
+        { _, _, onCompletionRecorded -> onCompletionRecorded(false) },
+    onNextLevelClicked: (Int) -> Unit = {},
 ) : ScreenContent {
     private val controller = MatchScreenController(
         activity = activity,
@@ -24,6 +26,7 @@ class MatchScreen(
         onBackClicked = onBackClicked,
         openDebugOnStart = openDebugOnStart,
         onMatchFinished = onMatchFinished,
+        onNextLevelClicked = onNextLevelClicked,
     )
 
     override val view: View = controller.createView()

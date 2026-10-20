@@ -15,18 +15,23 @@ import android.widget.LinearLayout
 import android.widget.CheckBox
 import android.widget.ScrollView
 import android.widget.TextView
+import com.urkaaaz.campaign.CampaignLevelDefinition
 import com.urkaaaz.campaign.MapDefinitionRepository
 import com.urkaaaz.contracts.MatchEvent
+import com.urkaaaz.contracts.MatchOutcome
 import com.urkaaaz.contracts.PlayerLoadoutConfig
+import com.urkaaaz.screens.loadout.LoadoutAssetCatalog
 
 class MatchScreenController(
     private val activity: Activity,
-    campaignLevel: Int,
+    private val campaignLevel: Int,
     playerLoadout: PlayerLoadoutConfig? = null,
     private val demoMode: Boolean = false,
     private val onBackClicked: () -> Unit,
     private val openDebugOnStart: Boolean = false,
-    onMatchFinished: (Int, MatchEvent.MatchFinished) -> Unit = { _, _ -> },
+    onMatchFinished: (Int, MatchEvent.MatchFinished, (Boolean) -> Unit) -> Unit =
+        { _, _, onCompletionRecorded -> onCompletionRecorded(false) },
+    private val onNextLevelClicked: (Int) -> Unit = {},
 ) {
     private val viewModel = MatchViewModel(
         campaignLevel = campaignLevel,
@@ -35,7 +40,12 @@ class MatchScreenController(
         mapRepository = MapDefinitionRepository { path -> activity.assets.open(path) },
         combatLogSink = AndroidCombatLogSink(),
         ammunitionLogSink = AndroidAmmunitionLogSink(),
-        onMatchFinished = onMatchFinished,
+        onMatchFinished = { level, event ->
+            onMatchFinished(level, event) { completionRecorded ->
+                campaignCompletionRecorded = completionRecorded
+                lastRenderedState?.let(::updateFinishedAction)
+            }
+        },
     )
     private val gameHandler = Handler(Looper.getMainLooper())
     private lateinit var battlefieldView: BattlefieldView
@@ -47,6 +57,8 @@ class MatchScreenController(
     private lateinit var restartButton: TextView
     private var snapshotMode = false
     private var debugPausedMatch = false
+    private var campaignCompletionRecorded: Boolean? = null
+    private var lastRenderedState: RenderState? = null
 
     private var aimAngle = 45f
     private var aimPower = 50f
@@ -118,22 +130,26 @@ class MatchScreenController(
                 setOnClickListener { setSnapshotMode(false) }
         }
         restartButton = TextView(activity).apply {
-            text = "RESTART MATCH"
-            setTextColor(Color.WHITE)
-            textSize = 16f
+            text = activity.getString(com.urkaaaz.android.R.string.match_restart)
+            setTextColor(Color.rgb(64, 38, 20))
+            textSize = 14f
             setTypeface(typeface, Typeface.BOLD)
             gravity = Gravity.CENTER
-            setPadding(dp(20), dp(12), dp(20), dp(12))
-            setBackgroundResource(com.urkaaaz.android.R.drawable.bg_hud_panel)
+            setPadding(0, 0, 0, 0)
+            setBackgroundResource(LoadoutAssetCatalog.longButtonBackground())
             elevation = dp(12).toFloat()
             translationZ = dp(24).toFloat()
-            minWidth = dp(190)
-            minHeight = dp(52)
+            minWidth = dp(160)
+            minHeight = dp(48)
             visibility = View.GONE
             setOnClickListener {
-                aimAngle = 45f
-                aimPower = 50f
-                render(viewModel.dispatch(MatchUiAction.RestartMatch))
+                if (canContinueToNextLevel(viewModel.renderState)) {
+                    onNextLevelClicked(campaignLevel + 1)
+                } else {
+                    aimAngle = 45f
+                    aimPower = 50f
+                    render(viewModel.dispatch(MatchUiAction.RestartMatch))
+                }
             }
         }
 
@@ -248,6 +264,7 @@ class MatchScreenController(
     }
 
     private fun render(state: RenderState) {
+        lastRenderedState = state
         hudView.render(state)
         ammunitionPanel.render(state)
         unitPanel.render(state)
@@ -266,11 +283,52 @@ class MatchScreenController(
             View.GONE
         }
         if (restartButton.visibility == View.VISIBLE) {
-            restartButton.alpha = 1f
-            restartButton.isClickable = true
+            updateFinishedAction(state)
             restartButton.bringToFront()
         }
     }
+
+    private fun updateFinishedAction(state: RenderState) {
+        val hasNextLevel = !demoMode &&
+            campaignLevel < CampaignLevelDefinition.MAX_LEVELS &&
+            state.outcomeLabel == MatchOutcome.BLUE_WIN.name
+        val completionPending = hasNextLevel && campaignCompletionRecorded == null
+        val nextLevelReady = hasNextLevel && campaignCompletionRecorded == true
+        val actionText = when {
+            nextLevelReady ->
+                activity.getString(com.urkaaaz.android.R.string.match_next_level)
+            completionPending ->
+                activity.getString(com.urkaaaz.android.R.string.match_saving_progress)
+            else -> activity.getString(com.urkaaaz.android.R.string.match_restart)
+        }
+        if (restartButton.text != actionText) {
+            restartButton.text = actionText
+            restartButton.setBackgroundResource(
+                if (nextLevelReady) {
+                    LoadoutAssetCatalog.nextLevelButtonBackground()
+                } else {
+                    LoadoutAssetCatalog.longButtonBackground()
+                },
+            )
+            restartButton.textSize = if (completionPending) 12f else 14f
+            restartButton.layoutParams = restartButton.layoutParams.apply {
+                width = dp(if (nextLevelReady) 128 else 160)
+                height = dp(48)
+            }
+        }
+        val isActionEnabled = !completionPending
+        if (restartButton.isEnabled != isActionEnabled) {
+            restartButton.isEnabled = isActionEnabled
+            restartButton.isClickable = isActionEnabled
+            restartButton.alpha = if (isActionEnabled) 1f else 0.6f
+        }
+    }
+
+    private fun canContinueToNextLevel(state: RenderState): Boolean =
+        !demoMode &&
+            campaignLevel < CampaignLevelDefinition.MAX_LEVELS &&
+            state.outcomeLabel == MatchOutcome.BLUE_WIN.name &&
+            campaignCompletionRecorded == true
 
     private fun showDebugToolsDialog() {
         debugPausedMatch = viewModel.renderState.statusLabel == "RUNNING"

@@ -83,17 +83,29 @@ to `R.drawable.loadout_unlimited_icon`. Fixed ROCK also shows its supplied
 gold lock marker next to the infinity icon. Five approved full-card ammunition
 illustrations are stored in `assets_src/loadout/ammunition-cards/` and mapped
 to their `loadout_ammunition_*_card` drawables for carousel rendering.
-Spell artwork is not yet mapped; its 11-type generation prompt is
-`docs/systems/loadout-spell-card-art.agp`. Missing art does not block the shared
-card layout. `CampaignSystem`
+The bottom Loadout summary displays separate live unit, ammunition and spell
+counts beside the supplied category icons in `assets_src/loadout/ui/`; labels,
+counts, status and the Start Match button remain Android-rendered text and
+controls. The Start Match button uses separate transparent normal and pressed
+backgrounds from `assets_src/loadout/ui/`; its live label is dark and bold.
+The XS family uses a 32dp graphic inside a 48dp touch target: Short for Loadout
+`BACK`, Normal for campaign `NEXT LEVEL`, and Long for match restart actions.
+Each selector swaps its matching normal/pressed PNG. The larger Start Match
+button retains its original 220 x 54 dp selector and layout.
+Eleven approved full-card spell illustrations are stored in
+`assets_src/loadout/spell-cards/` and mapped to their
+`loadout_spell_*_card` drawables for carousel and detail rendering. The
+11-type generation prompt is `docs/systems/loadout-spell-card-art.agp`.
+`CampaignSystem`
 persists completed levels, the highest unlocked level and applied milestone
-IDs separately from the profile. Only `BLUE_WIN` advances the campaign.
+IDs separately from the profile. Only `BLUE_WIN` advances the campaign. The
+match result offers `NEXT LEVEL` after that completion is persisted, opening
+the next level's Loadout; failed saves retain the restart action.
 Haste is awarded for level 5 and Heal for level 7; their availability starts
 at levels 6 and 8. Campaign rewards are projected into Loadout progression,
 and preferred spells affect only newly generated defaults. Tutorials remain
-deferred to the future game-wide TutorialSystem; spell illustrations and spell
-gameplay remain unfinished. Missing spell art is an explicit catalog result
-and does not block the text-based card.
+deferred to the future game-wide TutorialSystem. Spell gameplay remains
+unfinished; spell artwork is presentation-only.
 
 Future idea, not implemented: progression could grant an otherwise limited
 ammunition type a temporary effective unlimited entitlement after a qualifying

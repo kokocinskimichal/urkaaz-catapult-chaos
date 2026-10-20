@@ -1,0 +1,151 @@
+Create two coordinated end-of-match popup mockups for Urkaaaz: one VICTORY
+state and one DEFEAT state.
+
+## Reference inputs
+
+- Attach a full-screen screenshot of the Urkaaaz match screen and battlefield
+  for campaign level 1, `green_frontier`. Use it as the primary scene
+  reference.
+- Attach the Loadout screenshot and approved Urkaaaz UI assets as secondary
+  references for the dark iron/wood panels, warm gold trim, typography,
+  materials, and visual quality.
+- Reuse the visual identity of existing Urkaaaz units and catapults when
+  available. Do not redesign their canonical appearance.
+- This is only a first-pass visual proposal for `green_frontier`. Do not
+  generalize the mockups to other biomes or add alternate biome treatments.
+
+## Output
+
+- Generate exactly two separate static landscape mockups:
+  - `match_result_victory.png`
+  - `match_result_defeat.png`
+- Canvas: exactly 1920 x 1080 pixels, 16:9.
+- Save the files for review under `assets_src/match/result-mockups/`.
+- Use the same popup size, placement, panel structure, typography, and content
+  alignment in both variants. Change only the outcome treatment, humorous
+  illustration, and outcome-specific available actions.
+- These are composition references only. Do not import either mockup as a
+  flattened runtime screen or Android drawable.
+
+## Shared composition
+
+- Keep the actual Green Frontier battlefield visible behind the popup,
+  darkened enough to separate the foreground UI while preserving its green
+  grass, natural colors, and rolling outdoor landscape. Do not replace it
+  with a generic fantasy background.
+- Center one compact, readable result panel over the battlefield. Use the
+  established Urkaaaz dark translucent iron/wood surfaces, restrained rivets,
+  warm-gold edging, and clear pale text.
+- Keep the panel focused on the result. Do not add a full-screen dashboard,
+  extra card grid, store, tutorial, or unrelated match statistics.
+- Include a live-text header area for the outcome and a smaller context line
+  for `LEVEL X · BIOME NAME`. Keep all production text, numbers, icons, and
+  controls conceptually separate from the background and illustration.
+- Add one friendly, humorous fantasy-game illustration that is clearly
+  related to Green Frontier. It may overlap the panel edge, but must not
+  obscure the result, reward information, or buttons.
+- Use readable contrast and comfortable spacing. The popup must remain
+  legible over Green Frontier's bright grass and foliage.
+
+## Victory variant
+
+- Show the exact outcome label `VICTORY!` prominently, with a warm gold
+  highlight distinct from the defeat treatment.
+- Use a playful, celebratory scene with recognizable existing Urkaaaz
+  characters or a catapult. The joke should come from harmless slapstick or
+  over-the-top celebration, not from gore, injury, or a new gameplay ability.
+- Tie the gag to Green Frontier's grass, leaves, or rolling green landscape
+  without changing character identities or inventing canonical lore.
+- Include a clearly separated progression reward area for an item newly
+  available in the next campaign level:
+  - Label it `UNLOCKED IN LEVEL X` or `NEW IN LEVEL X`.
+  - Show one dynamic unit or ammunition icon and its dynamic name.
+  - Treat the item as data supplied by campaign progression. Do not invent,
+    rename, or substitute an unlock.
+  - Show this area only when the next-level progression actually supplies an
+    unlock; otherwise leave the area out rather than showing a fake reward.
+- Include a future gold-reward row labeled `GOLD EARNED`, but show an empty or
+  neutral placeholder (`—`) instead of a number. Gold rewards are not
+  implemented: do not imply that gold was granted, display a fabricated
+  amount, or make the placeholder look interactive. The runtime UI should hide
+  this row until gold rewards exist.
+- Show two native-control placeholders:
+  - Primary: `NEXT LEVEL`, available only when a next level exists and its
+    completion has been persisted.
+  - Secondary: `EXIT TO CAMPAIGN`.
+- For the final campaign level, do not show `NEXT LEVEL`; use the campaign
+  return action instead. Do not imply that a level beyond the campaign exists.
+
+## Defeat variant
+
+- Show the exact outcome label `DEFEAT` prominently, using a restrained
+  ember-red or dark copper accent while retaining the shared panel style.
+- Use a different friendly Green Frontier comic scene. Prefer an existing
+  character in a harmless, mildly absurd setback (for example, helmet askew,
+  tangled banner, or a harmless pile of leaves). Keep the tone encouraging
+  rather than mocking; no gore, graphic injury, or humiliating imagery.
+- Do not show a next-level unlock or claim campaign progression was granted.
+- Keep the same reserved `GOLD EARNED` row with a neutral `—` placeholder
+  only as a design reference; the runtime UI must hide it until rewards are
+  implemented.
+- Show two native-control placeholders:
+  - Primary: `RETRY`.
+  - Secondary: `EXIT TO CAMPAIGN`.
+- Make the retry action visually primary without making the campaign exit
+  difficult to find.
+
+## Green Frontier art direction
+
+- Derive colors, ambient details, and the illustration's visual gag from the
+  supplied Green Frontier reference. Preserve the same biome in both
+  outcomes.
+- Use recognizable Green Frontier details such as grass, leaves, and the
+  rolling outdoor landscape. Do not introduce snow, copperwood, ashland, or
+  marsh scenery.
+- Keep biome details inside the illustration or visible battlefield; do not
+  tint the outcome text or reward icons so heavily that their meaning changes.
+- Do not place the same joke or the same pose in both outcome variants.
+
+## Runtime separation requirements
+
+- Victory/defeat labels, level and biome names, gold values, unlock names,
+  icons, and button labels are dynamic UI, not text baked into a production
+  background.
+- The UI must receive the match outcome and campaign progression result; it
+  must not infer success from artwork or mutate campaign state itself.
+- `NEXT LEVEL` is available only after successful campaign completion
+  persistence and only when another level exists.
+- `RETRY` restarts the current level. `EXIT TO CAMPAIGN` returns to campaign
+  level selection; it must not be presented as quitting the app.
+- The result popup must not claim a gold reward or unlock that the game did
+  not report.
+
+## Negative requirements
+
+- No fake gold amount, fabricated unit/ammunition unlock, score, XP, kill
+  count, campaign completion percentage, or unimplemented reward.
+- No reward-shop or purchase action, premium currency, tutorial, settings,
+  pause controls, or exit-to-operating-system action.
+- No fictional Urkaaaz unit, ammunition, spell, faction, biome, logo, or lore.
+- No gore, disturbing imagery, hostile real-world symbols, watermark,
+  signature, phone frame, or presentation board.
+- No alternate screen layouts: both outcomes must be directly comparable.
+- No text or controls baked into any asset intended for runtime reuse.
+
+## Review checklist
+
+- Confirm there are exactly two 1920 x 1080 landscape PNG mockups.
+- Confirm both use the same panel geometry and content hierarchy.
+- Confirm the outcome is immediately distinguishable in both variants.
+- Confirm both comic illustrations reflect Green Frontier and use familiar
+  Urkaaaz characters or equipment.
+- Confirm victory shows only a progression-provided next-level unlock and
+  defeat shows none.
+- Confirm the gold row is clearly a non-functional placeholder with no
+  fabricated amount.
+- Confirm the button labels and enabled states match the outcome and campaign
+  boundary.
+- Confirm dynamic text, values, reward icons, and controls remain separable
+  for native Android implementation.
+- Show both mockups individually for review before producing or integrating
+  production assets.

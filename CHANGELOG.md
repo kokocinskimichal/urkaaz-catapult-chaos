@@ -6,12 +6,21 @@
 
 - Added generation prompts for all 11 spell-card illustrations, the Loadout
   header frame, and the fixed ROCK icon.
+- Added dedicated card artwork for all 11 spells and three Loadout summary
+  category icons.
+- Added normal/pressed XS gold button backgrounds for compact BACK, NEXT LEVEL,
+  and match restart actions.
+- Campaign victories now offer NEXT LEVEL after progress is saved, opening the
+  newly unlocked level's Loadout.
 
 ### Changed
 
 - Completed the Loadout visual update with dedicated ammunition-card art,
   ROCK's fixed-slot marker, a framed live title/level header, global Cinzel
   SemiBold typography, and category panels sized to their cards.
+- Reworked the Loadout footer into a live, icon-based summary and retained the
+  original 220 x 54 dp Start Match button with its supplied backgrounds and
+  dark, bold label.
 
 ## 2026-10-19
 

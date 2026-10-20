@@ -20,9 +20,14 @@ class CampaignCompletionPresenter(
 ) {
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
 
-    fun onMatchFinished(level: Int, event: MatchEvent.MatchFinished) {
+    fun onMatchFinished(
+        level: Int,
+        event: MatchEvent.MatchFinished,
+        onCompletionRecorded: (Boolean) -> Unit,
+    ) {
         scope.launch {
-            when (val result = campaignSystem.completeLevel(level, event)) {
+            val result = campaignSystem.completeLevel(level, event)
+            when (result) {
                 is CampaignCompletionResult.Completed,
                 is CampaignCompletionResult.NoProgress -> Unit
                 is CampaignCompletionResult.Rejected ->
@@ -46,6 +51,7 @@ class CampaignCompletionPresenter(
                         },
                     )
             }
+            onCompletionRecorded(result is CampaignCompletionResult.Completed)
         }
     }
 

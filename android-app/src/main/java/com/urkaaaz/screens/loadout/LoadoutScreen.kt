@@ -6,7 +6,12 @@ import android.graphics.ColorMatrix
 import android.graphics.ColorMatrixColorFilter
 import android.graphics.Typeface
 import android.graphics.drawable.GradientDrawable
+import android.text.SpannableString
+import android.text.Spanned
 import android.text.TextUtils
+import android.text.style.ForegroundColorSpan
+import android.text.style.RelativeSizeSpan
+import android.text.style.StyleSpan
 import android.util.TypedValue
 import android.view.Gravity
 import android.view.View
@@ -18,6 +23,8 @@ import android.widget.LinearLayout
 import android.widget.ScrollView
 import android.widget.TextView
 import androidx.core.content.res.ResourcesCompat
+import androidx.core.view.ViewCompat
+import androidx.core.view.WindowInsetsCompat
 import androidx.core.widget.TextViewCompat
 import com.urkaaaz.android.R
 import com.urkaaaz.application.loadout.LoadoutCategory
@@ -70,11 +77,13 @@ class LoadoutScreen(
     private lateinit var ammunitionOptions: LinearLayout
     private lateinit var spellOptions: LinearLayout
     private lateinit var goldView: TextView
-    private lateinit var selectedView: TextView
     private lateinit var statusView: TextView
     private lateinit var unitCountView: TextView
     private lateinit var ammunitionCountView: TextView
     private lateinit var spellCountView: TextView
+    private lateinit var unitSummaryCountView: TextView
+    private lateinit var ammunitionSummaryCountView: TextView
+    private lateinit var spellSummaryCountView: TextView
     private lateinit var startButton: Button
     private lateinit var detailsContent: LinearLayout
 
@@ -130,7 +139,22 @@ class LoadoutScreen(
 
         mainContent = LinearLayout(context).apply {
             orientation = LinearLayout.VERTICAL
-            setPadding(dp(context, 18), dp(context, 10), dp(context, 18), dp(context, 10))
+            val horizontalPadding = dp(context, 18)
+            val topPadding = dp(context, 10)
+            val bottomGap = dp(context, 12)
+            setPadding(horizontalPadding, topPadding, horizontalPadding, bottomGap)
+            ViewCompat.setOnApplyWindowInsetsListener(this) { view, insets ->
+                val navigationBarInset = insets
+                    .getInsets(WindowInsetsCompat.Type.navigationBars())
+                    .bottom
+                view.setPadding(
+                    horizontalPadding,
+                    topPadding,
+                    horizontalPadding,
+                    navigationBarInset + bottomGap,
+                )
+                insets
+            }
             addView(createHeader(context, showBack = true), matchWrap())
 
             val columns = LinearLayout(context).apply {
@@ -182,12 +206,48 @@ class LoadoutScreen(
                 setBackgroundResource(R.drawable.bg_hud_panel)
                 val summary = LinearLayout(context).apply {
                     orientation = LinearLayout.VERTICAL
-                    selectedView = TextView(context).apply {
-                        textSize = 15f
-                        setTypeface(typeface, Typeface.BOLD)
-                        setTextColor(Color.WHITE)
+                    val categories = LinearLayout(context).apply {
+                        orientation = LinearLayout.HORIZONTAL
+                        gravity = Gravity.CENTER_VERTICAL
+                        addView(TextView(context).apply {
+                            text = context.getString(R.string.loadout_summary_title)
+                            textSize = 10f
+                            setTypeface(typeface, Typeface.BOLD)
+                            setTextColor(Color.WHITE)
+                            gravity = Gravity.CENTER_VERTICAL
+                            maxLines = 2
+                        }, LinearLayout.LayoutParams(dp(context, 72), dp(context, 40)).apply {
+                            marginEnd = dp(context, 4)
+                        })
+                        addSummaryDivider(context, this)
+                        addView(
+                            createSummaryCategory(
+                                context,
+                                R.string.loadout_summary_units,
+                                LoadoutAssetCatalog.summaryUnitsIcon(),
+                            ) { unitSummaryCountView = it },
+                            LinearLayout.LayoutParams(0, dp(context, 40), 1f),
+                        )
+                        addSummaryDivider(context, this)
+                        addView(
+                            createSummaryCategory(
+                                context,
+                                R.string.loadout_summary_ammo,
+                                LoadoutAssetCatalog.summaryAmmunitionIcon(),
+                            ) { ammunitionSummaryCountView = it },
+                            LinearLayout.LayoutParams(0, dp(context, 40), 1f),
+                        )
+                        addSummaryDivider(context, this)
+                        addView(
+                            createSummaryCategory(
+                                context,
+                                R.string.loadout_summary_spells,
+                                LoadoutAssetCatalog.summarySpellsIcon(),
+                            ) { spellSummaryCountView = it },
+                            LinearLayout.LayoutParams(0, dp(context, 40), 1f),
+                        )
                     }
-                    addView(selectedView, wrap())
+                    addView(categories, LinearLayout.LayoutParams(-1, dp(context, 40)))
                     statusView = TextView(context).apply {
                         textSize = 11f
                         maxLines = 1
@@ -202,8 +262,8 @@ class LoadoutScreen(
                     text = context.getString(R.string.loadout_start_match)
                     textSize = 17f
                     setTypeface(typeface, Typeface.BOLD)
-                    setTextColor(Color.rgb(255, 225, 145))
-                    setBackgroundResource(R.drawable.bg_hud_panel)
+                    setTextColor(Color.rgb(64, 38, 20))
+                    setBackgroundResource(LoadoutAssetCatalog.startMatchButtonBackground())
                     isEnabled = false
                     alpha = 0.45f
                     setOnClickListener {
@@ -221,7 +281,10 @@ class LoadoutScreen(
                     marginStart = dp(context, 8)
                 })
             }
-            addView(footer, wrap())
+            addView(
+                footer,
+                LinearLayout.LayoutParams(-1, -2),
+            )
         }
         addView(mainContent, FrameLayout.LayoutParams(-1, -1))
 
@@ -251,13 +314,15 @@ class LoadoutScreen(
                 textSize = 18f
                 setTypeface(typeface, Typeface.BOLD)
                 setTextColor(Color.rgb(255, 230, 190))
+                gravity = Gravity.START or Gravity.CENTER_VERTICAL
+                maxLines = 1
                 setPadding(dp(context, 4), dp(context, 2), dp(context, 4), dp(context, 6))
             }, LinearLayout.LayoutParams(0, -2, 1f))
             val count = TextView(context).apply {
-                textSize = 11f
-                setTypeface(typeface, Typeface.BOLD)
-                setTextColor(Color.rgb(255, 211, 106))
+                textSize = 10f
+                setTextColor(Color.rgb(220, 207, 184))
                 gravity = Gravity.END or Gravity.CENTER_VERTICAL
+                maxLines = 1
             }
             onCountCreated(count)
             addView(count, wrap())
@@ -301,10 +366,12 @@ class LoadoutScreen(
                     text = context.getString(R.string.loadout_back)
                     textSize = 13f
                     setTypeface(typeface, Typeface.BOLD)
-                    setTextColor(Color.WHITE)
-                    setPadding(dp(context, 8), dp(context, 10), dp(context, 8), dp(context, 10))
+                    setTextColor(Color.rgb(64, 38, 20))
+                    gravity = Gravity.CENTER
+                    setPadding(0, 0, 0, 0)
+                    setBackgroundResource(LoadoutAssetCatalog.backButtonBackground())
                     setOnClickListener { onBack() }
-                }, wrap())
+                }, LinearLayout.LayoutParams(dp(context, 96), dp(context, 48)))
             } else {
                 addView(TextView(context).apply {
                     text = "←"
@@ -470,8 +537,22 @@ class LoadoutScreen(
         goldView.text = state.progression?.let {
             mainContent.context.getString(R.string.loadout_gold, it.goldBalance)
         }.orEmpty()
-        selectedView.text = summaryText(mainContent.context)
         statusView.text = statusText(mainContent.context)
+        unitSummaryCountView.text = summaryCount(
+            mainContent.context,
+            state.draft?.unitTypes?.size ?: 0,
+            MatchLoadout.MAX_UNITS,
+        )
+        ammunitionSummaryCountView.text = summaryCount(
+            mainContent.context,
+            state.draft?.ammunitionSlots?.count { it != null } ?: 0,
+            MatchLoadout.AMMUNITION_SLOT_COUNT,
+        )
+        spellSummaryCountView.text = summaryCount(
+            mainContent.context,
+            state.draft?.spellTypes?.size ?: 0,
+            MatchLoadout.MAX_SPELLS,
+        )
         unitCountView.text = selectionCount(
             mainContent.context,
             state.draft?.unitTypes?.size ?: 0,
@@ -497,8 +578,84 @@ class LoadoutScreen(
         spellCarousel.post { spellCarousel.scrollTo(spellCarouselX, 0) }
     }
 
-    private fun selectionCount(context: Context, selected: Int, maximum: Int): String =
-        context.getString(R.string.loadout_selection_count, selected, maximum)
+    private fun selectionCount(context: Context, selected: Int, maximum: Int): CharSequence {
+        val selectedText = selected.toString()
+        return SpannableString(
+            context.getString(R.string.loadout_selection_count, selected, maximum),
+        ).apply {
+            setSpan(
+                RelativeSizeSpan(1.3f),
+                0,
+                selectedText.length,
+                Spanned.SPAN_EXCLUSIVE_EXCLUSIVE,
+            )
+            setSpan(
+                StyleSpan(Typeface.BOLD),
+                0,
+                selectedText.length,
+                Spanned.SPAN_EXCLUSIVE_EXCLUSIVE,
+            )
+            setSpan(
+                ForegroundColorSpan(Color.rgb(255, 211, 106)),
+                0,
+                selectedText.length,
+                Spanned.SPAN_EXCLUSIVE_EXCLUSIVE,
+            )
+        }
+    }
+
+    private fun summaryCount(context: Context, selected: Int, maximum: Int): String =
+        context.getString(R.string.loadout_summary_count, selected, maximum)
+
+    private fun addSummaryDivider(context: Context, parent: LinearLayout) {
+        parent.addView(
+            View(context).apply {
+                setBackgroundColor(Color.argb(92, 220, 207, 184))
+            },
+            LinearLayout.LayoutParams(dp(context, 1), dp(context, 34)).apply {
+                marginStart = dp(context, 5)
+                marginEnd = dp(context, 5)
+            },
+        )
+    }
+
+    private fun createSummaryCategory(
+        context: Context,
+        titleResource: Int,
+        iconResource: Int,
+        onCountCreated: (TextView) -> Unit,
+    ): View = LinearLayout(context).apply {
+        orientation = LinearLayout.HORIZONTAL
+        gravity = Gravity.CENTER_VERTICAL
+        addView(ImageView(context).apply {
+            setImageResource(iconResource)
+            scaleType = ImageView.ScaleType.FIT_CENTER
+            contentDescription = null
+        }, LinearLayout.LayoutParams(dp(context, 36), dp(context, 36)).apply {
+            marginEnd = dp(context, 5)
+        })
+        val text = LinearLayout(context).apply {
+            orientation = LinearLayout.VERTICAL
+            gravity = Gravity.CENTER_VERTICAL
+            addView(TextView(context).apply {
+                text = context.getString(titleResource)
+                textSize = 11f
+                setTypeface(typeface, Typeface.BOLD)
+                setTextColor(Color.WHITE)
+                maxLines = 1
+                ellipsize = TextUtils.TruncateAt.END
+            }, wrap())
+            val count = TextView(context).apply {
+                textSize = 15f
+                setTypeface(typeface, Typeface.BOLD)
+                setTextColor(Color.rgb(255, 211, 106))
+                maxLines = 1
+            }
+            onCountCreated(count)
+            addView(count, wrap())
+        }
+        addView(text, LinearLayout.LayoutParams(0, -2, 1f))
+    }
 
     private fun carouselItemParams(context: Context) =
         LinearLayout.LayoutParams(
@@ -996,20 +1153,6 @@ class LoadoutScreen(
     private fun showMain() {
         detailsContent.visibility = View.GONE
         mainContent.visibility = View.VISIBLE
-    }
-
-    private fun summaryText(context: Context): String {
-        val draft = viewModel.state.draft
-            ?: return context.getString(R.string.loadout_status_empty)
-        return context.getString(
-            R.string.loadout_selected_summary,
-            draft.unitTypes.size,
-            MatchLoadout.MAX_UNITS,
-            draft.ammunitionSlots.count { it != null },
-            MatchLoadout.AMMUNITION_SLOT_COUNT,
-            draft.spellTypes.size,
-            MatchLoadout.MAX_SPELLS,
-        )
     }
 
     private fun statusText(context: Context): String {

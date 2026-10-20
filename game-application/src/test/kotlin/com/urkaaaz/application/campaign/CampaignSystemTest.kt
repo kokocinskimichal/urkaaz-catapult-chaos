@@ -30,6 +30,20 @@ class CampaignSystemTest {
     }
 
     @Test
+    fun blueWinOnLevelOneUnlocksLevelTwo() = runTest {
+        val system = CampaignSystem(FakeRepository())
+
+        val result = assertIs<CampaignCompletionResult.Completed>(
+            system.completeLevel(1, finished(MatchOutcome.BLUE_WIN)),
+        )
+
+        assertEquals(2, result.progress.highestUnlockedLevel)
+        assertEquals(setOf(1), result.progress.completedLevels)
+        val selectedLevel = assertIs<CampaignLevelSelection.Selected>(system.selectLevel(2))
+        assertEquals(2, selectedLevel.definition.level)
+    }
+
+    @Test
     fun blueWinAtomicallyCompletesLevelUnlocksNextAndGrantsMilestone() = runTest {
         val system = CampaignSystem(FakeRepository(CampaignProgress(highestUnlockedLevel = 5)))
 

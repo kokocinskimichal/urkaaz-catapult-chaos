@@ -17,6 +17,9 @@
     <string name="campaign_completion_unavailable">Campaign progress could not be saved. Retry by completing this level again.</string>
     <string name="campaign_completion_invalid">Campaign progress data is invalid. The completion was not recorded.</string>
     <string name="campaign_completion_level_invalid">The campaign level was no longer available. No progress was recorded.</string>
+    <string name="match_restart">RESTART MATCH</string>
+    <string name="match_next_level">NEXT LEVEL</string>
+    <string name="match_saving_progress">SAVING PROGRESS…</string>
     <string name="loadout_title">LOADOUT</string>
     <string name="loadout_level">CAMPAIGN • LEVEL %1$d</string>
     <string name="loadout_back">BACK</string>
@@ -24,9 +27,13 @@
     <string name="loadout_units">UNITS</string>
     <string name="loadout_ammunition">AMMUNITION</string>
     <string name="loadout_spells">SPELLS</string>
+    <string name="loadout_summary_title">LOADOUT SUMMARY</string>
+    <string name="loadout_summary_units">UNITS</string>
+    <string name="loadout_summary_ammo">AMMO</string>
+    <string name="loadout_summary_spells">SPELLS</string>
+    <string name="loadout_summary_count">%1$d / %2$d</string>
     <string name="loadout_selection_count">%1$d / %2$d SELECTED</string>
     <string name="loadout_available_on_level">Available on this level</string>
-    <string name="loadout_selected_summary">Units %1$d/%2$d  •  Ammo %3$d/%4$d  •  Spells %5$d/%6$d</string>
     <string name="loadout_stock">Stock: %1$d</string>
     <string name="loadout_unlimited">Unlimited</string>
     <string name="loadout_state_selected">SELECTED</string>

@@ -1,0 +1,93 @@
+Create a cohesive set of three category icons for the bottom Loadout summary
+in Urkaaaz. Each icon must be generated as an independent image. Do not create
+a footer mockup, sprite sheet, contact sheet, or combined image.
+
+## Reference inputs
+
+- Attach the user's Loadout screenshot showing the bottom summary. Use it as
+  the primary reference for each icon's silhouette, scale, and placement
+  beside its live category label and selection count.
+- Attach an approved Urkaaaz unit-card illustration and the main-menu
+  background as secondary references for material rendering, lighting, and
+  overall game-art quality.
+- The summary icons represent categories only. Do not reproduce a specific
+  unit, ammunition inventory, or spell effect from the cards.
+
+## Shared art direction
+
+- Create a coherent family of polished, dimensional fantasy-game icons with
+  crisp silhouettes, readable highlights, and restrained detail.
+- Use a bright steel, silver, and warm ivory palette that stays legible on a
+  dark wood-and-metal Loadout summary panel. Small bronze or muted gold accents
+  are acceptable, but avoid overpowering the icon with glow.
+- Center each motif with a small, even transparent safety margin. Make the
+  silhouette clear when displayed at approximately 24-40 dp.
+- Use transparent RGBA backgrounds. The Android UI renders category names,
+  selection counts, the summary panel, and the Start Match button separately.
+- These are category markers, not interactive controls. Do not add a badge,
+  button plate, card frame, check mark, lock, or status indicator.
+
+## Icon 1: units
+
+- Output filename: `loadout_summary_units.png`
+- Canvas: exactly 256 x 256 pixels, RGBA PNG.
+- Draw two crossed short swords as one compact, balanced silhouette, matching
+  the crossed-weapons motif in the reference screenshot.
+- Use polished steel blades with simple, slightly warm metal hilts. Keep both
+  blades and handles distinct at small size.
+- Do not add a shield, helmet, character, blood, text, or faction emblem.
+
+## Icon 2: ammunition
+
+- Output filename: `loadout_summary_ammunition.png`
+- Canvas: exactly 256 x 256 pixels, RGBA PNG.
+- Draw one rugged, faceted stone projectile inspired by the ROCK ammunition
+  icon in the reference screenshot. It should read immediately as the
+  ammunition category without looking like a specific card illustration.
+- Use dimensional gray stone with a few restrained warm highlights. Keep the
+  outline bold and the facets simple enough to remain recognizable at small
+  size.
+- Do not add a crate, fuse, flame, weapon, text, or background.
+
+## Icon 3: spells
+
+- Output filename: `loadout_summary_spells.png`
+- Canvas: exactly 256 x 256 pixels, RGBA PNG.
+- Draw one compact, elegant arcane spiral or magical vortex, matching the
+  silver spiral motif in the reference screenshot.
+- Use bright silver and ivory metal with a subtle cool-blue magical highlight.
+  Keep the spiral bold and readable; avoid fine runes that disappear when
+  reduced.
+- Keep the symbol generic to the spells category. Do not depict a particular
+  spell, element, character, text, or background.
+
+## Negative requirements
+
+- No words, letters, numbers, labels, watermark, signature, logo, screenshot,
+  scenery, card, UI panel, button, border, or contact sheet.
+- No opaque background, checkerboard, cast shadow outside the icon, or
+  excessive bloom.
+- No thin, tangled, or highly detailed shapes that become unreadable at small
+  size.
+- Do not combine multiple category symbols into one icon or make the three
+  icons visually interchangeable.
+
+## Output and review
+
+Return exactly three separate transparent PNG files with the exact filenames
+and dimensions above. Save them for review under:
+
+```text
+assets_src/loadout/ui/
+```
+
+Before delivery, verify that:
+
+- all three files are valid 256 x 256 RGBA PNGs with transparent backgrounds;
+- each icon is centered and recognizable at 24-40 dp;
+- the icons look like one visual family while remaining distinct by category;
+- no image contains text, a panel, a button, a watermark, or unintended
+  background pixels.
+
+Show the three icons individually on both dark and bright backgrounds for
+visual review. Do not integrate them into Android resources until approved.
