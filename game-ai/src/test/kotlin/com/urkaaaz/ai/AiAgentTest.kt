@@ -189,12 +189,15 @@ class AiAgentTest {
         val veteran = catalog.tuning(AiProfileSelection(AiProfileId.VETERAN))
         val elite = catalog.tuning(AiProfileSelection(AiProfileId.ELITE))
 
-        assertEquals(18f, cadet.angleErrorDegrees)
-        assertEquals(30f, cadet.powerError)
+        assertEquals(28f, cadet.angleErrorDegrees)
+        assertEquals(45f, cadet.powerError)
+        assertEquals(8_000L, cadet.unitRecruitmentIntervalMilliseconds)
         assertEquals(3f, veteran.angleErrorDegrees)
         assertEquals(6f, veteran.powerError)
+        assertEquals(0L, veteran.unitRecruitmentIntervalMilliseconds)
         assertEquals(1.25f, elite.angleErrorDegrees)
         assertEquals(2.5f, elite.powerError)
+        assertEquals(0L, elite.unitRecruitmentIntervalMilliseconds)
     }
 
     @Test

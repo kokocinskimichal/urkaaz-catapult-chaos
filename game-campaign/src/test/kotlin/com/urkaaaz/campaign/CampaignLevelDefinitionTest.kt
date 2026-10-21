@@ -43,6 +43,16 @@ class CampaignLevelDefinitionTest {
     }
 
     @Test
+    fun campaignAiDifficultyProgressesFromCadetToVeteranToElite() {
+        assertEquals(AiProfileId.CADET, CampaignLevelDefinition.forLevel(1).enemy.aiProfile.profileId)
+        assertEquals(AiProfileId.CADET, CampaignLevelDefinition.forLevel(10).enemy.aiProfile.profileId)
+        assertEquals(AiProfileId.VETERAN, CampaignLevelDefinition.forLevel(11).enemy.aiProfile.profileId)
+        assertEquals(AiProfileId.VETERAN, CampaignLevelDefinition.forLevel(30).enemy.aiProfile.profileId)
+        assertEquals(AiProfileId.ELITE, CampaignLevelDefinition.forLevel(31).enemy.aiProfile.profileId)
+        assertEquals(AiProfileId.ELITE, CampaignLevelDefinition.forLevel(100).enemy.aiProfile.profileId)
+    }
+
+    @Test
     fun milestoneSpellsBecomeAvailableAtTheirConfiguredLevels() {
         assertFalse(SpellType.HASTE in CampaignLevelDefinition.forLevel(5).availableSpells)
         assertTrue(SpellType.HASTE in CampaignLevelDefinition.forLevel(6).availableSpells)
@@ -57,7 +67,7 @@ class CampaignLevelDefinitionTest {
         val level = CampaignLevelDefinition.forLevel(3)
 
         assertEquals("chapter1-level3", level.mapDefinition.mapId)
-        assertEquals(AiProfileId.VETERAN, level.enemy.aiProfile.profileId)
+        assertEquals(AiProfileId.CADET, level.enemy.aiProfile.profileId)
         assertEquals(0, level.enemy.aiProfile.progressionPercent)
         assertEquals(12, level.startingAmmunition)
         assertEquals(1f, level.initialWind.direction)
@@ -70,7 +80,7 @@ class CampaignLevelDefinitionTest {
         val level = CampaignLevelDefinition.forLevel(4)
 
         assertEquals("chapter1-level4", level.mapDefinition.mapId)
-        assertEquals(AiProfileId.VETERAN, level.enemy.aiProfile.profileId)
+        assertEquals(AiProfileId.CADET, level.enemy.aiProfile.profileId)
         assertEquals(14, level.startingAmmunition)
         assertEquals(-1f, level.initialWind.direction)
         assertEquals(0.7f, level.initialWind.strength, 0.0001f)
@@ -106,7 +116,7 @@ class CampaignLevelDefinitionTest {
         assertTrue(scenario.initialUnits.isEmpty())
         assertTrue("SIEGE_BOMB" in scenario.availableAmmunition)
         assertTrue(scenario.initialResources.ammunition.isNotEmpty())
-        assertEquals(AiProfileId.VETERAN, scenario.aiProfile.profileId)
+        assertEquals(AiProfileId.CADET, scenario.aiProfile.profileId)
     }
 
     @Test

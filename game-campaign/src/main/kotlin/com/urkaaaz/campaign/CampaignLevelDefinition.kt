@@ -135,8 +135,6 @@ data class CampaignLevelDefinition(
 
         private fun aiProfileFor(level: Int): AiProfileSelection {
             val profileId = when {
-                level in setOf(3, 4, 6, 7) -> AiProfileId.VETERAN
-                level in setOf(8, 9) -> AiProfileId.ELITE
                 level <= 10 -> AiProfileId.CADET
                 level <= 30 -> AiProfileId.VETERAN
                 else -> AiProfileId.ELITE

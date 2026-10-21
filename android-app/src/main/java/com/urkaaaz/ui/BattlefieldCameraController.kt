@@ -30,6 +30,7 @@ class BattlefieldCameraController(
     private var lastPhaseLabel: String? = null
     private var postImpactHoldSeconds = 0f
     private var cameraReturnActive = false
+    private var preFollowScale: Float? = null
     private var manualPanActive = false
     private var panningMap = false
     private var panDragging = false
@@ -60,6 +61,7 @@ class BattlefieldCameraController(
             lastPhaseLabel = null
             postImpactHoldSeconds = 0f
             cameraReturnActive = false
+            preFollowScale = null
         }
         matchIdentityInitialized = true
         lastMatchId = state.matchId
@@ -93,6 +95,9 @@ class BattlefieldCameraController(
         if (trackedProjectile != null) {
             manualPanActive = false
             if (!wasFollowingProjectile) {
+                if (preFollowScale == null) {
+                    preFollowScale = transform.scale
+                }
                 transform = transform.copy(scale = maxOf(transform.scale, AUTO_TRACK_SCALE))
             }
             wasFollowingProjectile = true
@@ -117,6 +122,7 @@ class BattlefieldCameraController(
                 val targetTeam = trackedTeamLabel ?: "BLUE"
                 if (animateToTeam(state, targetTeam, viewportWidth, viewportHeight)) {
                     cameraReturnActive = false
+                    preFollowScale = null
                     lastFramedTeamLabel = targetTeam
                 }
             } else {
@@ -135,7 +141,9 @@ class BattlefieldCameraController(
 
     fun setSnapshotMode(enabled: Boolean) {
         snapshotMode = enabled
-        if (!enabled) {
+        if (enabled) {
+            preFollowScale = null
+        } else {
             initialLevelFramingApplied = false
         }
     }
@@ -159,6 +167,7 @@ class BattlefieldCameraController(
             offsetX = focusX - contentX * newScale,
             offsetY = focusY - contentY * newScale,
         )
+        preFollowScale = null
         manualPanActive = true
         wasFollowingProjectile = false
         postImpactHoldSeconds = 0f
@@ -288,20 +297,25 @@ class BattlefieldCameraController(
         viewportWidth: Float,
         viewportHeight: Float,
     ): Boolean {
+        val targetScale = preFollowScale ?: transform.scale
+        val nextScale =
+            transform.scale + (targetScale - transform.scale) * CAMERA_RETURN_LERP
         val (x, y) = if (teamLabel == "RED") {
             state.redCatapultX to state.redCatapultY
         } else {
             state.blueCatapultX to state.blueCatapultY
         }
         val targetX = viewportWidth / 2f -
-            (x / worldWidth * viewportWidth) * transform.scale
+            (x / worldWidth * viewportWidth) * nextScale
         val targetY = viewportHeight / 2f -
-            (y / worldHeight * viewportHeight) * transform.scale
+            (y / worldHeight * viewportHeight) * nextScale
         transform = transform.copy(
+            scale = nextScale,
             offsetX = transform.offsetX + (targetX - transform.offsetX) * CAMERA_RETURN_LERP,
             offsetY = transform.offsetY + (targetY - transform.offsetY) * CAMERA_RETURN_LERP,
         )
-        return abs(targetX - transform.offsetX) < CAMERA_RETURN_EPSILON &&
+        return abs(targetScale - transform.scale) < CAMERA_RETURN_SCALE_EPSILON &&
+            abs(targetX - transform.offsetX) < CAMERA_RETURN_EPSILON &&
             abs(targetY - transform.offsetY) < CAMERA_RETURN_EPSILON
     }
 
@@ -341,6 +355,7 @@ class BattlefieldCameraController(
         private const val RENDER_STEP_SECONDS = 0.033f
         private const val CAMERA_RETURN_LERP = 0.18f
         private const val CAMERA_RETURN_EPSILON = 1f
+        private const val CAMERA_RETURN_SCALE_EPSILON = 0.001f
         private const val PAN_START_DISTANCE = 12f
     }
 }

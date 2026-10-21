@@ -215,6 +215,75 @@ class BattlefieldCameraControllerTest {
     }
 
     @Test
+    fun automaticFollowRestoresThePreviousZoomWhenTheCameraReturns() {
+        val camera = BattlefieldCameraController()
+        val state = RenderStateMapper.map(
+            MatchSnapshot(
+                status = MatchStatus.RUNNING,
+                phase = MatchPhase.PLAYER_TURN,
+                activeTeam = Team.BLUE,
+            ),
+        ).copy(initialCameraZoom = 1.1f)
+        val viewportWidth = 1_000f
+        val viewportHeight = 600f
+        val projectile = ProjectileRenderState(
+            projectileId = "blue-shot-1",
+            teamLabel = "BLUE",
+            x = 2_400f,
+            y = 1_200f,
+            ammunitionType = "ROCK",
+        )
+
+        camera.update(state, viewportWidth, viewportHeight)
+        camera.update(state.copy(projectiles = listOf(projectile)), viewportWidth, viewportHeight)
+        assertEquals(1.25f, camera.transform.scale)
+
+        repeat(120) {
+            camera.update(state, viewportWidth, viewportHeight)
+        }
+
+        assertTrue(!camera.wasFollowingProjectile)
+        assertEquals(1.1f, camera.transform.scale, 0.001f)
+    }
+
+    @Test
+    fun manualZoomDuringProjectileFollowIsNotReplacedByAutomaticRestore() {
+        val camera = BattlefieldCameraController()
+        val state = RenderStateMapper.map(
+            MatchSnapshot(
+                status = MatchStatus.RUNNING,
+                phase = MatchPhase.PLAYER_TURN,
+                activeTeam = Team.BLUE,
+            ),
+        )
+        val viewportWidth = 1_000f
+        val viewportHeight = 600f
+        val projectile = ProjectileRenderState(
+            projectileId = "blue-shot-1",
+            teamLabel = "BLUE",
+            x = 2_400f,
+            y = 1_200f,
+            ammunitionType = "ROCK",
+        )
+
+        camera.update(state, viewportWidth, viewportHeight)
+        camera.update(state.copy(projectiles = listOf(projectile)), viewportWidth, viewportHeight)
+        camera.applyZoom(
+            scaleFactor = 2f,
+            focusX = viewportWidth / 2f,
+            focusY = viewportHeight / 2f,
+            viewportWidth = viewportWidth,
+            viewportHeight = viewportHeight,
+        )
+
+        repeat(120) {
+            camera.update(state, viewportWidth, viewportHeight)
+        }
+
+        assertEquals(2.5f, camera.transform.scale, 0.001f)
+    }
+
+    @Test
     fun endingPanBeforeDraggingDoesNotDisableFollowing() {
         val camera = BattlefieldCameraController()
         val state = RenderStateMapper.map(

@@ -12,6 +12,13 @@
 
 ### Changed
 
+- Reduced early campaign AI pressure: levels 1–10 now use CADET, with wider aim
+  error and an 8-second interval between unit recruitments; VETERAN starts at
+  level 11 and ELITE at 31.
+- Set initial and maximum supply to 20 for both teams; post-spend regeneration
+  replenishes one point every three seconds.
+- Automatic projectile tracking now restores the prior zoom while the camera
+  returns to the firing team's framing.
 - Restored both campaign fortresses to the standard 500 HP; the demo mode's
   existing BLUE fortress health bonus is unchanged.
 - Configured immersive full-screen mode to hide Android system bars.

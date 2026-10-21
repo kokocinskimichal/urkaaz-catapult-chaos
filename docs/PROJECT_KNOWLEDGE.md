@@ -270,11 +270,11 @@ The current match HUD displays:
 - A sent wave marks its units as moving, advances them toward the opposing
   fortress during simulation ticks, and switches rendering to the copied
   legacy movement animation frames.
-- Supply follows the legacy resource cadence: after spending, it regenerates
-  by one point every three seconds up to the maximum of twenty. Wave deployment
-  starts from the unit's garrison position without an artificial positional
-  jump, and movement uses the legacy `0.45` speed scale multiplied by the
-  global `2.0` movement rule.
+- Supply starts at 20 for each team and regenerates by one point every three
+  seconds up to a regeneration cap of 20. Wave deployment starts from the
+  unit's garrison position without an artificial positional jump, and movement
+  uses the legacy `0.45` speed scale multiplied by the global `2.0` movement
+  rule.
 - Unit waves now resolve legacy-style interactions in the deterministic
    simulation: Defenders and Raging Boars fight nearby enemy units, Slingmasters
    attack visible-range targets, Demolishers detonate on contact, and Sappers
@@ -362,8 +362,12 @@ does not decode the full animation set again for every frame or every unit.
   strategies for artillery, recruitment and wave dispatch. Its reaction
   interval and aim error are bounded by the campaign profile; it uses only
   RED's available supply and has no resource/stat bonuses.
-- BLUE and RED both start with 10 supply and regenerate one supply every three
-  seconds, up to a shared cap of 10.
+- Campaign AI progresses from CADET on levels 1–10 to VETERAN on 11–30 and
+  ELITE from level 31. CADET adds aim error of up to ±28° and ±45 power and has
+  an 8-second interval between unit recruitments; combat decisions continue
+  during that interval.
+- BLUE and RED both start with 20 supply and regenerate one supply every three
+  seconds, up to a shared cap of 20.
 - Fortress and unit HP bars share one renderer style: a rounded dark track,
 8-unit height, and green above 60% health, orange from 30% through 60%, or
 red below 30%. Zero health leaves the dark track unfilled.
@@ -552,6 +556,9 @@ must go through commands and domain/application boundaries.
   automatic tracking resumes when the next BLUE projectile launches. A pan
   touch that ends before the drag threshold does not disable tracking, and a
   match restart resets the manual override even if projectile IDs are reused.
+  Automatic projectile tracking raises zoom to at least 1.25x, then restores
+  the pre-follow scale while the camera returns to the tracked team's catapult.
+  A manual zoom during tracking cancels that pending automatic restoration.
   Aiming power uses screen-space pull distance, so the same finger drag keeps
   its strength across zoom levels; the aiming circle and gesture threshold are
   also measured in screen space.

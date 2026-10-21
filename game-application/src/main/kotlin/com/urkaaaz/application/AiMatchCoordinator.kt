@@ -36,6 +36,7 @@ class AiMatchCoordinator(
     private var paused = false
     private var initialDecisionPending = true
     private var elapsedSinceDecision = 0L
+    private var recruitmentCooldownRemainingMilliseconds = 0L
 
     fun start(randomSeed: Long) {
         val allowedUnits = allowedUnitIdsOverride
@@ -62,6 +63,7 @@ class AiMatchCoordinator(
         paused = false
         initialDecisionPending = true
         elapsedSinceDecision = 0L
+        recruitmentCooldownRemainingMilliseconds = 0L
     }
 
     fun decide(
@@ -71,6 +73,8 @@ class AiMatchCoordinator(
         require(elapsedMilliseconds >= 0) { "elapsed time must not be negative" }
         val currentAgent = agent ?: return emptyList()
         if (paused || snapshot.status != MatchStatus.RUNNING) return emptyList()
+        recruitmentCooldownRemainingMilliseconds =
+            (recruitmentCooldownRemainingMilliseconds - elapsedMilliseconds).coerceAtLeast(0L)
         if (!initialDecisionPending) {
             elapsedSinceDecision += elapsedMilliseconds
             if (elapsedSinceDecision < currentAgent.reactionIntervalMilliseconds) {
@@ -80,10 +84,18 @@ class AiMatchCoordinator(
         } else {
             initialDecisionPending = false
         }
-        return currentAgent.decide(
+        val commands = currentAgent.decide(
             snapshot = snapshot,
             includeUnitActions = unitAutomationEnabled,
         )
+        if (recruitmentCooldownRemainingMilliseconds > 0L) {
+            return commands.filterNot { it is MatchCommand.DeployUnit }
+        }
+        if (commands.any { it is MatchCommand.DeployUnit }) {
+            recruitmentCooldownRemainingMilliseconds =
+                currentAgent.unitRecruitmentIntervalMilliseconds
+        }
+        return commands
     }
 
     fun pause() {
@@ -99,6 +111,7 @@ class AiMatchCoordinator(
         paused = false
         initialDecisionPending = true
         elapsedSinceDecision = 0L
+        recruitmentCooldownRemainingMilliseconds = 0L
     }
 
     fun setUnitAutomationEnabled(enabled: Boolean) {

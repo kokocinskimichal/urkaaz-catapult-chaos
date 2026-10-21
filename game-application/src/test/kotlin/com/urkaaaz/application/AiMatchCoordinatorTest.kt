@@ -10,6 +10,7 @@ import com.urkaaaz.contracts.MatchPhase
 import com.urkaaaz.contracts.MatchScenario
 import com.urkaaaz.contracts.MatchSnapshot
 import com.urkaaaz.contracts.MatchStatus
+import com.urkaaaz.contracts.MatchCommand
 import com.urkaaaz.contracts.PlayerConfig
 import com.urkaaaz.contracts.PlayerId
 import com.urkaaaz.contracts.ResourceSnapshot
@@ -61,7 +62,34 @@ class AiMatchCoordinatorTest {
         assertEquals(redPlayer, first.first().playerId)
         assertEquals(4, first.size)
         assertTrue(beforeCadence.isEmpty())
-        assertEquals(4, atCadence.size)
+        assertEquals(3, atCadence.size)
+        assertTrue(atCadence.none { it is MatchCommand.DeployUnit })
+    }
+
+    @Test
+    fun cadetRecruitmentWaitsEightSecondsWhileCombatDecisionsContinue() {
+        val coordinator = AiMatchCoordinator(scenario)
+        coordinator.start(randomSeed = 15L)
+        var elapsed = 0L
+        val recruitmentTimes = mutableListOf<Long>()
+        var combatDecisionDuringCooldown = false
+
+        repeat(300) {
+            elapsed += 33L
+            val commands = coordinator.decide(snapshot, elapsedMilliseconds = 33L)
+            if (commands.any { it is MatchCommand.DeployUnit }) {
+                recruitmentTimes += elapsed
+            } else if (
+                recruitmentTimes.isNotEmpty() &&
+                commands.any { it is MatchCommand.Aim }
+            ) {
+                combatDecisionDuringCooldown = true
+            }
+        }
+
+        assertEquals(2, recruitmentTimes.size)
+        assertTrue(recruitmentTimes[1] - recruitmentTimes[0] >= 8_000L)
+        assertTrue(combatDecisionDuringCooldown)
     }
 
     @Test

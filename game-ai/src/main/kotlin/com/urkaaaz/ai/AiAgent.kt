@@ -29,6 +29,7 @@ data class AiProfileDefinition(
     val angleErrorDegrees: Float,
     val powerError: Float,
     val reactionIntervalMilliseconds: Long,
+    val unitRecruitmentIntervalMilliseconds: Long = 0L,
     val progressionErrorReduction: Float = 0f,
     val progressionReactionReduction: Float = 0f,
 ) {
@@ -37,6 +38,9 @@ data class AiProfileDefinition(
         require(powerError >= 0f) { "power error must not be negative" }
         require(reactionIntervalMilliseconds > 0) {
             "reaction interval must be positive"
+        }
+        require(unitRecruitmentIntervalMilliseconds >= 0) {
+            "unit recruitment interval must not be negative"
         }
         require(progressionErrorReduction in 0f..1f) {
             "profile progression error reduction must be between 0 and 1"
@@ -54,6 +58,7 @@ data class AiProfileTuning(
     val angleErrorDegrees: Float,
     val powerError: Float,
     val reactionIntervalMilliseconds: Long,
+    val unitRecruitmentIntervalMilliseconds: Long,
 )
 
 class AiProfileCatalog(definitions: List<AiProfileDefinition>) {
@@ -89,6 +94,8 @@ class AiProfileCatalog(definitions: List<AiProfileDefinition>) {
             waveStrategy = definition.waveStrategy,
             angleErrorDegrees = definition.angleErrorDegrees * errorScale,
             powerError = definition.powerError * errorScale,
+            unitRecruitmentIntervalMilliseconds =
+                definition.unitRecruitmentIntervalMilliseconds,
             reactionIntervalMilliseconds = (
                 definition.reactionIntervalMilliseconds - reactionReduction
                 ).toLong().coerceAtLeast(
@@ -107,9 +114,10 @@ class AiProfileCatalog(definitions: List<AiProfileDefinition>) {
                     catapultStrategy = AiStrategyId("simple"),
                     recruitmentStrategy = AiStrategyId("simple"),
                     waveStrategy = AiStrategyId("simple"),
-                    angleErrorDegrees = 18f,
-                    powerError = 30f,
+                    angleErrorDegrees = 28f,
+                    powerError = 45f,
                     reactionIntervalMilliseconds = 1_100L,
+                    unitRecruitmentIntervalMilliseconds = 8_000L,
                 ),
                 AiProfileDefinition(
                     profileId = AiProfileId.VETERAN,
@@ -163,6 +171,9 @@ class AiAgent(
 
     val reactionIntervalMilliseconds: Long
         get() = tuning.reactionIntervalMilliseconds
+
+    val unitRecruitmentIntervalMilliseconds: Long
+        get() = tuning.unitRecruitmentIntervalMilliseconds
 
     fun setAllowedUnits(allowedUnits: Set<UnitDefinition>) {
         require(allowedUnits.isNotEmpty()) { "AI must have at least one allowed unit" }

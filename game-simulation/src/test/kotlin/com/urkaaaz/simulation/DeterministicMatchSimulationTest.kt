@@ -372,13 +372,15 @@ class DeterministicMatchSimulationTest {
     }
 
     @Test
-    fun bothTeamsStartWithTenSupplyAndRegenerateUpToTen() {
+    fun bothTeamsStartWithTwentySupplyAndRegenerateUpToTwenty() {
         val simulation = DeterministicMatchSimulation(MatchId("supply-match"), config)
         simulation.start()
 
-        assertEquals(10, simulation.snapshot().resourcesByTeam[Team.BLUE]?.supply)
-        assertEquals(10, simulation.snapshot().resourcesByTeam[Team.RED]?.supply)
+        assertEquals(20, simulation.snapshot().resourcesByTeam[Team.BLUE]?.supply)
+        assertEquals(20, simulation.snapshot().resourcesByTeam[Team.RED]?.supply)
 
+        simulation.deployUnit(com.urkaaaz.domain.UnitFactory.defender(), Team.BLUE)
+        simulation.deployUnit(com.urkaaaz.domain.UnitFactory.defender(), Team.BLUE)
         simulation.deployUnit(com.urkaaaz.domain.UnitFactory.defender(), Team.BLUE)
 
         assertEquals(5, simulation.snapshot().resourcesByTeam[Team.BLUE]?.supply)
@@ -386,10 +388,10 @@ class DeterministicMatchSimulationTest {
         assertEquals(5, simulation.snapshot().resourcesByTeam[Team.BLUE]?.supply)
         simulation.advance(1)
         assertEquals(6, simulation.snapshot().resourcesByTeam[Team.BLUE]?.supply)
-        simulation.advance(12_000)
-        assertEquals(10, simulation.snapshot().resourcesByTeam[Team.BLUE]?.supply)
+        simulation.advance(42_000)
+        assertEquals(20, simulation.snapshot().resourcesByTeam[Team.BLUE]?.supply)
         simulation.advance(3_000)
-        assertEquals(10, simulation.snapshot().resourcesByTeam[Team.BLUE]?.supply)
+        assertEquals(20, simulation.snapshot().resourcesByTeam[Team.BLUE]?.supply)
     }
 
     @Test

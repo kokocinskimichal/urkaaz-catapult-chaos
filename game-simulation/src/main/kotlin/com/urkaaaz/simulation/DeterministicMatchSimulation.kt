@@ -2036,7 +2036,7 @@ class DeterministicMatchSimulation(
     )
 
     companion object {
-        private const val MAX_SUPPLY = 10
+        private const val MAX_SUPPLY = 20
         private const val SUPPLY_REGEN_INTERVAL_SECONDS = 3f
         private const val MIN_DAMAGE_VARIANCE_FACTOR = 0.80f
         private const val MAX_DAMAGE_VARIANCE_FACTOR = 1.20f
