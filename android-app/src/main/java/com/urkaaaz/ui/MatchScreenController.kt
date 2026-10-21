@@ -89,6 +89,9 @@ class MatchScreenController(
                 render(viewModel.dispatch(MatchUiAction.TogglePause))
             }
             onBackClicked = this@MatchScreenController.onBackClicked
+            onFortressShieldClicked = {
+                render(viewModel.dispatch(MatchUiAction.CastFortressShield))
+            }
         }
         ammunitionPanel = AmmunitionPanelView(
             activity,

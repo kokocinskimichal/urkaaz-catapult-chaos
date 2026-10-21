@@ -22,6 +22,38 @@ class MatchHudView(context: Context) : FrameLayout(context) {
         contentDescription = "Wind direction and strength"
         scaleType = ImageView.ScaleType.FIT_CENTER
     }
+    private val manaText = hudText("MANA 0", 14f).apply {
+        setTypeface(typeface, Typeface.BOLD)
+        setSingleLine(true)
+    }
+    private val spellFeedbackText = hudText("", 11f).apply {
+        setSingleLine(true)
+        ellipsize = android.text.TextUtils.TruncateAt.END
+    }
+    private val fortressShieldButton = Button(context).apply {
+        text = "CAST SHIELD"
+        UiTypography.applyButtonTypeface(this)
+        textSize = 14f
+        isSingleLine = true
+        ellipsize = android.text.TextUtils.TruncateAt.END
+        setTextColor(Color.WHITE)
+        background = panelBackground(Color.argb(225, 49, 91, 126))
+        minWidth = 0
+        minHeight = 0
+        minimumWidth = 0
+        minimumHeight = 0
+        setPadding(8, 0, 8, 0)
+        contentDescription = "Cast fortress shield"
+    }
+    private val spellPanel = LinearLayout(context).apply {
+        orientation = LinearLayout.VERTICAL
+        gravity = Gravity.CENTER
+        background = panelBackground(Color.argb(225, 36, 43, 47))
+        setPadding(6, 4, 6, 4)
+        addView(manaText, LinearLayout.LayoutParams(-1, 24))
+        addView(fortressShieldButton, LinearLayout.LayoutParams(-1, 44))
+        addView(spellFeedbackText, LinearLayout.LayoutParams(-1, 20))
+    }
     private val pauseButton = Button(context).apply {
         text = "II"
         UiTypography.applyButtonTypeface(this)
@@ -88,12 +120,22 @@ class MatchHudView(context: Context) : FrameLayout(context) {
                 topMargin = 38
             },
         )
+        addView(
+            spellPanel,
+            LayoutParams(184, 100).apply {
+                gravity = Gravity.TOP or Gravity.END
+                topMargin = 42
+                marginEnd = 24
+            },
+        )
         pauseButton.setOnClickListener { onPauseClicked?.invoke() }
         backButton.setOnClickListener { onBackClicked?.invoke() }
+        fortressShieldButton.setOnClickListener { onFortressShieldClicked?.invoke() }
     }
 
     var onPauseClicked: (() -> Unit)? = null
     var onBackClicked: (() -> Unit)? = null
+    var onFortressShieldClicked: (() -> Unit)? = null
 
     fun render(state: RenderState) {
         timerText.text = formatMatchTime(state.matchTimeRemainingMilliseconds)
@@ -105,6 +147,27 @@ class MatchHudView(context: Context) : FrameLayout(context) {
             windIndicatorResource(state.windDirection, state.windStrength),
         )
         pauseButton.text = if (state.statusLabel == "PAUSED") "▶" else "II"
+        spellPanel.visibility = timerPanel.visibility
+        manaText.text = "MANA: ${state.playerMana}"
+        val shieldHealth = state.blueFortressShieldHealth
+        fortressShieldButton.text = when {
+            shieldHealth != null && shieldHealth > 0 ->
+                "ACTIVE $shieldHealth/${state.blueFortressShieldMaxHealth ?: shieldHealth}"
+            state.hasFortressShieldEquipped -> "CAST SHIELD"
+            else -> "NOT EQUIPPED"
+        }
+        fortressShieldButton.isEnabled =
+            state.statusLabel == "RUNNING" &&
+                state.hasFortressShieldEquipped &&
+                (shieldHealth == null || shieldHealth <= 0)
+        fortressShieldButton.alpha = 1f
+        fortressShieldButton.contentDescription = when {
+            shieldHealth != null && shieldHealth > 0 ->
+                "Fortress shield active, $shieldHealth hit points"
+            state.hasFortressShieldEquipped -> "Cast fortress shield"
+            else -> "Fortress shield is not equipped"
+        }
+        spellFeedbackText.text = state.spellFeedbackLabel.orEmpty()
     }
 
     private fun formatMatchTime(milliseconds: Long): String {

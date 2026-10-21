@@ -2,6 +2,7 @@ package com.urkaaaz.application.loadout
 
 import com.urkaaaz.domain.AmmunitionType
 import com.urkaaaz.domain.SpellType
+import com.urkaaaz.domain.SpellCatalog
 import com.urkaaaz.domain.UnitConfigurations
 
 /** One canonical, immutable player selection. Empty unit/spell lists are valid drafts only. */
@@ -82,7 +83,7 @@ internal fun String.isAllowedSpell(
     availability: LoadoutAvailability,
     progression: LoadoutProgressionSnapshot,
 ): Boolean {
-    val spell = SpellType.valueOf(this)
+    val spell = SpellCatalog.find(this) ?: return false
     return if (spell.special) {
         progression.specialSpellStock(this) > 0
     } else {

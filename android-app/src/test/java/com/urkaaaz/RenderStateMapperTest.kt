@@ -19,6 +19,7 @@ import com.urkaaaz.contracts.TerrainProfile
 import com.urkaaaz.contracts.TerrainSample
 import com.urkaaaz.contracts.ProjectileSnapshot
 import com.urkaaaz.contracts.RelicSize
+import com.urkaaaz.contracts.ResourceSnapshot
 import com.urkaaaz.contracts.Team
 import com.urkaaaz.contracts.WindSnapshot
 import com.urkaaaz.ui.RenderStateMapper
@@ -63,6 +64,30 @@ class RenderStateMapperTest {
         assertEquals(125_000L, state.matchTimeRemainingMilliseconds)
         assertEquals(-1f, state.windDirection)
         assertEquals(0.8f, state.windStrength)
+    }
+
+    @Test
+    fun mapperExposesPlayerManaAndFortressShieldHealth() {
+        val state = RenderStateMapper.map(
+            MatchSnapshot(
+                fortresses = listOf(
+                    FortressSnapshot(
+                        entityId = EntityId("blue-fortress"),
+                        team = Team.BLUE,
+                        health = 500,
+                        maxHealth = 500,
+                        shieldHealth = 65,
+                        shieldMaxHealth = 80,
+                    ),
+                ),
+                resourcesByTeam = mapOf(Team.BLUE to ResourceSnapshot(mana = 20)),
+            ),
+        )
+
+        assertEquals(20, state.playerMana)
+        assertEquals(65, state.blueFortressShieldHealth)
+        assertEquals(80, state.blueFortressShieldMaxHealth)
+        assertEquals(null, state.redFortressShieldHealth)
     }
 
     @Test

@@ -2,6 +2,7 @@ package com.urkaaaz.application
 
 import com.urkaaaz.contracts.MapDefinition
 import com.urkaaaz.contracts.MatchCommand
+import com.urkaaaz.contracts.CommandResult
 import com.urkaaaz.contracts.MatchEvent
 import com.urkaaaz.contracts.MatchId
 import com.urkaaaz.contracts.MatchScenario
@@ -79,8 +80,10 @@ object MatchReplayPlayer {
             replay.steps.forEach { step ->
                 when (step) {
                     is MatchReplayStep.Command -> {
-                        session.dispatch(step.value)
-                        addAll(session.consumeEvents())
+                        when (val result = session.dispatchResult(step.value)) {
+                            is CommandResult.Accepted -> addAll(result.events)
+                            is CommandResult.Rejected -> Unit
+                        }
                     }
                     MatchReplayStep.Pause -> session.pause()
                     MatchReplayStep.Resume -> session.resume()

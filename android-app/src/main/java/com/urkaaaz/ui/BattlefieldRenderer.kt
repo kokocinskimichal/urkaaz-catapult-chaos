@@ -10,6 +10,7 @@ import android.graphics.RectF
 import android.graphics.Shader
 import android.graphics.Typeface
 import com.urkaaaz.contracts.FortressHitboxProfile
+import com.urkaaaz.contracts.FortressShieldGeometry
 import com.urkaaaz.contracts.WorldDimensions
 import com.urkaaaz.contracts.WorldScale
 
@@ -27,6 +28,15 @@ class BattlefieldRenderer(
 ) {
     private val backgroundPaint = Paint(Paint.ANTI_ALIAS_FLAG)
     private val spritePaint = Paint(Paint.ANTI_ALIAS_FLAG or Paint.FILTER_BITMAP_FLAG)
+    private val fortressShieldFillPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        color = Color.argb(38, 75, 183, 255)
+        style = Paint.Style.FILL
+    }
+    private val fortressShieldStrokePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        color = Color.argb(220, 130, 225, 255)
+        style = Paint.Style.STROKE
+        strokeWidth = 5f
+    }
 
     fun render(
         canvas: Canvas,
@@ -131,6 +141,22 @@ class BattlefieldRenderer(
             redFortressBaseline,
             fortressRenderWidth,
             fortressRenderHeight,
+        )
+        drawFortressShield(
+            canvas = canvas,
+            health = state.blueFortressShieldHealth,
+            centerX = blueFortressCenterX,
+            centerY = blueFortressCenterY,
+            width = fortressRenderWidth,
+            height = fortressRenderHeight,
+        )
+        drawFortressShield(
+            canvas = canvas,
+            health = state.redFortressShieldHealth,
+            centerX = redFortressCenterX,
+            centerY = redFortressCenterY,
+            width = fortressRenderWidth,
+            height = fortressRenderHeight,
         )
 
         drawDeformedCap(
@@ -324,6 +350,29 @@ class BattlefieldRenderer(
         }
         if (isAiming) drawAimGesture(canvas, groundTop)
         canvas.restore()
+    }
+
+    private fun drawFortressShield(
+        canvas: Canvas,
+        health: Int?,
+        centerX: Float,
+        centerY: Float,
+        width: Float,
+        height: Float,
+    ) {
+        if (health == null || health <= 0) return
+        val horizontalRadius =
+            FortressShieldGeometry.horizontalRadius(width)
+        val verticalRadius =
+            FortressShieldGeometry.verticalRadius(height)
+        val bounds = RectF(
+            centerX - horizontalRadius,
+            centerY - verticalRadius,
+            centerX + horizontalRadius,
+            centerY + verticalRadius,
+        )
+        canvas.drawOval(bounds, fortressShieldFillPaint)
+        canvas.drawOval(bounds, fortressShieldStrokePaint)
     }
 
     private fun drawFireRainFields(

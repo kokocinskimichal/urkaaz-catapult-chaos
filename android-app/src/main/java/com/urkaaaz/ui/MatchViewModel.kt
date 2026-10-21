@@ -7,7 +7,9 @@ import com.urkaaaz.campaign.MapDefinitionRepository
 import com.urkaaaz.application.LocalMatchGateway
 import com.urkaaaz.application.MatchReplay
 import com.urkaaaz.contracts.CommandId
+import com.urkaaaz.contracts.CommandResult
 import com.urkaaaz.contracts.EventId
+import com.urkaaaz.contracts.MatchError
 import com.urkaaaz.contracts.MatchCommand
 import com.urkaaaz.contracts.MatchEvent
 import com.urkaaaz.contracts.MatchId
@@ -96,6 +98,11 @@ class MatchViewModel(
     private var paused = false
     private var selectedAmmunition = "ROCK"
     private val forwardedCampaignCompletions = mutableSetOf<Triple<Long, MatchId, EventId>>()
+    private var spellFeedbackLabel: String? = null
+    private val hasFortressShieldEquipped = campaignScenario?.let { scenario ->
+        "FORTRESS_SHIELD" in scenario.availableSpells &&
+            "FORTRESS_SHIELD" in scenario.playerLoadout?.spellTypes.orEmpty()
+    } == true
 
     var renderState: RenderState = RenderStateMapper.map(MatchSnapshot())
         private set
@@ -148,6 +155,9 @@ class MatchViewModel(
     }
 
     fun dispatch(action: MatchUiAction): RenderState {
+        if (action == MatchUiAction.CastFortressShield) {
+            return dispatchFortressShield()
+        }
         if (action == MatchUiAction.AdvanceSimulation) {
             val currentSnapshot = gateway.snapshot()
             if (currentSnapshot.status != com.urkaaaz.contracts.MatchStatus.RUNNING) {
@@ -162,6 +172,7 @@ class MatchViewModel(
             MatchUiAction.StartMatch -> {
                 paused = false
                 matchGeneration += 1L
+                spellFeedbackLabel = null
                 gateway.dispatch(
                     MatchCommand.Start(
                     commandId = CommandId("ui-${++commandSequence}"),
@@ -174,6 +185,7 @@ class MatchViewModel(
                 paused = false
                 matchGeneration += 1L
                 selectedAmmunition = "ROCK"
+                spellFeedbackLabel = null
                 gateway.restart(matchId, playerId)
             }
             MatchUiAction.FireRock -> gateway.dispatch(
@@ -243,6 +255,7 @@ class MatchViewModel(
                     playerId = playerId,
                 ),
             )
+            MatchUiAction.CastFortressShield -> return dispatchFortressShield()
         }
         var presentationEvents = gateway.consumeEvents()
         if (action == MatchUiAction.AdvanceSimulation &&
@@ -263,7 +276,43 @@ class MatchViewModel(
         forwardCampaignCompletionEvents(events)
         return RenderStateMapper.map(snapshot, events).copy(
             matchGeneration = matchGeneration,
+            hasFortressShieldEquipped = hasFortressShieldEquipped,
+            spellFeedbackLabel = spellFeedbackLabel,
         )
+    }
+
+    private fun dispatchFortressShield(): RenderState {
+        spellFeedbackLabel = null
+        val result = gateway.dispatchResult(
+            MatchCommand.CastSpell(
+                commandId = CommandId("ui-${++commandSequence}"),
+                matchId = matchId,
+                playerId = playerId,
+                spellType = "FORTRESS_SHIELD",
+            ),
+        )
+        val events = when (result) {
+            is CommandResult.Accepted -> {
+                spellFeedbackLabel = "SHIELD ACTIVATED"
+                result.events
+            }
+            is CommandResult.Rejected -> {
+                spellFeedbackLabel = spellRejectionLabel(result.error)
+                emptyList()
+            }
+        }
+        return mapRenderState(gateway.snapshot(), events).also { renderState = it }
+    }
+
+    private fun spellRejectionLabel(error: MatchError): String = when (error) {
+        MatchError.INSUFFICIENT_RESOURCE -> "NOT ENOUGH MANA"
+        MatchError.SPELL_ALREADY_ACTIVE -> "SHIELD ALREADY ACTIVE"
+        MatchError.SPELL_NOT_IN_LOADOUT -> "SHIELD NOT EQUIPPED"
+        MatchError.SPELL_NOT_AVAILABLE -> "SHIELD UNAVAILABLE"
+        MatchError.MATCH_NOT_RUNNING,
+        MatchError.ALREADY_FINISHED,
+        -> "MATCH NOT RUNNING"
+        else -> "CAST REJECTED"
     }
 
     internal fun forwardCampaignCompletionEvents(events: List<MatchEvent>) {

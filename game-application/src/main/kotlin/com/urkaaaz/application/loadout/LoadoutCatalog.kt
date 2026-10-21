@@ -4,6 +4,7 @@ import com.urkaaaz.domain.AmmunitionCatalog as DomainAmmunitionCatalog
 import com.urkaaaz.domain.AmmunitionEffect
 import com.urkaaaz.domain.AmmunitionType
 import com.urkaaaz.domain.SpellCategory
+import com.urkaaaz.domain.SpellCatalog
 import com.urkaaaz.domain.SpellType
 import com.urkaaaz.domain.UnitConfigurations
 
@@ -80,9 +81,9 @@ object LoadoutCatalog {
             )
         }
 
-    val spells: List<LoadoutSpellDefinition> = SpellType.values().map { spell ->
+    val spells: List<LoadoutSpellDefinition> = SpellCatalog.all.map { spell ->
         LoadoutSpellDefinition(
-            id = spell.name,
+            id = spell.type.name,
             goldCost = spell.goldCost,
             category = spell.category.toLoadoutCategory(),
             special = spell.special,

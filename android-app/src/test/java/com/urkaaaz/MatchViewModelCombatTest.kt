@@ -48,6 +48,44 @@ class MatchViewModelCombatTest {
     }
 
     @Test
+    fun equippedFortressShieldCanBeCastAndRejectedWhenAlreadyActive() {
+        val viewModel = MatchViewModel(
+            campaignLevel = 1,
+            playerLoadout = PlayerLoadoutConfig(
+                playerId = PlayerId("player"),
+                unitTypes = listOf("DEFENDER"),
+                ammunitionSlots = listOf("ROCK", null, null),
+                spellTypes = listOf("FORTRESS_SHIELD"),
+            ),
+        )
+        viewModel.dispatch(MatchUiAction.StartMatch)
+
+        val active = viewModel.dispatch(MatchUiAction.CastFortressShield)
+
+        assertEquals(20, active.playerMana)
+        assertEquals(80, active.blueFortressShieldHealth)
+        assertEquals("SHIELD ACTIVATED", active.spellFeedbackLabel)
+
+        val rejected = viewModel.dispatch(MatchUiAction.CastFortressShield)
+
+        assertEquals(20, rejected.playerMana)
+        assertEquals(80, rejected.blueFortressShieldHealth)
+        assertEquals("SHIELD ALREADY ACTIVE", rejected.spellFeedbackLabel)
+    }
+
+    @Test
+    fun fortressShieldActivationWithoutEquippedSpellIsReported() {
+        val viewModel = MatchViewModel(campaignLevel = 1)
+        viewModel.dispatch(MatchUiAction.StartMatch)
+
+        val rejected = viewModel.dispatch(MatchUiAction.CastFortressShield)
+
+        assertEquals(100, rejected.playerMana)
+        assertEquals(null, rejected.blueFortressShieldHealth)
+        assertEquals("SHIELD NOT EQUIPPED", rejected.spellFeedbackLabel)
+    }
+
+    @Test
     fun campaignMatchOnlyShowsUnitsAvailableAtTheSelectedLevel() {
         val viewModel = MatchViewModel(campaignLevel = 1)
 

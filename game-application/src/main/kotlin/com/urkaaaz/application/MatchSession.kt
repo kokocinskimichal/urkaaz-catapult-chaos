@@ -1,6 +1,8 @@
 package com.urkaaaz.application
 
 import com.urkaaaz.contracts.MatchCommand
+import com.urkaaaz.contracts.CommandResult
+import com.urkaaaz.contracts.MatchError
 import com.urkaaaz.contracts.MatchSnapshot
 import com.urkaaaz.contracts.MatchStatus
 import com.urkaaaz.contracts.MatchScenario
@@ -8,6 +10,8 @@ import com.urkaaaz.contracts.MapDefinition
 import com.urkaaaz.domain.AmmunitionType
 import com.urkaaaz.domain.WorldBounds
 import com.urkaaaz.domain.UnitFactory
+import com.urkaaaz.domain.SpellCatalog
+import com.urkaaaz.domain.SpellType
 import com.urkaaaz.contracts.Team
 import com.urkaaaz.contracts.WindSnapshot
 import com.urkaaaz.contracts.WorldDimensions
@@ -53,6 +57,12 @@ class MatchSession(
     )
 
     fun dispatch(command: MatchCommand): MatchSnapshot {
+        if (command is MatchCommand.CastSpell) {
+            return when (val result = dispatchSpell(command, includeEventsInResult = false)) {
+                is CommandResult.Accepted -> latestSnapshot
+                is CommandResult.Rejected -> throw MatchCommandRejectedException(result.error)
+            }
+        }
         latestEvents = emptyList()
         latestSnapshot = when (command) {
             is MatchCommand.Start -> start(command)
@@ -108,6 +118,67 @@ class MatchSession(
             replaySteps += MatchReplayStep.Command(command)
         }
         return latestSnapshot
+    }
+
+    fun dispatchResult(command: MatchCommand): CommandResult {
+        if (command is MatchCommand.CastSpell) {
+            return dispatchSpell(command, includeEventsInResult = true)
+        }
+        dispatch(command)
+        return CommandResult.Accepted(
+            commandId = command.commandId,
+            events = consumeEvents(),
+        )
+    }
+
+    private fun dispatchSpell(
+        command: MatchCommand.CastSpell,
+        includeEventsInResult: Boolean,
+    ): CommandResult {
+        latestEvents = emptyList()
+        fun rejected(error: MatchError): CommandResult.Rejected {
+            if (replaySeed != null) replaySteps += MatchReplayStep.Command(command)
+            return CommandResult.Rejected(command.commandId, error)
+        }
+
+        val runningSimulation = simulation
+            ?: return rejected(MatchError.MATCH_NOT_RUNNING)
+        when (runningSimulation.snapshot().status) {
+            MatchStatus.RUNNING -> Unit
+            MatchStatus.FINISHED -> return rejected(MatchError.ALREADY_FINISHED)
+            else -> return rejected(MatchError.MATCH_NOT_RUNNING)
+        }
+        val spell = SpellCatalog.find(command.spellType)
+            ?: return rejected(MatchError.UNKNOWN_SPELL)
+        val matchScenario = scenario
+            ?: return rejected(MatchError.SPELL_NOT_AVAILABLE)
+        if (command.spellType !in matchScenario.availableSpells) {
+            return rejected(MatchError.SPELL_NOT_AVAILABLE)
+        }
+        val team = teamForPlayer(command.playerId)
+        if (team == Team.BLUE) {
+            val loadout = matchScenario.playerLoadout
+            if (loadout?.playerId != command.playerId ||
+                command.spellType !in loadout.spellTypes
+            ) {
+                return rejected(MatchError.SPELL_NOT_IN_LOADOUT)
+            }
+        }
+        if (!spell.isImplemented) return rejected(MatchError.SPELL_NOT_IMPLEMENTED)
+
+        val error = when (spell.type) {
+            SpellType.FORTRESS_SHIELD ->
+                runningSimulation.castFortressShield(command.playerId, team, command.target)
+            else -> MatchError.SPELL_NOT_IMPLEMENTED
+        }
+        if (error != null) return rejected(error)
+
+        latestEvents = runningSimulation.drainEvents()
+        latestSnapshot = runningSimulation.snapshot()
+        if (replaySeed != null) replaySteps += MatchReplayStep.Command(command)
+        val result = CommandResult.Accepted(command.commandId, latestEvents)
+        if (includeEventsInResult) latestEvents = emptyList()
+        return result
     }
 
     fun replay(): MatchReplay? {

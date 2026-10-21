@@ -1,0 +1,213 @@
+Design one cohesive landscape match-HUD concept for Urkaaaz. The result must
+look like a polished, readable extension of the supplied game screen, not a
+generic mobile strategy interface. Create one unified layout and show it in
+two interaction states. Do not implement Android UI or generate production
+assets.
+
+## Reference inputs
+
+Attach these images to the generation prompt:
+
+1. **Required primary reference:** the full current Urkaaaz match-screen
+   screenshot supplied with this request. Preserve its battlefield, biome,
+   camera framing, units, catapults, projectiles, and existing game-art
+   identity. Treat it as the source of truth for the actual play area.
+2. **Required control reference:** a high-resolution screenshot of the active
+   bottom-left unit panel, including the Supply gauge, available unit buttons,
+   and Send Wave button. Include disabled or unavailable unit states if
+   possible.
+3. **Required ammunition reference:** a screenshot of the ammunition selector
+   with its selection popup open. Show the selected ammunition, stock and
+   reload information where available.
+4. **Recommended style reference:** one approved Urkaaaz Loadout or campaign
+   screen showing the dark panels, gold edging, typography, and existing
+   icon treatment.
+5. **Optional component references:** if the generator cannot read repository
+   files directly, attach the actual PNGs from these paths:
+   - Units: `android-app/src/main/res/drawable-nodpi/defender_icon.png`,
+     `sapper_icon.png`, `demolisher_icon.png`,
+     `goblin_raging_boar_icon.png`, and `goblin_slingmaster_icon.png`.
+   - Send Wave: `android-app/src/main/res/drawable-nodpi/send_wave_icon.png`.
+   - Ammunition: `rock_flight_00.png`, `ammo_icon_siege_bomb.png`,
+     `ammo_icon_powder_barrel.png`, `fire_rain_icon.png`, and
+     `plague_cauldron_icon.png` from the same `drawable-nodpi` directory.
+   - Spell reference: `loadout_spell_fortress_shield_card.png` from that
+     directory. Use this as an illustration/style reference, not as a
+     substitute for a newly invented spell icon.
+   - Button treatment: attach normal/pressed examples such as
+     `ui_button_dark_m_normal.png` and `ui_button_dark_m_pressed.png`, plus
+     the matching red pair only if the generator needs a restrained error
+     state reference.
+
+Use the provided match screenshot as the primary visual reference. Do not
+replace the battlefield with a new illustration or alter the canonical
+fortress/catapult composition.
+
+## Output
+
+Create exactly two separate static landscape screen mockups:
+
+- `match_hud_redesign_mockup.png` — normal match state;
+- `match_hud_target_selection_state.png` — the same HUD and battlefield while
+  a spell requires the player to select a target.
+
+Canvas: exactly 1920 x 912 pixels, matching the approximately 2.1:1 landscape
+aspect ratio of the supplied match screenshot. Keep the same layout, panel
+geometry, scale, typography, spacing, and battlefield framing in both images.
+The second image is an interaction state of the same design, not an alternate
+layout or visual direction.
+
+These are visual design references only. Keep all production text, counters,
+icons, and controls conceptually separable from the battlefield. Do not create
+flattened runtime backgrounds, reusable UI assets, spritesheets, or a phone
+mockup.
+
+## Unified Urkaaaz art direction
+
+- Follow the supplied game's painted fantasy battlefield and the approved
+  Urkaaaz interface references.
+- Use a restrained family of translucent charcoal/blackened-iron panels,
+  subtle dark wood or metal texture, controlled bronze/gold edging, and warm
+  ivory text. Keep the result visually related to the existing dark and gold
+  button families; do not invent a new button silhouette for every control.
+- Use the game's Cinzel-style display typography only for short headings.
+  Keep counters and compact labels highly legible at actual mobile scale.
+- Reuse familiar supplied game icons. Preserve their canonical appearance;
+  do not redraw units, spells, or ammunition as new characters.
+- Use semantic color consistently: gold for selected/primary actions, muted
+  dark neutral for secondary controls, and restrained red only for danger or
+  unavailable/error states. Do not use color alone to communicate state.
+- Keep panels compact and aligned to the screen edges. Preserve a broad,
+  unobstructed central view of the battlefield, fortresses, units, and
+  projectile trajectory.
+- Maintain clear touch targets and comfortable spacing. Do not make live
+  labels tiny, clipped, wrapped awkwardly, or dependent on a hover state.
+
+## Composition
+
+### Top status bar
+
+Create one slim, coherent top bar rather than several unrelated floating
+labels:
+
+- **Left:** Back control, clearly separated from the battlefield.
+- **Center:** match timer and wind direction/strength, in one compact status
+  group.
+- **Right:** Pause control and a small status area only for messages already
+  provided by the match. Do not invent campaign goals or scores.
+- Keep fortress health and reload indicators anchored near their respective
+  fortresses in the battlefield, as they are world-related information rather
+  than dock controls.
+
+### Bottom command dock
+
+Create one translucent dock along the bottom, visually divided into three
+related groups with consistent panel treatment and clear hierarchy:
+
+1. **Units and orders — left group**
+   - Supply gauge with a readable current value and capacity treatment.
+   - Available unit icons with their live supply costs.
+   - Clear enabled, selected, and unavailable states.
+   - A distinct Send Wave action using the existing command icon.
+   - Keep the existing interaction model: choose a unit to deploy and use Send
+     Wave for the deployed group. Do not invent a separate Attack button.
+
+2. **Spells and mana — center group**
+   - A prominent mana meter/counter that is readable without opening a menu.
+   - A compact row of equipped spell icons, selected from the actual loadout.
+   - A clear cast/ready/active state for each equipped spell.
+   - Show active effect details only when the runtime exposes them: remaining
+     duration for timed effects, current/max HP for a shield, or cooldown when
+     a cooldown exists. Never fabricate a timer, cost, cooldown, or effect.
+   - Make active/selected/disabled states visually distinct while preserving
+     the shared button and panel style.
+
+3. **Ammunition — right group**
+   - A larger selected-ammunition icon/control that clearly opens the existing
+     ammunition picker.
+   - Readable stock and reload feedback alongside the selected ammunition.
+   - Show ammunition choices in a compact popup/grid state consistent with the
+     supplied ammunition reference; do not display ammunition unavailable to
+     the current level or committed loadout.
+
+Keep the three groups visually balanced. Do not allow the dock to obscure
+fortress health, deployed units, the catapult aiming gesture, or the likely
+projectile flight path. Keep the battlefield as the dominant visual layer.
+
+### Messages and debug controls
+
+- Provide one compact, non-blocking feedback location for messages such as
+  insufficient mana, unavailable selection, or successful activation. Do not
+  cover the timer, aiming path, or active projectile.
+- Keep DEBUG out of the normal production presentation. If the reference
+  requires it, show it as a clearly secondary debug-only control, not as part
+  of the primary gameplay dock.
+
+## Interaction state: target selection
+
+In `match_hud_target_selection_state.png`, preserve the normal layout exactly
+and show the player selecting a target for a spell that requires manual
+targeting:
+
+- Clearly indicate that target-selection mode is active and what input is
+  expected.
+- Highlight only a valid target or valid placement area with a restrained
+  gold/blue selection treatment and a clear outline/reticle.
+- Keep invalid targets visually distinct without overwhelming the battlefield.
+- Include an obvious Cancel action that exits target selection.
+- Keep the chosen spell visibly selected in the spell group.
+- This is a generic interaction-state visualization only. Do not name or
+  illustrate an unimplemented spell, invent its effect, or imply that
+  `FORTRESS_SHIELD` requires manual targeting; its current target is automatic.
+- Do not add manual unit target controls for ordinary combat. Unit combat
+  targeting remains automatic.
+
+## Runtime and data fidelity
+
+- Display only information backed by the current match, committed loadout, or
+  existing application contracts.
+- Use representative values from the supplied screenshot when legible.
+  Otherwise use neutral placeholders; do not invent balance values, unlocks,
+  stock, spell durations, cooldowns, objectives, rewards, or campaign state.
+- Spell icons and available options must come from the committed loadout and
+  campaign-level availability.
+- An equipped but unaffordable spell may remain visible as unavailable with
+  a readable reason. Do not imply that a disabled spell is castable.
+- Keep UI actions native and live in the eventual implementation. Do not bake
+  control labels, values, or interaction feedback into reusable art.
+- The HUD is presentation only: do not depict controls mutating gameplay
+  state outside the normal command flow.
+
+## Negative requirements
+
+- No generic fantasy HUD, sci-fi interface, modern military overlay, neon
+  gradients, excessive glow, opaque full-width slabs, or decorative clutter.
+- No redesign or replacement of the supplied battlefield, units, catapults,
+  fortresses, projectile art, or terrain.
+- No fake spell names, spells, targets, durations, cooldowns, balances,
+  currencies, objectives, rewards, stock values, or progression unlocks.
+- No extra gameplay controls, manual attack-target picker, or invented
+  gameplay abilities.
+- No tiny/cropped text, illegible icon-only controls without accessible
+  labels, overlapping panels, hidden critical controls, or unsafe edge
+  placement.
+- No application/device frame, presentation board, additional biome, watermark,
+  signature, logo redesign, or contact sheet.
+
+## Review checklist
+
+- Confirm exactly two PNG mockups exist with the exact filenames and
+  dimensions.
+- Confirm both images use one consistent HUD layout and preserve the supplied
+  battlefield composition.
+- Confirm Back, timer, wind, pause, Supply, unit deployment, Send Wave, mana,
+  equipped spells, ammunition, stock/reload feedback, and spell feedback are
+  all represented.
+- Confirm the target-selection image is a state change of the same layout and
+  clearly exposes selection and cancellation.
+- Confirm active-spell indicators show only data the runtime can provide; no
+  fake duration, cooldown, cost, or effect is presented.
+- Confirm panels and labels remain legible at the supplied screenshot's aspect
+  ratio and do not obscure the battlefield's aiming/trajectory area.
+- Show both mockups individually for visual review. Do not integrate assets or
+  change Android UI before approval.

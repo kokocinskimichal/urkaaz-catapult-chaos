@@ -37,6 +37,7 @@ data class Fortress(
     val center: WorldPosition,
     val maxHealth: Int = 500,
     val health: Health = Health(maximum = maxHealth),
+    val shield: FortressShield? = null,
 ) {
     init {
         require(health.maximum == maxHealth) { "fortress health maximum must match maxHealth" }
@@ -47,10 +48,24 @@ data class Fortress(
 
     fun withDamage(amount: Int): Fortress = copy(health = health.damage(amount))
 
+    fun withShield(hitPoints: Int): Fortress = copy(
+        shield = FortressShield(Health(maximum = hitPoints)),
+    )
+
+    fun withShieldDamage(amount: Int): Fortress {
+        val currentShield = requireNotNull(shield) { "fortress shield is not active" }
+        val damagedShield = currentShield.copy(health = currentShield.health.damage(amount))
+        return copy(shield = damagedShield.takeIf { it.health.isAlive })
+    }
+
     fun contains(position: WorldPosition): Boolean =
         FortressHitboxProfile.rectangles.any {
             it.contains(position.x - center.x, position.y - center.y)
         }
+
+        data class FortressShield(
+            val health: Health,
+        )
 
     fun intersects(position: WorldPosition, radius: Float): Boolean =
         FortressHitboxProfile.rectangles.any {

@@ -3,17 +3,24 @@ package com.urkaaaz.simulation
 import com.urkaaaz.contracts.CatapultPresentationContract
 import com.urkaaaz.contracts.EntityId
 import com.urkaaaz.contracts.MatchEvent
+import com.urkaaaz.contracts.MatchError
 import com.urkaaaz.contracts.MatchId
 import com.urkaaaz.contracts.MatchPhase
 import com.urkaaaz.contracts.MatchSnapshot
 import com.urkaaaz.contracts.MatchStatus
 import com.urkaaaz.contracts.Team
+import com.urkaaaz.contracts.PlayerId
 import com.urkaaaz.contracts.WorldDimensions
 import com.urkaaaz.domain.AmmunitionType
+import com.urkaaaz.domain.AmmunitionCatalog
+import com.urkaaaz.domain.Aim
+import com.urkaaaz.domain.Catapult
+import com.urkaaaz.domain.Fortress
 import com.urkaaaz.domain.UnitConfigurations
 import com.urkaaaz.domain.UnitDefinition
 import com.urkaaaz.domain.UnitFactory
 import com.urkaaaz.domain.WorldBounds
+import com.urkaaaz.domain.WorldPosition
 import kotlin.math.abs
 import kotlin.test.Test
 import kotlin.test.assertFailsWith
@@ -54,6 +61,94 @@ class DeterministicMatchSimulationTest {
             SimulationConfig(bounds = WorldBounds(width = 1_000f, height = 600f))
                 .fortressCollisionRadius,
         )
+    }
+
+    @Test
+    fun manaStartsAtConfiguredValueAndRegeneratesOnDeterministicIntervals() {
+        val simulation = DeterministicMatchSimulation(
+            MatchId("mana-regeneration"),
+            SimulationConfig(
+                bounds = WorldBounds(width = 1_000f, height = 600f),
+                startingMana = 20,
+            ),
+        )
+        simulation.start()
+
+        assertEquals(20, simulation.snapshot().resources.mana)
+        simulation.advance(7_999)
+        assertEquals(20, simulation.snapshot().resourcesByTeam[Team.BLUE]?.mana)
+        simulation.advance(1)
+        assertEquals(30, simulation.snapshot().resourcesByTeam[Team.BLUE]?.mana)
+        simulation.advance(56_000)
+        assertEquals(100, simulation.snapshot().resourcesByTeam[Team.BLUE]?.mana)
+        assertEquals(
+            null,
+            simulation.castFortressShield(PlayerId("blue-player"), Team.BLUE, targetId = null),
+        )
+        simulation.advance(7_999)
+        assertEquals(20, simulation.snapshot().resourcesByTeam[Team.BLUE]?.mana)
+        simulation.advance(1)
+        assertEquals(30, simulation.snapshot().resourcesByTeam[Team.BLUE]?.mana)
+    }
+
+    @Test
+    fun fortressShieldRejectsActivationWhenManaIsInsufficient() {
+        val simulation = DeterministicMatchSimulation(
+            MatchId("insufficient-spell-mana"),
+            SimulationConfig(
+                bounds = WorldBounds(width = 1_000f, height = 600f),
+                startingMana = 79,
+            ),
+        )
+        simulation.start()
+
+        assertEquals(
+            MatchError.INSUFFICIENT_RESOURCE,
+            simulation.castFortressShield(PlayerId("blue-player"), Team.BLUE, targetId = null),
+        )
+        assertEquals(79, simulation.snapshot().resources.mana)
+        assertEquals(null, simulation.snapshot().fortresses.single { it.team == Team.BLUE }.shieldHealth)
+    }
+
+    @Test
+    fun fortressShieldInterceptsEnemyProjectileWithoutDamagingFortress() {
+        val redFortress = Fortress(
+            id = EntityId("red-fortress"),
+            team = Team.RED,
+            center = WorldPosition(400f, 0f),
+        ).withShield(80)
+        val simulation = DeterministicMatchSimulation(
+            matchId = MatchId("shield-impact"),
+            config = SimulationConfig(
+                bounds = WorldBounds(width = 1_000f, height = 600f),
+                gravityAccelerationY = 0f,
+            ),
+            blueCatapult = Catapult(
+                id = EntityId("blue-catapult"),
+                team = Team.BLUE,
+                position = WorldPosition(50f, 0f),
+                anchorPosition = WorldPosition(100f, 0f),
+                aim = Aim(directionDegrees = 0f, power = 100f),
+            ),
+            blueFortress = Fortress(
+                id = EntityId("blue-fortress"),
+                team = Team.BLUE,
+                center = WorldPosition(50f, 0f),
+            ),
+            redFortress = redFortress,
+        )
+        simulation.start()
+        simulation.fire(EntityId("blue-catapult"), AmmunitionType.ROCK)
+
+        val events = simulation.advance(100)
+
+        assertTrue(events.any { it is MatchEvent.ShieldDamaged })
+        assertEquals(500, simulation.snapshot().fortresses.single { it.team == Team.RED }.health)
+        assertEquals(
+            80 - AmmunitionCatalog.definition(AmmunitionType.ROCK).damage.fortressDamage,
+            simulation.snapshot().fortresses.single { it.team == Team.RED }.shieldHealth,
+        )
+        assertTrue(simulation.snapshot().projectiles.isEmpty())
     }
 
     @Test

@@ -2,6 +2,16 @@
 
 ## 2026-10-21
 
+### Added
+
+- Implemented the first SpellSystem gameplay slice: centralized spell
+  definitions, deterministic mana regeneration, typed `CastSpell` results,
+  Fortress Shield activation and projectile interception, shield snapshots,
+  replay support, shared shield collision/render geometry, and match
+  HUD/rendering integration.
+- Added a unified match HUD redesign prompt covering the normal match and
+  spell-targeting states.
+
 ### Fixed
 
 - Campaign victories now deliver queued `MatchFinished` events even when the
@@ -12,6 +22,8 @@
 
 ### Changed
 
+- Routed Loadout spell metadata through the canonical domain catalog and
+  enlarged the in-match mana/shield control for visibility.
 - Reduced early campaign AI pressure: levels 1–10 now use CADET, with wider aim
   error and an 8-second interval between unit recruitments; VETERAN starts at
   level 11 and ELITE at 31.

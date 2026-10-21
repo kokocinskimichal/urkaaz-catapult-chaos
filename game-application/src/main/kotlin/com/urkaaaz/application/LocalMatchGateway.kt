@@ -1,6 +1,7 @@
 package com.urkaaaz.application
 
 import com.urkaaaz.contracts.MatchCommand
+import com.urkaaaz.contracts.CommandResult
 import com.urkaaaz.contracts.MatchEvent
 import com.urkaaaz.contracts.MatchSnapshot
 import com.urkaaaz.contracts.MapDefinition
@@ -35,12 +36,22 @@ class LocalMatchGateway(
 ) {
     fun dispatch(command: MatchCommand): MatchSnapshot {
         val snapshot = session.dispatch(command)
+        startAiIfNeeded(command)
+        return snapshot
+    }
+
+    fun dispatchResult(command: MatchCommand): CommandResult {
+        val result = session.dispatchResult(command)
+        startAiIfNeeded(command)
+        return result
+    }
+
+    private fun startAiIfNeeded(command: MatchCommand) {
         if (command is MatchCommand.Start) {
             val seed = session.replay()?.randomSeed
                 ?: error("started match is missing its recorded random seed")
             aiCoordinator.start(seed)
         }
-        return snapshot
     }
 
     fun snapshot(): MatchSnapshot = session.snapshot()

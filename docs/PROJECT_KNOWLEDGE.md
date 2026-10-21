@@ -138,8 +138,15 @@ deferred.
 Haste is awarded for level 5 and Heal for level 7; their availability starts
 at levels 6 and 8. Campaign rewards are projected into Loadout progression,
 and preferred spells affect only newly generated defaults. Tutorials remain
-deferred to the future game-wide TutorialSystem. Spell gameplay remains
-unfinished; spell artwork is presentation-only.
+deferred to the future game-wide TutorialSystem. The SpellSystem has one
+implemented runtime effect: `FORTRESS_SHIELD`; the other ten spell effects and
+AI spell casting remain unimplemented. The shield costs 80 mana, has 80 HP, and
+intercepts projectiles within the same fortress-centered ellipse used by its
+world-space rendering. `FortressShieldGeometry` in `game-contracts` is the
+shared shape definition. Mana starts at 100, regenerates 10 every eight seconds
+of simulation time, and is exposed through match snapshots. Spell-card artwork
+is available, but artwork for the remaining world effects still needs to be
+mapped as those effects are implemented.
 
 Future idea, not implemented: progression could grant an otherwise limited
 ammunition type a temporary effective unlimited entitlement after a qualifying
@@ -230,6 +237,8 @@ The current match HUD displays:
 
 - match countdown timer;
 - wind direction and strength;
+- current mana and an activation control for an equipped `FORTRESS_SHIELD`,
+  with command rejections surfaced to the player;
 - pause/resume control;
 - a `RESTART MATCH` control after the match outcome overlay, which restarts the
   current local match through `LocalMatchGateway.restart`;
@@ -673,10 +682,12 @@ must go through commands and domain/application boundaries.
   selection, normalized-loadout status, item details and guarded commit.
   Campaign progression and Haste/Heal milestone persistence are implemented;
   tutorials remain deferred to TutorialSystem. Runtime ammunition consumption
-  is not reconciled with persistent stock. Spell illustrations are not yet
-  supplied; their absence is handled by the explicit asset catalog result.
-- `SpellType` definitions and selected-spell contract data exist, but
-  `CastSpell` and spell effects are not implemented.
+  is not reconciled with persistent stock.
+- `CastSpell` is implemented for `FORTRESS_SHIELD` only, including mana
+  validation, replay, typed results, shield snapshots and Android match
+  presentation. The other ten spell effects and AI casting are not implemented;
+  spell-card artwork exists, while world-effect visuals remain to be integrated
+  with each effect.
 - Shop and result screens remain placeholders.
 - `ResultScreen` remains a placeholder; match results are still shown by the
   existing match presentation. Campaign progress is local-only and has no

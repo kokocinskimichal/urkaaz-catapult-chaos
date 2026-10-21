@@ -39,8 +39,12 @@ data class RenderState(
     val playerPower: Float,
     val blueFortressHealth: Int,
     val blueFortressMaxHealth: Int,
+    val blueFortressShieldHealth: Int? = null,
+    val blueFortressShieldMaxHealth: Int? = null,
     val redFortressHealth: Int,
     val redFortressMaxHealth: Int,
+    val redFortressShieldHealth: Int? = null,
+    val redFortressShieldMaxHealth: Int? = null,
     val windStrength: Float,
     val impact: ImpactRenderState?,
     val outcomeLabel: String?,
@@ -64,6 +68,9 @@ data class RenderState(
     val fireRainEffects: List<FireRainEffectRenderState> = emptyList(),
     val plagueCauldronEffects: List<PlagueCauldronEffectRenderState> = emptyList(),
     val matchGeneration: Long = 0L,
+    val playerMana: Int = 0,
+    val hasFortressShieldEquipped: Boolean = false,
+    val spellFeedbackLabel: String? = null,
 )
 
 data class MapObjectRenderState(
@@ -210,8 +217,12 @@ object RenderStateMapper {
             ?.power ?: 50f,
         blueFortressHealth = snapshot.fortresses.firstOrNull { it.team.name == "BLUE" }?.health ?: 0,
         blueFortressMaxHealth = snapshot.fortresses.firstOrNull { it.team.name == "BLUE" }?.maxHealth ?: 0,
+        blueFortressShieldHealth = blueFortressSnapshot?.shieldHealth,
+        blueFortressShieldMaxHealth = blueFortressSnapshot?.shieldMaxHealth,
         redFortressHealth = snapshot.fortresses.firstOrNull { it.team.name == "RED" }?.health ?: 0,
         redFortressMaxHealth = snapshot.fortresses.firstOrNull { it.team.name == "RED" }?.maxHealth ?: 0,
+        redFortressShieldHealth = redFortressSnapshot?.shieldHealth,
+        redFortressShieldMaxHealth = redFortressSnapshot?.shieldMaxHealth,
         windStrength = snapshot.wind.strength,
         impact = events.lastOrNull {
             it is MatchEvent.TerrainDeformed ||
@@ -281,6 +292,9 @@ object RenderStateMapper {
         playerGold = snapshot.resourcesByTeam[
             com.urkaaaz.contracts.Team.BLUE
         ]?.gold ?: snapshot.resources.gold,
+        playerMana = snapshot.resourcesByTeam[
+            com.urkaaaz.contracts.Team.BLUE
+        ]?.mana ?: snapshot.resources.mana,
         playerSupply = snapshot.resourcesByTeam[
             com.urkaaaz.contracts.Team.BLUE
         ]?.supply ?: snapshot.resources.supply,

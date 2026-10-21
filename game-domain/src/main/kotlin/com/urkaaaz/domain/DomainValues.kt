@@ -76,6 +76,21 @@ data class ResourceWallet(
         return copy(supply = supply - amount)
     }
 
+    fun canSpendMana(amount: Int): Boolean = amount >= 0 && mana >= amount
+
+    fun spendMana(amount: Int): ResourceWallet {
+        require(canSpendMana(amount)) { "insufficient mana" }
+        return copy(mana = mana - amount)
+    }
+
+    fun restoreMana(amount: Int, maximum: Int): ResourceWallet {
+        require(amount >= 0) { "mana restoration must not be negative" }
+        require(maximum >= 0) { "maximum mana must not be negative" }
+        return copy(
+            mana = (mana.toLong() + amount).coerceAtMost(maximum.toLong()).toInt(),
+        )
+    }
+
     fun ammunitionCount(type: AmmunitionType): Int =
         if (type.unlimited) Int.MAX_VALUE else ammunition[type] ?: 0
 

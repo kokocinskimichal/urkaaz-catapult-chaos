@@ -2,7 +2,9 @@ package com.urkaaaz.application
 
 import com.urkaaaz.contracts.MatchCommand
 import com.urkaaaz.contracts.CommandId
+import com.urkaaaz.contracts.CommandResult
 import com.urkaaaz.contracts.MatchEvent
+import com.urkaaaz.contracts.MatchError
 import com.urkaaaz.contracts.MatchId
 import com.urkaaaz.contracts.MatchStatus
 import com.urkaaaz.contracts.PlayerId
@@ -16,12 +18,159 @@ import com.urkaaaz.contracts.Team
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
+import kotlin.test.assertIs
 import kotlin.test.assertNotEquals
 import kotlin.test.assertTrue
 import com.urkaaaz.application.loadout.LoadoutCommandRejectedException
 import com.urkaaaz.application.loadout.LoadoutError
 
 class MatchSessionTest {
+    @Test
+    fun fortressShieldCastSpendsManaAndReturnsTypedEvents() {
+        val session = MatchSession(scenario = spellScenario())
+        val matchId = MatchId("spell-match")
+        val playerId = PlayerId("spell-player")
+        session.dispatch(MatchCommand.Start(CommandId("spell-start"), matchId, playerId))
+
+        val result = session.dispatchResult(
+            MatchCommand.CastSpell(
+                commandId = CommandId("shield-cast"),
+                matchId = matchId,
+                playerId = playerId,
+                spellType = "FORTRESS_SHIELD",
+            ),
+        )
+
+        val accepted = assertIs<CommandResult.Accepted>(result)
+        val castEvent = assertIs<MatchEvent.SpellCast>(accepted.events.single())
+        assertEquals("FORTRESS_SHIELD", castEvent.spellType)
+        assertEquals(80, castEvent.manaCost)
+        assertEquals(EntityId("blue-fortress"), castEvent.targetId)
+        assertEquals(20, session.snapshot().resourcesByTeam[Team.BLUE]?.mana)
+        val blueFortress = session.snapshot().fortresses.single { it.team == Team.BLUE }
+        assertEquals(80, blueFortress.shieldHealth)
+        assertEquals(80, blueFortress.shieldMaxHealth)
+
+        val repeatedCast = session.dispatchResult(
+            MatchCommand.CastSpell(
+                CommandId("shield-repeat"),
+                matchId,
+                playerId,
+                "FORTRESS_SHIELD",
+            ),
+        )
+        assertEquals(
+            CommandResult.Rejected(CommandId("shield-repeat"), MatchError.SPELL_ALREADY_ACTIVE),
+            repeatedCast,
+        )
+        assertEquals(20, session.snapshot().resourcesByTeam[Team.BLUE]?.mana)
+    }
+
+    @Test
+    fun spellCastRejectsUnknownUnavailableAndUnselectedSpells() {
+        val playerId = PlayerId("spell-player")
+        val matchId = MatchId("spell-rejections")
+        val session = MatchSession(scenario = spellScenario(loadoutSpells = listOf("HASTE")))
+        session.dispatch(MatchCommand.Start(CommandId("spell-rejections-start"), matchId, playerId))
+
+        fun cast(id: String, spellType: String) = session.dispatchResult(
+            MatchCommand.CastSpell(CommandId(id), matchId, playerId, spellType),
+        )
+
+        assertEquals(
+            CommandResult.Rejected(CommandId("unknown-spell"), MatchError.UNKNOWN_SPELL),
+            cast("unknown-spell", "UNKNOWN"),
+        )
+        assertEquals(
+            CommandResult.Rejected(CommandId("unselected-spell"), MatchError.SPELL_NOT_IN_LOADOUT),
+            cast("unselected-spell", "FORTRESS_SHIELD"),
+        )
+        assertEquals(
+            CommandResult.Rejected(CommandId("unavailable-spell"), MatchError.SPELL_NOT_AVAILABLE),
+            cast("unavailable-spell", "ICE_TRAP"),
+        )
+    }
+
+    @Test
+    fun fortressShieldRejectsAnExplicitEnemyFortressTarget() {
+        val session = MatchSession(scenario = spellScenario())
+        val matchId = MatchId("spell-invalid-target")
+        val playerId = PlayerId("spell-player")
+        session.dispatch(MatchCommand.Start(CommandId("spell-target-start"), matchId, playerId))
+
+        val result = session.dispatchResult(
+            MatchCommand.CastSpell(
+                commandId = CommandId("spell-enemy-target"),
+                matchId = matchId,
+                playerId = playerId,
+                spellType = "FORTRESS_SHIELD",
+                target = EntityId("red-fortress"),
+            ),
+        )
+
+        assertEquals(
+            CommandResult.Rejected(
+                CommandId("spell-enemy-target"),
+                MatchError.INVALID_SPELL_TARGET,
+            ),
+            result,
+        )
+        assertEquals(100, session.snapshot().resourcesByTeam[Team.BLUE]?.mana)
+    }
+
+    @Test
+    fun rejectedSpellCommandsRemainDeterministicInReplay() {
+        val session = MatchSession(scenario = spellScenario(), randomSeedProvider = { 31L })
+        val matchId = MatchId("spell-replay")
+        val playerId = PlayerId("spell-player")
+        session.dispatch(MatchCommand.Start(CommandId("spell-replay-start"), matchId, playerId))
+        session.consumeEvents()
+        session.dispatchResult(
+            MatchCommand.CastSpell(
+                CommandId("spell-replay-rejected"),
+                matchId,
+                playerId,
+                "UNKNOWN",
+            ),
+        )
+        val accepted = session.dispatchResult(
+            MatchCommand.CastSpell(
+                CommandId("spell-replay-cast"),
+                matchId,
+                playerId,
+                "FORTRESS_SHIELD",
+            ),
+        )
+        val expectedSnapshot = session.snapshot()
+
+        val replay = session.replay() ?: error("match replay was not recorded")
+        val replayResult = MatchReplayPlayer.play(replay)
+
+        assertIs<CommandResult.Accepted>(accepted)
+        assertEquals(expectedSnapshot, replayResult.snapshot)
+        assertTrue(replayResult.events.any { it is MatchEvent.SpellCast })
+    }
+
+    private fun spellScenario(
+        loadoutSpells: List<String> = listOf("FORTRESS_SHIELD"),
+    ) = MatchScenario(
+        scenarioId = "spell-test",
+        battlefield = BattlefieldConfig(width = 7_200, height = 4_800),
+        players = listOf(
+            PlayerConfig(PlayerId("spell-player"), Team.BLUE),
+            PlayerConfig(PlayerId("spell-ai"), Team.RED),
+        ),
+        availableUnits = listOf("DEFENDER"),
+        availableAmmunition = listOf("ROCK"),
+        availableSpells = listOf("FORTRESS_SHIELD", "HASTE"),
+        playerLoadout = PlayerLoadoutConfig(
+            playerId = PlayerId("spell-player"),
+            unitTypes = listOf("DEFENDER"),
+            ammunitionSlots = listOf("ROCK", null, null),
+            spellTypes = loadoutSpells,
+        ),
+    )
+
     @Test
     fun replayCapturesSeedAndReproducesTheCommandTrace() {
         val session = MatchSession(randomSeedProvider = { 713L })

@@ -29,6 +29,12 @@ data class MatchScenario(
         require(availableUnits.distinct().size == availableUnits.size) {
             "available unit identifiers must be unique"
         }
+        require(availableSpells.all(String::isNotBlank)) {
+            "available spell identifiers must not be blank"
+        }
+        require(availableSpells.distinct().size == availableSpells.size) {
+            "available spell identifiers must be unique"
+        }
         playerLoadout?.let { loadout ->
             require(players.any { it.playerId == loadout.playerId && it.team == Team.BLUE }) {
                 "loadout player must be a blue player in the scenario"

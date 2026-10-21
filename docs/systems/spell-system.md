@@ -2,14 +2,19 @@
 
 ## Status i cel
 
-Ten dokument opisuje docelową architekturę oraz plan migracji zaklęć z
-legacy. Nie oznacza, że system albo opisane kontrakty są już zaimplementowane.
-Zakres tej zmiany obejmuje wyłącznie dokumentację i skill `/addSpell`.
+SpellSystem jest częściowo zaimplementowany. Pierwszy pionowy wycinek obejmuje
+domenowy `SpellCatalog`, runtime many, typowany wynik aktywacji oraz
+`FORTRESS_SHIELD` działający przez sesję, symulację, eventy, snapshot i match
+screen. Android pokazuje manę, pozwala aktywować wyposażoną tarczę, prezentuje
+odrzucenia i rysuje jej stan z snapshotu. Pozostałe dziesięć efektów oraz
+trwałe rozliczanie stocku nadal są niezaimplementowane; opis poniżej rozróżnia
+obecny zakres od celu migracji.
 
-SpellSystem ma przenosić efekty, koszty i reguły aktywacji zaklęć do
-deterministycznego meczu Urkaaaz, zapewniając jeden katalog balansu, jawne
-granice komend/eventów oraz możliwość dodawania kolejnych zaklęć bez
-rozbudowywania centralnego obiektu z warunkami dla każdego typu.
+SpellSystem ma obsługiwać deterministyczne efekty wszystkich 11 zaklęć
+legacy, od walidacji aktywacji po eventy i snapshoty. Powinien zapewniać jeden
+katalog balansu, jawne granice komend/eventów oraz rozszerzalne reguły bez
+przenoszenia gameplayu do Androida lub rozbudowywania centralnego obiektu
+warunkami dla każdego typu.
 
 Migracja zachowuje obserwowalne zachowanie i balans z legacy. Wyjątkiem jest
 rozbieżność w opisie Haste: użytkownik potwierdził, że działa wyłącznie na
@@ -23,9 +28,9 @@ W zakresie:
 - definicje zaklęć, targety, koszty many i efekty gameplayowe;
 - deterministyczny runtime, aktywne czasy, pułapki i fortyfikacje;
 - jawne aktywacje, odrzucenia, eventy i snapshoty;
-- integracja z dostępnością kampanii, progresją, złotem i stockiem zaklęć
-  specjalnych;
-- Androidowy wybór/aktywacja zaklęć, prezentacja kategorii celu i efektów;
+- integracja z dostępnością kampanii i zatwierdzonym loadoutem oraz jawne
+  raportowanie zużycia stocku runtime do granicy aplikacyjnej progresji;
+- Androidowa aktywacja zaklęć, prezentacja kategorii celu i efektów;
 - migracja wszystkich 11 zaklęć legacy z testami zgodności.
 
 Poza zakresem SpellSystemu:
@@ -35,17 +40,18 @@ Poza zakresem SpellSystemu:
   `LoadoutSystem`;
 - własność trwałego złota, odblokowań i stocku gracza;
 - reguły kampanii, nawigacji i Android lifecycle;
+- zakupy oraz trwałe rozliczanie profilu po meczu — pozostają granicą
+  PlayerProgressionSystemu i adapterów persystencji;
 - implementacja reguł gameplayowych w Android UI lub osobna implementacja
   tych reguł w AI.
 
-`LoadoutSystem` jest częściowo zaimplementowany i ma wspólny właścicielski
-model wyboru jednostek, amunicji i zaklęć w `game-application`. Wcześniejszy
-`game-domain.SpellLoadout` został usunięty. SpellSystem nie powinien tworzyć
-równoległej wersji loadoutu ani przejmować jego walidacji. Runtime otrzyma
-niemutowalny, zatwierdzony wynik loadoutu jako konfigurację meczu. Lokalny
-profil, zapis loadoutu i bezpieczne zatwierdzanie są zaimplementowane;
-interaktywne edytory, zakupy i autoryzacja milestone'ów kampanii pozostają
-niedokończone.
+`LoadoutSystem` ma już kanoniczny model wyboru jednostek, amunicji i zaklęć,
+interaktywne edytory, walidację oraz lokalny zapis zatwierdzonego loadoutu.
+`CampaignSystem` zapisuje postęp i nagrody Haste/Heal. SpellSystem nie może
+tworzyć równoległego loadoutu ani przejmować walidacji wyboru lub kampanijnych
+odblokowań. Otrzymuje niemutowalny, zatwierdzony `PlayerLoadoutConfig` jako
+konfigurację meczu. Zakupy i trwałe rozliczanie stocku pozostają
+niewdrożonymi odpowiedzialnościami progresji.
 
 ## Obecne elementy i granice
 
@@ -53,22 +59,41 @@ W repozytorium istnieją już:
 
 | Element | Obecna rola | Docelowe użycie |
 |---|---|---|
-| `game-domain/Spells.kt: SpellType` | stabilne typy zaklęć, koszt złota, kategoria roli, flaga special | zachować identyfikatory; uporządkować definicje i balans w jednym katalogu |
+| `game-domain/Spells.kt: SpellType` | stabilne identyfikatory zaklęć | zachować identyfikatory; balans i metadane należą do katalogu |
+| `game-domain/SpellCatalog.kt: SpellCatalog` | koszty, kategorie roli/celu i implementowalność; runtime effect ma na razie tylko tarcza | kanoniczne źródło definicji wszystkich 11 zaklęć |
 | `game-domain/Spells.kt: SpellCategory` | `OFFENSIVE`, `DEFENSIVE`, `BATTLEFIELD_CONTROL`, `SUPPORT`, `SIEGE` | zachować jako kategorię roli/efektu; nie używać jako kategorii targetu |
-| `game-application/application/loadout/MatchLoadout` | wspólny wybór jednostek, amunicji i czarów | kanoniczny model LoadoutSystemu |
+| `game-application/.../loadout/MatchLoadout` | wspólny wybór jednostek, amunicji i czarów | kanoniczny model LoadoutSystemu |
 | `MatchCommand.CastSpell` | komenda z ID tekstowym i opcjonalnym celem | wejście do walidacji/aktywacji; nie zmienia stanu bezpośrednio |
-| `MatchEvent.SpellCast` | event udanej aktywacji | rozszerzyć lub zastąpić typowanymi eventami bez utraty kompatybilności kontraktu |
+| `CommandResult` / `MatchEvent.SpellCast` | jawny wynik aktywacji oraz event ze wskazanym celem i kosztem many | wspólny kanał odpowiedzi dla kolejnych zaklęć |
+| `MatchEvent.ShieldDamaged` | event trafienia i pozostałego HP tarczy | jawny kontrakt prezentacji trafienia |
 | `MatchSnapshot.effects` / `EffectSnapshot` | ogólny odczyt efektów | wykorzystać po weryfikacji wystarczalności; nie dublować stanu renderowania |
-| `ResourceSnapshot.mana/gold` | odczyt zasobów | mana w runtime meczu; złoto w progresji/aplikacji |
+| `ResourceSnapshot.mana/gold` | odczyt zasobów obu drużyn | symulacja publikuje manę, złoto, supply i amunicję |
 | `CampaignLevelDefinition.availableSpells` | dostępność zaklęć na poziomie | pozostaje konfiguracją kampanii i wejściem do match launch |
 | `MatchSession` | lifecycle, pauza, restart i forwarding | przekazywać komendy; tworzyć świeży runtime przy starcie/restart |
 | `DeterministicMatchSimulation` | deterministyczny runtime meczu | właściciel stanu SpellSystemu w ramach symulacji |
-| `LoadoutScreen` | dostępność poziomu, zwalidowany draft i stan zapisu | interaktywne edytory LoadoutSystemu pozostają do wdrożenia |
+| `LoadoutScreen` | wybór zaklęć w zatwierdzonym loadoucie | nie jest ekranem aktywacji zaklęć podczas meczu |
 
-Kontrakty przewidują `CastSpell`, `SpellCast`, `EffectSnapshot` oraz
-`availableSpells`, ale `MatchSession` nie obsługuje jeszcze `CastSpell`, a
-symulacja nie ma aktywnego SpellSystemu. Nie należy uznawać samych kontraktów
-za działającą implementację.
+`MatchSession.dispatchResult` i `LocalMatchGateway.dispatchResult` obsługują
+`CastSpell`; Androidowy match screen pokazuje manę, wysyła akcję aktywacji
+wyposażonego `FORTRESS_SHIELD`, wyświetla wynik/odrzucenie i rysuje osłonę z
+niemutowalnego stanu fortecy w world-space. Wynik aktywacji sprawdza status
+meczu, dostępność poziomu, zatwierdzony loadout i poprawny cel. Nieznane,
+niedostępne, niewyposażone i
+niezaimplementowane zaklęcia oraz błędy many/aktywnej tarczy są odrzucane
+jawnym `MatchError`. Koszt pobierany jest dopiero przy powodzeniu. Replay
+zachowuje zaakceptowane i odrzucone próby aktywacji.
+
+Mana startuje i ma limit 100, regeneruje 10 co 8 sekund symulacji, a jej stan
+jest publikowany w snapshotach. `FORTRESS_SHIELD` kosztuje 80 many, ma 80 HP,
+przechwytuje wyłącznie pociski drużyny przeciwnej i nie przepuszcza reszty
+obrażeń na fortecę. Kolizja i renderowanie korzystają ze wspólnej,
+fortress-centered geometrii eliptycznej `FortressShieldGeometry` w
+`game-contracts`. Stan tarczy znajduje się w `FortressSnapshot`;
+przechwycenie toru pocisku emituje `ProjectileHitEntity` oraz `ShieldDamaged`. Pozostałe
+efekty katalogu mają wartości balansu i kategorię celu, ale brak im runtime
+effect definition. `EffectSnapshot` nadal opisuje aktywne efekty amunicji.
+Walidacja scenariusza sprawdza identyfikatory dostępności, a zgodność
+dostępności z loadoutem jest egzekwowana przy aktywacji.
 
 Istniejące podobne rozwiązanie do naśladowania to `AmmunitionCatalog`:
 jednoznaczna definicja balansu w domenie, niezależna od Androida i używana
@@ -129,7 +154,10 @@ albo wskazywać całą armię.
 
 ## Katalog i rozszerzalność
 
-Docelowy katalog domenowy powinien być jedynym źródłem:
+`SpellCatalog` jest kanonicznym źródłem stabilnych typów, kategorii roli i
+celu oraz kosztów złota i many dla wszystkich 11 zaklęć. Runtime effect
+definition istnieje na razie wyłącznie dla tarczy fortecy. Katalog docelowo
+pozostaje jedynym źródłem:
 
 - stabilnego `SpellType`/ID;
 - obecnej kategorii roli `SpellCategory`;
@@ -139,9 +167,9 @@ Docelowy katalog domenowy powinien być jedynym źródłem:
 - kluczy lokalizacji/assetów, bez zależności od Android `R`.
 
 `SpellType` zachowuje stabilne identyfikatory, a katalog dostarcza ich
-kompletne metadane. Migracja ma przenieść obecne `goldCost`, `category` i
-`special` do jednej definicji katalogowej, zamiast utrzymywać te same wartości
-w enumie i drugim katalogu. Nie może po cichu zmieniać nazw `ICE_TRAP`,
+kompletne metadane. Obecne `goldCost`, `category`, `special`, koszty many i
+kategorie celu są już przeniesione do jednej definicji katalogowej. Nie może
+po cichu zmieniać nazw `ICE_TRAP`,
 `RUNIC_BASTION`, `HASTE`, `HEAL`, `FORTRESS_SHIELD`, `CATAPULT_LOCK`,
 `SLOWING_FIELD`, `VAMPIRIC_BANNER`, `STONE_SKIN`, `SIEGE_FRENZY` i
 `BERSERKER`.
@@ -172,9 +200,11 @@ nieznany ID jest jawnym błędem, a nie domyślnym czarem.
 3. Niemutowalne dane uruchomienia meczu: dostępne typy z
    `CampaignLevelDefinition.availableSpells` oraz zwalidowany, wybrany
    loadout dostarczony przez LoadoutSystem. LoadoutSystem pozostaje
-   właścicielem wyboru i walidacji tego loadoutu.
+   właścicielem wyboru i walidacji; konfiguracja meczu oraz aktywacja muszą
+   jawnie sprawdzić, że zaklęcie jest dostępne i wyposażone.
 4. Autorytatywny stan symulacji: mana, jednostki, katapulty, fortece,
-   aktywne efekty i stock przypisany do bieżącego meczu.
+   aktywne efekty i stock przypisany do bieżącego meczu. Mana jest już częścią
+   runtime'u; stock zaklęć pozostaje niewdrożony.
 5. Deterministyczny czas symulacji przekazany przez istniejący cykl
    `AdvanceSimulation`.
 
@@ -190,8 +220,10 @@ Obsługa aktywacji powinna być atomowa:
 5. opublikować event oraz nowy snapshot.
 
 Odrzucenie nie pobiera many/stocku ani nie pozostawia częściowego efektu.
-Zgodnie z opisem w `architecture.md` wynik powinien mieć postać
-`Accepted` albo `Rejected(reason)`. Przyczyny obejmują co najmniej:
+Aktywacja korzysta z `CommandResult.Accepted` albo
+`CommandResult.Rejected(reason)` przez `dispatchResult`; legacy'owe
+`dispatch` nadal zwraca `MatchSnapshot`. SpellSystem nie tworzy osobnego
+kanału odrzuceń. Obecne przyczyny obejmują:
 nieznany czar, mecz nieaktywny, czar niedostępny na poziomie, czar
 niewyposażony, brak many, brak stocku, brak prawidłowego celu i efekt już
 aktywny, jeśli dany czar nie może być ponownie aktywowany.
@@ -199,12 +231,13 @@ aktywny, jeśli dany czar nie może być ponownie aktywowany.
 ### Wyjście
 
 - `SpellCast`/`SpellActivated` jako fakt udanej aktywacji z graczem/drużyną,
-  typem, czasem symulacji i celem, jeżeli istnieje;
+  typem, czasem symulacji, celem i kosztem many;
 - jawne odrzucenie komendy z typowaną przyczyną;
 - aktualizowany `MatchSnapshot`, w tym mana, statusy jednostek oraz odczyt
   aktywnych efektów i obiektów świata;
-- event zużycia stocku meczu, jeśli jest potrzebny do utrzymania trwałej
-  progresji po zakończeniu meczu.
+- jawny wynik zużycia stocku meczu, który aplikacja może później rozliczyć
+  przez PlayerProgressionSystem. Trwały zapis nie należy do runtime'u
+  symulacji.
 
 `UnitSnapshot.statuses`/`statusDetails` i `MatchSnapshot.effects` są istniejącymi
 kontraktami do oceny pod kątem reuse. Jeżeli nie kodują właściciela/drużyny,
@@ -221,7 +254,7 @@ kontraktu efektów.
 | Dostępność poziomu | `CampaignLevelDefinition` |
 | Wybór loadoutu | istniejący LoadoutSystem |
 | Złoto, odblokowania, trwały stock | warstwa aplikacyjnej progresji/persystencji |
-| Mana, bieżący stock meczu, aktywne timery, pułapki, tarcze i bastiony | jeden runtime `DeterministicMatchSimulation` |
+| Mana i tarcza fortecy; bieżący stock meczu, pozostałe aktywne timery, pułapki i bastiony | runtime `DeterministicMatchSimulation`; mana i tarcza są wdrożone, reszta pozostaje w planie |
 | Snapshot/render state | kontrakty i mapper Androida jako niemutowalny odczyt |
 
 Trwały stock w progresji jest oddzielony od stocku przekazanego do meczu.
@@ -230,9 +263,9 @@ rozlicza zapis trwałej progresji przez jawny wynik/event. Nie przenosić
 `SharedPreferences` ani repozytorium progresji do `game-domain` lub
 `game-simulation`.
 
-Nowy mecz tworzy świeży SpellSystem/runtime. Pauza nie przesuwa timerów, bo
+Nowy mecz tworzy świeży runtime symulacji. Pauza nie przesuwa timerów, bo
 `MatchSession` nie przekazuje kroków symulacji. Restart tworzy świeży stan
-zaklęć z konfiguracji meczu, a zakończenie meczu uniemożliwia dalsze
+many i zaklęć z konfiguracji meczu, a zakończenie meczu uniemożliwia dalsze
 aktywacje/tickowanie. Brak stanu efektu w UI nie może wpływać na gameplay.
 
 ## Deterministyczność i kolejność faz
@@ -325,7 +358,8 @@ poziomu za wybór loadoutu.
 
 - ekran loadoutu należący do LoadoutSystemu będzie prezentował
   zaklęcia pogrupowane według kategorii celu z metadanych domenowych;
-- match screen wysyła akcję UI i komendę CastSpell;
+- match screen wysyła akcję UI i komendę `CastSpell`; obecnie aktywuje
+  `FORTRESS_SHIELD`, wyświetla manę i powód odrzucenia;
 - dostępność przycisku/komunikaty wynikają z snapshotu i odrzucenia komendy,
   nie z lokalnej kopii many/stocku;
 - timer, aktywny buff, tarcza, pułapka i bastion są renderowane na podstawie
@@ -333,39 +367,52 @@ poziomu za wybór loadoutu.
 - ikony i polskie/angielskie etykiety są mapowane przez istniejące katalogi
   assetów/lokalizacji; core przechowuje klucze, nie Android resource ID.
 
-Migracja musi sprawdzić dostępne pliki ikon/efektów legacy i istniejące zasoby
-Urkaaaz przed tworzeniem nowych assetów. Opis Haste ma jasno wskazywać
-sojuszniczy cel. UI nie może deklarować, że Haste przyspiesza przeciwnika.
+Spell-card artwork jest już dostępny. Migracja ma sprawdzać istniejące zasoby
+Urkaaaz przed tworzeniem nowych assetów world-effectów. Opis Haste ma jasno
+wskazywać sojuszniczy cel. UI nie może deklarować, że Haste przyspiesza
+przeciwnika.
 
 ## Etapowy plan migracji
 
-1. **Baseline i parytet.** Spisać wartości z `SpellType.kt`, `Mana.kt`,
+Stan pionowego wycinka: etapy 2–5 są częściowo wdrożone dla katalogu,
+kontraktów i `FORTRESS_SHIELD`; mana, tarcza i jej prezentacja w match screenie
+działają. Pozostałe efekty, prezentacja kategorii celu, AI oraz trwałe
+rozliczanie stocku są jeszcze poza implementacją.
+
+1. **Baseline i parytet.** Wartości kosztów i targetów są zapisane w
+   `SpellCatalog`; pozostałe reguły efektów nadal wymagają porównania z
+   legacy `SpellType.kt`, `Mana.kt`,
    poszczególnych klas czarów, `SpellContext`, `SpellSystem`, `GameEngine`,
    `SpellProgress` i zasobów UI. Dla każdego czaru zdefiniować cel,
    warunki aktywacji, czas/stackowanie oraz zachowanie na granicy ticka.
    Zarejestrować rozbieżność opisu Haste i użyć reguły sojuszniczej.
-2. **Kontrakty domenowe.** Uporządkować stabilne typy i utworzyć jeden
-   katalog definicji balansu z ortogonalnymi kategoriami roli i celu.
-   Dodać walidację kompletności/unikalności oraz testy całego katalogu.
-3. **Kontrakty meczu.** Podłączyć `CastSpell` do jawnego wyniku komendy,
-   rozbudować event aktywacji i niemutowalny snapshot efektów. Dodać typowane
-   odrzucenia. Nie wprowadzać zależności `game-contracts -> game-domain`.
-4. **Granica loadoutu.** Użyć istniejącego LoadoutSystemu. Jego
-   zatwierdzony wynik musi wejść do launch config/scenario. Nie implementować
-   tymczasowego spell-only loadoutu ani nie traktować `availableSpells` jako
-   wyboru gracza. Nie duplikować jego walidacji ani persystencji.
-5. **Deterministyczny runtime.** Dodać obsługę aktywacji i ticków w istniejącej
-   symulacji. Migrować najpierw zasoby/aktywację, potem czasowe buffy, leczenie
-   i targetowanie jednostek, następnie pułapki/katapultę/tarczę/bastion.
+2. **Kontrakty domenowe — częściowo wdrożone.** Katalog obejmuje wszystkie
+   stabilne typy, koszty i kategorie roli/celu; runtime effect definition i
+   testy balansu uzupełniać wraz z implementacją kolejnych czarów.
+3. **Kontrakty meczu — wdrożone dla tarczy.** `CastSpell` zwraca
+   `CommandResult`, event aktywacji niesie cel i koszt, a snapshot fortecy
+   publikuje stan tarczy. Nie wprowadzać zależności
+   `game-contracts -> game-domain`.
+4. **Granica loadoutu — wdrożona dla aktywacji.** Użyć istniejącego
+   LoadoutSystemu i jego zatwierdzonego `PlayerLoadoutConfig`; odrzucać
+   niedostępny lub niewyposażony czar. Nie implementować tymczasowego
+   spell-only loadoutu ani nie traktować `availableSpells` jako wyboru gracza.
+   Nie duplikować walidacji loadoutu ani jego persystencji.
+5. **Deterministyczny runtime — częściowo wdrożony.** Mana, jej regeneracja,
+   aktywacja tarczy i przechwytywanie pocisków działają w istniejącej
+   symulacji. Migrować dalej czasowe buffy, leczenie i targetowanie jednostek,
+   pułapki/katapultę/bastion oraz pozostałe reguły.
    Zachować jednego właściciela runtime state i ustaloną kolejność faz.
-6. **Progresja.** Przenieść reguły ceny złota, trwałego odblokowania i stocku
-   do warstwy aplikacyjnej. Konfiguracja meczu otrzymuje tylko zatwierdzone
-   dostępne czary i runtime stock. Zapis zmian stocku przechodzi przez jawne
-   eventy/wynik meczu; `SharedPreferences` nie trafia do domeny/symulacji.
-7. **Android.** Podłączyć match screen do komendy i render state; rozszerzyć
-   istniejący ekran loadoutu o edytory czarów; pokazać grupy celu, koszty,
-   stock, aktywne czasy oraz powody odrzuceń. Użyć lub zweryfikować istniejące
-   ikony i lokalizacje.
+6. **Granica progresji.** Nie przenosić zakupów, trwałego złota, odblokowań
+   ani zapisu profilu do domeny lub symulacji. Match launch otrzymuje
+   zatwierdzoną dostępność/loadout i dozwolony stock runtime; wynik meczu
+   raportuje zużycie do aplikacyjnej granicy progresji. Szczegóły trwałego
+   rozliczenia pozostają zakresem PlayerProgressionSystemu.
+7. **Android — częściowo wdrożony.** Match screen jest podłączony do komendy,
+   wyniku komendy i render state dla tarczy, many i odrzuceń. Dodać pozostałe
+   efekty, aktywne czasy i targetowanie; edytory Loadoutu pozostają własnością
+   LoadoutSystemu. Spell-card artwork jest dostępny; integrować world-effect
+   wizualizacje wraz z odpowiednimi efektami.
 8. **Parytet i domknięcie.** Uruchomić testy domeny, kontraktów, symulacji,
    sesji aplikacji i Android mapper/UI; porównać wszystkie wartości i reguły z
    baseline’em legacy; utrwalić replay regression i sprawdzić brak zależności
@@ -377,10 +424,10 @@ dodać tymczasowego drugiego właściciela wyboru ani walidacji.
 
 ## Plan testów i kryteria akceptacji
 
-Przyszła implementacja powinna dodać:
+Kolejne etapy implementacji powinny dodać:
 
-- testy katalogu: wszystkie 11 stabilnych ID, unikalność, kompletna definicja,
-  kategorie i niezmienione koszty/parametry;
+- testy katalogu: wszystkie 11 stabilnych ID, unikalność, kategorie i
+  niezmienione koszty; dodać runtime effect definition pozostałych czarów;
 - testy każdej aktywacji: koszt many, target, odrzucenie i brak częściowych
   skutków przy błędzie;
 - testy targetu/strony: Haste obejmuje wyłącznie sojuszników; kontrola
@@ -402,10 +449,10 @@ Przyszła implementacja powinna dodać:
 - test architektury: brak Androida w core, jeden właściciel balansu i runtime,
   brak drugiego SpellSystemu/loadoutu.
 
-Akceptacja implementacji wymaga wszystkich 11 efektów, jawnych odrzuceń,
-zachowania legacy balansu, testów deterministycznych, wykorzystania wspólnego
-loadoutu z LoadoutSystemu, prezentacji kategorii celu oraz braku duplikacji
-zasobów/progresji.
+Pełna akceptacja SpellSystemu wymaga wszystkich 11 efektów. Obecny wycinek
+zapewnia jawną aktywację i odrzucenia dla tarczy, zachowanie zdefiniowanego
+legacy balansu, testy deterministyczne oraz wykorzystanie wspólnego loadoutu.
+Pozostałe efekty, targetowanie i ich prezentacja w Androidzie są nadal otwarte.
 
 ## Rozważone warianty
 
@@ -419,34 +466,37 @@ Rekomendowane rozszerzenie wykorzystuje obecne kontrakty i strukturę
 modułową, a jednocześnie zachowuje oddzielną odpowiedzialność przyszłego
 LoadoutSystemu.
 
-## Otwarte decyzje przed implementacją
+## Otwarte decyzje i brakujący zakres
 
-- dokładny kontrakt przekazania zatwierdzonego loadoutu przez przyszły
-  LoadoutSystem do match launch;
+- czy rozszerzyć `EffectSnapshot` i `StatusSnapshot`, czy dodać
+  wyspecjalizowany `SpellSnapshot`, jeśli istniejące pola nie przeniosą
+  właściciela, typu zaklęcia, celu i czasu w sposób jednoznaczny;
 - pełna reguła wygaśnięcia efektu na granicy ticka i matematyka nakładających
   się różnych buffów, potwierdzona testami parytetu legacy;
 - rozliczenie trwałego stocku w przypadku przerwanego/zakończonego meczu;
-- które efekty wymagają odtworzenia osobnych assetów, a które mogą użyć już
-  dostępnych zasobów.
+- które efekty wymagają osobnych assetów, a które mogą użyć istniejących
+  zasobów; ilustracje kart zaklęć są dostępne, natomiast mapowanie wizualizacji
+  world-effectów pozostaje do rozstrzygnięcia dla kolejnych efektów.
 
-Te kwestie nie zmieniają przyjętych zasad: brak zmian balansu, Haste tylko dla
-sojuszników, LoadoutSystem jako osobny właściciel loadoutu i SpellSystem bez
-Androida/persystencji.
+Nadal trzeba domknąć read model aktywnych efektów, trwałe rozliczanie stocku,
+pozostałe efekty oraz ich prezentację. Zrealizowana tarcza nie zmienia
+przyjętych zasad: Haste działa tylko na sojuszników, LoadoutSystem pozostaje
+właścicielem loadoutu, a SpellSystem nie posiada persystencji.
 
 ## Proponowane pliki przyszłej implementacji
 
-Lista orientacyjna; dokładne pliki ustalić po ponownym odczytaniu bieżącego
-kodu:
+Lista pozostałych prac:
 
-- `game-domain/.../Spells.kt` — stabilne ID i obecna kategoria roli;
-- `game-domain/.../SpellCatalog.kt` — definicje, balans i kategorie celu;
+- `game-domain/.../Spells.kt` i `SpellCatalog.kt` — stabilne ID, koszty i
+  kategorie są już wdrożone; uzupełniać definicje efektów;
 - `game-domain/.../SpellRules.kt` lub wyspecjalizowane reguły — tylko jeśli
   potrzebne po analizie istniejących helperów;
 - `game-contracts/.../MatchCommands.kt`, `MatchEvents.kt`,
   `MatchSnapshot.kt` — komenda, wynik, eventy i odczyt efektów;
-- `game-simulation/.../SpellSimulation.kt` — aktywacja/tick wpięte do
-  `DeterministicMatchSimulation`;
-- `game-application/.../MatchSession.kt` — forwarding, wynik i lifecycle;
+- `game-simulation/.../DeterministicMatchSimulation.kt` — mana i tarcza są
+  już wdrożone; pozostałe efekty integrować w tej samej symulacji;
+- `game-application/.../MatchSession.kt` — wynik aktywacji i lifecycle są już
+  wdrożone dla `CastSpell`;
 - `game-campaign/.../CampaignLevelDefinition.kt` — dostępność bez logiki
   progresji/loadoutu;
 - `android-app/.../MatchViewModel.kt`, match-owned UI/render mappery i przyszły

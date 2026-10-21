@@ -3,6 +3,7 @@ package com.urkaaaz.simulation
 import com.urkaaaz.contracts.MapDefinition
 import com.urkaaaz.contracts.PlayerLoadoutConfig
 import com.urkaaaz.contracts.WorldScale
+import com.urkaaaz.domain.ManaConfiguration
 import com.urkaaaz.domain.WorldBounds
 
 /** Tunable, host-independent constants for the deterministic simulation. */
@@ -18,6 +19,11 @@ data class SimulationConfig(
     val blueFortressMaxHealth: Int = 500,
     val redFortressMaxHealth: Int = 500,
     val startingLimitedAmmunition: Int = 3,
+    val startingMana: Int = ManaConfiguration.STARTING_MANA,
+    val maximumMana: Int = ManaConfiguration.MAXIMUM_MANA,
+    val manaRegenerationAmount: Int = ManaConfiguration.REGENERATION_AMOUNT,
+    val manaRegenerationIntervalMilliseconds: Long =
+        ManaConfiguration.REGENERATION_INTERVAL_MILLISECONDS,
     val matchDurationMilliseconds: Long = 300_000L,
     val mapDefinition: MapDefinition? = null,
     val playerLoadout: PlayerLoadoutConfig? = null,
@@ -40,6 +46,16 @@ data class SimulationConfig(
         }
         require(startingLimitedAmmunition >= 0) {
             "starting limited ammunition must not be negative"
+        }
+        require(maximumMana > 0) { "maximum mana must be positive" }
+        require(startingMana in 0..maximumMana) {
+            "starting mana must be within mana bounds"
+        }
+        require(manaRegenerationAmount > 0) {
+            "mana regeneration amount must be positive"
+        }
+        require(manaRegenerationIntervalMilliseconds > 0) {
+            "mana regeneration interval must be positive"
         }
         require(matchDurationMilliseconds > 0) {
             "match duration must be positive"

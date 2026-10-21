@@ -1,6 +1,7 @@
 package com.urkaaaz.campaign
 
 import com.urkaaaz.domain.SpellType
+import com.urkaaaz.domain.SpellCatalog
 
 data class CampaignMilestoneDefinition(
     val id: String,
@@ -19,7 +20,9 @@ data class CampaignMilestoneDefinition(
         require(availableFromLevel in (completedLevel + 1)..CampaignLevelDefinition.MAX_LEVELS) {
             "availableFromLevel must be after completion and within the campaign"
         }
-        require(!spellType.special) { "campaign milestones can only unlock regular spells" }
+        require(!SpellCatalog.definition(spellType).special) {
+            "campaign milestones can only unlock regular spells"
+        }
     }
 }
 

@@ -89,6 +89,20 @@ sealed interface MatchEvent {
         override val simulationTimeMilliseconds: Long,
         val playerId: PlayerId,
         val spellType: String,
+        val targetId: EntityId? = null,
+        val manaCost: Int = 0,
+    ) : MatchEvent
+
+    data class ShieldDamaged(
+        override val eventId: EventId,
+        override val matchId: MatchId,
+        override val simulationTimeMilliseconds: Long,
+        val fortressId: EntityId,
+        val projectileId: EntityId,
+        val amount: Int,
+        val remainingHealth: Int,
+        val x: Float,
+        val y: Float,
     ) : MatchEvent
 
     data class UnitDeployed(

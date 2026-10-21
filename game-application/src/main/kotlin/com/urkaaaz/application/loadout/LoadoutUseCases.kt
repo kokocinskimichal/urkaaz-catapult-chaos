@@ -4,6 +4,7 @@ import com.urkaaaz.contracts.PlayerId
 import com.urkaaaz.contracts.PlayerLoadoutConfig
 import com.urkaaaz.domain.AmmunitionType
 import com.urkaaaz.domain.SpellType
+import com.urkaaaz.domain.SpellCatalog
 import com.urkaaaz.domain.UnitConfigurations
 
 class LoadoutUseCases(
@@ -129,7 +130,7 @@ class LoadoutUseCases(
             }
             is LoadoutEditAction.ToggleSpell -> {
                 if (action.selected) {
-                    val spell = SpellType.values().firstOrNull { it.name == action.spellType }
+                    val spell = SpellCatalog.find(action.spellType)
                         ?: return rejected(draft, LoadoutError.UNKNOWN_SPELL)
                     if (spell.special) {
                         if (snapshot.specialSpellStock(action.spellType) <= 0) {
@@ -165,7 +166,7 @@ class LoadoutUseCases(
         spellType: String,
         availability: LoadoutAvailability,
     ): LoadoutPurchaseOutcome {
-        val spell = SpellType.values().firstOrNull { it.name == spellType }
+        val spell = SpellCatalog.find(spellType)
             ?: return LoadoutPurchaseOutcome.Rejected(LoadoutError.UNKNOWN_SPELL)
         if (spell.special) {
             return LoadoutPurchaseOutcome.Rejected(LoadoutError.SPECIAL_SPELL_REQUIRES_SHOP)
@@ -244,7 +245,7 @@ class LoadoutUseCases(
             }
         }
         for (spellType in loadout.spellTypes) {
-            val spell = SpellType.values().firstOrNull { it.name == spellType }
+            val spell = SpellCatalog.find(spellType)
                 ?: return LoadoutError.UNKNOWN_SPELL
             if (spell.special) {
                 if (snapshot.specialSpellStock(spellType) <= 0) {
@@ -357,7 +358,7 @@ class LoadoutUseCases(
             }
         }
 
-        val knownSpells = SpellType.values().mapTo(mutableSetOf()) { it.name }
+        val knownSpells = SpellCatalog.all.mapTo(mutableSetOf()) { it.type.name }
         val spells = mutableListOf<String>()
         for (id in stored.spellTypes) {
             when {
@@ -365,7 +366,7 @@ class LoadoutUseCases(
                 !id.isAllowedSpell(availability, progression) -> correct(
                     LoadoutCategory.SPELL,
                     id,
-                    if (SpellType.valueOf(id).special) LoadoutCorrectionReason.OUT_OF_STOCK
+                    if (SpellCatalog.find(id)?.special == true) LoadoutCorrectionReason.OUT_OF_STOCK
                     else if (id !in availability.spellTypes) LoadoutCorrectionReason.UNAVAILABLE
                     else LoadoutCorrectionReason.LOCKED,
                 )

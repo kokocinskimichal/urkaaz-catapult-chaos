@@ -5,7 +5,9 @@ import com.urkaaaz.contracts.CatapultPresentationContract
 import com.urkaaaz.contracts.EntityId
 import com.urkaaaz.contracts.EventId
 import com.urkaaaz.contracts.FortressSnapshot
+import com.urkaaaz.contracts.FortressShieldGeometry
 import com.urkaaaz.contracts.MatchEvent
+import com.urkaaaz.contracts.MatchError
 import com.urkaaaz.contracts.MatchId
 import com.urkaaaz.contracts.MatchOutcome
 import com.urkaaaz.contracts.MatchPhase
@@ -30,6 +32,9 @@ import com.urkaaaz.domain.Velocity
 import com.urkaaaz.domain.WorldBounds
 import com.urkaaaz.domain.WorldPosition
 import com.urkaaaz.domain.ResourceWallet
+import com.urkaaaz.domain.SpellCatalog
+import com.urkaaaz.domain.SpellEffectDefinition
+import com.urkaaaz.domain.SpellType
 import com.urkaaaz.domain.Unit
 import com.urkaaaz.domain.DemolisherUnit
 import com.urkaaaz.domain.SapperUnit
@@ -40,6 +45,7 @@ import com.urkaaaz.domain.UnitActionState
 import com.urkaaaz.domain.UnitStatus
 import com.urkaaaz.domain.FriendlyFirePolicy
 import kotlin.math.min
+import kotlin.math.sqrt
 import kotlin.random.Random
 
 /**
@@ -77,6 +83,7 @@ class DeterministicMatchSimulation(
                 config.bounds.width - fortressCenterMargin,
                 FORTRESS_FLAT_HALF_WIDTH,
             )
+
             .protectRange(fortressCenterMargin, FORTRESS_FLAT_HALF_WIDTH)
             .protectRange(
                 config.bounds.width - fortressCenterMargin,
@@ -95,6 +102,10 @@ class DeterministicMatchSimulation(
     private val supplyRegenProgressSeconds = mutableMapOf(
         Team.BLUE to 0f,
         Team.RED to 0f,
+    )
+    private val manaRegenProgressMilliseconds = mutableMapOf(
+        Team.BLUE to 0L,
+        Team.RED to 0L,
     )
     private val wind = WindSystem(
         initialAccelerationX = config.windAccelerationX,
@@ -130,6 +141,103 @@ class DeterministicMatchSimulation(
         emit { MatchEvent.TurnChanged(it, matchId, simulationTimeMilliseconds, activeTeam) }
         logCombatState("match-started")
         return drainEvents()
+    }
+
+    private fun shieldImpactBy(
+        start: WorldPosition,
+        end: WorldPosition,
+        projectileTeam: Team,
+    ): ShieldImpact? {
+        val targetFortress = fortress(opposingTeam(projectileTeam))
+        if (targetFortress.shield == null) return null
+        val center = targetFortress.center
+        val radiusX = FortressShieldGeometry.horizontalRadius(WorldScale.FORTRESS_WIDTH)
+        val radiusY = FortressShieldGeometry.verticalRadius(WorldScale.FORTRESS_HEIGHT)
+        val fraction = segmentCircleIntersectionFraction(
+            start = WorldPosition(
+                x = (start.x - center.x) / radiusX,
+                y = (start.y - center.y) / radiusY,
+            ),
+            end = WorldPosition(
+                x = (end.x - center.x) / radiusX,
+                y = (end.y - center.y) / radiusY,
+            ),
+            center = WorldPosition(0f, 0f),
+            radius = 1f,
+        ) ?: return null
+        return ShieldImpact(
+            fortress = targetFortress,
+            position = WorldPosition(
+                x = start.x + (end.x - start.x) * fraction,
+                y = start.y + (end.y - start.y) * fraction,
+            ),
+        )
+    }
+
+    private fun segmentCircleIntersectionFraction(
+        start: WorldPosition,
+        end: WorldPosition,
+        center: WorldPosition,
+        radius: Float,
+    ): Float? {
+        val dx = end.x - start.x
+        val dy = end.y - start.y
+        val offsetX = start.x - center.x
+        val offsetY = start.y - center.y
+        val a = dx * dx + dy * dy
+        val c = offsetX * offsetX + offsetY * offsetY - radius * radius
+        if (c <= 0f) return 0f
+        if (a == 0f) return null
+        val b = 2f * (offsetX * dx + offsetY * dy)
+        val discriminant = b * b - 4f * a * c
+        if (discriminant < 0f) return null
+        val root = sqrt(discriminant)
+        val first = (-b - root) / (2f * a)
+        val second = (-b + root) / (2f * a)
+        return when {
+            first in 0f..1f -> first
+            second in 0f..1f -> second
+            else -> null
+        }
+    }
+
+    private fun resolveShieldImpact(projectile: Projectile, target: Fortress) {
+        phase = MatchPhase.RESOLVING_IMPACT
+        val damage = AmmunitionCatalog.definition(projectile.ammunition).damage.fortressDamage
+        val remainingHealth = (requireNotNull(target.shield).health.current - damage)
+            .coerceAtLeast(0)
+        setFortress(target.withShieldDamage(damage))
+        emit {
+            MatchEvent.ProjectileHitEntity(
+                eventId = it,
+                matchId = matchId,
+                simulationTimeMilliseconds = simulationTimeMilliseconds,
+                projectileId = projectile.id,
+                targetId = target.id,
+                ammunitionType = projectile.ammunition.name,
+                targetLayer = "FORTRESS_SHIELD",
+                x = projectile.position.x,
+                y = projectile.position.y,
+            )
+        }
+        emit {
+            MatchEvent.ShieldDamaged(
+                eventId = it,
+                matchId = matchId,
+                simulationTimeMilliseconds = simulationTimeMilliseconds,
+                fortressId = target.id,
+                projectileId = projectile.id,
+                amount = damage,
+                remainingHealth = remainingHealth,
+                x = projectile.position.x,
+                y = projectile.position.y,
+            )
+        }
+        logAmmunition(
+            reason = "projectile-hit-fortress-shield",
+            projectile = projectile,
+            targetId = target.id,
+        )
     }
 
     fun fire(
@@ -291,12 +399,51 @@ class DeterministicMatchSimulation(
         movingTeams += team
     }
 
+    fun castFortressShield(
+        playerId: PlayerId,
+        team: Team,
+        targetId: EntityId?,
+    ): MatchError? {
+        when (status) {
+            MatchStatus.RUNNING -> Unit
+            MatchStatus.FINISHED -> return MatchError.ALREADY_FINISHED
+            else -> return MatchError.MATCH_NOT_RUNNING
+        }
+        val definition = SpellCatalog.definition(SpellType.FORTRESS_SHIELD)
+        val effect = definition.effect as? SpellEffectDefinition.FortressShield
+            ?: return MatchError.SPELL_NOT_IMPLEMENTED
+        val targetFortress = fortress(team)
+        if (targetId != null && targetId != targetFortress.id) {
+            return MatchError.INVALID_SPELL_TARGET
+        }
+        if (targetFortress.shield != null) return MatchError.SPELL_ALREADY_ACTIVE
+        val wallet = resources.getValue(team)
+        val manaCost = definition.manaCost
+        if (!wallet.canSpendMana(manaCost)) return MatchError.INSUFFICIENT_RESOURCE
+
+        resources[team] = wallet.spendMana(manaCost)
+        setFortress(targetFortress.withShield(effect.hitPoints))
+        emit {
+            MatchEvent.SpellCast(
+                eventId = it,
+                matchId = matchId,
+                simulationTimeMilliseconds = simulationTimeMilliseconds,
+                playerId = playerId,
+                spellType = definition.type.name,
+                targetId = targetFortress.id,
+                manaCost = manaCost,
+            )
+        }
+        return null
+    }
+
     fun advance(deltaMilliseconds: Long): List<MatchEvent> {
         require(deltaMilliseconds >= 0) { "deltaMilliseconds must not be negative" }
         check(status == MatchStatus.RUNNING) { "match is not running" }
         val deltaSeconds = deltaMilliseconds / 1_000f
         wind.update(deltaSeconds)
         replenishSupply(deltaSeconds)
+        replenishMana(deltaMilliseconds)
         reloadRemainingSecondsByAmmunition.forEach { (team, reloads) ->
             reloads.keys.forEach { ammunition ->
                 val previous = reloads.getValue(ammunition)
@@ -413,6 +560,14 @@ class DeterministicMatchSimulation(
         val impactProjectile = terrainImpact?.let {
             advanced.copy(position = it)
         } ?: advanced
+        val shieldImpact = shieldImpactBy(projectile.position, impactProjectile.position, projectile.firedBy)
+        if (shieldImpact != null) {
+            resolveShieldImpact(
+                impactProjectile.copy(position = shieldImpact.position),
+                shieldImpact.fortress,
+            )
+            return null
+        }
         val target = targetHitBy(impactProjectile)
         return when {
             target != null -> {
@@ -575,6 +730,8 @@ class DeterministicMatchSimulation(
                 maxHealth = it.maxHealth,
                 x = it.center.x,
                 foundationY = it.center.y + WorldScale.FORTRESS_HEIGHT / 2f,
+                shieldHealth = it.shield?.health?.current,
+                shieldMaxHealth = it.shield?.health?.maximum,
             )
         },
         units = (units + defeatedUnits.map { it.unit }).map {
@@ -645,12 +802,14 @@ class DeterministicMatchSimulation(
         wind = wind.snapshot(),
         outcome = outcome(),
         resources = ResourceSnapshot(
-            gold = resources[Team.BLUE]?.gold ?: 0,
+            gold = resources.getValue(Team.BLUE).gold,
+            mana = resources.getValue(Team.BLUE).mana,
         ),
         resourcesByTeam = resources.mapValues { (_, wallet) ->
             ResourceSnapshot(
                 gold = wallet.gold,
                 supply = wallet.supply,
+                mana = wallet.mana,
                 ammunition = wallet.ammunition.mapKeys { (type, _) -> type.name },
             )
         },
@@ -1521,6 +1680,14 @@ class DeterministicMatchSimulation(
     private fun fortress(team: Team): Fortress =
         if (team == Team.BLUE) currentBlueFortress else currentRedFortress
 
+    private fun setFortress(fortress: Fortress) {
+        if (fortress.team == Team.BLUE) {
+            currentBlueFortress = fortress
+        } else {
+            currentRedFortress = fortress
+        }
+    }
+
     private fun fortressAttackX(team: Team): Float {
         val fortress = fortress(team)
         return fortress.center.x + if (team == Team.BLUE) 60f else -60f
@@ -1546,6 +1713,35 @@ class DeterministicMatchSimulation(
                     supply = (wallet.supply + replenished).coerceAtMost(MAX_SUPPLY),
                 )
             }
+        }
+    }
+
+    private fun replenishMana(deltaMilliseconds: Long) {
+        if (deltaMilliseconds <= 0L) return
+        Team.entries.forEach { team ->
+            val wallet = resources.getValue(team)
+            if (wallet.mana >= config.maximumMana) {
+                manaRegenProgressMilliseconds[team] = 0L
+                return@forEach
+            }
+            val progress = manaRegenProgressMilliseconds.getValue(team) + deltaMilliseconds
+            val intervals = progress / config.manaRegenerationIntervalMilliseconds
+            var remainingProgress = progress % config.manaRegenerationIntervalMilliseconds
+            if (intervals > 0L) {
+                val manaMissing = config.maximumMana - wallet.mana
+                val intervalsToFull =
+                    (manaMissing.toLong() + config.manaRegenerationAmount - 1) /
+                        config.manaRegenerationAmount
+                val restored = if (intervals >= intervalsToFull) {
+                    manaMissing
+                } else {
+                    (intervals * config.manaRegenerationAmount).toInt()
+                }
+                val updatedWallet = wallet.restoreMana(restored, config.maximumMana)
+                resources[team] = updatedWallet
+                if (updatedWallet.mana >= config.maximumMana) remainingProgress = 0L
+            }
+            manaRegenProgressMilliseconds[team] = remainingProgress
         }
     }
 
@@ -1998,6 +2194,7 @@ class DeterministicMatchSimulation(
     private fun initialWallet(): ResourceWallet = ResourceWallet(
         gold = 100,
         supply = MAX_SUPPLY,
+        mana = config.startingMana,
         ammunition = AmmunitionType.entries
             .filter {
                 !it.unlimited &&
@@ -2033,6 +2230,11 @@ class DeterministicMatchSimulation(
         val id: EntityId,
         val layer: com.urkaaaz.domain.AmmunitionHitLayer,
         val stopsProjectile: Boolean,
+    )
+
+    private data class ShieldImpact(
+        val fortress: Fortress,
+        val position: WorldPosition,
     )
 
     companion object {

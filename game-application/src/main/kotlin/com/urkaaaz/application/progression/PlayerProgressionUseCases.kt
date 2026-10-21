@@ -7,6 +7,7 @@ import com.urkaaaz.application.loadout.LoadoutProgressionSnapshot
 import com.urkaaaz.application.loadout.LoadoutPurchaseResult
 import com.urkaaaz.domain.AmmunitionType
 import com.urkaaaz.domain.SpellType
+import com.urkaaaz.domain.SpellCatalog
 
 class PlayerProgressionUseCases(
     private val repository: PlayerProgressionRepository,
@@ -42,7 +43,7 @@ class PlayerProgressionUseCases(
         LoadoutPurchaseResult.Blocked
 
     private fun LoadoutProgressionSnapshot.isValidProfile(): Boolean {
-        val knownSpells = SpellType.values().associateBy { it.name }
+        val knownSpells = SpellCatalog.all.associateBy { it.type.name }
         val knownAmmunition = AmmunitionType.values().associateBy { it.name }
         return unlockedSpellTypes.all { id ->
             knownSpells[id]?.special == false
