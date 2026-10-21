@@ -1,5 +1,21 @@
 # Changelog
 
+## 2026-10-21
+
+### Fixed
+
+- Campaign victories now deliver queued `MatchFinished` events even when the
+  match screen observes an already-finished snapshot; a tick that ends the match
+  returns its final snapshot without a spurious `requireRunning()` failure.
+- `NEXT LEVEL` dispatches the action already enabled by the persisted campaign
+  completion state instead of rechecking potentially stale render state.
+
+### Changed
+
+- Restored both campaign fortresses to the standard 500 HP; the demo mode's
+  existing BLUE fortress health bonus is unchanged.
+- Configured immersive full-screen mode to hide Android system bars.
+
 ## 2026-10-20
 
 ### Added
@@ -10,6 +26,20 @@
   category icons.
 - Added normal/pressed XS gold button backgrounds for compact BACK, NEXT LEVEL,
   and match restart actions.
+- Imported the complete red button-background family, matching the gold
+  standard sizes and XS length variants, with normal/pressed selectors.
+- Imported the complete dark button-background family in matching sizes, with
+  normal/pressed selectors.
+- Applied the existing Cinzel SemiBold typeface to all live-text button
+  controls.
+- Imported the shared match-result popup panel with a transparent illustration
+  window for the Victory/Defeat UI.
+- Imported the Victory and Defeat title plaques as separate transparent PNGs
+  and layered each beneath its live outcome title in the popup.
+- Imported and layered separate Green Frontier Victory and Defeat
+  illustrations into the popup's framed window.
+- Added the Victory/Defeat in-match popup overlay, with live level/biome labels,
+  persisted-progress gating, retry and context-appropriate return actions.
 - Campaign victories now offer NEXT LEVEL after progress is saved, opening the
   newly unlocked level's Loadout.
 

@@ -1,0 +1,89 @@
+Create two coordinated, text-free outcome title plaques for the Urkaaaz
+Victory/Defeat match-result popup.
+
+## References
+
+- Attach `assets_src/match/result-ui/match_result_popup_panel.png` as the
+  primary reference for material, lighting, trim, and scale.
+- Use `docs/systems/match-result-popup-mockup.agp` for the popup composition
+  and the distinction between Victory and Defeat.
+- The plaques are separate overlays on the shared panel. Do not redraw or
+  replace the panel, its transparent illustration window, or its top
+  level/biome plaque.
+
+## Output
+
+- Generate exactly two separate isolated PNG assets:
+  - `match_result_victory_plaque.png`
+  - `match_result_defeat_plaque.png`
+- Save both under `assets_src/match/result-ui/`.
+- Canvas: exactly 1920 x 480 pixels, RGBA, transparent background. This is a
+  4x source for a 480 x 120 dp target.
+- Center each plaque in its canvas with even transparent margins. Keep the
+  complete silhouette and any soft shadow inside the canvas.
+- Both plaques must have the same canvas size, silhouette footprint, visual
+  weight, and alignment so Android can use them in the same position.
+
+## Shared design
+
+- Create one compact, horizontal title plaque that can overlap the shared
+  popup panel's upper border without obscuring the level/biome plaque or
+  illustration window.
+- Match the shared Urkaaaz finish: dark iron or wood inset, warm bronze/gold
+  edging, restrained rivets, dimensional bevels, and controlled highlights.
+- Keep the center calm and wide enough for a live Android outcome label:
+  `VICTORY!` or `DEFEAT`.
+- Do not render any letters, words, numbers, punctuation, logos, or
+  typography. Android renders localized text separately in Cinzel SemiBold.
+- Keep the center surface sufficiently dark and uncluttered for pale or
+  warm-gold live text to remain readable.
+- Avoid thin details that disappear when scaled to 480 x 120 dp.
+
+## Victory plaque
+
+- Output: `match_result_victory_plaque.png`.
+- Use a confident warm-gold highlight treatment that complements, but does
+  not compete with, the shared popup frame.
+- Optional decoration may include a restrained laurel or celebratory metal
+  detail at the ends of the plaque. Keep its center clear for live text.
+- The mood should feel triumphant and welcoming, not premium, magical, or
+  reward-specific.
+
+## Defeat plaque
+
+- Output: `match_result_defeat_plaque.png`.
+- Use a restrained ember-red or dark-copper accent while retaining the same
+  neutral iron/wood material and overall plaque geometry as Victory.
+- Optional decoration may include a subtle scuffed edge or subdued ember
+  detail at the ends. Keep its center clear for live text.
+- Keep the mood encouraging and readable; avoid damage that suggests injury,
+  gore, or humiliation.
+
+## Runtime separation
+
+- These are decorative plaque backgrounds only. Do not bake in the outcome
+  title, level, biome, score, reward, unlock, or button content.
+- Victory and Defeat use their respective plaque PNGs, while the shared panel
+  and all other popup controls remain separate runtime layers.
+- Do not include a character, catapult, battlefield, landscape, or illustration
+  in either plaque; those belong in separate artwork.
+- Do not add a gold-reward or progression claim to either design.
+
+## Negative prompt
+
+text, letters, words, numbers, punctuation, logo, watermark, signature,
+button, button label, reward, coin, unlock, character, unit, catapult,
+battlefield, landscape, illustration, full popup panel, opaque canvas,
+cropped plaque, clipped bevel, oversized laurels, aggressive flames, gore,
+injury, humiliating imagery, excessive glow, tiny unreadable detail
+
+## Review checklist
+
+- Confirm exactly two PNGs exist with the requested names and dimensions.
+- Confirm both use RGBA and transparent pixels outside the plaque silhouette.
+- Confirm the plaque silhouettes have matching size, shape, and alignment.
+- Confirm the center of each plaque is clear for live Cinzel SemiBold text.
+- Confirm Victory is warm gold and Defeat is restrained ember-red/copper.
+- Preview both at 480 x 120 dp over the shared popup panel.
+- Do not import these assets into Android or change runtime layout until both
+  are reviewed and approved.

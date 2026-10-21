@@ -27,6 +27,7 @@ class MatchSession(
     private val mapDefinition: MapDefinition? = null,
     private val scenario: MatchScenario? = null,
     private val blueFortressMaxHealth: Int = 500,
+    private val redFortressMaxHealth: Int = 500,
     private val combatLogSink: CombatLogSink = NoOpCombatLogSink,
     private val ammunitionLogSink: AmmunitionLogSink = NoOpAmmunitionLogSink,
     private val randomSeedProvider: () -> Long = { Random.nextLong() },
@@ -48,6 +49,7 @@ class MatchSession(
         mapDefinition = mapDefinition,
         scenario = scenario,
         blueFortressMaxHealth = blueFortressMaxHealth,
+        redFortressMaxHealth = redFortressMaxHealth,
     )
 
     fun dispatch(command: MatchCommand): MatchSnapshot {
@@ -90,12 +92,13 @@ class MatchSession(
                 requireRunning().snapshot()
             }
             is MatchCommand.AdvanceSimulation -> {
+                val runningSimulation = requireRunning()
                 latestEvents = if (!paused) {
-                    requireRunning().advance(command.deltaMilliseconds)
+                    runningSimulation.advance(command.deltaMilliseconds)
                 } else {
                     emptyList()
                 }
-                requireRunning().snapshot()
+                runningSimulation.snapshot()
             }
             else -> throw UnsupportedOperationException(
                 "M10 command is not implemented by the local session: ${command::class.simpleName}",
@@ -194,6 +197,7 @@ class MatchSession(
                 terrainBiome = terrainBiome,
                 windAccelerationX = initialWind.direction * initialWind.strength,
                 blueFortressMaxHealth = blueFortressMaxHealth,
+                redFortressMaxHealth = redFortressMaxHealth,
                 mapDefinition = mapDefinition,
                 playerLoadout = scenario?.playerLoadout,
                 availableAmmunitionTypes = scenario?.availableAmmunition?.toSet().orEmpty(),

@@ -2,6 +2,7 @@ package com.urkaaaz.ui
 
 import android.content.Context
 import android.graphics.Typeface
+import android.widget.TextView
 import androidx.core.content.res.ResourcesCompat
 import com.urkaaaz.android.R
 
@@ -10,4 +11,8 @@ internal object UiTypography {
         requireNotNull(ResourcesCompat.getFont(context, R.font.cinzel_semibold)) {
             "Cinzel SemiBold font resource could not be loaded"
         }
+
+    fun applyButtonTypeface(textView: TextView) {
+        textView.typeface = typeface(textView.context)
+    }
 }

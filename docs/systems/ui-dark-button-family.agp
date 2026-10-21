@@ -1,0 +1,114 @@
+Create a reusable Urkaaaz dark button-background family that matches the
+approved gold button family in size, silhouette, proportions, and state
+behavior. The dark face is a semantic color variant, not a new button shape.
+
+## References
+
+- Attach the approved gold backgrounds
+  `loadout_start_match_button_normal.png` and
+  `loadout_start_match_button_pressed.png` as the geometry, material, and
+  interaction references.
+- Preserve the same fantasy-game craftsmanship, bevel structure, silhouette,
+  ornament placement, and controlled highlights as the gold family.
+- Do not use the red button family as a palette reference; this family must
+  read as dark and neutral, not red.
+
+## Output sizes
+
+Generate one transparent normal background and one pressed background for
+each distinct size below. Every PNG canvas is RGBA and rendered at 4x the
+target dp dimensions.
+
+| Family entry | Target display size | PNG canvas size |
+|---|---:|---:|
+| XS | 128 x 32 dp | 512 x 128 px |
+| S | 176 x 44 dp | 704 x 176 px |
+| M | 220 x 55 dp | 880 x 220 px |
+| L | 280 x 70 dp | 1120 x 280 px |
+| XL | 360 x 90 dp | 1440 x 360 px |
+| XS short | 96 x 32 dp | 384 x 128 px |
+| XS long | 160 x 32 dp | 640 x 128 px |
+
+The XS normal size is 128 x 32 dp and is shared by the standard XS entry and
+the XS length variants. Do not generate it twice. This results in exactly
+14 distinct PNG files: seven footprints, each with normal and pressed states.
+
+## Filenames and destination
+
+Use `<family>_<size>[_<length>]_<state>.png`, where `<family>` is
+`ui_button_dark`, `<state>` is `normal` or `pressed`, and `<length>` is used
+only for the compact XS short and long variants.
+
+- `ui_button_dark_xs_normal.png`
+- `ui_button_dark_xs_pressed.png`
+- `ui_button_dark_s_normal.png`
+- `ui_button_dark_s_pressed.png`
+- `ui_button_dark_m_normal.png`
+- `ui_button_dark_m_pressed.png`
+- `ui_button_dark_l_normal.png`
+- `ui_button_dark_l_pressed.png`
+- `ui_button_dark_xl_normal.png`
+- `ui_button_dark_xl_pressed.png`
+- `ui_button_dark_xs_short_normal.png`
+- `ui_button_dark_xs_short_pressed.png`
+- `ui_button_dark_xs_long_normal.png`
+- `ui_button_dark_xs_long_pressed.png`
+
+Save the 14 review assets under `assets_src/loadout/ui/`. Do not copy them to
+Android resources until the user approves the preview.
+
+## Shared visual design
+
+- Keep the gold family's exact target proportions and silhouette for every
+  matching size. Preserve its corner cuts, bevel widths, safe margins, and
+  decorative side details.
+- Use a rich charcoal or graphite face with near-black recessed shadows and
+  restrained neutral highlights. The face must read as dark, not as a washed
+  out gray.
+- Retain the family's bronze/gold outer bevel and metallic trim so the dark
+  buttons remain part of the same Urkaaaz button system.
+- Keep the center text-safe area calm and unobstructed.
+- These are background assets only. Android renders live labels separately.
+  Do not include text, letters, numbers, icons, arrows, or labels in any PNG.
+- Live labels use Cinzel SemiBold in warm ivory or pale gold for strong
+  contrast against the dark face in both interaction states.
+- Dark is for secondary, navigation, and utility actions. Keep primary
+  continuation actions in the gold family and retry, restart, or destructive
+  actions in the red family.
+- Use transparent pixels outside the button silhouette; do not flatten a
+  screen, panel, or other UI into a button.
+
+## Interaction states
+
+- **Normal:** visibly raised charcoal face, crisp upper bevel, and restrained
+  highlights. It must read as enabled, not disabled.
+- **Pressed:** preserve the exact outer geometry and ornament placement of
+  its normal pair. Slightly deepen the face, reduce the raised bevel and
+  highlights, and make the inner face feel gently pressed inward.
+- Keep each normal/pressed pair pixel-aligned in silhouette and ornament
+  placement. Pressed assets must remain clearly dark and enabled, with enough
+  contrast for the live label.
+- Do not add disabled, selected, loading, focus, or hover states.
+
+## Negative prompt
+
+text, letters, numbers, words, labels, logo, watermark, signature, opaque
+background, full-screen UI, screenshot, phone frame, changed silhouette,
+changed proportions, clipped corners, cropped bevel, asymmetrical ornaments,
+ornaments in the text-safe area, excessive glow, bright gray or silver face,
+blue face, red face, gold face, flat featureless black face, disabled state,
+loading state, extra icons, extra buttons
+
+## Review checklist
+
+- Confirm exactly 14 files exist with the listed names and target pixel sizes.
+- Confirm every PNG is RGBA with transparency outside the button silhouette.
+- Confirm the five standard sizes exactly match the gold family's dimensions.
+- Confirm XS short and long use the same 32 dp height and silhouette family;
+  only their width and center plate change.
+- Compare every normal/pressed pair as an overlay; geometry and ornament
+  placement must align.
+- Preview each size at its target dp dimensions and verify warm ivory/pale-gold
+  live-label contrast in both states.
+- Show all seven normal/pressed pairs individually for review before Android
+  integration.

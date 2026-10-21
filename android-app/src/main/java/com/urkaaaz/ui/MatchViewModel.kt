@@ -48,7 +48,12 @@ class MatchViewModel(
             playerLoadout,
             playerId,
         ),
-        blueFortressMaxHealth = if (demoMode) DEMO_BLUE_FORTRESS_MAX_HEALTH else DEFAULT_FORTRESS_MAX_HEALTH,
+        blueFortressMaxHealth = if (demoMode) {
+            DEMO_BLUE_FORTRESS_MAX_HEALTH
+        } else {
+            DEFAULT_FORTRESS_MAX_HEALTH
+        },
+        redFortressMaxHealth = DEFAULT_FORTRESS_MAX_HEALTH,
         combatLogSink = combatLogSink,
         ammunitionLogSink = ammunitionLogSink,
     ),
@@ -146,7 +151,8 @@ class MatchViewModel(
         if (action == MatchUiAction.AdvanceSimulation) {
             val currentSnapshot = gateway.snapshot()
             if (currentSnapshot.status != com.urkaaaz.contracts.MatchStatus.RUNNING) {
-                return mapRenderState(currentSnapshot).also { renderState = it }
+                return mapRenderState(currentSnapshot, gateway.consumeEvents())
+                    .also { renderState = it }
             }
         }
         if (action == MatchUiAction.FireRock && !selectedAmmunitionIsAvailable()) {

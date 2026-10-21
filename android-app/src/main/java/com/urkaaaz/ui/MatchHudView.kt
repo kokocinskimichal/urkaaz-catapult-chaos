@@ -24,6 +24,7 @@ class MatchHudView(context: Context) : FrameLayout(context) {
     }
     private val pauseButton = Button(context).apply {
         text = "II"
+        UiTypography.applyButtonTypeface(this)
         textSize = 10f
         setTextColor(Color.WHITE)
         background = panelBackground(Color.argb(150, 61, 72, 78))
@@ -35,6 +36,7 @@ class MatchHudView(context: Context) : FrameLayout(context) {
     }
     private val backButton = Button(context).apply {
         text = "BACK"
+        UiTypography.applyButtonTypeface(this)
         textSize = 9f
         setTextColor(Color.WHITE)
         background = panelBackground(Color.argb(150, 61, 72, 78))

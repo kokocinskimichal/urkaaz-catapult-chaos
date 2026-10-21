@@ -1,0 +1,114 @@
+Create a reusable Urkaaaz red button-background family that matches the
+approved gold button family in size, silhouette, proportions, and state
+behavior. The red face is a semantic color variant, not a new button shape.
+
+## References
+
+- Attach the approved gold backgrounds
+  `loadout_start_match_button_normal.png` and
+  `loadout_start_match_button_pressed.png` as the geometry and interaction
+  references.
+- Attach `match_result_defeat.png` only as a red-face palette reference for
+  the `RETRY` button. Do not reproduce its popup, labels, or surrounding UI.
+- Preserve the same fantasy-game materials, bevel structure, silhouette,
+  ornament placement, and controlled highlights as the gold family.
+
+## Output sizes
+
+Generate one transparent normal background and one pressed background for
+each distinct size below. Every PNG canvas is RGBA and rendered at 4x the
+target dp dimensions.
+
+| Family entry | Target display size | PNG canvas size |
+|---|---:|---:|
+| XS | 128 x 32 dp | 512 x 128 px |
+| S | 176 x 44 dp | 704 x 176 px |
+| M | 220 x 55 dp | 880 x 220 px |
+| L | 280 x 70 dp | 1120 x 280 px |
+| XL | 360 x 90 dp | 1440 x 360 px |
+| XS short | 96 x 32 dp | 384 x 128 px |
+| XS long | 160 x 32 dp | 640 x 128 px |
+
+The XS normal size is 128 x 32 dp and is shared by the standard XS entry and
+the XS length variants. Do not generate it twice. This results in exactly
+14 distinct PNG files: seven footprints, each with normal and pressed states.
+
+## Filenames and destination
+
+Use `<family>_<size>[_<length>]_<state>.png`, where `<family>` is
+`ui_button_red`, `<state>` is `normal` or `pressed`, and `<length>` is used
+only for the compact XS short and long variants.
+
+- `ui_button_red_xs_normal.png`
+- `ui_button_red_xs_pressed.png`
+- `ui_button_red_s_normal.png`
+- `ui_button_red_s_pressed.png`
+- `ui_button_red_m_normal.png`
+- `ui_button_red_m_pressed.png`
+- `ui_button_red_l_normal.png`
+- `ui_button_red_l_pressed.png`
+- `ui_button_red_xl_normal.png`
+- `ui_button_red_xl_pressed.png`
+- `ui_button_red_xs_short_normal.png`
+- `ui_button_red_xs_short_pressed.png`
+- `ui_button_red_xs_long_normal.png`
+- `ui_button_red_xs_long_pressed.png`
+
+Save the 14 review assets under `assets_src/loadout/ui/`. Do not copy them to
+Android resources until the user approves the preview.
+
+## Shared visual design
+
+- Keep the gold family’s exact target proportions and silhouette for every
+  matching size. Preserve its corner cuts, bevel widths, safe margins, and
+  decorative side details.
+- Replace the bright gold face with a rich, clearly red crimson/carmine face.
+  Use deep burgundy for recessed shadows and restrained red edge highlights.
+- Retain the gold/bronze outer bevel and metallic trim so the red family still
+  belongs to the same Urkaaaz button system.
+- Use the defeat mockup’s red `RETRY` plate as a palette cue only. Do not copy
+  its button dimensions when they differ from the gold size reference.
+- Keep the center text-safe area calm and unobstructed.
+- These are background assets only. Android renders live labels separately.
+  Do not include text, letters, numbers, icons, arrows, or labels in any PNG.
+- Live red-button labels use Cinzel SemiBold in a contrasting warm ivory or
+  pale-gold color. Maintain legibility against the red face in both
+  interaction states.
+- Red is for retry, restart, destructive, or similarly emphatic actions. Do
+  not make every primary or secondary action red.
+- Use transparent pixels outside the button silhouette; do not flatten a
+  popup, screenshot, or other screen content into a button.
+
+## Interaction states
+
+- **Normal:** visibly raised red face, crisp upper bevel, and restrained
+  highlights. It must read as enabled, not alarming or disabled.
+- **Pressed:** preserve the exact outer geometry and ornament placement of
+  its normal pair. Darken the red face slightly, reduce the raised bevel and
+  glow, and make the inner face feel gently pressed inward.
+- Keep each normal/pressed pair pixel-aligned in silhouette and ornament
+  placement. Pressed assets must remain clearly red and enabled.
+- Do not add disabled, selected, loading, focus, or hover states.
+
+## Negative prompt
+
+text, letters, numbers, words, labels, logo, watermark, signature, opaque
+background, full-screen UI, screenshot, phone frame, popup panel, changed
+silhouette, changed proportions, clipped corners, cropped bevel, asymmetrical
+ornaments, ornaments in the text-safe area, excessive glow, orange or pink
+face, gold face, black face, silver or blue button, disabled state, loading
+state, extra icons, extra buttons
+
+## Review checklist
+
+- Confirm exactly 14 files exist with the listed names and target pixel sizes.
+- Confirm every PNG is RGBA with transparency outside the button silhouette.
+- Confirm the five standard sizes exactly match the gold family’s dimensions.
+- Confirm XS short and long use the same 32 dp height and silhouette family;
+  only their width and center plate change.
+- Compare every normal/pressed pair as an overlay; geometry and ornament
+  placement must align.
+- Preview each size at its target dp dimensions and verify the red label
+  contrast using live Android text, not text baked into the PNG.
+- Show all seven normal/pressed pairs individually for review before Android
+  integration.

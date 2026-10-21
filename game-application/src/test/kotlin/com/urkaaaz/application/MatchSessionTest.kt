@@ -137,10 +137,12 @@ class MatchSessionTest {
     }
 
     @Test
-    fun configurablePlayerFortressHealthIsExposedInTheStartingSnapshot() {
-        val snapshot = MatchSession(
+    fun configurableFortressHealthForBothTeamsIsExposedAndRecordedForReplay() {
+        val session = MatchSession(
             blueFortressMaxHealth = 5_000,
-        ).dispatch(
+            redFortressMaxHealth = 5,
+        )
+        val snapshot = session.dispatch(
             MatchCommand.Start(
                 commandId = CommandId("start-demo-health"),
                 matchId = MatchId("demo-health"),
@@ -153,9 +155,10 @@ class MatchSessionTest {
             snapshot.fortresses.first { it.team == com.urkaaaz.contracts.Team.BLUE }.maxHealth,
         )
         assertEquals(
-            500,
+            5,
             snapshot.fortresses.first { it.team == com.urkaaaz.contracts.Team.RED }.maxHealth,
         )
+        assertEquals(snapshot, MatchReplayPlayer.play(requireNotNull(session.replay())).snapshot)
     }
 
     @Test
@@ -178,6 +181,45 @@ class MatchSessionTest {
 
         assertEquals(-1f, snapshot.wind.direction)
         assertEquals(0.5f, snapshot.wind.strength)
+    }
+
+    @Test
+    fun advancingIntoMatchFinishReturnsTheFinishedSnapshotAndEvent() {
+        val session = MatchSession(
+            blueFortressMaxHealth = 1,
+            randomSeedProvider = { 17L },
+        )
+        val matchId = MatchId("finished-during-advance")
+        val redPlayerId = PlayerId("local-ai")
+        session.dispatch(MatchCommand.Start(CommandId("start-finish"), matchId, redPlayerId))
+        session.dispatch(
+            MatchCommand.DeployUnit(
+                CommandId("deploy-finisher"),
+                matchId,
+                redPlayerId,
+                "DEFENDER",
+            ),
+        )
+        session.dispatch(
+            MatchCommand.SendWave(CommandId("send-finisher"), matchId, redPlayerId),
+        )
+
+        var snapshot = session.snapshot()
+        var tick = 0
+        while (snapshot.status == MatchStatus.RUNNING && tick < 600) {
+            snapshot = session.dispatch(
+                MatchCommand.AdvanceSimulation(
+                    CommandId("finish-tick-$tick"),
+                    matchId,
+                    redPlayerId,
+                    100,
+                ),
+            )
+            tick++
+        }
+
+        assertEquals(MatchStatus.FINISHED, snapshot.status)
+        assertTrue(session.consumeEvents().any { it is MatchEvent.MatchFinished })
     }
 
     @Test

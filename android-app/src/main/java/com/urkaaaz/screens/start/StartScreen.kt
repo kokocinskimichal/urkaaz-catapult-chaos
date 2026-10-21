@@ -11,6 +11,7 @@ import android.widget.LinearLayout
 import android.widget.TextView
 import com.urkaaaz.android.R
 import com.urkaaaz.navigation.ScreenContent
+import com.urkaaaz.ui.UiTypography
 
 class StartScreen(
     context: Context,
@@ -53,6 +54,7 @@ class StartScreen(
             })
             addView(TextView(context).apply {
                 text = context.getString(R.string.test_mode)
+                UiTypography.applyButtonTypeface(this)
                 textSize = 14f
                 gravity = Gravity.CENTER
                 setTextColor(Color.rgb(255, 211, 106))

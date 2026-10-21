@@ -99,6 +99,27 @@ class MatchViewModelCombatTest {
     }
 
     @Test
+    fun campaignLevelsUseStandardFortressHealthAndDemoKeepsItsBlueBonus() {
+        val levelOne = MatchViewModel(campaignLevel = 1)
+        levelOne.dispatch(MatchUiAction.StartMatch)
+
+        assertEquals(500, levelOne.renderState.blueFortressMaxHealth)
+        assertEquals(500, levelOne.renderState.redFortressMaxHealth)
+
+        val levelTwo = MatchViewModel(campaignLevel = 2)
+        levelTwo.dispatch(MatchUiAction.StartMatch)
+
+        assertEquals(500, levelTwo.renderState.blueFortressMaxHealth)
+        assertEquals(500, levelTwo.renderState.redFortressMaxHealth)
+
+        val demo = MatchViewModel(demoMode = true)
+        demo.dispatch(MatchUiAction.StartMatch)
+
+        assertEquals(5_000, demo.renderState.blueFortressMaxHealth)
+        assertEquals(500, demo.renderState.redFortressMaxHealth)
+    }
+
+    @Test
     fun defenderHealthChangesThroughTheAndroidMatchPipeline() {
         val viewModel = MatchViewModel(demoMode = true)
 

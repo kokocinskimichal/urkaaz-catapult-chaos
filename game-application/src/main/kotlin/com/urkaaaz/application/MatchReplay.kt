@@ -53,6 +53,7 @@ data class MatchReplayConfiguration(
     val mapDefinition: MapDefinition?,
     val scenario: MatchScenario?,
     val blueFortressMaxHealth: Int,
+    val redFortressMaxHealth: Int = 500,
 )
 
 data class MatchReplayResult(
@@ -71,6 +72,7 @@ object MatchReplayPlayer {
             mapDefinition = replay.configuration.mapDefinition,
             scenario = replay.configuration.scenario,
             blueFortressMaxHealth = replay.configuration.blueFortressMaxHealth,
+            redFortressMaxHealth = replay.configuration.redFortressMaxHealth,
             randomSeedProvider = { replay.randomSeed },
         )
         val events = buildList {

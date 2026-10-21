@@ -109,6 +109,8 @@ Generate five sizes and two interaction states for each size.
   watermark, signature, or any other text in any PNG.
 - Android renders live button labels separately and switches between the
   matching size's normal and pressed assets.
+- Render live labels in Cinzel SemiBold with a dark, high-contrast color on
+  the gold face.
 - Do not add a disabled-state asset, loading indicator, spinner, or extra
   action; those are outside this ten-file request.
 - Do not flatten the footer or any other UI into either button background.

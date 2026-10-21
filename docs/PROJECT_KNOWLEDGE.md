@@ -11,6 +11,8 @@ opens the loadout screen. The test mode button still opens `MatchScreen` with
 persistence are implemented with AndroidX DataStore. Campaign matches start
 only after the profile and saved loadout are read, validated and committed.
 Shop and result screens remain placeholders.
+`MainActivity` hides Android status and navigation bars for immersive
+full-screen presentation; system bars can be revealed transiently with a swipe.
 
 Terminology convention: **mecz** means the gameplay session and runtime
 simulation only. The Android UI is called the **match screen**, while the
@@ -73,6 +75,8 @@ native-drawn shapes or text glyphs. Original files are kept in
 `assets_src/loadout/ui/`; Android resources use `drawable-nodpi`.
 Cinzel SemiBold is the global Android game UI font and is also explicitly
 applied to text rendered on custom canvases.
+Live-text button controls explicitly use the shared `UiTypography` helper to
+retain Cinzel SemiBold. Button labels baked into image assets are unchanged.
 Level-unavailable units, ammunition and spells, plus locked spells, are
 desaturated and dimmed with the supplied centered lock asset; the card hides
 the visible availability/locked label while retaining accessible descriptions.
@@ -92,6 +96,25 @@ The XS family uses a 32dp graphic inside a 48dp touch target: Short for Loadout
 `BACK`, Normal for campaign `NEXT LEVEL`, and Long for match restart actions.
 Each selector swaps its matching normal/pressed PNG. The larger Start Match
 button retains its original 220 x 54 dp selector and layout.
+The reusable red button backgrounds are stored in `assets_src/loadout/ui/`
+and Android `drawable-nodpi`, with normal/pressed selectors for XS, S, M, L,
+XL, XS short, and XS long. Their fourteen PNGs are imported for future UI use;
+current screens do not yet select this red family. Labels remain live Android
+text and should use a light, high-contrast color on red.
+The dark button backgrounds are also stored in `assets_src/loadout/ui/` and
+Android `drawable-nodpi`, with normal/pressed selectors for the same seven
+footprints. They use a charcoal face with bronze/gold trim and are not yet
+assigned to a screen; labels remain live Android text in a contrasting light
+color.
+The shared match-result popup panel is stored at
+`assets_src/match/result-ui/match_result_popup_panel.png` and
+`drawable-nodpi/match_result_popup_panel.png`. It has a transparent
+illustration window and is used by the in-match Victory/Defeat popup; the
+approved 1499 x 1049 preview was upscaled to the AGP's 2400 x 1680 canvas.
+The outcome plaques are stored at
+`assets_src/match/result-ui/match_result_{victory,defeat}_plaque.png` and
+Android `drawable-nodpi`; the popup layers the matching plaque under its live
+outcome title. The source PNGs are 1920 x 480 RGBA canvases.
 Eleven approved full-card spell illustrations are stored in
 `assets_src/loadout/spell-cards/` and mapped to their
 `loadout_spell_*_card` drawables for carousel and detail rendering. The
@@ -99,8 +122,19 @@ Eleven approved full-card spell illustrations are stored in
 `CampaignSystem`
 persists completed levels, the highest unlocked level and applied milestone
 IDs separately from the profile. Only `BLUE_WIN` advances the campaign. The
-match result offers `NEXT LEVEL` after that completion is persisted, opening
-the next level's Loadout; failed saves retain the restart action.
+match result remains an overlay over the dimmed battlefield. `NEXT LEVEL`
+appears only after that completion is persisted and opens the next level's
+Loadout; during a pending save, NEXT LEVEL stays disabled while campaign return
+remains available. The controller dispatches the enabled action directly;
+completion and level eligibility are owned by the popup state mapper rather
+than rechecked against potentially stale render state. Failed saves offer retry
+plus campaign return. Defeat offers retry and campaign return, while demo
+matches offer retry and Dashboard return.
+The popup uses live level/biome and outcome text with the shared panel,
+outcome-specific plaque, and existing button assets. Separate Green Frontier
+Victory and Defeat illustrations are stored in `assets_src/match/result-ui/`
+and Android `drawable-nodpi`, sized to the panel window. Reward content remains
+deferred.
 Haste is awarded for level 5 and Heal for level 7; their availability starts
 at levels 6 and 8. Campaign rewards are projected into Loadout progression,
 and preferred spells affect only newly generated defaults. Tutorials remain
@@ -132,7 +166,8 @@ runtime is implemented.
 Campaign progress is initialized at level 1 in the versioned local campaign
 DataStore namespace. `CampaignScreen` reloads progress asynchronously and
 blocks selection on storage/corruption failures; it no longer exposes all 100
-levels by default.
+levels by default. Campaign fortresses use 500 HP each; demo mode preserves its
+existing 5000 HP BLUE fortress and 500 HP RED fortress.
 
 Campaign maps use one immutable JSON contract in `game-contracts`:
 `MapDefinition` contains a map ID and biome, fixed world dimensions,
@@ -211,9 +246,12 @@ The current match HUD displays:
   enabling the deterministic wind system: it begins transitioning after eight
   seconds and selects another wind target every 18–24 seconds.
 - The match tick reads the immutable simulation snapshot through
-  `LocalMatchGateway` before advancing. This prevents a stale presentation
-  state from dispatching `AdvanceSimulation` after the simulation has reached
-  `FINISHED`; the finished snapshot keeps the restart control visible.
+  `LocalMatchGateway` before advancing. An advance that itself transitions to
+  `FINISHED` must return its final snapshot and events without checking
+  `requireRunning()` again; this lets the match screen render the result popup
+  without a spurious terminal-tick exception. If a tick later observes an
+  already-finished snapshot, `MatchViewModel` also drains pending events so
+  `MatchFinished` still reaches campaign completion.
 - legacy-style unit deployment controls above the ammunition selector;
   selecting a unit sends `MatchUiAction.DeployUnit`, spends team gold and
   exposes the deployed unit through the match snapshot.

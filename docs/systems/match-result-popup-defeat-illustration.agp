@@ -1,0 +1,88 @@
+Create one humorous Defeat illustration for the Urkaaaz match-result popup,
+using the attached Green Frontier biome background.
+
+## Reference inputs
+
+- Attach the Green Frontier background image. Use it as the scene's
+  environment reference and preserve its recognizable rolling terrain,
+  greenery, lighting, and color palette.
+- Use the existing shared panel at
+  `assets_src/match/result-ui/match_result_popup_panel.png` to match the
+  illustration window's framing and visual scale.
+- Use the existing Victory illustration, if available, only as a reference
+  for the shared rendering style and scale. The Defeat gag and pose must be
+  clearly different.
+- If a current in-game screenshot or blue Defender reference is available,
+  use it to preserve the existing character design. Do not redesign the unit.
+
+## Output
+
+- Generate exactly one PNG:
+  `match_result_defeat_illustration.png`.
+- Save it under `assets_src/match/result-ui/`.
+- Canvas: exactly 2024 x 698 pixels, landscape aspect ratio approximately
+  2.9:1. This matches the transparent illustration opening in the supplied
+  2400 x 1680 panel asset at its 4x source scale (about 506 x 175 dp).
+- Fill the canvas edge-to-edge as a complete illustration for the opening.
+  Do not add transparent margins, a panel frame, or a title plaque.
+- Compose for the wide, shallow window: keep the Defender and leaf-pile gag
+  large enough to read at popup size, with important details away from edges.
+
+## Selected humorous scene
+
+- Show the recognizable blue Defender sitting safely and upright in a soft
+  pile of Green Frontier leaves after a defeat.
+- Tilt the Defender's helmet slightly askew and give the character a sheepish,
+  good-natured expression, as if pretending the leaf pile was intentional.
+- Keep the pose comfortable and harmless. The joke is the absurdly cozy
+  landing and the Defender's dignified reaction, not pain, injury, or
+  humiliation.
+- Use scattered leaves and soft grass to connect the gag to Green Frontier.
+  Do not repeat Victory's airborne leaf-confetti gag.
+
+## Composition and style
+
+- Match the polished Urkaaaz fantasy-game art style and the canonical
+  appearance of existing characters and equipment.
+- Preserve the attached Green Frontier environment as the visual basis;
+  adapt its crop or paint details only as needed to fit the wide opening.
+- Make the Defender the clear focal point. Keep the leaf pile low in the
+  composition so the face, tilted helmet, and expression remain visible.
+- Avoid important details in the top edge, where the popup's title plaque
+  visually overlaps the illustration window.
+- Use lighting and contrast that remain clear beneath the popup's dimming
+  scrim and inside the bronze frame.
+- Keep the scene free of text and readable at the final display size.
+
+## Runtime separation
+
+- This is illustration artwork only. Do not include `DEFEAT`, level or biome
+  labels, buttons, rewards, coins, unlocks, numbers, or UI.
+- Do not draw the popup panel, title plaque, or any border; Android layers
+  those assets independently.
+- Do not add a new character, unit, faction, spell, weapon, or canonical lore.
+- Do not include Victory, a new gameplay ability, gore, injury, or hostile
+  imagery.
+
+## Negative prompt
+
+text, letters, numbers, labels, logo, watermark, signature, UI, buttons,
+popup panel, title plaque, reward, coin, unlock, new unit, new weapon, new
+spell, invented faction, invented lore, gore, injury, pain, humiliating pose,
+crying, defeated character being mocked, airborne leaf confetti, generic
+fantasy landscape, snow, desert, marsh, ashland, unrelated biome, cropped
+character, tiny unreadable character, excessive particles, excessive glow
+
+## Review checklist
+
+- Confirm one 2024 x 698 PNG exists at the requested path.
+- Confirm the composition fills the wide illustration window without adding
+  a frame, title, or UI.
+- Confirm the attached Green Frontier background is recognizable in the
+  environment and palette.
+- Confirm the blue Defender matches the existing appearance and remains the
+  clear focal point.
+- Confirm the seated leaf-pile gag is playful, safe, and distinct from Victory.
+- Preview at approximately 506 x 175 dp inside the shared popup panel.
+- Do not import the generated illustration into Android until it is reviewed
+  and approved.

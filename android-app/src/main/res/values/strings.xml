@@ -20,6 +20,15 @@
     <string name="match_restart">RESTART MATCH</string>
     <string name="match_next_level">NEXT LEVEL</string>
     <string name="match_saving_progress">SAVING PROGRESS…</string>
+    <string name="match_result_level_context">LEVEL %1$d · %2$s</string>
+    <string name="match_result_victory">VICTORY!</string>
+    <string name="match_result_defeat">DEFEAT</string>
+    <string name="match_result_draw">DRAW</string>
+    <string name="match_result_retry">RETRY</string>
+    <string name="match_result_exit_campaign">EXIT TO CAMPAIGN</string>
+    <string name="match_result_back_dashboard">BACK TO DASHBOARD</string>
+    <string name="match_result_saving_status">Campaign progress is being saved.</string>
+    <string name="match_result_completion_failed">Progress save failed. Retry this level or return.</string>
     <string name="loadout_title">LOADOUT</string>
     <string name="loadout_level">CAMPAIGN • LEVEL %1$d</string>
     <string name="loadout_back">BACK</string>

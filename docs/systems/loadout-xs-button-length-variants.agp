@@ -10,7 +10,8 @@ a separate visual style for compact navigation such as `BACK`.
   interaction-state references.
 - Attach the Loadout screen screenshot to check how a compact button fits
   beside the existing header and content. Use it as a composition reference;
-  labels rendered over these assets by the game must be dark and bold.
+  labels rendered over these assets by the game must use Cinzel SemiBold in a
+  dark color.
 - Preserve the shared gold face, bronze bevels, silhouette language, and
   restrained highlights. The width changes; the button family does not.
 
@@ -51,7 +52,7 @@ a separate visual style for compact navigation such as `BACK`.
   do not squeeze the ornaments into the text-safe area.
 - Keep the center area clear of ornaments so Android-rendered text can be
   centered on the gold face with strong contrast.
-- The game renders these live labels in its existing typeface, bold and dark:
+- The game renders these live labels in Cinzel SemiBold in a dark color:
   Short `BACK`, Normal `NEXT LEVEL`, and Long `RESTART MATCH`. This mapping is
   contextual guidance only; do not include the labels in the PNG assets.
 - Keep the gold treatment consistent for primary, secondary, and navigation
@@ -100,7 +101,7 @@ state, loading state, extra icons, extra buttons
 - Confirm Short, Normal, and Long retain the same height and visual style,
   changing only their width and proportional center plate.
 - Confirm the PNGs are text-free. Preview them in the game with their live
-  labels (`BACK`, `NEXT LEVEL`, `RESTART MATCH`) in the existing dark, bold
-  typeface; check centering and readability at target dp size.
+  labels (`BACK`, `NEXT LEVEL`, `RESTART MATCH`) in dark Cinzel SemiBold;
+  check centering and readability at target dp size.
 - Preview all six assets against the dark Loadout footer and show each pair
   individually for review before Android integration.

@@ -18,6 +18,7 @@ class LocalMatchGateway(
     mapDefinition: MapDefinition? = null,
     scenario: MatchScenario? = null,
     blueFortressMaxHealth: Int = 500,
+    redFortressMaxHealth: Int = 500,
     combatLogSink: CombatLogSink = NoOpCombatLogSink,
     ammunitionLogSink: AmmunitionLogSink = NoOpAmmunitionLogSink,
     private val session: MatchSession = MatchSession(
@@ -26,6 +27,7 @@ class LocalMatchGateway(
         mapDefinition = mapDefinition,
         scenario = scenario,
         blueFortressMaxHealth = blueFortressMaxHealth,
+        redFortressMaxHealth = redFortressMaxHealth,
         combatLogSink = combatLogSink,
         ammunitionLogSink = ammunitionLogSink,
     ),

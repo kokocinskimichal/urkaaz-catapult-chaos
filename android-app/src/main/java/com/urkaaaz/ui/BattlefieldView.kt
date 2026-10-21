@@ -74,6 +74,7 @@ class BattlefieldView(context: Context) : View(context) {
         combatFeedback = emptyList(),
     )
     private var animationFrame = 0
+    private var showOutcomeLabel = true
     private var impactFrame = 0
     private var lifecyclePaused = false
     private val fireRainPresentationClock = FireRainPresentationClock()
@@ -134,7 +135,8 @@ class BattlefieldView(context: Context) : View(context) {
         drawAimGesture = ::drawAimGesture,
     )
 
-    fun render(newState: RenderState) {
+    fun render(newState: RenderState, showOutcomeLabel: Boolean = true) {
+        this.showOutcomeLabel = showOutcomeLabel
         updateProjectileTrails(newState)
         camera.update(newState, width.toFloat(), height.toFloat())
         val presentationState = newState.copy(
@@ -243,6 +245,7 @@ class BattlefieldView(context: Context) : View(context) {
             viewportHeight = height.toFloat(),
             debugHitboxesVisible = debugHitboxesVisible,
             combatFeedback = state.combatFeedback,
+            showOutcomeLabel = showOutcomeLabel,
         )
         if (debugCoordinatesVisible) {
             drawDebugCursorCoordinates(canvas)

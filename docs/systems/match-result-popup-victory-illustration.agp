@@ -1,0 +1,86 @@
+Create one humorous Victory illustration for the Urkaaaz match-result popup,
+using the attached Green Frontier biome background.
+
+## Reference inputs
+
+- Attach the Green Frontier background image. Use it as the scene's
+  environment reference and preserve its recognizable rolling terrain,
+  greenery, lighting, and color palette.
+- Use the existing shared panel at
+  `assets_src/match/result-ui/match_result_popup_panel.png` to match the
+  illustration window's framing and visual scale.
+- If a current in-game screenshot or blue Defender reference is available,
+  use it to preserve the existing character design. Do not redesign the unit.
+
+## Output
+
+- Generate exactly one PNG:
+  `match_result_victory_illustration.png`.
+- Save it under `assets_src/match/result-ui/`.
+- Canvas: exactly 2024 x 698 pixels, landscape aspect ratio approximately
+  2.9:1. This matches the transparent illustration opening in the supplied
+  2400 x 1680 panel asset at its 4x source scale (about 506 x 175 dp).
+- Fill the canvas edge-to-edge as a complete illustration for the opening.
+  Do not add transparent margins, a panel frame, or a title plaque.
+- Compose for the wide, shallow window: keep the Defender and the leaf gag
+  large enough to read at popup size, with their important details away from
+  the edges.
+
+## Selected humorous scene
+
+- Show the recognizable blue Defender celebrating a Victory in Green
+  Frontier.
+- A large green leaf has been caught and tossed into the air by the nearby
+  catapult; it breaks into a playful burst of smaller leaves like confetti.
+- Make the gag feel accidental and harmless, not like a new ammunition type,
+  spell, weapon, or gameplay ability.
+- Give the Defender a joyful, slightly overconfident victory pose. Keep the
+  humor warm and characterful rather than slapstick injury or mockery.
+- Use Green Frontier grass, leaves, and rolling landscape details from the
+  attached background to make the scene unmistakably belong to this biome.
+
+## Composition and style
+
+- Match the polished Urkaaaz fantasy-game art style and the canonical
+  appearance of existing characters and equipment.
+- Preserve the attached Green Frontier environment as the visual basis;
+  adapt its crop or paint details only as needed to fit the wide opening.
+- Place the Defender and catapult in a clear, balanced composition. Keep the
+  leaf burst readable against the background without covering the character.
+- Avoid important details in the top edge, where the popup's title plaque
+  visually overlaps the illustration window.
+- Use lighting and contrast that remain clear beneath the popup's dimming
+  scrim and inside the bronze frame.
+- Keep the scene free of text and readable at the final display size.
+
+## Runtime separation
+
+- This is illustration artwork only. Do not include `VICTORY!`, level or
+  biome labels, buttons, rewards, coins, unlocks, numbers, or UI.
+- Do not draw the popup panel, title plaque, or any border; Android layers
+  those assets independently.
+- Do not add a new character, unit, faction, spell, weapon, or canonical lore.
+- Do not include a defeat gag or any injury, gore, or hostile imagery.
+
+## Negative prompt
+
+text, letters, numbers, labels, logo, watermark, signature, UI, buttons,
+popup panel, title plaque, reward, coin, unlock, new unit, new weapon, new
+spell, invented faction, invented lore, gore, injury, humiliating pose,
+generic fantasy landscape, snow, desert, marsh, ashland, unrelated biome,
+cropped character, tiny unreadable character, leaf burst obscuring the
+Defender, excessive particles, excessive glow
+
+## Review checklist
+
+- Confirm one 2024 x 698 PNG exists at the requested path.
+- Confirm the composition fills the wide illustration window without adding
+  a frame, title, or UI.
+- Confirm the attached Green Frontier background is recognizable in the
+  environment and palette.
+- Confirm the blue Defender and catapult match their existing appearance.
+- Confirm the leaf-confetti gag is playful, readable, and does not imply new
+  gameplay.
+- Preview at approximately 506 x 175 dp inside the shared popup panel.
+- Do not import the generated illustration into Android until it is reviewed
+  and approved.

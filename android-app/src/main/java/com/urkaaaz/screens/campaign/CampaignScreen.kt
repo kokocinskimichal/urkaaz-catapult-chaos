@@ -18,6 +18,7 @@ import com.urkaaaz.application.campaign.CampaignSelectionRejection
 import com.urkaaaz.application.campaign.CampaignSystem
 import com.urkaaaz.campaign.CampaignLevelDefinition
 import com.urkaaaz.navigation.ScreenContent
+import com.urkaaaz.ui.UiTypography
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -156,6 +157,7 @@ class CampaignScreen(
                     } else {
                         context.getString(R.string.campaign_level_locked, level)
                     }
+                    UiTypography.applyButtonTypeface(this)
                     textSize = 18f
                     setTextColor(Color.WHITE)
                     gravity = Gravity.CENTER
@@ -199,6 +201,7 @@ class CampaignScreen(
     private fun addRetryButton() {
         levelsContainer.addView(TextView(context).apply {
             text = context.getString(R.string.campaign_retry)
+            UiTypography.applyButtonTypeface(this)
             textSize = 14f
             setTextColor(Color.rgb(255, 211, 106))
             gravity = Gravity.CENTER

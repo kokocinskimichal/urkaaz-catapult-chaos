@@ -15,12 +15,11 @@ import android.widget.LinearLayout
 import android.widget.CheckBox
 import android.widget.ScrollView
 import android.widget.TextView
-import com.urkaaaz.campaign.CampaignLevelDefinition
 import com.urkaaaz.campaign.MapDefinitionRepository
 import com.urkaaaz.contracts.MatchEvent
 import com.urkaaaz.contracts.MatchOutcome
+import com.urkaaaz.contracts.MatchStatus
 import com.urkaaaz.contracts.PlayerLoadoutConfig
-import com.urkaaaz.screens.loadout.LoadoutAssetCatalog
 
 class MatchScreenController(
     private val activity: Activity,
@@ -43,7 +42,7 @@ class MatchScreenController(
         onMatchFinished = { level, event ->
             onMatchFinished(level, event) { completionRecorded ->
                 campaignCompletionRecorded = completionRecorded
-                lastRenderedState?.let(::updateFinishedAction)
+                lastRenderedState?.let(::render)
             }
         },
     )
@@ -54,7 +53,7 @@ class MatchScreenController(
     private lateinit var unitPanel: UnitPanelView
     private lateinit var debugButton: TextView
     private lateinit var snapshotCloseButton: TextView
-    private lateinit var restartButton: TextView
+    private lateinit var resultPopupView: MatchResultPopupView
     private var snapshotMode = false
     private var debugPausedMatch = false
     private var campaignCompletionRecorded: Boolean? = null
@@ -114,7 +113,7 @@ class MatchScreenController(
                 text = "DEBUG"
                 setTextColor(Color.WHITE)
                 textSize = 11f
-                setTypeface(typeface, Typeface.BOLD)
+                UiTypography.applyButtonTypeface(this)
                 setPadding(dp(8), dp(3), dp(8), dp(3))
                 setBackgroundResource(com.urkaaaz.android.R.drawable.bg_hud_panel)
                 setOnClickListener { showDebugToolsDialog() }
@@ -123,34 +122,20 @@ class MatchScreenController(
                 text = "CLOSE SNAPSHOT"
                 setTextColor(Color.WHITE)
                 textSize = 12f
-                setTypeface(typeface, Typeface.BOLD)
+                UiTypography.applyButtonTypeface(this)
                 setPadding(dp(14), dp(7), dp(14), dp(7))
                 setBackgroundResource(com.urkaaaz.android.R.drawable.bg_hud_panel)
                 visibility = View.GONE
                 setOnClickListener { setSnapshotMode(false) }
         }
-        restartButton = TextView(activity).apply {
-            text = activity.getString(com.urkaaaz.android.R.string.match_restart)
-            setTextColor(Color.rgb(64, 38, 20))
-            textSize = 14f
-            setTypeface(typeface, Typeface.BOLD)
-            gravity = Gravity.CENTER
-            setPadding(0, 0, 0, 0)
-            setBackgroundResource(LoadoutAssetCatalog.longButtonBackground())
-            elevation = dp(12).toFloat()
-            translationZ = dp(24).toFloat()
-            minWidth = dp(160)
-            minHeight = dp(48)
-            visibility = View.GONE
-            setOnClickListener {
-                if (canContinueToNextLevel(viewModel.renderState)) {
-                    onNextLevelClicked(campaignLevel + 1)
-                } else {
-                    aimAngle = 45f
-                    aimPower = 50f
-                    render(viewModel.dispatch(MatchUiAction.RestartMatch))
-                }
-            }
+        resultPopupView = MatchResultPopupView(activity) { action ->
+            dispatchMatchResultAction(
+                action = action,
+                onRetry = ::restartMatch,
+                onNextLevel = { onNextLevelClicked(campaignLevel + 1) },
+                onCampaignReturn = onBackClicked,
+                onDashboardReturn = onBackClicked,
+            )
         }
 
         battlefieldView.onAimChanged = { aim ->
@@ -230,16 +215,7 @@ class MatchScreenController(
                     rightMargin = dp(12)
                 },
             )
-            addView(
-                restartButton,
-                FrameLayout.LayoutParams(
-                    FrameLayout.LayoutParams.WRAP_CONTENT,
-                    FrameLayout.LayoutParams.WRAP_CONTENT,
-                ).apply {
-                    gravity = Gravity.CENTER
-                    topMargin = dp(92)
-                },
-            )
+            addView(resultPopupView, FrameLayout.LayoutParams(-1, -1))
             render(viewModel.dispatch(MatchUiAction.StartMatch))
             if (openDebugOnStart) {
                 viewModel.setAiUnitAutomationEnabled(false)
@@ -265,70 +241,36 @@ class MatchScreenController(
 
     private fun render(state: RenderState) {
         lastRenderedState = state
+        val popupState = MatchResultPopupStateMapper.map(
+            isFinished = state.statusLabel == MatchStatus.FINISHED.name && !snapshotMode,
+            outcome = state.outcomeLabel?.let(MatchOutcome::valueOf),
+            campaignLevel = campaignLevel,
+            biomeName = state.terrainBiome,
+            demoMode = demoMode,
+            campaignCompletionRecorded = campaignCompletionRecorded,
+        )
         hudView.render(state)
         ammunitionPanel.render(state)
         unitPanel.render(state)
-        battlefieldView.render(state)
+        battlefieldView.render(state, showOutcomeLabel = popupState == null)
         debugButton.visibility = if (state.statusLabel == "RUNNING" && !snapshotMode) {
             View.VISIBLE
         } else {
             View.GONE
         }
-        restartButton.visibility = if (
-            state.statusLabel == com.urkaaaz.contracts.MatchStatus.FINISHED.name &&
-            !snapshotMode
-        ) {
-            View.VISIBLE
-        } else {
-            View.GONE
-        }
-        if (restartButton.visibility == View.VISIBLE) {
-            updateFinishedAction(state)
-            restartButton.bringToFront()
+        resultPopupView.visibility = if (popupState == null) View.GONE else View.VISIBLE
+        if (popupState != null) {
+            resultPopupView.render(popupState)
+            resultPopupView.bringToFront()
         }
     }
 
-    private fun updateFinishedAction(state: RenderState) {
-        val hasNextLevel = !demoMode &&
-            campaignLevel < CampaignLevelDefinition.MAX_LEVELS &&
-            state.outcomeLabel == MatchOutcome.BLUE_WIN.name
-        val completionPending = hasNextLevel && campaignCompletionRecorded == null
-        val nextLevelReady = hasNextLevel && campaignCompletionRecorded == true
-        val actionText = when {
-            nextLevelReady ->
-                activity.getString(com.urkaaaz.android.R.string.match_next_level)
-            completionPending ->
-                activity.getString(com.urkaaaz.android.R.string.match_saving_progress)
-            else -> activity.getString(com.urkaaaz.android.R.string.match_restart)
-        }
-        if (restartButton.text != actionText) {
-            restartButton.text = actionText
-            restartButton.setBackgroundResource(
-                if (nextLevelReady) {
-                    LoadoutAssetCatalog.nextLevelButtonBackground()
-                } else {
-                    LoadoutAssetCatalog.longButtonBackground()
-                },
-            )
-            restartButton.textSize = if (completionPending) 12f else 14f
-            restartButton.layoutParams = restartButton.layoutParams.apply {
-                width = dp(if (nextLevelReady) 128 else 160)
-                height = dp(48)
-            }
-        }
-        val isActionEnabled = !completionPending
-        if (restartButton.isEnabled != isActionEnabled) {
-            restartButton.isEnabled = isActionEnabled
-            restartButton.isClickable = isActionEnabled
-            restartButton.alpha = if (isActionEnabled) 1f else 0.6f
-        }
+    private fun restartMatch() {
+        campaignCompletionRecorded = null
+        aimAngle = 45f
+        aimPower = 50f
+        render(viewModel.dispatch(MatchUiAction.RestartMatch))
     }
-
-    private fun canContinueToNextLevel(state: RenderState): Boolean =
-        !demoMode &&
-            campaignLevel < CampaignLevelDefinition.MAX_LEVELS &&
-            state.outcomeLabel == MatchOutcome.BLUE_WIN.name &&
-            campaignCompletionRecorded == true
 
     private fun showDebugToolsDialog() {
         debugPausedMatch = viewModel.renderState.statusLabel == "RUNNING"
@@ -371,7 +313,7 @@ class MatchScreenController(
             text = "SNAPSHOT"
             setTextColor(Color.WHITE)
             textSize = 14f
-            setTypeface(typeface, Typeface.BOLD)
+            UiTypography.applyButtonTypeface(this)
             setPadding(dp(12), dp(10), dp(12), dp(10))
             setBackgroundResource(com.urkaaaz.android.R.drawable.bg_hud_panel)
             setOnClickListener {
@@ -421,7 +363,7 @@ class MatchScreenController(
                 text = "RECRUIT ENEMY ${debugUnitLabel(unitId).uppercase()}"
                 setTextColor(Color.WHITE)
                 textSize = 13f
-                setTypeface(typeface, Typeface.BOLD)
+                UiTypography.applyButtonTypeface(this)
                 setPadding(dp(12), dp(8), dp(12), dp(8))
                 setBackgroundResource(com.urkaaaz.android.R.drawable.bg_hud_panel)
                 isEnabled = unitId in viewModel.aiAllowedUnitIds()
@@ -444,7 +386,7 @@ class MatchScreenController(
             text = "SEND ENEMY WAVE"
             setTextColor(Color.WHITE)
             textSize = 14f
-            setTypeface(typeface, Typeface.BOLD)
+            UiTypography.applyButtonTypeface(this)
             setPadding(dp(12), dp(10), dp(12), dp(10))
             setBackgroundResource(com.urkaaaz.android.R.drawable.bg_hud_panel)
             setOnClickListener {
@@ -460,7 +402,7 @@ class MatchScreenController(
             text = "CLOSE"
             setTextColor(Color.WHITE)
             textSize = 14f
-            setTypeface(typeface, Typeface.BOLD)
+            UiTypography.applyButtonTypeface(this)
             setPadding(dp(12), dp(10), dp(12), dp(10))
             setBackgroundResource(com.urkaaaz.android.R.drawable.bg_hud_panel)
             setOnClickListener { dialog.dismiss() }

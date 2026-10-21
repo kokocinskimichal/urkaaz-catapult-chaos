@@ -1,0 +1,97 @@
+Create one reusable, text-free popup panel frame for the Urkaaaz match-result
+screen. It is shared by Victory and Defeat; do not bake outcome-specific
+colors, illustrations, rewards, labels, or controls into this asset.
+
+## References
+
+- Attach `match_result_victory.png` and `match_result_defeat.png` as
+  composition references. Use their shared dark wood/iron panel, framed
+  Green Frontier illustration window, warm metal edging, and restrained
+  hardware as visual guidance.
+- Use `loadout_header_frame.png` only as a secondary reference for the
+  established Urkaaaz wood, metal, lighting, and material finish.
+- The mockups are flattened screen compositions. Do not reproduce their
+  battlefield, characters, text, buttons, coin artwork, or other UI content
+  in this panel asset.
+
+## Output
+
+- Generate exactly one isolated transparent PNG:
+  `match_result_popup_panel.png`.
+- Canvas: 2400 x 1680 px, RGBA, rendered at 4x the target 600 x 420 dp size.
+- Preserve a 10:7 landscape proportion. The panel must scale uniformly and
+  remain legible when rendered smaller than its target dp size.
+- Save the review asset under `assets_src/match/result-ui/`.
+- Keep the area outside the panel transparent. The game renders the
+  battlefield behind the popup and applies its dimming overlay in UI.
+
+## Shared panel structure
+
+- Build one substantial dark wood-and-iron backing with a clear outer
+  silhouette, warm bronze/gold metal edging, restrained corner plates, and
+  readable depth. Match the shared framing language of both mockups.
+- Include a wide, centered illustration window in the upper-middle area.
+  Render its inner opening fully transparent so the runtime can place a
+  separate Victory or Defeat illustration behind the frame.
+- Frame the illustration opening with a continuous inset border. Keep the
+  opening rectangular and unobstructed; do not place ornaments over the
+  visible art area.
+- Reserve a small centered top plaque area for the dynamic level/biome line.
+  It may have a dark inset surface and metal trim, but must contain no text.
+- Leave a broad, calm dark panel surface below the illustration window for
+  optional reward content and native UI controls. Do not draw fixed rows,
+  separators, or placeholders there; the runtime must be able to omit
+  unavailable rewards without leaving an empty baked-in row.
+- Keep the central upper edge clear for a separate, outcome-specific title
+  plaque to overlap the frame. Do not include a victory laurel, red defeat
+  plate, or result title in this shared asset.
+- Ensure the panel has enough unobstructed interior space for live UI text
+  and the gold, dark, or red button backgrounds to be layered independently.
+
+## Visual direction
+
+- Follow the mockups' polished fantasy-game finish: dark, warm wood; deep
+  iron surfaces; bronze/gold bevels; controlled highlights; and subtle
+  handcrafted detail.
+- Keep the panel visually strong over a dimmed battlefield without
+  overpowering the separately rendered result illustration or labels.
+- Keep materials and lighting neutral enough to work with both the warm-gold
+  Victory treatment and restrained ember-red Defeat treatment.
+- Use symmetrical corner hardware and even safe margins. Avoid fragile,
+  tiny details that disappear when the panel is scaled down.
+- Render no shadows or glow outside the transparent canvas bounds.
+
+## Runtime separation
+
+- This asset is only the reusable popup backing and illustration-window
+  frame. Android renders the live outcome title, level/biome context, reward
+  data, icons, and button labels separately.
+- Victory and Defeat use the same panel asset and geometry. Their separate
+  title plaques and illustrations are layered by the UI.
+- The runtime may hide all reward content when no reward is available; the
+  panel must not imply that a gold reward or unlock exists.
+- Do not include any button face; the UI uses the existing gold/red families
+  and the separately generated dark button family.
+
+## Negative prompt
+
+text, letters, numbers, words, labels, title, logo, watermark, signature,
+character, unit, catapult, landscape, battlefield, sky, grass, leaves, coins,
+reward icon, unlock icon, button, button label, gold amount, victory wreath,
+defeat emblem, red outcome treatment, full-screen background, screenshot,
+phone frame, presentation board, opaque exterior, opaque illustration
+window, ornaments across the window, excessive glow, asymmetrical hardware,
+cropped frame, clipped corners
+
+## Review checklist
+
+- Confirm exactly one 2400 x 1680 RGBA PNG exists with the specified name.
+- Confirm pixels outside the panel silhouette are transparent.
+- Confirm the illustration-window opening is fully transparent and large
+  enough for the separate landscape illustration.
+- Confirm the top plaque is blank and leaves room for a live level/biome line.
+- Confirm the panel has no fixed reward row or control artwork.
+- Confirm the central upper edge can accept separate Victory and Defeat title
+  plaques without covering the illustration opening.
+- Preview the frame over both match-result mockups at the target size and
+  verify that its shared neutral material treatment suits both outcomes.

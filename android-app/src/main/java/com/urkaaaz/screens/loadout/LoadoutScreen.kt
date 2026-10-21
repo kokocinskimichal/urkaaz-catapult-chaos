@@ -40,6 +40,7 @@ import com.urkaaaz.application.loadout.LoadoutUseCases
 import com.urkaaaz.application.loadout.MatchLoadout
 import com.urkaaaz.contracts.PlayerLoadoutConfig
 import com.urkaaaz.navigation.ScreenContent
+import com.urkaaaz.ui.UiTypography
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -261,7 +262,7 @@ class LoadoutScreen(
                 startButton = Button(context).apply {
                     text = context.getString(R.string.loadout_start_match)
                     textSize = 17f
-                    setTypeface(typeface, Typeface.BOLD)
+                    UiTypography.applyButtonTypeface(this)
                     setTextColor(Color.rgb(64, 38, 20))
                     setBackgroundResource(LoadoutAssetCatalog.startMatchButtonBackground())
                     isEnabled = false
@@ -365,7 +366,7 @@ class LoadoutScreen(
                 addView(TextView(context).apply {
                     text = context.getString(R.string.loadout_back)
                     textSize = 13f
-                    setTypeface(typeface, Typeface.BOLD)
+                    UiTypography.applyButtonTypeface(this)
                     setTextColor(Color.rgb(64, 38, 20))
                     gravity = Gravity.CENTER
                     setPadding(0, 0, 0, 0)
@@ -978,6 +979,7 @@ class LoadoutScreen(
             } else {
                 context.getString(R.string.loadout_select_item)
             }
+            UiTypography.applyButtonTypeface(this)
             isEnabled = opensShop || (!isFixedRock && (
                 isSelected || (
                     status == LoadoutOptionStatus.AVAILABLE &&

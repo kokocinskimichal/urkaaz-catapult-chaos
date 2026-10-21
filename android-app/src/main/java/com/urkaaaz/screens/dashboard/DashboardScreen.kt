@@ -13,6 +13,7 @@ import android.widget.Space
 import android.widget.TextView
 import com.urkaaaz.android.R
 import com.urkaaaz.navigation.ScreenContent
+import com.urkaaaz.ui.UiTypography
 
 class DashboardScreen(
     private val context: Context,
@@ -47,6 +48,7 @@ class DashboardScreen(
 
         addView(Button(context).apply {
             text = "RESET"
+            UiTypography.applyButtonTypeface(this)
             textSize = 11f
             setTextColor(Color.WHITE)
             setPadding(dp(12), dp(6), dp(12), dp(6))
@@ -78,6 +80,7 @@ class DashboardScreen(
             })
             addView(Button(context).apply {
                 text = "RESET"
+                UiTypography.applyButtonTypeface(this)
                 textSize = 9f
                 setTextColor(Color.WHITE)
                 setPadding(dp(7), dp(3), dp(7), dp(3))

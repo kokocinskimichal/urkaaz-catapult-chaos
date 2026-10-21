@@ -43,6 +43,7 @@ class BattlefieldRenderer(
         viewportHeight: Float,
         debugHitboxesVisible: Boolean,
         combatFeedback: List<CombatFeedbackRenderState>,
+        showOutcomeLabel: Boolean = true,
     ) {
         canvas.save()
         canvas.scale(camera.scale, camera.scale)
@@ -318,7 +319,9 @@ class BattlefieldRenderer(
                 viewportHeight = viewportHeight,
             )
         }
-        drawOutcome(canvas, state.outcomeLabel, viewportWidth, viewportHeight)
+        if (showOutcomeLabel) {
+            drawOutcome(canvas, state.outcomeLabel, viewportWidth, viewportHeight)
+        }
         if (isAiming) drawAimGesture(canvas, groundTop)
         canvas.restore()
     }
