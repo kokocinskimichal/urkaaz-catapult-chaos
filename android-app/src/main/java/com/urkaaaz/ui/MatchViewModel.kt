@@ -6,6 +6,7 @@ import com.urkaaaz.campaign.DemoLevelDefinitions
 import com.urkaaaz.campaign.MapDefinitionRepository
 import com.urkaaaz.application.LocalMatchGateway
 import com.urkaaaz.application.MatchReplay
+import com.urkaaaz.application.loadout.LoadoutCatalog
 import com.urkaaaz.contracts.CommandId
 import com.urkaaaz.contracts.CommandResult
 import com.urkaaaz.contracts.EventId
@@ -68,30 +69,29 @@ class MatchViewModel(
         playerId,
     )
 
-    val selectableAmmunitionTypes: Set<String>? = campaignScenario?.let { scenario ->
-        playerLoadout?.ammunitionSlots
+    val selectableAmmunitionTypes: List<String> = campaignScenario?.let { scenario ->
+        val committedTypes = scenario.playerLoadout?.ammunitionSlots
             ?.filterNotNull()
-            ?.toSet()
-            ?.let { selectedTypes ->
-                scenario.availableAmmunition.filterTo(mutableSetOf()) {
-                    it in selectedTypes
-                }
-            }
-            ?: scenario.availableAmmunition.toSet()
-    }
+            ?: scenario.availableAmmunition
+        committedTypes
+            .filter { it in scenario.availableAmmunition }
+            .take(PlayerLoadoutConfig.AMMUNITION_SLOT_COUNT)
+    } ?: listOf("ROCK", "SIEGE_BOMB", "POWDER_BARREL")
 
-    val selectableUnitTypes: Set<String>? = campaignScenario?.let { scenario ->
-        val levelUnitTypes = scenario.availableUnits
-            .takeIf { it.isNotEmpty() }
-            ?.toSet()
-        val loadoutUnitTypes = scenario.playerLoadout?.unitTypes?.toSet()
-        when {
-            levelUnitTypes != null && loadoutUnitTypes != null ->
-                levelUnitTypes intersect loadoutUnitTypes
-            levelUnitTypes != null -> levelUnitTypes
-            else -> loadoutUnitTypes
-        }
-    }
+    val selectableUnitTypes: List<String> = campaignScenario?.let { scenario ->
+        val committedTypes = scenario.playerLoadout?.unitTypes ?: scenario.availableUnits
+        committedTypes
+            .filter { it in scenario.availableUnits }
+            .take(PlayerLoadoutConfig.MAX_UNITS)
+    } ?: LoadoutCatalog.units
+        .take(PlayerLoadoutConfig.MAX_UNITS)
+        .map { it.id }
+
+    val selectableSpellTypes: List<String> = campaignScenario?.let { scenario ->
+        scenario.playerLoadout?.spellTypes.orEmpty()
+            .filter { it in scenario.availableSpells }
+            .take(PlayerLoadoutConfig.MAX_SPELLS)
+    }.orEmpty()
 
     private var commandSequence = 0
     private var matchGeneration = 0L
@@ -99,11 +99,6 @@ class MatchViewModel(
     private var selectedAmmunition = "ROCK"
     private val forwardedCampaignCompletions = mutableSetOf<Triple<Long, MatchId, EventId>>()
     private var spellFeedbackLabel: String? = null
-    private val hasFortressShieldEquipped = campaignScenario?.let { scenario ->
-        "FORTRESS_SHIELD" in scenario.availableSpells &&
-            "FORTRESS_SHIELD" in scenario.playerLoadout?.spellTypes.orEmpty()
-    } == true
-
     var renderState: RenderState = RenderStateMapper.map(MatchSnapshot())
         private set
 
@@ -155,8 +150,8 @@ class MatchViewModel(
     }
 
     fun dispatch(action: MatchUiAction): RenderState {
-        if (action == MatchUiAction.CastFortressShield) {
-            return dispatchFortressShield()
+        if (action is MatchUiAction.CastSpell) {
+            return dispatchSpell(action.spellType)
         }
         if (action == MatchUiAction.AdvanceSimulation) {
             val currentSnapshot = gateway.snapshot()
@@ -255,7 +250,7 @@ class MatchViewModel(
                     playerId = playerId,
                 ),
             )
-            MatchUiAction.CastFortressShield -> return dispatchFortressShield()
+            is MatchUiAction.CastSpell -> return dispatchSpell(action.spellType)
         }
         var presentationEvents = gateway.consumeEvents()
         if (action == MatchUiAction.AdvanceSimulation &&
@@ -276,24 +271,24 @@ class MatchViewModel(
         forwardCampaignCompletionEvents(events)
         return RenderStateMapper.map(snapshot, events).copy(
             matchGeneration = matchGeneration,
-            hasFortressShieldEquipped = hasFortressShieldEquipped,
+            selectedAmmunitionType = selectedAmmunition,
             spellFeedbackLabel = spellFeedbackLabel,
         )
     }
 
-    private fun dispatchFortressShield(): RenderState {
+    private fun dispatchSpell(spellType: String): RenderState {
         spellFeedbackLabel = null
         val result = gateway.dispatchResult(
             MatchCommand.CastSpell(
                 commandId = CommandId("ui-${++commandSequence}"),
                 matchId = matchId,
                 playerId = playerId,
-                spellType = "FORTRESS_SHIELD",
+                spellType = spellType,
             ),
         )
         val events = when (result) {
             is CommandResult.Accepted -> {
-                spellFeedbackLabel = "SHIELD ACTIVATED"
+                spellFeedbackLabel = "SPELL CAST"
                 result.events
             }
             is CommandResult.Rejected -> {
@@ -306,9 +301,9 @@ class MatchViewModel(
 
     private fun spellRejectionLabel(error: MatchError): String = when (error) {
         MatchError.INSUFFICIENT_RESOURCE -> "NOT ENOUGH MANA"
-        MatchError.SPELL_ALREADY_ACTIVE -> "SHIELD ALREADY ACTIVE"
-        MatchError.SPELL_NOT_IN_LOADOUT -> "SHIELD NOT EQUIPPED"
-        MatchError.SPELL_NOT_AVAILABLE -> "SHIELD UNAVAILABLE"
+        MatchError.SPELL_ALREADY_ACTIVE -> "SPELL ALREADY ACTIVE"
+        MatchError.SPELL_NOT_IN_LOADOUT -> "SPELL NOT EQUIPPED"
+        MatchError.SPELL_NOT_AVAILABLE -> "SPELL UNAVAILABLE"
         MatchError.MATCH_NOT_RUNNING,
         MatchError.ALREADY_FINISHED,
         -> "MATCH NOT RUNNING"
@@ -358,10 +353,30 @@ private fun loadSelectedScenario(
     playerLoadout: PlayerLoadoutConfig?,
     playerId: PlayerId,
 ): MatchScenario? {
-    if (demoMode) return null
-    return CampaignLevelDefinition.forLevel(campaignLevel, repository).toMatchScenario(
+    if (demoMode && playerLoadout == null) return null
+    val definition = CampaignLevelDefinition.forLevel(
+        if (demoMode) CampaignLevelDefinition.MAX_LEVELS else campaignLevel,
+        repository,
+    )
+    val scenario = definition.toMatchScenario(
         playerId = playerId,
         opponentId = PlayerId("local-ai"),
         playerLoadout = playerLoadout,
+    )
+    if (!demoMode) return scenario
+
+    val demo = DemoLevelDefinitions.fromRepository(repository)
+    return scenario.copy(
+        scenarioId = "demo",
+        initialResources = scenario.initialResources.copy(
+            ammunition = LoadoutCatalog.ammunition.associate {
+                it.id to definition.startingAmmunition
+            },
+        ),
+        availableUnits = LoadoutCatalog.units.map { it.id }.sorted(),
+        availableAmmunition = LoadoutCatalog.ammunition.map { it.id }.sorted(),
+        availableSpells = LoadoutCatalog.spells.map { it.id }.sorted(),
+        mapDefinition = demo.mapDefinition,
+        wind = demo.initialWind,
     )
 }

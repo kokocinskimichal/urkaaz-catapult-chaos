@@ -35,6 +35,7 @@ import com.urkaaaz.domain.ResourceWallet
 import com.urkaaaz.domain.SpellCatalog
 import com.urkaaaz.domain.SpellEffectDefinition
 import com.urkaaaz.domain.SpellType
+import com.urkaaaz.domain.SupplyConfiguration
 import com.urkaaaz.domain.Unit
 import com.urkaaaz.domain.DemolisherUnit
 import com.urkaaaz.domain.SapperUnit
@@ -1700,7 +1701,7 @@ class DeterministicMatchSimulation(
         if (deltaSeconds <= 0f) return
         Team.entries.forEach { team ->
             val wallet = resources.getValue(team)
-            if (wallet.supply >= MAX_SUPPLY) {
+            if (wallet.supply >= SupplyConfiguration.MAXIMUM_SUPPLY) {
                 supplyRegenProgressSeconds[team] = 0f
                 return@forEach
             }
@@ -1710,7 +1711,8 @@ class DeterministicMatchSimulation(
                 progress - replenished * SUPPLY_REGEN_INTERVAL_SECONDS
             if (replenished > 0) {
                 resources[team] = wallet.copy(
-                    supply = (wallet.supply + replenished).coerceAtMost(MAX_SUPPLY),
+                    supply = (wallet.supply + replenished)
+                        .coerceAtMost(SupplyConfiguration.MAXIMUM_SUPPLY),
                 )
             }
         }
@@ -2193,7 +2195,7 @@ class DeterministicMatchSimulation(
 
     private fun initialWallet(): ResourceWallet = ResourceWallet(
         gold = 100,
-        supply = MAX_SUPPLY,
+        supply = SupplyConfiguration.MAXIMUM_SUPPLY,
         mana = config.startingMana,
         ammunition = AmmunitionType.entries
             .filter {
@@ -2238,7 +2240,6 @@ class DeterministicMatchSimulation(
     )
 
     companion object {
-        private const val MAX_SUPPLY = 20
         private const val SUPPLY_REGEN_INTERVAL_SECONDS = 3f
         private const val MIN_DAMAGE_VARIANCE_FACTOR = 0.80f
         private const val MAX_DAMAGE_VARIANCE_FACTOR = 1.20f

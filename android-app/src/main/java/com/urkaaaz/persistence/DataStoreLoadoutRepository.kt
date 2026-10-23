@@ -14,8 +14,14 @@ import com.urkaaaz.application.loadout.StoredLoadoutSelection
 import java.io.IOException
 import kotlinx.coroutines.flow.first
 
+enum class LoadoutStorageScope {
+    CAMPAIGN_LEVEL,
+    DEMO,
+}
+
 class DataStoreLoadoutRepository(
     private val dataStore: DataStore<Preferences>,
+    private val scope: LoadoutStorageScope = LoadoutStorageScope.CAMPAIGN_LEVEL,
 ) : LoadoutRepository {
     override suspend fun read(level: Int): LoadoutStorageResult {
         if (level <= 0) {
@@ -33,12 +39,13 @@ class DataStoreLoadoutRepository(
             )
         }
 
-        val keys = LevelKeys(level)
+        val keys = LevelKeys(level, scope)
         val hasSelection = preferences.contains(keys.units) ||
             preferences.contains(keys.ammunition) ||
             preferences.contains(keys.spells)
-        val version = preferences[LOADOUT_VERSION_KEY]
-        if (!preferences.hasLoadoutFields() && version == null) {
+        val hasLoadoutFields = preferences.hasLoadoutFields(scope)
+        val version = preferences.loadoutVersion(scope)
+        if (!hasLoadoutFields && version == null) {
             return LoadoutStorageResult.Success(null)
         }
 
@@ -74,18 +81,18 @@ class DataStoreLoadoutRepository(
             return LoadoutStorageWriteResult.Failure(LoadoutStorageFailure.INVALID_LEVEL)
         }
 
-        val keys = LevelKeys(level)
+        val keys = LevelKeys(level, scope)
         val preferences = try {
             dataStore.updateData { current ->
-                val version = current[LOADOUT_VERSION_KEY]
+                val version = current.loadoutVersion(scope)
                 if (
                     version != null && version != LOADOUT_VERSION ||
-                    version == null && current.hasLoadoutFields()
+                    version == null && current.hasLoadoutFields(scope)
                 ) {
                     current
                 } else {
                     current.toMutablePreferences().apply {
-                        this[LOADOUT_VERSION_KEY] = LOADOUT_VERSION
+                        this[scope.versionKey()] = LOADOUT_VERSION
                         this[keys.units] = encodeIdentifiers(loadout.unitTypes)
                         this[keys.ammunition] = encodeSlots(loadout.ammunitionSlots)
                         this[keys.spells] = encodeIdentifiers(loadout.spellTypes)
@@ -102,7 +109,7 @@ class DataStoreLoadoutRepository(
             )
         }
 
-        return when (preferences[LOADOUT_VERSION_KEY]) {
+        return when (preferences.loadoutVersion(scope)) {
             LOADOUT_VERSION -> LoadoutStorageWriteResult.Saved
             null -> LoadoutStorageWriteResult.Failure(LoadoutStorageFailure.INVALID_DATA)
             else -> LoadoutStorageWriteResult.Failure(LoadoutStorageFailure.UNSUPPORTED_VERSION)
@@ -121,21 +128,49 @@ class DataStoreLoadoutRepository(
     private fun decodeSlots(encoded: String): List<String?> =
         encoded.split('|').map { value -> value.takeUnless { it == EMPTY_SLOT } }
 
-    private fun Preferences.hasLoadoutFields(): Boolean =
-        asMap().keys.any { key ->
-            key.name.startsWith(LOADOUT_KEY_PREFIX) && key.name != LOADOUT_VERSION_KEY.name
+    private fun Preferences.loadoutVersion(scope: LoadoutStorageScope): Int? =
+        when (scope) {
+            LoadoutStorageScope.CAMPAIGN_LEVEL -> this[LOADOUT_VERSION_KEY]
+            LoadoutStorageScope.DEMO -> this[DEMO_LOADOUT_VERSION_KEY]
+                ?: if (hasLoadoutFields(scope)) this[LOADOUT_VERSION_KEY] else null
         }
 
-    private class LevelKeys(level: Int) {
-        val units = stringPreferencesKey("loadout.$level.units")
-        val ammunition = stringPreferencesKey("loadout.$level.ammunition")
-        val spells = stringPreferencesKey("loadout.$level.spells")
+    private fun LoadoutStorageScope.versionKey(): Preferences.Key<Int> =
+        when (this) {
+            LoadoutStorageScope.CAMPAIGN_LEVEL -> LOADOUT_VERSION_KEY
+            LoadoutStorageScope.DEMO -> DEMO_LOADOUT_VERSION_KEY
+        }
+
+    private fun Preferences.hasLoadoutFields(scope: LoadoutStorageScope): Boolean =
+        asMap().keys.any { key ->
+            when (scope) {
+                LoadoutStorageScope.CAMPAIGN_LEVEL ->
+                    key.name.startsWith(LOADOUT_KEY_PREFIX) &&
+                        !key.name.startsWith(DEMO_LOADOUT_KEY_PREFIX) &&
+                        key.name != LOADOUT_VERSION_KEY.name
+                LoadoutStorageScope.DEMO ->
+                    key.name.startsWith(DEMO_LOADOUT_KEY_PREFIX) &&
+                        key.name != DEMO_LOADOUT_VERSION_KEY.name
+            }
+        }
+
+    private class LevelKeys(level: Int, scope: LoadoutStorageScope) {
+        private val prefix = when (scope) {
+            LoadoutStorageScope.CAMPAIGN_LEVEL -> "loadout.$level"
+            LoadoutStorageScope.DEMO -> "loadout.demo"
+        }
+        val units = stringPreferencesKey("$prefix.units")
+        val ammunition = stringPreferencesKey("$prefix.ammunition")
+        val spells = stringPreferencesKey("$prefix.spells")
     }
 
     private companion object {
         const val LOADOUT_VERSION = 1
         const val EMPTY_SLOT = "-"
         const val LOADOUT_KEY_PREFIX = "loadout."
+        const val DEMO_LOADOUT_KEY_PREFIX = "loadout.demo."
         val LOADOUT_VERSION_KEY = intPreferencesKey("loadout.schema_version")
+        val DEMO_LOADOUT_VERSION_KEY =
+            intPreferencesKey("${DEMO_LOADOUT_KEY_PREFIX}schema_version")
     }
 }

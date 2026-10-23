@@ -2,158 +2,180 @@ package com.urkaaaz.ui
 
 import android.content.Context
 import android.graphics.Color
-import android.graphics.drawable.GradientDrawable
 import android.view.Gravity
-import android.view.View
-import android.widget.FrameLayout
 import android.widget.ImageButton
 import android.widget.ImageView
 import android.widget.LinearLayout
-import android.widget.PopupWindow
+import android.widget.TextView
 import com.urkaaaz.android.R
+import com.urkaaaz.screens.loadout.LoadoutAssetCatalog
+import com.urkaaaz.screens.loadout.LoadoutAssetLookup
+import com.urkaaaz.screens.loadout.LoadoutItemReference
+import java.util.Locale
 
-/**
- * Legacy-style ammunition selector.
- *
- * The selector shows the currently equipped ammunition and opens a popup grid
- * with the available ammunition types. Selection remains an Android UI action;
- * the match view model owns the gameplay command.
- */
 class AmmunitionPanelView(
     context: Context,
-    availableAmmunitionTypes: Set<String>? = null,
-) : FrameLayout(context) {
-    private var selectedAmmo = ROCK
-    private var latestState = RenderStateMapper.map(com.urkaaaz.contracts.MatchSnapshot())
-    private val selectorButton = ImageButton(context)
-    private val selectableAmmunitionTypes =
-        ALL_AMMUNITION_TYPES.filter {
-            availableAmmunitionTypes == null || it in availableAmmunitionTypes
-        }
+    availableAmmunitionTypes: List<String>,
+) : LinearLayout(context) {
+    private val slots = availableAmmunitionTypes.take(MAX_VISIBLE_AMMUNITION)
+        .mapNotNull(::createSlot)
 
     var onAmmoSelected: ((String) -> Unit)? = null
 
     init {
-        foregroundGravity = Gravity.CENTER
-        clipChildren = false
-        setBackgroundColor(Color.TRANSPARENT)
-        setPadding(4, 2, 4, 2)
-        selectorButton.apply {
-            background = slotBackground(selected = true)
-            contentDescription = "Choose ammunition"
-            scaleType = ImageView.ScaleType.CENTER_INSIDE
-            setPadding(5, 5, 5, 5)
-            setImageResource(iconResource(selectedAmmo))
-            setOnClickListener { showAmmoMenu() }
-        }
+        orientation = VERTICAL
+        gravity = Gravity.CENTER
+        setPadding(dp(5), dp(8), dp(5), dp(3))
         addView(
-            selectorButton,
-            LayoutParams(dp(68), dp(68)).apply {
+            groupHeader(context.getString(R.string.match_hud_ammunition)),
+            LayoutParams(-1, dp(13)),
+        )
+        addView(
+            LinearLayout(context).apply {
+                orientation = HORIZONTAL
                 gravity = Gravity.CENTER
-                topMargin = -dp(14)
+                slots.forEach { slot ->
+                    addView(
+                        slot.root,
+                        LayoutParams(0, -1, 1f).apply {
+                            marginStart = dp(2)
+                            marginEnd = dp(2)
+                        },
+                    )
+                }
             },
+            LayoutParams(-1, 0, 1f),
         )
     }
 
     fun render(state: RenderState) {
-        latestState = state
-        val count = state.playerAmmunition[selectedAmmo]
-        val reload = state.playerReloadByAmmunition[selectedAmmo]
-            ?: state.playerReloadRemainingSeconds
-        selectorButton.isEnabled = true
-        selectorButton.alpha = 1f
-        selectorButton.contentDescription =
-            "Choose ammunition: $selectedAmmo, stock=${count ?: "unlimited"}, " +
-                "reload=${"%.1f".format(java.util.Locale.US, reload)} seconds"
-        selectorButton.setImageResource(iconResource(selectedAmmo))
-    }
-
-    private fun showAmmoMenu() {
-        val content = LinearLayout(context).apply {
-            orientation = LinearLayout.VERTICAL
-            setPadding(dp(4), dp(4), dp(4), dp(4))
-        }
-        lateinit var popup: PopupWindow
-        val columns = 4
-        selectableAmmunitionTypes.forEachIndexed { index, ammunitionType ->
-            if (index % columns == 0) {
-                content.addView(LinearLayout(context).apply {
-                    orientation = LinearLayout.HORIZONTAL
-                }, LinearLayout.LayoutParams(-2, dp(64)))
-            }
-            val row = content.getChildAt(content.childCount - 1) as LinearLayout
-            val count = latestState.playerAmmunition[ammunitionType]
-            val reload = latestState.playerReloadByAmmunition[ammunitionType] ?: 0f
-            val enabled = count == null || count > 0
-            row.addView(ImageButton(context).apply {
-                setImageResource(iconResource(ammunitionType))
-                background = slotBackground(ammunitionType == selectedAmmo)
-                setPadding(dp(5), dp(5), dp(5), dp(5))
-                scaleType = ImageView.ScaleType.CENTER_INSIDE
-                alpha = if (enabled) 1f else 0.35f
-                isEnabled = enabled
-                contentDescription =
-                    "$ammunitionType, stock=${count ?: "unlimited"}, " +
-                        "reload=${"%.1f".format(java.util.Locale.US, reload)} seconds"
-                setOnClickListener {
-                    selectedAmmo = ammunitionType
-                    selectorButton.setImageResource(iconResource(selectedAmmo))
-                    popup.dismiss()
-                    onAmmoSelected?.invoke(ammunitionType)
+        slots.forEach { slot ->
+            val count = state.playerAmmunition[slot.type]
+            val available = count == null || count > 0
+            val reload = state.playerReloadByAmmunition[slot.type]
+                ?: if (slot.type == state.selectedAmmunitionType) {
+                    state.playerReloadRemainingSeconds
+                } else {
+                    0f
                 }
-            }, LinearLayout.LayoutParams(dp(58), dp(58)).apply {
-                setMargins(dp(3), dp(3), dp(3), dp(3))
-            })
-        }
-
-        val rows = (selectableAmmunitionTypes.size + columns - 1) / columns
-        popup = PopupWindow(
-            content,
-            dp(64 * columns + 8),
-            dp(64 * rows + 8),
-            true,
-        ).apply {
-            setBackgroundDrawable(slotBackground(selected = false))
-            elevation = dp(12).toFloat()
-            isOutsideTouchable = true
-        }
-        selectorButton.post {
-            popup.showAsDropDown(
-                selectorButton,
-                -dp(64 * 2),
-                -popup.height - selectorButton.height,
+            val selected = slot.type == state.selectedAmmunitionType
+            slot.button.isEnabled = available && state.statusLabel == "RUNNING"
+            slot.button.alpha = if (available) 1f else 0.38f
+            if (selected != slot.selected) {
+                if (selected) {
+                    slot.button.background = HudPanelStyle.background(
+                        context,
+                        Color.argb(190, 128, 89, 39),
+                        selected = true,
+                    )
+                } else {
+                    slot.button.background = HudPanelStyle.background(
+                        context,
+                        Color.argb(82, 28, 33, 36),
+                    )
+                }
+                slot.selected = selected
+            }
+            slot.stockText.text = when {
+                !available -> context.getString(R.string.match_hud_out_of_stock)
+                count == null -> context.getString(R.string.match_hud_unlimited)
+                else -> context.getString(R.string.match_hud_stock, count)
+            }
+            slot.reloadText.text = if (reload > 0f) {
+                context.getString(
+                    R.string.match_hud_reload_seconds,
+                    String.format(Locale.US, "%.1f", reload),
+                )
+            } else {
+                context.getString(R.string.match_hud_ready)
+            }
+            slot.button.contentDescription = context.getString(
+                R.string.match_hud_ammunition_accessibility,
+                context.getString(slot.nameResource),
+                slot.stockText.text,
+                slot.reloadText.text,
             )
         }
     }
 
-    private fun iconResource(ammunitionType: String): Int = when (ammunitionType) {
-        "ROCK" -> R.drawable.rock_flight_00
-        "SIEGE_BOMB" -> R.drawable.ammo_icon_siege_bomb
-        "POWDER_BARREL" -> R.drawable.ammo_icon_powder_barrel
-        "FIRE_RAIN" -> R.drawable.fire_rain_icon
-        "PLAGUE_CAULDRON" -> R.drawable.plague_cauldron_icon
-        else -> R.drawable.rock_flight_00
+    private fun createSlot(type: String): AmmoSlot? {
+        val nameResource = ammunitionNameResource(type) ?: return null
+        val artwork = LoadoutAssetCatalog.illustration(LoadoutItemReference.Ammunition(type))
+        val iconResource = (artwork as? LoadoutAssetLookup.Found)?.drawableId
+            ?: return null
+        val button = ImageButton(context).apply {
+            scaleType = ImageView.ScaleType.CENTER_INSIDE
+            setPadding(dp(4), dp(4), dp(4), dp(4))
+            setImageResource(iconResource)
+            background = HudPanelStyle.background(context, Color.argb(82, 28, 33, 36))
+            setOnClickListener { onAmmoSelected?.invoke(type) }
+        }
+        val nameText = slotText().apply {
+            text = context.getString(ammunitionShortNameResource(type) ?: nameResource)
+        }
+        val stockText = slotText()
+        val reloadText = slotText()
+        val root = LinearLayout(context).apply {
+            orientation = VERTICAL
+            gravity = Gravity.CENTER
+            addView(button, LayoutParams(dp(48), dp(48)))
+            addView(nameText, LayoutParams(-1, dp(11)))
+            addView(stockText, LayoutParams(-1, dp(12)))
+            addView(reloadText, LayoutParams(-1, dp(12)))
+        }
+        return AmmoSlot(type, nameResource, button, stockText, reloadText, root)
     }
 
-    private fun slotBackground(selected: Boolean) = GradientDrawable().apply {
-        setColor(
-            if (selected) Color.rgb(184, 129, 48) else Color.rgb(73, 61, 49),
-        )
-        cornerRadius = dp(10).toFloat()
-        setStroke(dp(1), Color.argb(120, 255, 235, 190))
+    private fun ammunitionNameResource(type: String): Int? = when (type) {
+        "ROCK" -> R.string.loadout_name_rock
+        "SIEGE_BOMB" -> R.string.loadout_name_siege_bomb
+        "POWDER_BARREL" -> R.string.loadout_name_powder_barrel
+        "FIRE_RAIN" -> R.string.loadout_name_fire_rain
+        "PLAGUE_CAULDRON" -> R.string.loadout_name_plague_cauldron
+        else -> null
+    }
+
+    private fun ammunitionShortNameResource(type: String): Int? = when (type) {
+        "ROCK" -> R.string.match_hud_ammo_rock
+        "SIEGE_BOMB" -> R.string.match_hud_ammo_siege
+        "POWDER_BARREL" -> R.string.match_hud_ammo_barrel
+        "FIRE_RAIN" -> R.string.match_hud_ammo_fire_rain
+        "PLAGUE_CAULDRON" -> R.string.match_hud_ammo_plague
+        else -> null
+    }
+
+    private fun slotText() = TextView(context).apply {
+        gravity = Gravity.CENTER
+        includeFontPadding = false
+        textSize = 7f
+        maxLines = 1
+        setTextColor(Color.rgb(239, 220, 179))
+        UiTypography.applyButtonTypeface(this)
+    }
+
+    private fun groupHeader(label: String) = TextView(context).apply {
+        text = label
+        gravity = Gravity.CENTER
+        textSize = 9f
+        maxLines = 1
+        setTextColor(Color.rgb(225, 193, 119))
+        UiTypography.applyButtonTypeface(this)
     }
 
     private fun dp(value: Int): Int =
         (value * resources.displayMetrics.density).toInt()
 
+    private data class AmmoSlot(
+        val type: String,
+        val nameResource: Int,
+        val button: ImageButton,
+        val stockText: TextView,
+        val reloadText: TextView,
+        val root: LinearLayout,
+        var selected: Boolean = false,
+    )
+
     private companion object {
-        const val ROCK = "ROCK"
-        val ALL_AMMUNITION_TYPES = listOf(
-            "ROCK",
-            "SIEGE_BOMB",
-            "POWDER_BARREL",
-            "FIRE_RAIN",
-            "PLAGUE_CAULDRON",
-        )
+        const val MAX_VISIBLE_AMMUNITION = 3
     }
 }

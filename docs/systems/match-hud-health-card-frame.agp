@@ -1,0 +1,83 @@
+Create one production-ready background asset for the Urkaaaz match HUD health
+card. This asset will be reused for both BLUE and RED fortress health cards.
+Do not create a screen mockup or generate separate team-colored variants.
+
+## Reference inputs
+
+Attach:
+
+1. The latest Urkaaaz match-screen screenshot, to match the actual card scale,
+   battlefield palette, and surrounding HUD.
+2. The approved match-HUD mockup or reference showing the intended dark,
+   restrained metal-and-gold visual language.
+3. An approved Urkaaaz Loadout or campaign UI reference, if needed to match
+   existing materials and gold edging.
+
+Use the supplied images as visual references only. Do not reproduce their
+labels, values, artwork, or complete screen.
+
+## Outputą
+
+- Filename: `health_card_frame.png`
+- Source path: `assets_src/match/hud/health_card_frame.png`
+- Canvas: exactly 512 x 128 pixels.
+- Format: RGBA PNG.
+- Produce exactly one standalone asset.
+
+## Design
+
+Create a shallow, horizontal rounded-rectangle health-card panel suitable for
+the compact top rail of a landscape mobile game HUD. It should feel like a
+polished Urkaaaz interface element: translucent charcoal or blackened iron,
+subtle material depth, a fine controlled bronze/gold edge, and a restrained
+warm highlight. Keep the treatment clean and readable at small display size.
+
+The panel is shared by both teams. Keep its frame neutral and symmetrical:
+do not use blue or red faction coloring, banners, crests, shields, or other
+team-specific symbols. Team color is supplied dynamically by the health meter
+in Android.
+
+Use a dark, lightly translucent interior surface to support live text and
+the health meter over the battlefield. The area inside the frame must remain
+visually quiet and unobstructed. Keep the corners and outer edges crisp. Make
+the central horizontal area low-detail so it can be stretched without
+distorting the corners; do not add nine-patch guide pixels or markers.
+
+## Runtime content — do not bake into the image
+
+The Android HUD renders all of the following dynamically over this asset:
+
+- the `BLUE` or `RED` team label;
+- current and maximum fortress HP values;
+- the horizontal health meter and its changing fill color;
+- accessibility information and any future state indicators.
+
+Do not reserve a pre-drawn colored health bar or include any text, numerals,
+icons, symbols, gradients that imply a particular HP percentage, or baked-in
+selection/damage state. Do not bake a drop shadow into the PNG; the HUD adds a
+soft native shadow programmatically.
+
+## Negative requirements
+
+- No screenshot, mockup, battlefield, fortress, character, scenery, logo,
+  watermark, signature, device frame, or contact sheet.
+- No blue/red faction variant, crest, shield motif, or team-specific detail.
+- No text, numbers, health bar, progress fill, icon, or state indicator.
+- No opaque rectangular canvas background: pixels outside the rounded panel
+  silhouette must be fully transparent.
+- No bulky ornament, spikes, large rivets, bright neon, excessive glow, or
+  high-contrast texture that competes with live HP text.
+- No uneven corners, asymmetric border, jagged edges, or thin details that
+  disappear when rendered at approximately 42 dp high.
+
+## Review checklist
+
+- Confirm the output is one valid 512 x 128 RGBA PNG with the exact filename.
+- Confirm the outside of the card silhouette is transparent and the panel
+  interior is dark enough for warm ivory text and a blue/red health meter.
+- Confirm it works identically for both teams and does not encode an HP value
+  or damage state.
+- Preview it scaled to the in-game health-card height of approximately 42 dp;
+  the border should remain crisp and the center should remain visually quiet.
+- Show the asset over both a dark and a bright battlefield crop for review.
+  Do not integrate it into Android resources until approved.

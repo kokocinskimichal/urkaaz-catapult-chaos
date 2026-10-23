@@ -1,0 +1,106 @@
+Create one full-screen visual redesign mockup of the existing Urkaaaz match
+HUD. The attached screenshot is the source of truth for the current layout,
+content, and painted battlefield. Keep the layout; make the HUD feel more
+modern, lighter, and more refined without losing the game's warm fantasy
+identity.
+
+This is a visual direction proposal only. Do not implement Android UI, create
+production assets, or alter gameplay.
+
+## Reference
+
+Attach the current Urkaaaz match-screen screenshot supplied with this prompt.
+Preserve its battlefield, biome, camera framing, fortresses, catapults, units,
+terrain, and visible projectile/gameplay state. Use the screenshot as the
+literal composition and content reference, not merely as inspiration.
+
+## Output
+
+- Create exactly one landscape mockup: `match_hud_redesign_v3_mockup.png`.
+- Use a 1920 x 912 canvas, matching the reference's wide landscape format.
+- Show the complete match screen at once, without a device frame, presentation
+  board, extra views, or alternate states.
+- Keep text, icons, values, bars, and controls visually separable from the
+  battlefield. This is not a flattened production background or a reusable
+  asset sheet.
+- Present the mockup for review only. Do not integrate it into Android or
+  replace any existing assets before approval.
+
+## Preserve the layout and information
+
+Do not move, resize, reorder, add, or remove the existing HUD groups and
+controls. Preserve their current proportions and relationships:
+
+- Top: BLUE fortress health at left; timer, wind, and one pause control in the
+  center; RED fortress health at right.
+- Above the bottom dock: one fixed, centered message strip.
+- Bottom dock, left to right: Supply/units/orders, ammunition, spells/Mana.
+- Keep Supply at the far left of its group and Mana at the far right of the
+  spell group.
+- Keep the current game content, labels, values, icons, health colors, and
+  states shown in the screenshot. Do not invent game data or substitute
+  placeholder controls.
+- Keep the battlefield dominant and unobstructed. Do not modify the terrain,
+  art, camera, units, fortresses, catapults, or projectile paths.
+
+## Visual direction: modern Urkaaaz fantasy
+
+The current HUD's layout is acceptable; its presentation feels too heavy.
+Reduce the visual weight of the frames and repeated boxes rather than changing
+the underlying composition.
+
+- Keep the painted fantasy character of Urkaaaz: warm metal, restrained brass
+  highlights, and warm ivory text. Do not turn the interface into generic
+  mobile strategy UI.
+- Use a consistent charcoal surface matching the existing Loadout footer:
+  `#1A1A1A` at approximately 80% opacity (`#CC` alpha). Apply this same surface
+  treatment to all six main HUD panels and the message strip. Do not make it
+  opaque, pure black, differently tinted by section, or textured enough to
+  compete with the battlefield.
+- Replace the thick, bright, double gold bevels with a single fine bronze-gold
+  edge and a restrained inner highlight. Keep corners softly rounded and the
+  frame silhouette clean. No stacked borders, deep bevels, bulky ornaments,
+  large rivets, spikes, or glowing outlines.
+- Visually connect the three bottom groups as one lightweight dock. Use subtle
+  separators and consistent alignment instead of three heavy, individually
+  boxed panels. Keep the group order and boundaries immediately legible.
+- Make the top health cards and center timer rail slimmer and calmer while
+  preserving their alignment and relative sizes. The timer remains the focal
+  point within the top HUD, not a large ornamental plaque.
+- Reduce strong texture and contrast inside UI surfaces. Let the existing
+  painterly battlefield provide the visual richness.
+- Use clean, readable typography for labels and counts. Retain a restrained
+  fantasy display character only where it helps the game's identity; avoid
+  tiny serif labels and decorative lettering that is hard to read.
+- Reserve brighter gold for selected or primary states. Keep the existing
+  BLUE/RED health semantics and blue Mana identity; do not tint every panel by
+  team or resource.
+- Make buttons and slots feel lighter than the surrounding panels. Use a
+  clear, restrained selected state; do not outline every inactive item with a
+  bright gold frame.
+- Maintain comfortable touch-target spacing and legible text at the reference
+  scale.
+
+## Avoid
+
+- Do not change the accepted HUD layout or gameplay information.
+- No thick double metallic frames, heavy black slabs, multiple nested
+  outlines, ornate fantasy plaques, excessive texture, bright gold everywhere,
+  neon, sci-fi glass, military styling, or strong glow.
+- No invented labels, icons, values, controls, resources, objectives, or
+  gameplay states.
+- No redesign of the battlefield, art, camera, or existing game assets.
+- No app/device frame, logo, watermark, contact sheet, sprite sheet, or
+  standalone panel assets.
+
+## Review checklist
+
+- The whole mockup retains the screenshot's HUD layout and battlefield.
+- The HUD looks visibly lighter and more contemporary, while still belonging
+  to Urkaaaz's painted fantasy world.
+- All six main panels and the message strip use the same semi-transparent
+  charcoal surface; slot and button states remain visually distinct without
+  making every control gold-framed.
+- The bottom dock reads as one coherent system with three clear groups.
+- Text, icons, values, and active states remain legible at the target scale.
+- Nothing in the HUD obscures important battlefield action.

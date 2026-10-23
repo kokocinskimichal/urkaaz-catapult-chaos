@@ -76,6 +76,56 @@ class DataStoreRepositoriesTest {
     }
 
     @Test
+    fun demoLoadoutUsesSeparatePersistenceFromCampaignLevels() = runBlocking {
+        testStore().use { store ->
+            val campaign = DataStoreLoadoutRepository(store.dataStore)
+            val demo = DataStoreLoadoutRepository(
+                store.dataStore,
+                scope = LoadoutStorageScope.DEMO,
+            )
+            val selection = MatchLoadout(
+                unitTypes = listOf("DEFENDER"),
+                ammunitionSlots = listOf("ROCK", null, null),
+                spellTypes = listOf("FORTRESS_SHIELD"),
+            )
+            val storedSelection = StoredLoadoutSelection(
+                unitTypes = selection.unitTypes,
+                ammunitionSlots = selection.ammunitionSlots,
+                spellTypes = selection.spellTypes,
+            )
+
+            assertEquals(LoadoutStorageWriteResult.Saved, campaign.save(1, selection))
+            assertEquals(LoadoutStorageResult.Success(null), demo.read(1))
+            assertEquals(LoadoutStorageWriteResult.Saved, demo.save(1, selection))
+            assertEquals(LoadoutStorageResult.Success(storedSelection), campaign.read(1))
+            assertEquals(LoadoutStorageResult.Success(storedSelection), demo.read(1))
+        }
+    }
+
+    @Test
+    fun unversionedCampaignDataDoesNotBlockDemoLoadouts() = runBlocking {
+        testStore().use { store ->
+            store.dataStore.updateData { current ->
+                current.toMutablePreferences().apply {
+                    this[stringPreferencesKey("loadout.2.units")] = "DEFENDER"
+                }
+            }
+            val campaign = DataStoreLoadoutRepository(store.dataStore)
+            val demo = DataStoreLoadoutRepository(
+                store.dataStore,
+                scope = LoadoutStorageScope.DEMO,
+            )
+
+            assertEquals(LoadoutStorageResult.Success(null), demo.read(1))
+            assertEquals(LoadoutStorageWriteResult.Saved, demo.save(1, validLoadout()))
+            assertEquals(
+                LoadoutStorageResult.Failure(LoadoutStorageFailure.INVALID_DATA),
+                campaign.read(2),
+            )
+        }
+    }
+
+    @Test
     fun campaignProgressInitializesAndAtomicallyRoundTripsWithoutTouchingProfile() = runBlocking {
         testStore().use { store ->
             val playerRepository = DataStorePlayerProgressionRepository(store.dataStore)

@@ -1,0 +1,130 @@
+Refine the attached latest Urkaaaz match HUD mockup. Preserve its accepted
+layout and lighter frame treatment. Add only a subtle trace of warm fantasy
+material, remove debug-only UI, and make the Send Wave action read clearly as
+an action rather than another unit slot.
+
+This is one visual mockup for review. Do not implement Android UI, create
+production assets, or change gameplay.
+
+## Reference inputs and priority
+
+Attach both:
+
+1. **Original current match-screen screenshot:** source of truth for the
+   battlefield, game art, exact values, labels, icons, and match state.
+   Preserve the playfield exactly; do not redraw or reinterpret it.
+2. **Latest generated HUD mockup:** source of truth for HUD positions, relative
+   sizes, spacing, and the current cleaner visual direction. Refine it without
+   changing the accepted layout.
+
+If references conflict, use the original screenshot for battlefield and game
+content, and the latest mockup for HUD geometry. This brief supersedes earlier
+visual-direction prompts.
+
+## Output
+
+- Create exactly one landscape mockup: `match_hud_redesign_v5_mockup.png`.
+- Canvas: 1920 x 912 pixels.
+- Show the full match screen with no device frame, presentation board,
+  alternate states, extra views, or contact sheet.
+- Keep UI elements conceptually separable from the battlefield. Do not create
+  a flattened runtime background or production-ready component assets.
+- Present the mockup for review only. Do not integrate it into Android or
+  replace existing assets.
+
+## Preserve layout and gameplay information
+
+Keep the latest mockup's panel positions, dimensions, alignments, spacing, and
+group order. Do not add, remove, move, or resize HUD groups or controls except
+to remove the debug-only control and persistent `READY` panel as specified
+below.
+
+- Top rail: BLUE fortress health at left; timer, wind, and one pause control in
+  the center; RED fortress health at right.
+- No persistent `READY` panel or reserved message-strip space. After a spell
+  cast attempt, show its actual success/rejection text centered above the dock
+  for 2.5 seconds, then fade it out smoothly. The message is text-only and
+  transient.
+- Bottom dock, left to right: Supply/units/orders, ammunition, spells/Mana.
+- Keep Supply at the far left of its group and Mana at the far right of the
+  spell group.
+- Preserve the current real unit choices, Send Wave action, ammunition and
+  spell choices, values, and statuses from the original screenshot.
+- Remove `DEBUG` entirely. It is a development-only control and must not
+  appear in this production-style mockup.
+- Keep the original battlefield, biome, camera, terrain, fortresses, units,
+  catapults, and combat details unchanged.
+- Do not invent or alter game values, icons, states, resources, objectives,
+  controls, or gameplay.
+
+## Refine the visual material
+
+Keep the light, contemporary frame treatment from the latest mockup:
+
+- Use one fine bronze-gold edge, approximately half the thickness of the
+  earlier heavy frames. No doubled rails, deep bevels, bulky ornaments,
+  diamond dividers, rivets, spikes, or strong glow.
+- Keep the bottom dock as one coherent shell with three clearly separated
+  groups. Use quiet, thin separators; do not restore three individually
+  outlined boxes.
+- Integrate the pause control into the center rail with a simple glyph and
+  subtle separator, not its own nested frame.
+- Preserve the shared charcoal panel surface: `#1A1A1A` at approximately 80%
+  opacity (`#CC` alpha) across the main HUD panels.
+- Keep that surface dark and semi-transparent, but avoid a cold, flat,
+  featureless black appearance. Add only a very subtle warm umber/bronze
+  reflected tone or restrained tonal variation within the surface. It should
+  be barely perceptible and must not alter the shared base color, opacity, or
+  legibility.
+- Do not add visible grain, busy texture, bright gold fill, or strong gradients.
+  Let the painted battlefield carry most of the color and texture.
+- Reserve brighter gold for selected or primary states. Keep inactive slots
+  understated and preserve existing BLUE/RED health semantics and blue Mana.
+- Use clean, legible UI typography for labels and counters. A restrained
+  fantasy display face may remain for the timer or a short heading; avoid
+  decorative lettering and tiny serif labels.
+
+## Send Wave action
+
+The unit area has three unit choices and one separate **Send Wave** action.
+Show Send Wave as a compact, clearly actionable command control using its
+existing command-icon role and, if text is included, the exact label
+`SEND WAVE`. Do not present it as a fourth unit card, a selectable unit, or a
+disabled placeholder. Do not invent any additional action or behavior.
+
+## Art direction
+
+Aim for a modern fantasy strategy HUD: clean geometry, restrained brass,
+readable ivory text, and a trace of warm material that belongs with Urkaaaz's
+painted world. The result should feel polished and game-specific, not like a
+generic mobile dashboard, a black glass panel set, a medieval plaque, or a
+science-fiction interface.
+
+## Avoid
+
+- No layout redesign or changes to battlefield framing.
+- No heavy black slabs, stacked borders, bright gold outlines around every
+  control, ornamental clutter, strong texture, neon, or excessive glow.
+- No `DEBUG` control.
+- No persistent `READY` panel, message strip, or empty placeholder region.
+- Spell feedback appears only after an actual cast attempt, is shown as
+  text-only feedback above the dock for 2.5 seconds, then fades smoothly.
+- No extra unit slot or fake choice; Send Wave must read as an action.
+- No altered or invented labels, values, icons, statuses, resources, or
+  gameplay.
+- No application/device frame, logo, watermark, contact sheet, sprite sheet,
+  or standalone panel assets.
+
+## Review checklist
+
+- The HUD geometry matches the latest mockup and the battlefield matches the
+  original screenshot.
+- The result remains light and contemporary, with a subtle warm Urkaaaz
+  character rather than a cold, flat-black appearance.
+- Frames remain single, thin bronze-gold edges; the dock stays unified with
+  quiet separators.
+- The shared panel surface remains `#1A1A1A` at approximately 80% opacity.
+- `DEBUG` is absent, and Send Wave is clearly an action rather than a fourth
+  unit slot.
+- Labels, values, icons, and active states remain legible and faithful to the
+  original screenshot.

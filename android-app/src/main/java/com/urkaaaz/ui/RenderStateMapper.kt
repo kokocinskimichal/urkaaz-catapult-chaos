@@ -69,7 +69,8 @@ data class RenderState(
     val plagueCauldronEffects: List<PlagueCauldronEffectRenderState> = emptyList(),
     val matchGeneration: Long = 0L,
     val playerMana: Int = 0,
-    val hasFortressShieldEquipped: Boolean = false,
+    val selectedAmmunitionType: String = "ROCK",
+    val activeSpellTypes: Set<String> = emptySet(),
     val spellFeedbackLabel: String? = null,
 )
 
@@ -295,6 +296,11 @@ object RenderStateMapper {
         playerMana = snapshot.resourcesByTeam[
             com.urkaaaz.contracts.Team.BLUE
         ]?.mana ?: snapshot.resources.mana,
+        activeSpellTypes = buildSet {
+            if ((blueFortressSnapshot?.shieldHealth ?: 0) > 0) {
+                add("FORTRESS_SHIELD")
+            }
+        },
         playerSupply = snapshot.resourcesByTeam[
             com.urkaaaz.contracts.Team.BLUE
         ]?.supply ?: snapshot.resources.supply,

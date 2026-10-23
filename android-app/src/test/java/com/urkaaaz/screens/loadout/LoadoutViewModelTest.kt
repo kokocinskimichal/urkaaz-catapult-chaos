@@ -10,7 +10,9 @@ import com.urkaaaz.application.loadout.LoadoutError
 import com.urkaaaz.application.loadout.LoadoutStorageResult
 import com.urkaaaz.application.loadout.LoadoutStorageWriteResult
 import com.urkaaaz.application.loadout.LoadoutUseCases
+import com.urkaaaz.application.loadout.LoadoutCatalog
 import com.urkaaaz.application.loadout.MatchLoadout
+import com.urkaaaz.application.progression.DemoLoadoutProgressionPort
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.awaitCancellation
 import kotlinx.coroutines.cancelAndJoin
@@ -62,6 +64,37 @@ class LoadoutViewModelTest {
 
         assertNotNull(committed)
         assertTrue(repository.saved)
+    }
+
+    @Test
+    fun demoLoadoutOffersTheFullCatalogAndUsesDemoLabel() = runBlocking {
+        val viewModel = LoadoutViewModel(
+            campaignLevel = 1,
+            useCases = LoadoutUseCases(DemoLoadoutProgressionPort(), FakeRepository()),
+            demoMode = true,
+        )
+
+        viewModel.load()
+
+        assertTrue(viewModel.state.demoMode)
+        assertEquals(LoadoutCatalog.units.map { it.id }.toSet(), viewModel.state.availableUnits.toSet())
+        assertEquals(
+            LoadoutCatalog.ammunition.map { it.id }.toSet(),
+            viewModel.state.availableAmmunition.toSet(),
+        )
+        assertEquals(LoadoutCatalog.spells.map { it.id }.toSet(), viewModel.state.availableSpells.toSet())
+        viewModel.state.availableAmmunition.forEach { type ->
+            assertTrue(
+                viewModel.optionStatus(LoadoutItemReference.Ammunition(type)) in
+                    setOf(LoadoutOptionStatus.AVAILABLE, LoadoutOptionStatus.SELECTED),
+            )
+        }
+        viewModel.state.availableSpells.forEach { type ->
+            assertTrue(
+                viewModel.optionStatus(LoadoutItemReference.Spell(type)) in
+                    setOf(LoadoutOptionStatus.AVAILABLE, LoadoutOptionStatus.SELECTED),
+            )
+        }
     }
 
     @Test

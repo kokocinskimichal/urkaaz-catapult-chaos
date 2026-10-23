@@ -10,12 +10,14 @@ import com.urkaaaz.application.campaign.CampaignSystem
 import com.urkaaaz.application.loadout.LoadoutUseCases
 import com.urkaaaz.application.progression.CampaignAwareLoadoutProgressionPort
 import com.urkaaaz.application.progression.PlayerProgressionUseCases
+import com.urkaaaz.application.progression.DemoLoadoutProgressionPort
 import com.urkaaaz.navigation.AppNavigator
 import com.urkaaaz.navigation.AppScreen
 import com.urkaaaz.navigation.ScreenHost
 import com.urkaaaz.persistence.DataStoreCampaignProgressRepository
 import com.urkaaaz.persistence.DataStoreLoadoutRepository
 import com.urkaaaz.persistence.DataStorePlayerProgressionRepository
+import com.urkaaaz.persistence.LoadoutStorageScope
 import com.urkaaaz.persistence.urkaazPreferencesDataStore
 import com.urkaaaz.screens.campaign.CampaignScreen
 import com.urkaaaz.screens.dashboard.DashboardScreen
@@ -40,16 +42,30 @@ class MainActivity : ComponentActivity() {
             ),
         )
     }
-    private val loadoutUseCases by lazy {
-        val dataStore = applicationContext.urkaazPreferencesDataStore
-        LoadoutUseCases(
-            progression = CampaignAwareLoadoutProgressionPort(
-                playerProgression = PlayerProgressionUseCases(
-                    DataStorePlayerProgressionRepository(dataStore),
-                ),
-                campaignSystem = campaignSystem,
+    private val preferencesDataStore by lazy {
+        applicationContext.urkaazPreferencesDataStore
+    }
+    private val campaignAwareLoadoutProgression by lazy {
+        CampaignAwareLoadoutProgressionPort(
+            playerProgression = PlayerProgressionUseCases(
+                DataStorePlayerProgressionRepository(preferencesDataStore),
             ),
-            repository = DataStoreLoadoutRepository(dataStore),
+            campaignSystem = campaignSystem,
+        )
+    }
+    private val loadoutUseCases by lazy {
+        LoadoutUseCases(
+            progression = campaignAwareLoadoutProgression,
+            repository = DataStoreLoadoutRepository(preferencesDataStore),
+        )
+    }
+    private val demoLoadoutUseCases by lazy {
+        LoadoutUseCases(
+            progression = DemoLoadoutProgressionPort(),
+            repository = DataStoreLoadoutRepository(
+                preferencesDataStore,
+                scope = LoadoutStorageScope.DEMO,
+            ),
         )
     }
 
@@ -100,9 +116,7 @@ class MainActivity : ComponentActivity() {
                 context = this,
                 onPlay = { navigator.navigate(AppScreen.Dashboard) },
                 onTestMode = {
-                    navigator.navigate(
-                        AppScreen.Match(levelId = "DEMO_LEVEL", campaignLevel = 1),
-                    )
+                    navigator.navigate(AppScreen.Loadout(campaignLevel = 1, demoMode = true))
                 },
             )
             AppScreen.Dashboard -> DashboardScreen(
@@ -124,12 +138,17 @@ class MainActivity : ComponentActivity() {
             is AppScreen.Loadout -> LoadoutScreen(
                 context = this,
                 campaignLevel = screen.campaignLevel,
-                loadoutUseCases = loadoutUseCases,
+                loadoutUseCases = if (screen.demoMode) demoLoadoutUseCases else loadoutUseCases,
                 onBack = { navigator.back() },
+                demoMode = screen.demoMode,
                 onStart = { playerLoadout ->
                     navigator.replace(
                         AppScreen.Match(
-                            levelId = "LEVEL_${screen.campaignLevel}",
+                            levelId = if (screen.demoMode) {
+                                "DEMO_LEVEL"
+                            } else {
+                                "LEVEL_${screen.campaignLevel}"
+                            },
                             campaignLevel = screen.campaignLevel,
                             playerLoadout = playerLoadout,
                         ),

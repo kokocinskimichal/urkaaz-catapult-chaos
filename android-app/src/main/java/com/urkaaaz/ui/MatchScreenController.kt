@@ -51,6 +51,9 @@ class MatchScreenController(
     private lateinit var hudView: MatchHudView
     private lateinit var ammunitionPanel: AmmunitionPanelView
     private lateinit var unitPanel: UnitPanelView
+    private lateinit var spellPanel: SpellPanelView
+    private lateinit var commandDock: LinearLayout
+    private lateinit var feedbackToast: MatchFeedbackToastView
     private lateinit var debugButton: TextView
     private lateinit var snapshotCloseButton: TextView
     private lateinit var resultPopupView: MatchResultPopupView
@@ -88,10 +91,6 @@ class MatchScreenController(
             onPauseClicked = {
                 render(viewModel.dispatch(MatchUiAction.TogglePause))
             }
-            onBackClicked = this@MatchScreenController.onBackClicked
-            onFortressShieldClicked = {
-                render(viewModel.dispatch(MatchUiAction.CastFortressShield))
-            }
         }
         ammunitionPanel = AmmunitionPanelView(
             activity,
@@ -111,6 +110,48 @@ class MatchScreenController(
             onSendWave = {
                 render(viewModel.dispatch(MatchUiAction.SendWave))
             }
+        }
+        feedbackToast = MatchFeedbackToastView(activity)
+        spellPanel = SpellPanelView(
+            activity,
+            viewModel.selectableSpellTypes,
+        ).apply {
+            onSpellCast = { spellType ->
+                val state = viewModel.dispatch(MatchUiAction.CastSpell(spellType))
+                render(state)
+                feedbackToast.showFeedback(state.spellFeedbackLabel)
+            }
+        }
+        commandDock = LinearLayout(activity).apply {
+            orientation = LinearLayout.HORIZONTAL
+            gravity = Gravity.CENTER_VERTICAL
+            clipChildren = false
+            clipToPadding = false
+            background = HudPanelStyle.universalFrameBackground(activity)
+            HudPanelStyle.applyShadow(this)
+            setPadding(dp(4), 0, dp(4), 0)
+            val sidePanelWeight = 1.3f
+            addView(unitPanel, LinearLayout.LayoutParams(0, -1, sidePanelWeight))
+            addView(
+                View(activity).apply {
+                    setBackgroundColor(Color.argb(88, 181, 143, 78))
+                },
+                LinearLayout.LayoutParams(dp(1), -1).apply {
+                    topMargin = dp(14)
+                    bottomMargin = dp(14)
+                },
+            )
+            addView(ammunitionPanel, LinearLayout.LayoutParams(0, -1, 0.88f))
+            addView(
+                View(activity).apply {
+                    setBackgroundColor(Color.argb(88, 181, 143, 78))
+                },
+                LinearLayout.LayoutParams(dp(1), -1).apply {
+                    topMargin = dp(14)
+                    bottomMargin = dp(14)
+                },
+            )
+            addView(spellPanel, LinearLayout.LayoutParams(0, -1, sidePanelWeight))
         }
         debugButton = TextView(activity).apply {
                 text = "DEBUG"
@@ -175,25 +216,28 @@ class MatchScreenController(
             clipChildren = false
             addView(content, FrameLayout.LayoutParams(-1, -1))
             addView(
-                unitPanel,
-                FrameLayout.LayoutParams(
-                    FrameLayout.LayoutParams.WRAP_CONTENT,
-                    dp(68),
-                ).apply {
-                    gravity = Gravity.BOTTOM or Gravity.START
-                    bottomMargin = dp(22)
-                },
-            )
-            addView(
-                ammunitionPanel,
-                FrameLayout.LayoutParams(-1, dp(112)).apply {
+                commandDock,
+                FrameLayout.LayoutParams(-1, dp(108)).apply {
                     gravity = Gravity.BOTTOM
+                    leftMargin = dp(8)
+                    rightMargin = dp(8)
+                    bottomMargin = dp(10)
                 },
             )
             addView(
                 hudView,
-                FrameLayout.LayoutParams(-1, 180).apply {
+                FrameLayout.LayoutParams(-1, dp(58)).apply {
                     gravity = Gravity.TOP
+                },
+            )
+            addView(
+                feedbackToast,
+                FrameLayout.LayoutParams(
+                    FrameLayout.LayoutParams.WRAP_CONTENT,
+                    FrameLayout.LayoutParams.WRAP_CONTENT,
+                ).apply {
+                    gravity = Gravity.BOTTOM or Gravity.CENTER_HORIZONTAL
+                    bottomMargin = dp(122)
                 },
             )
             addView(
@@ -240,6 +284,9 @@ class MatchScreenController(
         if (::battlefieldView.isInitialized) {
             battlefieldView.setLifecyclePaused(true)
         }
+        if (::feedbackToast.isInitialized) {
+            feedbackToast.hideImmediately()
+        }
     }
 
     private fun render(state: RenderState) {
@@ -255,8 +302,11 @@ class MatchScreenController(
         hudView.render(state)
         ammunitionPanel.render(state)
         unitPanel.render(state)
+        spellPanel.render(state)
         battlefieldView.render(state, showOutcomeLabel = popupState == null)
-        debugButton.visibility = if (state.statusLabel == "RUNNING" && !snapshotMode) {
+        debugButton.visibility = if (
+            openDebugOnStart && state.statusLabel == "RUNNING" && !snapshotMode
+        ) {
             View.VISIBLE
         } else {
             View.GONE
@@ -438,8 +488,19 @@ class MatchScreenController(
         snapshotMode = enabled
         battlefieldView.setSnapshotMode(enabled)
         hudView.visibility = if (enabled) View.GONE else View.VISIBLE
-        ammunitionPanel.visibility = if (enabled) View.GONE else View.VISIBLE
-        debugButton.visibility = if (enabled) View.GONE else View.VISIBLE
+        commandDock.visibility = if (enabled) View.GONE else View.VISIBLE
+        if (enabled) {
+            feedbackToast.hideImmediately()
+        }
+        debugButton.visibility = if (
+            !enabled &&
+            openDebugOnStart &&
+            viewModel.renderState.statusLabel == "RUNNING"
+        ) {
+            View.VISIBLE
+        } else {
+            View.GONE
+        }
         snapshotCloseButton.visibility = if (enabled) View.VISIBLE else View.GONE
         battlefieldView.invalidate()
     }

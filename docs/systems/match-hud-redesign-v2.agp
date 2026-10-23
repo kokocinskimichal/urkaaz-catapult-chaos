@@ -1,0 +1,297 @@
+Design one cohesive landscape match HUD for Urkaaaz, adapting the supplied
+match-screen mockup to the actual game constraints and the revised panel order.
+The result should feel like a polished extension of the supplied game, not a
+generic mobile strategy interface. Create one unified layout in two interaction
+states. Do not implement Android UI or generate production assets.
+
+## Reference inputs
+
+Attach these images to the generation prompt:
+
+1. **Required primary reference:** the latest Urkaaaz match-screen screenshot.
+   Preserve its battlefield, biome, camera framing, units, catapults,
+   projectiles, fortress placement, and existing art identity.
+2. **Required layout reference:** the user-provided HUD mockup showing the
+   intended visual language and target-selection treatment. Use it for style
+   and interaction-state inspiration, but follow the panel order and three-slot
+   limits in this prompt instead of copying its five-unit/five-ammunition rows.
+   Use the latest generated mockup as the baseline. Preserve the approved
+   compact timer panel and persistent message strip; apply only explicitly
+   requested changes and keep all other composition, controls, sizes, and
+   artwork unchanged.
+3. **Required control reference:** a high-resolution screenshot of the active
+   unit panel, including the Supply gauge, available unit buttons, and Send
+   Wave action.
+4. **Required ammunition reference:** a screenshot of the ammunition selector
+   with its selection popup open, showing stock and reload information where
+   available.
+5. **Recommended style reference:** one approved Urkaaaz Loadout or campaign
+   screen showing the dark panels, gold edging, typography, and icon treatment.
+6. **Optional component references:** if the generator cannot read repository
+   files directly, attach the actual PNGs from these paths:
+   - Units: `android-app/src/main/res/drawable-nodpi/defender_icon.png`,
+     `sapper_icon.png`, `demolisher_icon.png`,
+     `goblin_raging_boar_icon.png`, and `goblin_slingmaster_icon.png`.
+   - Send Wave: `android-app/src/main/res/drawable-nodpi/send_wave_icon.png`.
+   - Ammunition: `rock_flight_00.png`, `ammo_icon_siege_bomb.png`,
+     `ammo_icon_powder_barrel.png`, `fire_rain_icon.png`, and
+     `plague_cauldron_icon.png` from the same `drawable-nodpi` directory.
+   - Spells: the available `loadout_spell_*_card.png` illustrations from that
+     directory. Preserve the supplied spell art and labels.
+   - Button treatment: normal/pressed examples such as
+     `ui_button_dark_m_normal.png` and `ui_button_dark_m_pressed.png`; attach
+     the matching red pair only if a restrained error-state reference is
+     needed.
+
+The supplied battlefield screenshot is the source of truth for the play area.
+Do not replace it with a new illustration or alter the canonical
+fortress/catapult composition.
+
+## Output
+
+Create exactly two separate static landscape screen mockups:
+
+- `match_hud_redesign_v2_mockup.png` — normal match state;
+- `match_hud_redesign_v2_target_selection.png` — the same HUD while a
+  hypothetical spell requires manual target selection.
+
+Each canvas must be exactly 1920 x 912 pixels, matching the approximately
+2.1:1 landscape aspect ratio of the supplied match screenshot. Keep the same
+layout, panel geometry, scale, typography, spacing, and battlefield framing in
+both images. The second image is an interaction state of the same design, not
+an alternate layout or visual direction.
+
+These are visual design references only. Keep production text, counters,
+icons, and controls conceptually separable from the battlefield. Do not create
+flattened runtime backgrounds, reusable UI assets, spritesheets, or a phone
+mockup.
+
+## Urkaaaz art direction
+
+- Follow the supplied painted fantasy battlefield and approved Urkaaaz
+  interface references.
+- Use a restrained family of translucent charcoal/blackened-iron panels,
+  subtle dark wood or metal texture, controlled bronze/gold edging, and warm
+  ivory text. Keep the result related to the existing dark and gold button
+  families.
+- Use Cinzel-style display typography only for short headings. Keep counters
+  and compact labels highly legible at actual mobile scale.
+- Reuse supplied game icons and preserve their canonical appearance. Do not
+  redraw units, spells, or ammunition as new characters.
+- Use semantic color consistently: gold for selected/primary actions, muted
+  dark neutral for secondary controls, and restrained red for danger or
+  unavailable/error states. Never communicate a state by color alone.
+- Keep the dock compact and aligned to the screen edges. Preserve a broad,
+  unobstructed central view of the battlefield, fortresses, units, and
+  projectile trajectory.
+- Maintain clear touch targets and comfortable spacing. Text must not be tiny,
+  clipped, awkwardly wrapped, or dependent on hover.
+
+## Composition
+
+### Top status area
+
+Create one slim, visually coherent top rail divided into three aligned zones.
+It should feel like one system without becoming a heavy, opaque bar:
+
+- **Left zone:** place the BLUE fortress HP card at the safe outer edge.
+- **Center zone:** make the match timer the primary focal point inside a
+  compact, flat, horizontal module. Keep the timer prominent, place the wind
+  icon/direction/strength beside it as secondary information, and integrate
+  exactly one pause control at the module's right edge. Fit all three into one
+  row where possible; do not make a separate lower wind panel.
+- **Right zone:** mirror the BLUE fortress card with the RED fortress HP card,
+  aligned to the opposite edge.
+- Give all three zones a shared visual language, consistent height, restrained
+  charcoal/metal backing, fine bronze/gold edging, and balanced spacing.
+  Keep the center module no taller than the HP cards. Use a simple rounded
+  rectangle or shallow capsule with minimal trim; no downward point, shield
+  silhouette, deep hanging frame, stacked inner borders, or excessive
+  ornament. The top rail must not visually hang over or compete with the
+  battlefield.
+- Keep fortress HP associated with its team's side in the top rail. Keep
+  world-related reload indicators near their respective catapults instead of
+  duplicating them in the top rail.
+- Do not invent objectives, scores, campaign rewards, or extra status panels.
+
+### Bottom command dock
+
+Use one dock with three adjacent groups in this exact left-to-right order:
+
+1. **Supply, units, and orders — left**
+   - Put a distinct, glanceable Supply indicator at the far-left of this
+     group, visually balanced with the Mana indicator on the far-right of the
+     spell group.
+   - Place `SUPPLY` above the gauge and `UNITS` above the unit choices and
+     deployment action, aligned to their respective content.
+   - Use a warm amber/gold treatment and a supply-crate icon so it cannot be
+     confused with Mana. Show the current value and capacity clearly, such as
+     `20/20`; a compact ring or segmented meter is preferred over a thin,
+     full-width bar.
+   - Keep the Supply indicator physically grouped with unit deployment; it is
+     not a separate fourth dock section.
+   - Show at most **three** available unit choices at once, with their actual
+     live Supply costs and clear enabled/selected/unavailable states.
+   - Include one distinct Send Wave action using the supplied command icon.
+   - Preserve the existing interaction model: choose a unit to deploy and use
+     Send Wave for the deployed group. Do not invent an Attack button.
+
+2. **Ammunition — center**
+   - Keep ammunition visually separate from both unit orders and spells.
+   - Place the `AMMUNITION` heading centered in the panel's top inset.
+   - Show at most **three** ammunition choices at once; use the selected
+     ammunition treatment and existing picker interaction.
+   - Make the selected ammunition easy to identify and show stock/reload
+     feedback only where available from the actual match state.
+   - Do not display ammunition unavailable to the current level or committed
+     loadout.
+
+3. **Spells and mana — right**
+   - Place `SPELLS` above the spell choices and `MANA` above the orb, aligned
+     to their respective areas.
+   - Show at most **three** equipped spells at once, using the committed
+     loadout and campaign-level availability.
+   - Place the mana indicator at the **far-right edge inside this spell
+     section**, adjacent to the spell choices. Do not leave mana in a shared
+     left-side resource panel or create a fourth dock group.
+   - Make mana compact and glanceable: use a restrained orb/ring or narrow
+     vertical meter inspired by classic action-RPG resource placement, with a
+     clear numeric value such as `78/100`. Do not copy Diablo artwork, logos,
+     interface assets, or exact visual styling.
+   - Keep all three spell choices readable and comfortably tappable; the mana
+     display must not dominate or squeeze the spell cards.
+   - Show cast/ready/active/unavailable status with both icon treatment and
+     readable text or symbols. Show effect details only when supplied by the
+     runtime: remaining duration for a timed effect, current/max HP for a
+     shield, or cooldown only if one exists.
+   - The implemented `FORTRESS_SHIELD` costs 80 mana and has 80 HP. It protects
+     its own fortress and does not require manual target selection. It has no
+     duration timer or cooldown. Do not show invented shield values or states.
+
+There are **at most three unit choices, three spell choices, and three
+ammunition choices** in the game HUD. Do not use five-card rows, add extra
+placeholder slots, or introduce horizontal scrolling for these fixed-size
+groups. When fewer than three items are available, show only the real items
+and use the resulting space for comfortable spacing rather than fictional
+choices. Use the constrained item counts to make touch targets and labels
+larger, not to add decorative information.
+
+Use the outer edges of the dock to balance the two resource readouts: warm
+Supply on the far-left with the unit group and blue Mana on the far-right
+inside the spell group. Keep their visual prominence comparable, while using
+different iconography and color so their meanings remain distinct.
+
+Balance the three groups without allowing the dock to obscure fortress health,
+deployed units, the catapult aiming gesture, or likely projectile flight paths.
+The battlefield must remain the dominant visual layer.
+
+The left Supply/unit/order group and the right spell/Mana group must have equal
+panel widths. Keep the ammunition group centered between them; it may be
+narrower.
+
+### Feedback and debug controls
+
+- Keep one compact, fixed message strip centered immediately above the bottom
+  command dock, as shown in the latest reference. The strip remains visible
+  throughout the match; in the neutral state it may read `READY`.
+- Change only the message content inside this same strip for current states
+  such as target selection, insufficient mana, unavailable selection, or
+  successful activation. Do not create a separate toast/banner, move or resize
+  the strip, or let messages reflow the dock.
+- Keep the strip shallow and non-blocking so it does not cover the aiming path,
+  active projectile, or important battlefield action.
+- Keep DEBUG out of the normal production presentation. If the reference
+  requires it, show it as a clearly secondary debug-only control, not part of
+  the primary dock.
+
+## Interaction state: target selection
+
+In `match_hud_redesign_v2_target_selection.png`, preserve the normal layout
+exactly and show a hypothetical future spell that requires a player-selected
+target:
+
+- Clearly indicate target-selection mode and the expected input.
+- Highlight a valid target or placement area with restrained gold/blue
+  treatment and a clear outline/reticle.
+- Keep invalid targets visually distinct without overwhelming the battlefield.
+- Include an obvious Cancel action.
+- Keep the selected spell visibly selected in the right-hand spell section;
+  keep mana at the far-right edge of that same section.
+- This is a conceptual future interaction, not a claim about the current
+  implementation. Do not assign it to `FORTRESS_SHIELD`, name an
+  unimplemented spell, invent an effect, or show a fabricated cost/cooldown.
+- Do not add manual unit target controls for ordinary combat; unit combat
+  targeting remains automatic.
+
+## Runtime and data fidelity
+
+- Display only information backed by the supplied screenshot, current match,
+  committed loadout, or existing application contracts.
+- Current/max mana is 100, with regeneration of 10 every eight seconds of
+  simulation time. Use an actual screenshot value if visible; otherwise use a
+  neutral placeholder such as `--/100`.
+- Supply capacity is 20. Do not use the sample image's `34/50`.
+- Campaign fortresses have 500 HP; the demo mode has its existing BLUE
+  fortress bonus and RED fortress value. Use the provided screenshot/configuration
+  instead of inventing values such as `8 420/9 000`.
+- Do not invent ammunition stock, spell duration, cooldown, cost, unlock,
+  objectives, rewards, or campaign state. Use neutral placeholders when the
+  actual value is unavailable.
+- Spell icons and options must come from the committed loadout and
+  campaign-level availability. Spell-card artwork exists, but only
+  `FORTRESS_SHIELD` currently has a runtime effect.
+- An equipped but unaffordable spell may remain visible as unavailable with a
+  readable reason. Do not imply that a disabled spell is castable.
+- Keep controls native and live in the eventual implementation. Do not bake
+  labels, values, or interaction feedback into reusable art.
+- The HUD is presentation only: controls communicate through the normal
+  command flow and do not directly mutate gameplay state.
+
+## Negative requirements
+
+- No generic fantasy HUD, sci-fi interface, military overlay, neon gradients,
+  excessive glow, opaque full-width slabs, or decorative clutter.
+- No redesign or replacement of the supplied battlefield, units, catapults,
+  fortresses, projectile art, or terrain.
+- No more than three displayed choices in any of the unit, spell, or
+  ammunition groups.
+- No fake spell names, effects, targets, durations, cooldowns, balances,
+  currencies, objectives, rewards, stock values, or progression unlocks.
+- No extra gameplay controls, manual attack-target picker, or invented
+  gameplay abilities.
+- No tiny/cropped text, illegible icon-only controls without accessible
+  labels, overlapping panels, hidden critical controls, or unsafe edge
+  placement.
+- No application/device frame, presentation board, additional biome, watermark,
+  signature, logo redesign, or contact sheet.
+
+## Review checklist
+
+- Confirm exactly two PNG mockups exist with the exact filenames and
+  dimensions.
+- Confirm both images use the same HUD layout and preserve the supplied
+  battlefield composition.
+- Confirm the dock order is: Supply/units/orders on the left, ammunition in the
+  center, spells on the right.
+- Confirm the top rail has three coordinated zones: BLUE HP on the left,
+  timer/wind/pause in the center, and RED HP on the right.
+- Confirm the center timer module is flat, compact, and no taller than the HP
+  cards, with timer, secondary wind information, and one pause control in a
+  single restrained treatment.
+- Confirm Supply is prominent and legible at the far-left of the unit group,
+  balanced against the compact Mana indicator at the far-right of the spell
+  group; the two resources remain visually distinct.
+- Confirm the mana indicator is at the far-right edge inside the spell group,
+  is readable at a glance, and does not squeeze the three spell choices.
+- Confirm no group shows more than three choices and no fake slots or scrolling
+  are used.
+- Confirm the target-selection image is a state change of the same layout with
+  clear selection and cancellation, and is identified as conceptual.
+- Confirm the same fixed message strip remains in place in both mockups; only
+  its content changes with the match state.
+- Confirm spell and shield statuses use only supported data; there is no fake
+  duration, cooldown, cost, effect, or target.
+- Confirm panels and labels remain legible at the supplied screenshot's aspect
+  ratio and do not obscure battlefield aiming/trajectory space.
+- Show both mockups individually for visual review. Do not integrate assets or
+  change Android UI before approval.

@@ -44,11 +44,28 @@ class MatchViewModelCombatTest {
 
         val viewModel = MatchViewModel(campaignLevel = 1, playerLoadout = loadout)
 
-        assertEquals(setOf("ROCK"), viewModel.selectableAmmunitionTypes)
+        assertEquals(listOf("ROCK"), viewModel.selectableAmmunitionTypes)
     }
 
     @Test
-    fun equippedFortressShieldCanBeCastAndRejectedWhenAlreadyActive() {
+    fun demoMatchLimitsDisplayedAmmunitionChoicesToThree() {
+        val viewModel = MatchViewModel(demoMode = true)
+
+        assertEquals(PlayerLoadoutConfig.AMMUNITION_SLOT_COUNT, viewModel.selectableAmmunitionTypes.size)
+    }
+
+    @Test
+    fun selectingAmmunitionUpdatesThePresentationState() {
+        val viewModel = MatchViewModel(demoMode = true)
+        viewModel.dispatch(MatchUiAction.StartMatch)
+
+        val state = viewModel.dispatch(MatchUiAction.SelectAmmo("SIEGE_BOMB"))
+
+        assertEquals("SIEGE_BOMB", state.selectedAmmunitionType)
+    }
+
+    @Test
+    fun equippedSpellCanBeCastThroughTheSharedSpellAction() {
         val viewModel = MatchViewModel(
             campaignLevel = 1,
             playerLoadout = PlayerLoadoutConfig(
@@ -60,36 +77,36 @@ class MatchViewModelCombatTest {
         )
         viewModel.dispatch(MatchUiAction.StartMatch)
 
-        val active = viewModel.dispatch(MatchUiAction.CastFortressShield)
+        val active = viewModel.dispatch(MatchUiAction.CastSpell("FORTRESS_SHIELD"))
 
         assertEquals(20, active.playerMana)
         assertEquals(80, active.blueFortressShieldHealth)
-        assertEquals("SHIELD ACTIVATED", active.spellFeedbackLabel)
+        assertEquals("SPELL CAST", active.spellFeedbackLabel)
 
-        val rejected = viewModel.dispatch(MatchUiAction.CastFortressShield)
+        val rejected = viewModel.dispatch(MatchUiAction.CastSpell("FORTRESS_SHIELD"))
 
         assertEquals(20, rejected.playerMana)
         assertEquals(80, rejected.blueFortressShieldHealth)
-        assertEquals("SHIELD ALREADY ACTIVE", rejected.spellFeedbackLabel)
+        assertEquals("SPELL ALREADY ACTIVE", rejected.spellFeedbackLabel)
     }
 
     @Test
-    fun fortressShieldActivationWithoutEquippedSpellIsReported() {
+    fun spellActivationWithoutEquippedSpellIsReported() {
         val viewModel = MatchViewModel(campaignLevel = 1)
         viewModel.dispatch(MatchUiAction.StartMatch)
 
-        val rejected = viewModel.dispatch(MatchUiAction.CastFortressShield)
+        val rejected = viewModel.dispatch(MatchUiAction.CastSpell("FORTRESS_SHIELD"))
 
         assertEquals(100, rejected.playerMana)
         assertEquals(null, rejected.blueFortressShieldHealth)
-        assertEquals("SHIELD NOT EQUIPPED", rejected.spellFeedbackLabel)
+        assertEquals("SPELL NOT EQUIPPED", rejected.spellFeedbackLabel)
     }
 
     @Test
     fun campaignMatchOnlyShowsUnitsAvailableAtTheSelectedLevel() {
         val viewModel = MatchViewModel(campaignLevel = 1)
 
-        assertEquals(setOf("DEFENDER"), viewModel.selectableUnitTypes)
+        assertEquals(listOf("DEFENDER"), viewModel.selectableUnitTypes)
     }
 
     @Test
@@ -102,14 +119,70 @@ class MatchViewModelCombatTest {
         )
         val viewModel = MatchViewModel(campaignLevel = 8, playerLoadout = loadout)
 
-        assertEquals(setOf("DEFENDER"), viewModel.selectableUnitTypes)
+        assertEquals(listOf("DEFENDER"), viewModel.selectableUnitTypes)
     }
 
     @Test
-    fun demoMatchDoesNotFilterUnitTypesByCampaignAvailability() {
+    fun demoMatchLimitsDisplayedUnitChoicesToLoadoutCapacity() {
         val viewModel = MatchViewModel(demoMode = true)
 
-        assertEquals(null, viewModel.selectableUnitTypes)
+        assertEquals(PlayerLoadoutConfig.MAX_UNITS, viewModel.selectableUnitTypes.size)
+        assertEquals(
+            viewModel.selectableUnitTypes.distinct(),
+            viewModel.selectableUnitTypes,
+        )
+    }
+
+    @Test
+    fun demoMatchUsesTheCommittedLoadoutForAllPlayerChoices() {
+        val loadout = PlayerLoadoutConfig(
+            playerId = PlayerId("player"),
+            unitTypes = listOf("SAPPER"),
+            ammunitionSlots = listOf("ROCK", "POWDER_BARREL", null),
+            spellTypes = listOf("FORTRESS_SHIELD"),
+        )
+
+        val viewModel = MatchViewModel(demoMode = true, playerLoadout = loadout)
+
+        assertEquals(listOf("SAPPER"), viewModel.selectableUnitTypes)
+        assertEquals(listOf("ROCK", "POWDER_BARREL"), viewModel.selectableAmmunitionTypes)
+        assertEquals(listOf("FORTRESS_SHIELD"), viewModel.selectableSpellTypes)
+    }
+
+    @Test
+    fun demoRuntimeRejectsUnitsOutsideTheCommittedLoadout() {
+        val viewModel = MatchViewModel(
+            demoMode = true,
+            playerLoadout = PlayerLoadoutConfig(
+                playerId = PlayerId("player"),
+                unitTypes = listOf("SAPPER"),
+                ammunitionSlots = listOf("ROCK", null, null),
+                spellTypes = listOf("FORTRESS_SHIELD"),
+            ),
+        )
+        viewModel.setAiUnitAutomationEnabled(false)
+        viewModel.dispatch(MatchUiAction.StartMatch)
+
+        viewModel.dispatch(MatchUiAction.DeployUnit("DEFENDER"))
+        assertTrue(viewModel.renderState.units.none { it.teamLabel == "BLUE" })
+
+        viewModel.dispatch(MatchUiAction.DeployUnit("SAPPER"))
+        assertTrue(viewModel.renderState.units.any {
+            it.teamLabel == "BLUE" && it.unitType == "SAPPER"
+        })
+    }
+
+    @Test
+    fun spellChoicesFollowCommittedLoadoutOrderAndCampaignAvailability() {
+        val loadout = PlayerLoadoutConfig(
+            playerId = PlayerId("player"),
+            unitTypes = listOf("DEFENDER"),
+            ammunitionSlots = listOf("ROCK", null, null),
+            spellTypes = listOf("FORTRESS_SHIELD", "HASTE"),
+        )
+        val viewModel = MatchViewModel(campaignLevel = 8, playerLoadout = loadout)
+
+        assertEquals(listOf("FORTRESS_SHIELD", "HASTE"), viewModel.selectableSpellTypes)
     }
 
     @Test

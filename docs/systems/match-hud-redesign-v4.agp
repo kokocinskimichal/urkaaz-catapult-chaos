@@ -1,0 +1,121 @@
+Refine the attached latest Urkaaaz match HUD mockup. Keep its accepted layout
+and information hierarchy, but make the interface feel substantially lighter,
+cleaner, and more contemporary while preserving Urkaaaz's painted fantasy
+identity.
+
+This is one visual mockup for review. Do not implement Android UI, create
+production assets, or change gameplay.
+
+## Reference inputs and priority
+
+Attach both:
+
+1. **Current match-screen screenshot:** source of truth for the battlefield,
+   game art, exact visible values, labels, icons, and match state. Preserve the
+   playfield exactly; do not redraw or reinterpret it.
+2. **Latest generated HUD mockup:** use it as the reference for panel positions,
+   relative sizes, spacing, and content arrangement. Refine its visual
+   treatment rather than changing its layout.
+
+If references conflict, use the current match screenshot for battlefield and
+game content, and the latest mockup for HUD geometry. This brief supersedes
+earlier visual-direction prompts.
+
+## Output
+
+- Create exactly one landscape mockup: `match_hud_redesign_v4_mockup.png`.
+- Canvas: 1920 x 912 pixels.
+- Show the whole match screen; no device frame, presentation board, alternate
+  states, additional views, or contact sheet.
+- Keep UI elements conceptually separable from the battlefield. Do not create
+  a flattened runtime background or production-ready component assets.
+- Present the mockup for review only. Do not integrate it into Android or
+  replace existing assets.
+
+## Preserve the current layout and content
+
+Keep the latest mockup's panel positions, dimensions, alignment, spacing, and
+group order. Do not move, add, remove, or resize any HUD group or control.
+Preserve the current content and states shown in the original match screenshot:
+
+- Top rail: BLUE fortress health at left; timer, wind, and one pause control in
+  the center; RED fortress health at right.
+- One centered `READY` message strip above the bottom dock.
+- Bottom dock, left to right: Supply/units/orders, ammunition, spells/Mana.
+- Supply stays at the far left of its group; Mana stays at the far right of the
+  spell group.
+- Retain the three unit choices, the Send Wave action, the displayed
+  ammunition and spell choices, and their existing values/statuses. Send Wave
+  is an action, not a fourth unit-choice tile.
+- Keep the original battlefield, biome, camera, terrain, fortresses, units,
+  catapults, and combat details unchanged.
+- Do not invent or alter labels, values, icons, resources, states, objectives,
+  controls, or gameplay.
+
+## Visual refinements
+
+The previous mockup is clearer, but its bright metallic borders, decorative
+diamonds, nested pause outline, and large dark dock still feel heavy. Make
+these specific changes:
+
+- Reduce the visible gold frame thickness to roughly half that of the previous
+  mockup. Use **one single, fine bronze-gold edge**. Remove the doubled
+  inner/outer rails, deep bevels, and bright continuous glow.
+- Remove the diamond ornaments at dock dividers and other small decorative
+  rivets. Use simple, low-contrast separators instead.
+- Make the three bottom groups read as one lightweight dock: one restrained
+  outer boundary and subtle internal separators, not three individual
+  brightly outlined boxes. Keep each group's existing footprint and contents.
+- Keep the shared panel surface consistent: charcoal `#1A1A1A` at
+  approximately 80% opacity (`#CC` alpha) for all six main HUD panels and the
+  message strip. Do not make it opaque, pure black, section-tinted, or heavily
+  textured. Reduce visual heaviness with the frame and ornament treatment,
+  not by changing the specified surface color or opacity.
+- Make the pause control feel integrated into the center rail. Remove its
+  separate nested gold frame; use a restrained separator and a clear pause
+  glyph.
+- Reserve brighter gold for selection and primary-action emphasis. Inactive
+  slots should not all have bright gold outlines. Preserve the selected-state
+  distinction without inventing a new interaction.
+- Use a clean, highly legible UI typeface for labels and counters. Retain a
+  restrained fantasy display face for the timer or short headings only.
+  Increase clarity rather than ornamenting the typography.
+- Keep existing BLUE/RED health semantics and the Mana blue. Keep warm ivory
+  text, with enough contrast against the semi-transparent panels.
+- Leave the painted battlefield as the main source of rich texture and color.
+  Keep UI texture subtle so it does not compete with the terrain.
+
+## Art direction
+
+Aim for a **modern fantasy strategy HUD**: disciplined geometry and crisp
+spacing, warmed by Urkaaaz's bronze, ivory, and painted-world palette. It
+should feel like a refined game interface, not a generic fantasy plaque, a
+mobile-app dashboard, or a science-fiction overlay.
+
+## Avoid
+
+- No thick bright gold frames, stacked borders, double bevels, heavy black
+  slabs, diamond divider ornaments, bulky rivets, spikes, excessive texture,
+  or strong glow.
+- No new panel shapes or layout changes.
+- No rework of battlefield art, camera, units, fortresses, catapults, or
+  projectiles.
+- No altered or invented game text, values, icons, statuses, controls, or
+  resources.
+- No app/device frame, logo, watermark, contact sheet, sprite sheet, or
+  standalone panel assets.
+
+## Review checklist
+
+- The HUD layout and battlefield match the supplied references.
+- The mockup is visibly lighter than the previous version without losing
+  Urkaaaz's fantasy character.
+- Frames use one restrained edge, approximately half as thick as before; the
+  diamond ornaments and nested pause outline are gone.
+- The bottom dock reads as one system with three clear groups and subtle
+  separators, not as a stack of heavy boxes.
+- The shared charcoal surface remains `#1A1A1A` at approximately 80% opacity
+  on all six main panels and the message strip.
+- Text, values, icons, states, and touch controls remain legible and faithful
+  to the original screenshot.
+- No HUD element obscures important battlefield action.

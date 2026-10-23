@@ -1,0 +1,79 @@
+Create one production-ready glass-orb shell asset for the Urkaaaz match HUD.
+The orb presents the player's live Mana level. It should feel dimensional,
+polished, and consistent with the game's restrained fantasy-metal HUD.
+
+## Reference inputs
+
+Use the user-provided ornate alternate Mana shell as the primary shape and
+ornament reference, along with the existing Urkaaaz match HUD and universal
+HUD frame for scale. Preserve the reference shell's gilded filigree and
+cardinal accents without adding more decoration. Do not reproduce screen
+layout, labels, values, or unrelated artwork.
+
+## Output
+
+- Filename: `match_hud_mana_orb_shell.png`
+- Source path: `assets_src/match/hud/match_hud_mana_orb_shell.png`
+- Android resource path after approval:
+  `android-app/src/main/res/drawable-nodpi/match_hud_mana_orb_shell.png`
+- Canvas: exactly 512 x 512 pixels, square.
+- Format: RGBA PNG.
+- Return exactly one standalone asset. Do not generate caustics or variants.
+- Do not add Nine-patch guides; the orb is scaled uniformly, never stretched.
+
+## Runtime scale and layering
+
+The current `ManaOrbView` occupies approximately 80 x 80 dp. The dynamic liquid
+is about 48 dp in diameter. The current/max Mana value is drawn separately,
+centered over the orb with a subtle shadow for contrast. Design the shell for
+this compact HUD size, not as a large inventory icon.
+
+Android draws the dark glass base and clips the live blue Mana fill, including
+its changing level and short surface ripple. The shell is rendered over that
+dynamic content. Keep the orb's center mostly transparent so the current fill
+remains clearly visible. The asset may replace the programmatic circular rim
+and highlight, but must not replace or obscure the dynamic fill.
+
+## Visual design
+
+- Depict one symmetrical, spherical glass vessel with the reference's crafted
+  gold frame and cardinal filigree.
+- Use warm gold details compatible with the HUD's edging, with subtle cool
+  reflections that complement the blue liquid.
+- Add controlled specular highlights, edge reflections, and slight refraction
+  to create convincing glass depth at approximately 48 dp.
+- Make the highlights readable at small size, but keep them sparse and
+  transparent; the Mana level must remain the visual focus.
+- Preserve a large, clear central opening. Use only light edge shading and
+  reflections inside the glass; do not create a dark opaque center.
+- Keep the silhouette clean and centered, retaining the reference proportions.
+  Leave transparent clearance around the ornament.
+
+## Runtime content — do not bake into the image
+
+- No blue liquid, fill percentage, wave or ripple.
+- No Mana value, label, text, icon, rune, number, or status.
+- No opaque background, card, frame, scenery, or device mockup.
+- No exterior drop shadow, strong glow, particles, caustics, or lens flare.
+- Do not add team colors or a team-specific design.
+
+## Negative requirements
+
+- No flat vector outline as the only dimensional treatment.
+- Do not add ornaments, spikes, rivets, or alchemical decoration beyond the
+  supplied reference.
+- No glass opacity that hides the dynamically rendered liquid.
+- No sharp glare or bright highlights that compete with the HUD text.
+- No contact sheet, alternative states, or additional asset files.
+
+## Review checklist
+
+- Confirm the output is one valid 512 x 512 RGBA PNG with the exact filename.
+- Confirm the canvas outside the orb and most of its inner glass area are
+  transparent.
+- Preview it uniformly scaled to the 80 x 80 dp view, layered over the live
+  fill at empty, half-full, and full Mana levels with the value centered.
+- Confirm the shell adds visible depth without obscuring the liquid or the
+  centered value.
+- Do not integrate a newly generated replacement into Android resources until
+  the asset is reviewed and approved.

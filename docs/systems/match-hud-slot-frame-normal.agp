@@ -1,0 +1,121 @@
+Create one production-ready background asset for a normal, unselected slot in
+the Urkaaaz match HUD. The same asset will be reused behind unit, ammunition,
+and spell choices. Do not create a screen mockup or separate category variants.
+
+## Reference inputs
+
+Attach:
+
+1. The match-HUD screenshot attached to this request. Use it as the primary
+   visual target for slot outline, corner shape, border weight, and contrast.
+   Match the normal unit/spell/ammunition slots in the bottom dock; do not
+   copy the bright selected-ammunition glow.
+2. The square frame sample attached to this request only as an example of a
+   self-contained square frame that can be resized proportionally. Its heavy
+   border is not a style target.
+3. The approved `health_card_frame.png` and
+   `match_hud_dock_group_frame.png` only as secondary references for palette
+   and material. Their larger, heavier panel treatments are not a target for
+   this small slot.
+4. The approved match-HUD redesign reference.
+5. Existing unit, ammunition, and spell icons to check that the slot's center
+   remains a clear backdrop for varied artwork.
+
+Use the supplied images as visual references only. Do not reproduce their
+labels, artwork, values, or complete screen.
+
+## Output
+
+- Filename: `match_hud_slot_frame_normal.png`
+- Source path: `assets_src/match/hud/match_hud_slot_frame_normal.png`
+- Canvas: exactly 256 x 256 pixels.
+- Format: RGBA PNG.
+- Produce exactly one standalone asset.
+- Keep the source canvas square and design it to support Android
+  Nine-patch/9-slice resizing to different slot widths and heights. Do not
+  include Nine-patch guide pixels or markers in this source PNG.
+
+## Design
+
+Create a lightweight, square slot outline for a tappable HUD item. Reproduce
+the screenshot's restrained, fine-edged treatment: a narrow, crisp bronze-gold
+outer line, at most a very subtle muted-steel inner highlight, and a quiet,
+dark translucent center. Use shallow beveling only; the slot should read as a
+thin framed card, not a miniature armored panel.
+
+Keep the border visually close to the screenshot's normal unit and spell
+slots: narrow, low-profile, and subordinate to the artwork. Use small,
+symmetrical clipped/chamfered corners rather than bulky rounded shoulders.
+Keep the interior detail-free so the item icon drawn by Android stays dominant.
+The edge must remain discernible at approximately 48 dp without becoming
+thick, bright, deeply beveled, or more ornate than the screenshot.
+
+## Nine-patch resizing
+
+Prepare this image as a clean Nine-patch source. Keep each corner's shape and
+ornament within a compact fixed area. Make the middle of every side straight
+and uniform, and keep the center plain and free of directional texture. When
+resized, the corners and border thickness should remain unchanged while only
+the simple edge segments and quiet center stretch.
+
+The same frame should work at square, wider, narrower, and taller dimensions.
+Do not stretch, squash, crop, or tile the corner treatment. Maintain a
+practical minimum size large enough to fit all four corners. The generated
+PNG must not contain guide pixels; after the asset is approved, its stretch
+and content regions will be marked in the Android Nine-patch resource.
+
+This asset represents only the normal, unselected state. It must not look
+selected, active, disabled, unavailable, or pressed. The selected-state asset
+is generated separately; interaction feedback and accessibility state remain
+dynamic UI behavior.
+
+## Runtime content — do not bake into the image
+
+Android renders the following dynamically above this background:
+
+- the unit, ammunition, or spell illustration;
+- item names, costs, ammunition stock, reload feedback, and spell status;
+- selection, active, disabled, unavailable, pressed, or other interaction
+  states.
+
+Do not include or imply a particular item category, item identity, team,
+resource value, gameplay state, or selection state. Do not bake a drop shadow
+into the PNG; any shadow is provided programmatically.
+
+## Negative requirements
+
+- No text, numbers, labels, icons, symbols, item illustrations, category
+  markers, dividers, or progress indicators.
+- No gold glow, bright selected-ammunition border, checkmark, aura, or other
+  selected/active treatment.
+- No gray wash, low-contrast treatment, slash, lock, or other disabled-state
+  treatment.
+- No blue/red team coloring, crest, shield, faction emblem, or team-specific
+  detail.
+- No screenshot, mockup, battlefield, character, scenery, logo, watermark,
+  signature, device frame, or contact sheet.
+- No opaque square canvas background: pixels outside the slot
+  silhouette must be fully transparent.
+- No thick frame, layered heavy rim, deep bevel, raised block, bulky ornament,
+  spikes, large rivets, excessive glow, neon, or busy texture that competes
+  with the live icon.
+- No pill-shaped corners, uneven corners, asymmetric edge, jagged contour, or
+  fragile detail that disappears at the in-game display size.
+
+## Review checklist
+
+- Confirm the output is one valid 256 x 256 RGBA PNG with the exact filename
+  and no Nine-patch guide pixels.
+- Confirm the exterior is transparent and the interior remains dark and
+  unobstructed behind all three item categories.
+- Preview it at several widths and heights, including approximately 48 x 48
+  dp, with unit, ammunition, and spell artwork; it must work consistently for
+  each.
+- Verify that Nine-patch resizing preserves the corners and border thickness
+  and stretches only the straight edges and plain center.
+- Compare the normal slot directly with the screenshot's normal unit/spell
+  slots. It should look thinner and lighter than the surrounding dock panels;
+  exclude the selected ammunition glow.
+- Compare its restrained normal-state edge with the separate selected-state
+  design; do not bake any interaction state into this asset.
+- Do not integrate it into Android resources until approved.

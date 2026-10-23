@@ -6,6 +6,8 @@ import com.urkaaaz.domain.AmmunitionType
 import com.urkaaaz.domain.SpellCategory
 import com.urkaaaz.domain.SpellCatalog
 import com.urkaaaz.domain.SpellType
+import com.urkaaaz.domain.ManaConfiguration
+import com.urkaaaz.domain.SupplyConfiguration
 import com.urkaaaz.domain.UnitConfigurations
 
 data class LoadoutUnitDefinition(
@@ -46,8 +48,10 @@ enum class LoadoutSpellCategory {
 data class LoadoutSpellDefinition(
     val id: String,
     val goldCost: Int,
+    val manaCost: Int,
     val category: LoadoutSpellCategory,
     val special: Boolean,
+    val implemented: Boolean,
 )
 
 /**
@@ -55,6 +59,9 @@ data class LoadoutSpellDefinition(
  * canonical balance definitions.
  */
 object LoadoutCatalog {
+    val maximumMana: Int = ManaConfiguration.MAXIMUM_MANA
+    val maximumSupply: Int = SupplyConfiguration.MAXIMUM_SUPPLY
+
     val units: List<LoadoutUnitDefinition> = UnitConfigurations.all.map { unit ->
         LoadoutUnitDefinition(
             id = unit.id,
@@ -85,8 +92,10 @@ object LoadoutCatalog {
         LoadoutSpellDefinition(
             id = spell.type.name,
             goldCost = spell.goldCost,
+            manaCost = spell.manaCost,
             category = spell.category.toLoadoutCategory(),
             special = spell.special,
+            implemented = spell.isImplemented,
         )
     }
 

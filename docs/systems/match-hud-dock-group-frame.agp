@@ -1,0 +1,115 @@
+Create one production-ready, universal frame asset for the Urkaaaz match HUD.
+The exact same asset must be suitable for the three bottom dock panels
+(Supply/units/orders, ammunition, spells/Mana), both fortress HP cards, and the
+central timer panel. Do not create a screen mockup or separate component
+variants.
+
+## Reference inputs
+
+Attach:
+
+1. A current Urkaaaz match-screen screenshot showing the bottom command dock,
+   both fortress HP cards, and the central timer panel.
+2. The latest user-supplied square gold frame image as a reference for the
+   stronger metallic border and gold material only. Ignore its dark center,
+   square composition, and chamfered corners. Adapt the border to a horizontal
+   rounded-rectangle panel with a fully transparent center.
+3. Do not attach `health_card_frame.png`; its dark fill could bias the result
+   toward an opaque black panel.
+4. An approved Urkaaaz Loadout or campaign UI reference if further material
+   guidance is needed.
+
+Do not use the current slot-frame asset or the old dock-group frame as style
+references.
+
+Preserve the reference game's painted fantasy identity. Do not reproduce
+specific labels, icons, unit art, or a complete screen.
+
+## Output
+
+- Filename: `match_hud_universal_frame.png`
+- Source path: `assets_src/match/hud/match_hud_universal_frame.png`
+- Canvas: exactly 512 x 190 pixels (approximately 2.7:1 landscape). Do not
+  return a square image, a padded square canvas, or a frame occupying only a
+  small part of the canvas.
+- Format: RGBA PNG.
+- Produce exactly one standalone asset.
+- Keep a low-detail horizontal and vertical center suitable for Nine-patch
+  stretching. Do not include Nine-patch guide pixels or markers.
+
+## Design
+
+Create a horizontal rounded-rectangle frame for a landscape mobile game HUD.
+Use a clearly visible, substantial bronze-gold metallic border with warm
+highlights and shallow depth, guided by the latest user-supplied frame image.
+The sample is a material reference only: do not copy its square composition,
+dark center, or clipped corner shape. The outer and inner frame contours must
+turn through smooth, continuous rounded arcs. Do not use diagonal corner cuts,
+chamfers, polygonal corners, or angular shoulders.
+
+The same frame will be Nine-patch resized across differently proportioned
+targets: three broad bottom panels around 108 dp high, two compact HP cards
+around 42 dp high, and the central timer/wind/pause panel. Preserve the curved
+corners and border thickness while allowing only straight edge sections and
+the plain center to stretch. Keep the corner treatment compact enough to
+remain balanced on the shorter HP and timer panels.
+
+Keep the entire panel interior fully transparent (alpha 0): do not fill it
+with black, near-black, gray, or any other color. Only the metallic frame
+pixels may have visible alpha. Do not simulate transparency with a black
+background. The Android UI supplies a separate `#1A1A1A` underlay at 80%
+opacity (`#CC` alpha) beneath the frame; do not bake it
+into the PNG. Keep the metal finish clean and consistent; this is a reusable
+frame, not a focal illustration. Use one symmetric treatment that works for
+left, center, and right placement.
+
+The frame must remain visually suitable around all of these targets without
+signaling one team or HUD section over another:
+
+- the Supply/units/orders panel;
+- the ammunition panel;
+- the spells/Mana panel;
+- the blue fortress HP card;
+- the red fortress HP card;
+- the central timer, wind, and pause panel.
+
+## Runtime content — do not bake into the image
+
+Android renders all labels, icons, timer digits, wind indicator, pause control,
+HP values and bars, slot states, resource meters, and interaction feedback
+above this frame. Do not include or imply a
+specific resource, team, unit, ammunition, spell, selection, or gameplay state.
+Use the same PNG for every target; do not add dividers or details that force
+a specific group layout. Do not bake a drop shadow into the PNG; the HUD adds a
+soft native shadow programmatically.
+
+## Negative requirements
+
+- No text, numbers, labels, icons, symbols, button shapes, slot dividers, meter,
+  progress fill, or team coloring.
+- No unit, spell, ammunition, Supply crate, Mana orb, battlefield, screenshot,
+  device frame, logo, watermark, signature, or contact sheet.
+- No opaque rectangular canvas background: pixels outside the rounded panel
+  silhouette must be fully transparent.
+- No fill or texture in the panel interior; every interior pixel must have
+  zero alpha.
+- No square composition, oversized transparent margins, or a small frame
+  centered inside the 512 x 190 canvas.
+- No chamfered, clipped, beveled-diagonal, or polygonal outer corners.
+- No bulky ornament, spikes, large rivets, excessive glow, neon, busy texture,
+  or bright details that compete with dynamic controls.
+- No uneven corners, asymmetric frame, jagged edge, or details that distort
+  when the center stretches.
+
+## Review checklist
+
+- Confirm the output is one valid 512 x 190 RGBA PNG with the exact filename.
+- Confirm both the exterior and the panel interior are transparent.
+- Confirm the metallic frame is visibly stronger than the previous delicate
+  line and the panel does not read as a black-filled card.
+- Preview the same asset around all three bottom panels, both HP cards, and
+  the central timer panel. Include both short and wide aspect ratios.
+- Confirm the same frame looks proportionate on the 108 dp dock groups and
+  the approximately 42 dp HP cards without changing corner shape or border
+  thickness.
+- Do not integrate it into Android resources until approved.

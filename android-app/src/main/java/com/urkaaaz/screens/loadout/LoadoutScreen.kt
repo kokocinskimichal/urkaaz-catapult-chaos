@@ -53,8 +53,9 @@ class LoadoutScreen(
     loadoutUseCases: LoadoutUseCases,
     private val onBack: () -> Unit,
     private val onStart: (PlayerLoadoutConfig) -> Unit,
+    demoMode: Boolean = false,
 ) : ScreenContent {
-    private val viewModel = LoadoutViewModel(campaignLevel, loadoutUseCases)
+    private val viewModel = LoadoutViewModel(campaignLevel, loadoutUseCases, demoMode)
     private val unavailableArtworkFilter = ColorMatrixColorFilter(
         ColorMatrix().apply { setSaturation(0f) },
     )
@@ -401,7 +402,11 @@ class LoadoutScreen(
                     topMargin = dp(context, 30)
                 })
                 addView(TextView(context).apply {
-                    text = context.getString(R.string.loadout_level, viewModel.state.level)
+                    text = if (viewModel.state.demoMode) {
+                        context.getString(R.string.loadout_demo_mode)
+                    } else {
+                        context.getString(R.string.loadout_level, viewModel.state.level)
+                    }
                     textSize = 10f
                     setTextColor(Color.rgb(239, 220, 179))
                     gravity = Gravity.CENTER

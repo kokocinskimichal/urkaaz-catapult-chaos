@@ -233,16 +233,50 @@ Selected map decorations and Relics display corner handles: radial dragging
 scales around the visual center while angular dragging rotates; the selected
 object panel remains available for precise numeric transforms.
 
-The current match HUD displays:
+The current match HUD uses a three-zone top rail (BLUE fortress health,
+timer/wind/pause, RED fortress health) and a three-group bottom dock (Supply
+and units/orders, ammunition, spells and Mana). The left and right dock groups
+have equal widths, with ammunition centered between them. Dock headings are
+aligned to their subareas: Supply/Units, Ammunition, and Spells/Mana. Each
+loadout group displays at most three real choices. Unit and ammunition choices
+follow the committed loadout and level availability; spell choices follow
+those filters, use a shared `MatchUiAction.CastSpell(spellType)` path, and
+remain disabled when their canonical catalog definition has no implemented
+effect. Spell costs, unit Supply costs and mana capacity come from
+`LoadoutCatalog`; the simulation and HUD share
+`SupplyConfiguration.MAXIMUM_SUPPLY`.
+Mana is rendered as a dynamic deep-blue liquid fill (`#18598E`) with a
+transparent gold-filigree shell supplied by the user, normalized to 512 x 512
+and layered above it. The orb occupies an 80 x 80 dp view, with its
+current/maximum value centered over the glass and a subtle shadow for
+contrast. The short presentation-only ripple remains native UI; the shell
+replaces the programmatic rim and highlight.
+The BLUE and RED fortress-health cards share the reusable `HealthCardView`,
+which receives the team label and health-bar color as parameters. The current
+match HUD uses `HudPanelStyle.universalFrameBackground()` for the complete
+dock, both health cards, and the timer module. The dock groups no
+longer have individual frames; subtle dividers are drawn by Android between
+groups and between timer/wind and pause. The approved source is
+`assets_src/match/hud/match_hud_universal_frame.png`, with the Android
+Nine-patch at `android-app/src/main/res/drawable-nodpi/match_hud_universal_frame.9.png`.
+Major HUD panels use a subtle, rounded Android elevation shadow rendered in
+code; shadows are not baked into panel assets. Spell feedback is shown as text
+only above the dock after an actual cast attempt, then fades after 2.5 seconds.
+No persistent `READY` panel or reserved strip space is used.
 
-- match countdown timer;
-- wind direction and strength;
-- current mana and an activation control for an equipped `FORTRESS_SHIELD`,
-  with command rejections surfaced to the player;
-- pause/resume control;
+The current match HUD also displays:
+
+- match countdown timer, wind direction/strength, and pause/resume control;
+- BLUE and RED fortress health in the top rail, while world reload indicators
+  remain beside their catapults;
+- Supply, committed unit choices with canonical costs, and `SEND WAVE`;
+- up to three committed ammunition choices with stock/reload information;
+- up to three committed spell choices, Mana and shared spell status feedback;
+- the existing result overlay and restart action; match navigation is available
+  through the result flow rather than a separate top-rail Back button;
 - a `RESTART MATCH` control after the match outcome overlay, which restarts the
   current local match through `LocalMatchGateway.restart`;
-- ammunition selection at the bottom of the battlefield.
+- transient spell feedback that does not reserve space or move the dock.
 - `MatchViewModel` blocks firing when the selected limited ammunition has no
   remaining stock, preventing an exhausted selection from crashing the Android
   match screen.
@@ -508,9 +542,12 @@ must go through commands and domain/application boundaries.
 | `android-app/.../screens/loadout/LoadoutViewModel.kt` | Async loadout state and guarded commit |
 | `android-app/.../screens/match/MatchScreen.kt` | Match screen boundary |
 | `android-app/.../ui/MatchScreenController.kt` | Match composition and lifecycle |
-| `android-app/.../ui/MatchHudView.kt` | Timer, wind and pause HUD |
-| `android-app/.../ui/AmmunitionPanelView.kt` | Ammunition controls |
-| `android-app/.../ui/UnitPanelView.kt` | In-match unit deployment controls |
+| `android-app/.../ui/MatchHudView.kt` | Top rail, timer, wind, fortress health and pause |
+| `android-app/.../ui/AmmunitionPanelView.kt` | Three-slot ammunition selector |
+| `android-app/.../ui/UnitPanelView.kt` | Supply, unit deployment and wave controls |
+| `android-app/.../ui/SpellPanelView.kt` | Loadout spell slots and Mana orb |
+| `android-app/.../ui/ManaOrbView.kt` | Dynamic liquid-style Mana presentation |
+| `android-app/.../ui/MatchFeedbackToastView.kt` | Transient text-only spell feedback with fade-out |
 | `android-app/.../ui/BattlefieldView.kt` | Battlefield interaction and draw entry point |
 | `android-app/.../ui/BattlefieldRenderer.kt` | Battlefield draw orchestration |
 | `android-app/.../ui/BattlefieldCameraController.kt` | Camera, zoom and pan |

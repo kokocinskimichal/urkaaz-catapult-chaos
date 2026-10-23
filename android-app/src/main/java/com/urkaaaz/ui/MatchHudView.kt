@@ -3,18 +3,17 @@ package com.urkaaaz.ui
 import android.content.Context
 import android.graphics.Color
 import android.graphics.Typeface
-import android.graphics.drawable.GradientDrawable
 import android.view.Gravity
 import android.view.View
 import android.widget.Button
-import android.widget.FrameLayout
 import android.widget.ImageView
 import android.widget.LinearLayout
+import android.widget.Space
 import android.widget.TextView
 import com.urkaaaz.android.R
 
-class MatchHudView(context: Context) : FrameLayout(context) {
-    private val timerText = hudText("0:00", 12f).apply {
+class MatchHudView(context: Context) : LinearLayout(context) {
+    private val timerText = hudText("0:00", 20f).apply {
         setTypeface(typeface, Typeface.BOLD)
     }
     private val windIndicator = ImageView(context).apply {
@@ -22,152 +21,123 @@ class MatchHudView(context: Context) : FrameLayout(context) {
         contentDescription = "Wind direction and strength"
         scaleType = ImageView.ScaleType.FIT_CENTER
     }
-    private val manaText = hudText("MANA 0", 14f).apply {
+    private val windText = hudText("LOW", 8f).apply {
         setTypeface(typeface, Typeface.BOLD)
         setSingleLine(true)
-    }
-    private val spellFeedbackText = hudText("", 11f).apply {
-        setSingleLine(true)
-        ellipsize = android.text.TextUtils.TruncateAt.END
-    }
-    private val fortressShieldButton = Button(context).apply {
-        text = "CAST SHIELD"
-        UiTypography.applyButtonTypeface(this)
-        textSize = 14f
-        isSingleLine = true
-        ellipsize = android.text.TextUtils.TruncateAt.END
-        setTextColor(Color.WHITE)
-        background = panelBackground(Color.argb(225, 49, 91, 126))
-        minWidth = 0
-        minHeight = 0
-        minimumWidth = 0
-        minimumHeight = 0
-        setPadding(8, 0, 8, 0)
-        contentDescription = "Cast fortress shield"
-    }
-    private val spellPanel = LinearLayout(context).apply {
-        orientation = LinearLayout.VERTICAL
-        gravity = Gravity.CENTER
-        background = panelBackground(Color.argb(225, 36, 43, 47))
-        setPadding(6, 4, 6, 4)
-        addView(manaText, LinearLayout.LayoutParams(-1, 24))
-        addView(fortressShieldButton, LinearLayout.LayoutParams(-1, 44))
-        addView(spellFeedbackText, LinearLayout.LayoutParams(-1, 20))
     }
     private val pauseButton = Button(context).apply {
         text = "II"
         UiTypography.applyButtonTypeface(this)
-        textSize = 10f
+        textSize = 11f
         setTextColor(Color.WHITE)
-        background = panelBackground(Color.argb(150, 61, 72, 78))
-        minWidth = 28
-        minHeight = 0
-        minimumWidth = 0
-        minimumHeight = 0
-        setPadding(0, 0, 0, 0)
-    }
-    private val backButton = Button(context).apply {
-        text = "BACK"
-        UiTypography.applyButtonTypeface(this)
-        textSize = 9f
-        setTextColor(Color.WHITE)
-        background = panelBackground(Color.argb(150, 61, 72, 78))
+        setBackgroundColor(Color.TRANSPARENT)
         minWidth = 0
         minHeight = 0
         minimumWidth = 0
         minimumHeight = 0
-        setPadding(6, 0, 6, 0)
-        contentDescription = "Back"
+        setPadding(0, 0, 0, 0)
+        contentDescription = "Pause match"
     }
-    private val timerPanel = LinearLayout(context).apply {
-        orientation = LinearLayout.HORIZONTAL
-        gravity = Gravity.CENTER
-        clipChildren = false
-        clipToPadding = false
-        background = panelBackground(Color.argb(210, 36, 43, 47))
-        setPadding(6, 2, 6, 2)
-        addView(timerText, LinearLayout.LayoutParams(-2, 32))
-        addView(
-            pauseButton,
-            LinearLayout.LayoutParams(32, 30).apply {
-                marginStart = 4
-                gravity = Gravity.CENTER_VERTICAL
-            },
-        )
-    }
+    private val blueHealth = HealthCardView(
+        context = context,
+        label = context.getString(R.string.match_hud_blue),
+        healthColor = Color.rgb(74, 153, 211),
+    )
+    private val redHealth = HealthCardView(
+        context = context,
+        label = context.getString(R.string.match_hud_red),
+        healthColor = Color.rgb(188, 76, 61),
+    )
 
     init {
+        orientation = HORIZONTAL
+        gravity = Gravity.CENTER_VERTICAL
         clipChildren = false
         clipToPadding = false
-        elevation = 8f
+        setPadding(dp(6), dp(4), dp(6), dp(4))
         addView(
-            timerPanel,
-            LayoutParams(-2, 36).apply {
-                gravity = Gravity.TOP or Gravity.CENTER_HORIZONTAL
-            },
+            blueHealth,
+            LayoutParams(0, dp(42), 0.7f),
         )
         addView(
-            backButton,
-            LayoutParams(52, 36).apply {
-                gravity = Gravity.TOP or Gravity.START
-                marginStart = 8
-            },
+            Space(context),
+            LayoutParams(0, dp(42), 0.3f),
         )
         addView(
-            windIndicator,
-            LayoutParams(208, 136).apply {
-                gravity = Gravity.TOP or Gravity.CENTER_HORIZONTAL
-                topMargin = 38
+            LinearLayout(context).apply {
+                orientation = HORIZONTAL
+                gravity = Gravity.CENTER
+                background = HudPanelStyle.universalFrameBackground(context)
+                HudPanelStyle.applyShadow(this, elevationDp = 2f)
+                setPadding(dp(8), dp(3), dp(8), dp(3))
+                addView(timerText, LayoutParams(dp(64), -1))
+                addView(windIndicator, LayoutParams(dp(32), dp(32)))
+                addView(
+                    windText,
+                    LayoutParams(dp(38), -1),
+                )
+                addView(
+                    View(context).apply {
+                        setBackgroundColor(Color.argb(88, 181, 143, 78))
+                    },
+                    LayoutParams(dp(1), dp(32)).apply {
+                        marginStart = dp(3)
+                        marginEnd = dp(3)
+                    },
+                )
+                addView(
+                    pauseButton,
+                    LayoutParams(dp(48), dp(48)).apply {
+                        marginStart = dp(4)
+                    },
+                )
             },
+            LayoutParams(dp(226), -1),
         )
         addView(
-            spellPanel,
-            LayoutParams(184, 100).apply {
-                gravity = Gravity.TOP or Gravity.END
-                topMargin = 42
-                marginEnd = 24
-            },
+            Space(context),
+            LayoutParams(0, dp(42), 0.3f),
+        )
+        addView(
+            redHealth,
+            LayoutParams(0, dp(42), 0.7f),
         )
         pauseButton.setOnClickListener { onPauseClicked?.invoke() }
-        backButton.setOnClickListener { onBackClicked?.invoke() }
-        fortressShieldButton.setOnClickListener { onFortressShieldClicked?.invoke() }
     }
 
     var onPauseClicked: (() -> Unit)? = null
-    var onBackClicked: (() -> Unit)? = null
-    var onFortressShieldClicked: (() -> Unit)? = null
 
     fun render(state: RenderState) {
         timerText.text = formatMatchTime(state.matchTimeRemainingMilliseconds)
         val visible = state.statusLabel == "RUNNING" || state.statusLabel == "PAUSED"
-        timerPanel.visibility = if (visible) View.VISIBLE else View.INVISIBLE
-        backButton.visibility = if (visible) View.VISIBLE else View.INVISIBLE
-        windIndicator.visibility = timerPanel.visibility
+        visibility = if (visible) View.VISIBLE else View.INVISIBLE
         windIndicator.setImageResource(
             windIndicatorResource(state.windDirection, state.windStrength),
         )
+        windText.text = when {
+            state.windStrength >= 0.75f -> context.getString(R.string.match_hud_wind_high)
+            state.windStrength >= 0.5f -> context.getString(R.string.match_hud_wind_medium)
+            else -> context.getString(R.string.match_hud_wind_low)
+        }
+        windIndicator.contentDescription = context.getString(
+            R.string.match_hud_wind_description,
+            if (state.windDirection < 0f) {
+                context.getString(R.string.match_hud_wind_left)
+            } else {
+                context.getString(R.string.match_hud_wind_right)
+            },
+            windText.text,
+        )
         pauseButton.text = if (state.statusLabel == "PAUSED") "▶" else "II"
-        spellPanel.visibility = timerPanel.visibility
-        manaText.text = "MANA: ${state.playerMana}"
-        val shieldHealth = state.blueFortressShieldHealth
-        fortressShieldButton.text = when {
-            shieldHealth != null && shieldHealth > 0 ->
-                "ACTIVE $shieldHealth/${state.blueFortressShieldMaxHealth ?: shieldHealth}"
-            state.hasFortressShieldEquipped -> "CAST SHIELD"
-            else -> "NOT EQUIPPED"
-        }
-        fortressShieldButton.isEnabled =
-            state.statusLabel == "RUNNING" &&
-                state.hasFortressShieldEquipped &&
-                (shieldHealth == null || shieldHealth <= 0)
-        fortressShieldButton.alpha = 1f
-        fortressShieldButton.contentDescription = when {
-            shieldHealth != null && shieldHealth > 0 ->
-                "Fortress shield active, $shieldHealth hit points"
-            state.hasFortressShieldEquipped -> "Cast fortress shield"
-            else -> "Fortress shield is not equipped"
-        }
-        spellFeedbackText.text = state.spellFeedbackLabel.orEmpty()
+        pauseButton.contentDescription = context.getString(
+            if (state.statusLabel == "PAUSED") {
+                R.string.match_hud_resume
+            } else {
+                R.string.match_hud_pause
+            },
+        )
+        blueHealth.render(state.blueFortressHealth, state.blueFortressMaxHealth)
+        redHealth.render(state.redFortressHealth, state.redFortressMaxHealth)
     }
 
     private fun formatMatchTime(milliseconds: Long): String {
@@ -193,12 +163,11 @@ class MatchHudView(context: Context) : FrameLayout(context) {
         gravity = Gravity.CENTER
         includeFontPadding = false
         setTextColor(Color.rgb(239, 220, 179))
-        setPadding(4, 2, 4, 2)
+        setPadding(dp(2), dp(1), dp(2), dp(1))
+        UiTypography.applyButtonTypeface(this)
     }
 
-    private fun panelBackground(color: Int) = GradientDrawable().apply {
-        setColor(color)
-        cornerRadius = 10f
-        setStroke(1, Color.argb(120, 255, 235, 190))
-    }
+    private fun dp(value: Int): Int =
+        (value * resources.displayMetrics.density).toInt()
+
 }

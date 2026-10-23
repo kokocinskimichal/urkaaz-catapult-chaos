@@ -6,7 +6,10 @@ sealed interface AppScreen {
     data object Start : AppScreen
     data object Dashboard : AppScreen
     data object Campaign : AppScreen
-    data class Loadout(val campaignLevel: Int) : AppScreen
+    data class Loadout(
+        val campaignLevel: Int,
+        val demoMode: Boolean = false,
+    ) : AppScreen
     data object Shop : AppScreen
     data class Match(
         val levelId: String,

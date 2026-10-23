@@ -1,5 +1,15 @@
 # Changelog
 
+## 2026-10-23
+
+### Changed
+
+- Added a demo-only Loadout flow with independent persistence and schema
+  versioning, making the full catalog selectable without changing
+  campaign-level loadouts.
+- Replaced the Mana orb shell with the supplied transparent gold-filigree
+  asset; centered the live Mana count and changed the liquid to deep blue.
+
 ## 2026-10-21
 
 ### Added
@@ -22,8 +32,26 @@
 
 ### Changed
 
+- Reorganized the match HUD into coordinated top status zones and a three-part
+  command dock with Supply, loadout-filtered units/ammunition/spells, and a
+  liquid-filled Mana orb. Added transient, text-only spell feedback and
+  generalized activation through `MatchUiAction.CastSpell`.
+- Added a reusable `HealthCardView` for BLUE and RED fortress indicators; the
+  top health cards, timer module, and shared command dock use the same
+  stretchable universal frame.
+- Added subtle programmatic elevation shadows to the top health cards, timer
+  module, and shared dock, plus a text shadow for transient feedback.
+- Kept the three dock groups and pause control visually distinct with subtle
+  UI-drawn dividers instead of separate panel frames. Alternate slot and
+  dock-group frame assets are prepared but not used by the live HUD.
+- Matched the widths of the Supply/unit and spell/Mana dock panels while
+  keeping ammunition centered between them.
+- Split dock headings so `SUPPLY`, `UNITS`, `AMMUNITION`, `SPELLS`, and `MANA`
+  align with their respective controls.
+- Centralized maximum Supply with the domain resource configuration so the
+  simulation and HUD use the same capacity.
 - Routed Loadout spell metadata through the canonical domain catalog and
-  enlarged the in-match mana/shield control for visibility.
+  exposed the selected ammunition and spell state in the in-match HUD.
 - Reduced early campaign AI pressure: levels 1–10 now use CADET, with wider aim
   error and an 8-second interval between unit recruitments; VETERAN starts at
   level 11 and ELITE at 31.

@@ -1,0 +1,98 @@
+Create one production-ready transparent frame asset for the Urkaaaz match HUD,
+refining the lightweight frame treatment in the latest approved HUD mockup.
+The same asset must Nine-patch scale for the complete bottom dock, both
+fortress HP cards, and the central timer/wind/pause panel.
+
+This deliverable is one standalone frame image only. Do not create a screen
+mockup, separate frame variants, Android UI, or gameplay graphics.
+
+## Reference input
+
+Attach the latest approved full-screen Urkaaaz match HUD mockup. Use it as the
+style reference for the thin bronze-gold edge, rounded geometry, and restrained
+warm highlights. Do not copy its text, icons, panel fill, or battlefield into
+the asset.
+
+Do not attach the older thick gold frames or earlier heavy HUD mockups; they
+conflict with this direction.
+
+## Output
+
+- Filename: `match_hud_universal_frame.png`
+- Source path: `assets_src/match/hud/match_hud_universal_frame.png`
+- Canvas: exactly 512 x 190 pixels, landscape, approximately 2.7:1.
+- Format: RGBA PNG.
+- Return exactly one standalone asset.
+- Do not include Nine-patch guide pixels or markers; Android markers are added
+  separately after the art is reviewed.
+
+## Visual design
+
+- Create a clean horizontal rounded-rectangle frame with a single, fine
+  bronze-gold edge. Match the latest mockup's lighter treatment; keep the
+  border visibly slimmer than the older universal frame.
+- Use one restrained warm highlight along the edge for a crafted Urkaaaz
+  fantasy character. Avoid a double rail, deep bevel, bright continuous gold
+  outline, glow, ornament, rivets, diamonds, spikes, or a bulky plaque look.
+- Keep both outer and inner contours smoothly rounded. Use compact corners
+  that stay balanced on short HP and timer panels.
+- Keep the long straight edge sections and center low-detail so they stretch
+  cleanly. Preserve border thickness and corner shape through Nine-patch
+  resizing.
+- The frame must work on panels with very different proportions: compact
+  fortress HP cards and center timer, as well as the wide bottom dock.
+- Use one neutral, symmetric design. Do not imply BLUE, RED, Supply, Mana,
+  ammunition, spells, or any other HUD section.
+
+## Transparency and runtime content
+
+- The entire panel interior must be fully transparent (alpha 0).
+- Pixels outside the rounded frame silhouette must be fully transparent.
+- Draw only the frame itself. Do not include panel fill, texture, shadow, text,
+  numbers, icons, dividers, labels, controls, or values.
+- Android renders a separate shared panel surface of `#1A1A1A` at 80% opacity
+  (`#CC` alpha) beneath the frame.
+- Android draws the dock's internal separators and all dynamic content above
+  the surface. Do not bake these into the asset.
+- Do not add a shadow; the Android UI supplies it separately.
+
+## Reuse targets
+
+The same PNG is used for:
+
+1. The complete bottom command dock as one outer frame around Supply/units/
+   Send Wave, ammunition, and spells/Mana. Internal group separators are
+   separate UI elements; do not split the dock into three framed boxes.
+2. The BLUE fortress HP card.
+3. The RED fortress HP card.
+4. The central timer/wind/pause panel. Keep the pause control inside this
+   panel, separated from the timer/wind area by exactly one subtle vertical
+   divider drawn by Android. The divider is a separate UI element, not part of
+   the frame PNG.
+
+No target-specific or team-specific variants are needed.
+
+## Negative requirements
+
+- No opaque or translucent fill in the image; panel fill remains a separate
+  Android layer.
+- No black canvas background, padded square canvas, or small frame centered
+  inside the canvas.
+- No text, labels, numbers, logos, icons, team colors, health bars, slot
+  borders, buttons, separators, or other UI contents.
+- No thick double outlines, excessive gold, bright neon, heavy texture, deep
+  bevel, angular/chamfered corners, spikes, bulky ornaments, or contact sheet.
+
+## Review checklist
+
+- Confirm the file is one valid 512 x 190 RGBA PNG with the exact filename.
+- Confirm both the panel interior and exterior are fully transparent.
+- Confirm the edge is single, slim, softly rounded, and visually consistent
+  with the latest approved mockup.
+- Preview the same Nine-patch around the complete bottom dock, both short HP
+  cards, and the center timer panel; do not alter the source asset between
+  previews.
+- Confirm corner shape and border thickness stay balanced at the shortest
+  target height and that only straight edge sections and the plain center
+  stretch.
+- Do not integrate the asset into Android until it is reviewed and approved.

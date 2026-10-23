@@ -1,8 +1,8 @@
 package com.urkaaaz.screens.loadout
 
 import com.urkaaaz.application.loadout.LoadoutAvailability
-import com.urkaaaz.application.loadout.LoadoutCommitResult
 import com.urkaaaz.application.loadout.LoadoutCatalog
+import com.urkaaaz.application.loadout.LoadoutCommitResult
 import com.urkaaaz.application.loadout.LoadoutCorrection
 import com.urkaaaz.application.loadout.LoadoutEditAction
 import com.urkaaaz.application.loadout.LoadoutEditResult
@@ -19,6 +19,7 @@ import com.urkaaaz.contracts.PlayerLoadoutConfig
 
 data class LoadoutUiState(
     val level: Int,
+    val demoMode: Boolean = false,
     val availableUnits: List<String>,
     val availableAmmunition: List<String>,
     val availableSpells: List<String>,
@@ -82,18 +83,35 @@ internal fun <T> availableOptionsFirst(
 class LoadoutViewModel(
     campaignLevel: Int,
     private val useCases: LoadoutUseCases,
-    definition: CampaignLevelDefinition = CampaignLevelDefinition.forLevel(campaignLevel),
+    demoMode: Boolean = false,
+    definition: CampaignLevelDefinition? = null,
 ) {
-    private val scenario = definition.toMatchScenario()
-    private val availability = LoadoutAvailability(
-        level = definition.level,
-        unitTypes = scenario.availableUnits.toSet(),
-        ammunitionTypes = scenario.availableAmmunition.toSet(),
-        spellTypes = scenario.availableSpells.toSet(),
-    )
+    private val campaignDefinition = if (demoMode) {
+        null
+    } else {
+        definition ?: CampaignLevelDefinition.forLevel(campaignLevel)
+    }
+    private val availability = if (demoMode) {
+        LoadoutAvailability(
+            level = campaignLevel,
+            unitTypes = LoadoutCatalog.units.mapTo(mutableSetOf()) { it.id },
+            ammunitionTypes = LoadoutCatalog.ammunition.mapTo(mutableSetOf()) { it.id },
+            spellTypes = LoadoutCatalog.spells.mapTo(mutableSetOf()) { it.id },
+        )
+    } else {
+        val definition = requireNotNull(campaignDefinition)
+        val scenario = definition.toMatchScenario()
+        LoadoutAvailability(
+            level = definition.level,
+            unitTypes = scenario.availableUnits.toSet(),
+            ammunitionTypes = scenario.availableAmmunition.toSet(),
+            spellTypes = scenario.availableSpells.toSet(),
+        )
+    }
 
     var state = LoadoutUiState(
-        level = definition.level,
+        level = campaignDefinition?.level ?: campaignLevel,
+        demoMode = demoMode,
         availableUnits = LoadoutCatalog.units
             .map { it.id }
             .filter { it in availability.unitTypes },

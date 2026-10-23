@@ -31,5 +31,11 @@ class LoadoutCatalogTest {
             SpellCatalog.all.map { Triple(it.type.name, it.goldCost, it.special) },
             LoadoutCatalog.spells.map { Triple(it.id, it.goldCost, it.special) },
         )
+        assertEquals(
+            SpellCatalog.all.map { Triple(it.type.name, it.manaCost, it.isImplemented) },
+            LoadoutCatalog.spells.map { Triple(it.id, it.manaCost, it.implemented) },
+        )
+        assertEquals(20, LoadoutCatalog.maximumSupply)
+        assertEquals(100, LoadoutCatalog.maximumMana)
     }
 }

@@ -78,7 +78,15 @@ przenosi zatwierdzony wybór przez granicę meczu.
 `CampaignLevelRegistry` i mapper poziomu przenoszą obie informacje.
 `LocalMatchGateway`/`MatchSession` przyjmują scenariusz; jego wybór jest
 przekazywany do `SimulationConfig`, a warstwa sesji egzekwuje jednostki i
-amunicję dla gracza. SpellSystem nadal nie obsługuje `CastSpell`.
+amunicję dla gracza. Wspólny kontrakt `CastSpell` trafia do SpellSystemu;
+efekt gameplayowy mają tylko czary oznaczone w katalogu jako zaimplementowane.
+
+Tryb demo używa tego samego ekranu i walidatora loadoutu, ale udostępnia
+wszystkie jednostki, typy amunicji i czary z katalogów, niezależnie od
+dostępności kampanii, odblokowań i zapasów gracza. Zapis demo ma osobny klucz
+DataStore i wersję schematu, niezależne od wyborów kampanii. Zatwierdzony
+wybór trafia do scenariusza demo z mapą i wiatrem demo, a wybrane jednostki,
+amunicja i czary pozostają ograniczone przez loadout w runtime meczu.
 
 ## Właściciel i kierunek zależności
 
