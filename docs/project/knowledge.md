@@ -672,7 +672,9 @@ must go through commands and domain/application boundaries.
   blast radius, with unit damage falling off by distance. It creates a
   150-world-unit crater with depth 90 and can damage allied units but not the
   firing team's fortress. Its inventory remains limited to three shots with a
-  6.5-second reload.
+  3.25-second reload. Reload times were halved across all ammunition types
+  (Siege Bomb 2.75 s, Powder Barrel 3.25 s, Fire Rain 4 s, Plague Cauldron
+  7.5 s; Rock stays at 0 s) as a provisional value pending Balance Simulation.
 - The ammunition catalog contains Rock, Siege Bomb, Powder Barrel, Fire Rain
   and Plague Cauldron; Cluster Bomb and its fragment-only projectile metadata
   and rendering have been removed. Rock deals 50 damage to units and
@@ -849,3 +851,23 @@ The sole editor is the local React/Vite application in `map-editor-web`;
 shared Kotlin map-editor domain, format and rendering modules remain available
 for contract and tooling use, but there is no desktop UI or desktop asset
 adapter.
+
+## Balance simulation
+
+- `game-balance` runs headless AI-vs-AI matches (ELITE as BLUE player, campaign
+  profile as RED) and reports win rate against a linear target curve
+  (90% at level 1 → 55% at level 31 → 45% at level 100, ±10 pp). Run `./gradlew
+  :game-balance:balanceBaseline -PbalanceArgs="seeds dir levels"`.
+- Balance parameters are injectable through `GameBalance` (domain): unit and
+  ammunition catalogs plus `SupplyBalance`. `GameBalance.default` equals the
+  shipped values; `GameBalance.tuned(...)` scales units/ammunition without
+  touching globals. `MatchSession`, `SimulationConfig`, `AiMatchCoordinator`
+  and `BalanceMatchConfig` accept it.
+- CADET (3°/6, 600 ms) and VETERAN (2°/4, 550 ms, wind-aware) fit the target
+  curve on levels 1–10. Known gaps (40 seeds): levels 20–30 are too easy
+  (~81% vs 68–56%) and levels 75–100 too hard (~36–30% vs 49–45%). Giving
+  VETERAN a progression ramp made results highly level-dependent (e.g. level
+  24: 1%, level 26: 88%, stable at 150 seeds), so it was not adopted.
+- Tools: `balanceTune` (random search of global multipliers; global
+  multipliers barely move the curve) and `balanceRedHealth` (scan of enemy
+  fortress HP per level).

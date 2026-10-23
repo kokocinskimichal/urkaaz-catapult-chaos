@@ -22,6 +22,7 @@ include(
     ":game-campaign",
     ":game-ai",
     ":game-application",
+    ":game-balance",
     ":android-app",
     ":game-assets",
     ":map-editor-domain",

@@ -3,6 +3,7 @@ package com.urkaaaz.simulation
 import com.urkaaaz.contracts.MapDefinition
 import com.urkaaaz.contracts.PlayerLoadoutConfig
 import com.urkaaaz.contracts.WorldScale
+import com.urkaaaz.domain.GameBalance
 import com.urkaaaz.domain.ManaConfiguration
 import com.urkaaaz.domain.WorldBounds
 
@@ -10,6 +11,7 @@ import com.urkaaaz.domain.WorldBounds
 data class SimulationConfig(
     val bounds: WorldBounds,
     val terrainBiome: String = "GREEN_FRONTIER",
+    val balance: GameBalance = GameBalance.default,
     val gravityAccelerationY: Float = 420f,
     val windAccelerationX: Float = 0f,
     val windAccelerationScale: Float = 390f,

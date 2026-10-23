@@ -56,7 +56,7 @@ class AiMatchCoordinatorTest {
         coordinator.start(randomSeed = 12L)
 
         val first = coordinator.decide(snapshot, elapsedMilliseconds = 33)
-        val beforeCadence = coordinator.decide(snapshot, elapsedMilliseconds = 1_099)
+        val beforeCadence = coordinator.decide(snapshot, elapsedMilliseconds = 599)
         val atCadence = coordinator.decide(snapshot, elapsedMilliseconds = 1)
 
         assertEquals(redPlayer, first.first().playerId)
@@ -147,6 +147,38 @@ class AiMatchCoordinatorTest {
                 elapsedMilliseconds = 1_100,
             ).any { it is MatchCommand.Fire },
         )
+    }
+
+    @Test
+    fun blueCoordinatorControlsTheBlueTeamWithItsOwnProfile() {
+        val bluePlayer = PlayerId("blue-player")
+        val coordinator = AiMatchCoordinator(
+            scenario,
+            team = Team.BLUE,
+            profileOverride = AiProfileSelection(AiProfileId.ELITE),
+        )
+        coordinator.start(randomSeed = 21L)
+
+        val commands = coordinator.decide(snapshot, elapsedMilliseconds = 33)
+
+        assertTrue(commands.isNotEmpty())
+        assertTrue(commands.all { it.playerId == bluePlayer })
+        val aim = commands.filterIsInstance<MatchCommand.Aim>().single()
+        assertEquals(EntityId("blue-catapult"), aim.catapultId)
+    }
+
+    @Test
+    fun blueCoordinatorWaitsForTheBlueReload() {
+        val coordinator = AiMatchCoordinator(scenario, team = Team.BLUE)
+        coordinator.setUnitAutomationEnabled(false)
+        coordinator.start(randomSeed = 22L)
+        val reloading = snapshot.copy(
+            reloadRemainingSeconds = mapOf(Team.BLUE to 3f),
+        )
+
+        val commands = coordinator.decide(reloading, elapsedMilliseconds = 33)
+
+        assertTrue(commands.none { it is MatchCommand.Fire || it is MatchCommand.Aim })
     }
 
     @Test

@@ -104,7 +104,7 @@ private object SimpleCatapultStrategy : CatapultDecisionStrategy {
     override val id = AiStrategyId("simple")
 
     override fun decide(context: AiStrategyContext): List<MatchCommand> =
-        fireAt(context, preferredTarget = { _, enemyCatapult -> enemyCatapult.toTargetPoint() }) { ammunition ->
+        fireAt(context, preferredTarget = { _, enemyCatapult -> enemyCatapult.toTargetPoint() }, windAware = true) { ammunition ->
             AmmunitionCatalog.definition(ammunition).damage.fortressDamage.toFloat()
         }
 }
@@ -113,7 +113,7 @@ private object SituationalCatapultStrategy : CatapultDecisionStrategy {
     override val id = AiStrategyId("situational")
 
     override fun decide(context: AiStrategyContext): List<MatchCommand> =
-        fireAt(context, preferredTarget = ::bestUnitCluster) { ammunition ->
+        fireAt(context, preferredTarget = ::bestUnitCluster, windAware = true) { ammunition ->
             val damage = AmmunitionCatalog.definition(ammunition).damage
             damage.fortressDamage * 1.25f + damage.unitDamage +
                 damage.fortressRadius * 0.1f + damage.unitRadius * 0.1f
@@ -124,7 +124,7 @@ private object CounterplayCatapultStrategy : CatapultDecisionStrategy {
     override val id = AiStrategyId("counterplay")
 
     override fun decide(context: AiStrategyContext): List<MatchCommand> =
-        fireAt(context, preferredTarget = ::highestThreatUnit) { ammunition ->
+        fireAt(context, preferredTarget = ::highestThreatUnit, windAware = true) { ammunition ->
             val damage = AmmunitionCatalog.definition(ammunition).damage
             damage.unitDamage * 1.5f + damage.unitRadius +
                 damage.fortressDamage * 0.5f + damage.fortressRadius * 0.1f
@@ -134,6 +134,7 @@ private object CounterplayCatapultStrategy : CatapultDecisionStrategy {
 private fun fireAt(
     context: AiStrategyContext,
     preferredTarget: (AiStrategyContext, CatapultSnapshot) -> TargetPoint,
+    windAware: Boolean = false,
     ammunitionScore: (AmmunitionType) -> Float,
 ): List<MatchCommand> {
     val team = context.team
@@ -154,11 +155,26 @@ private fun fireAt(
     val angleFromHorizontal = Math.toDegrees(
         atan2(abs(target.y - catapult.y).toDouble(), horizontalDistance.toDouble()),
     ).toFloat()
-    val angle = (angleFromHorizontal + 42f + randomOffset(
+    val nominalAngle = angleFromHorizontal + 42f
+    val angle = (nominalAngle + randomOffset(
         context.random,
         context.tuning.angleErrorDegrees,
     )).coerceIn(0f, 180f)
-    val power = (horizontalDistance / 12f + randomOffset(
+    val nominalPower = if (windAware) {
+        AiBallistics.powerFor(
+            team = team,
+            originX = catapult.anchorX,
+            originY = catapult.anchorY,
+            targetX = target.x,
+            targetY = target.y,
+            angleDegrees = nominalAngle,
+            ammunition = ammunition,
+            wind = context.snapshot.wind,
+        )
+    } else {
+        null
+    } ?: (horizontalDistance / 12f)
+    val power = (nominalPower + randomOffset(
         context.random,
         context.tuning.powerError,
     )).coerceIn(0f, 100f)
@@ -210,7 +226,13 @@ private fun highestThreatUnit(
     context: AiStrategyContext,
     enemyCatapult: CatapultSnapshot,
 ): TargetPoint {
-    val target = activeEnemies(context).maxByOrNull { unit ->
+    val ownFortressX = context.snapshot.fortresses
+        .firstOrNull { it.team == context.team }?.x
+    val threatRange = context.snapshot.terrain.worldWidth * THREAT_RANGE_RATIO
+    val threats = activeEnemies(context).filter { unit ->
+        ownFortressX == null || abs(unit.x - ownFortressX) <= threatRange
+    }
+    val target = threats.maxByOrNull { unit ->
         when {
             unit.unitType == UnitFactory.sapper().id -> 1_000f
             unit.unitType == "DEMOLISHER" -> 900f
@@ -232,6 +254,9 @@ private fun highestThreatUnit(
         y = target.y,
     )
 }
+
+/** Enemy units farther than this share of the world width from the own fortress are ignored in favor of fortress pressure. */
+private const val THREAT_RANGE_RATIO = 0.35f
 
 private fun livingEnemies(context: AiStrategyContext): List<UnitSnapshot> =
     context.snapshot.units.filter { it.team != context.team && it.health > 0 }

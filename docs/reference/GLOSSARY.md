@@ -58,6 +58,7 @@ kontrakty są wyraźnie oddzielone.
 | **CS** | **Combat System** | Cele, grupy ataku, harmonogram ataków, obrażenia, śmierć i eventy walki jednostek. | Działa dla obecnego zakresu jednostek. |
 | **TS** | **Terrain System** | Profil terenu, deformacje, kratery, próbki wysokości i materializacja terenu w symulacji. | Działa. |
 | **LDS** | **Level Definition System** | Niemutowalne definicje poziomów, authoring, walidacja, placementy, fundamenty i rejestr kampanii. | Działa. |
+| **BSIM** | **Balance Simulation** | Headless mecze AI vs AI (ELITE jako gracz), metryki, cele trudności i dobór parametrów przez wstrzykiwalny `GameBalance`. | Działa jako moduł `game-balance`. |
 | **PS** | **Projectile System** | Ruch pocisków, balistyka, wiatr, trajektoria i cykl życia pocisku. | Działa jako część symulacji i AS. |
 | **CoS** | **Collision System** | Wykrywanie i klasyfikacja kolizji pocisków, jednostek, fortec i terenu. | Działa jako część symulacji i AS/CS. |
 | **DS** | **Damage System** | Rozstrzyganie obrażeń jednostek, fortec, terenu i efektów obszarowych. | Działa jako część symulacji i CS/AS. |

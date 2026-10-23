@@ -36,7 +36,7 @@ enum class AmmunitionType(
     ),
     SIEGE_BOMB(
         effect = AmmunitionEffect.EXPLOSIVE,
-        reloadSeconds = 5.5f,
+        reloadSeconds = 2.75f,
         damageRadius = 115f,
         damage = 72,
         craterRadius = 125f,
@@ -46,7 +46,7 @@ enum class AmmunitionType(
     ),
     POWDER_BARREL(
         effect = AmmunitionEffect.EXPLOSIVE,
-        reloadSeconds = 6.5f,
+        reloadSeconds = 3.25f,
         damageRadius = 155f,
         damage = 120,
         craterRadius = 165f,
@@ -56,7 +56,7 @@ enum class AmmunitionType(
     ),
     FIRE_RAIN(
         effect = AmmunitionEffect.INCENDIARY,
-        reloadSeconds = 8f,
+        reloadSeconds = 4f,
         damageRadius = 68f,
         damage = 4,
         craterRadius = 54f,
@@ -66,7 +66,7 @@ enum class AmmunitionType(
     ),
     PLAGUE_CAULDRON(
         effect = AmmunitionEffect.PLAGUE,
-        reloadSeconds = 15f,
+        reloadSeconds = 7.5f,
         damageRadius = 300f,
         damage = 8,
         craterRadius = 0f,

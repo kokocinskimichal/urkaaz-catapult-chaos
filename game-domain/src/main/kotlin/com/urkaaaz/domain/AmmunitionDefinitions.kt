@@ -1,6 +1,7 @@
 package com.urkaaaz.domain
 
 import com.urkaaaz.contracts.Team
+import kotlin.math.roundToInt
 
 enum class AmmunitionHitLayer {
     TERRAIN,
@@ -248,7 +249,7 @@ object RockAmmunition : AmmunitionDefinition(
 object SiegeBombAmmunition : AmmunitionDefinition(
     type = AmmunitionType.SIEGE_BOMB,
     displayKey = "ammunition.siege_bomb",
-    reload = ReloadProfile(5.5f),
+    reload = ReloadProfile(2.75f),
     inventory = InventoryProfile(unlimited = true),
     flight = FlightProfile(mass = 2.5f, windResponse = 0.8f),
     collision = CollisionProfile(
@@ -270,7 +271,7 @@ object SiegeBombAmmunition : AmmunitionDefinition(
 object PowderBarrelAmmunition : AmmunitionDefinition(
     type = AmmunitionType.POWDER_BARREL,
     displayKey = "ammunition.powder_barrel",
-    reload = ReloadProfile(6.5f),
+    reload = ReloadProfile(3.25f),
     inventory = InventoryProfile(unlimited = false, startingCount = 3),
     flight = FlightProfile(mass = 2f, windResponse = 0.9f),
     collision = CollisionProfile(
@@ -293,7 +294,7 @@ object PowderBarrelAmmunition : AmmunitionDefinition(
 object FireRainAmmunition : AmmunitionDefinition(
     type = AmmunitionType.FIRE_RAIN,
     displayKey = "ammunition.fire_rain",
-    reload = ReloadProfile(8f),
+    reload = ReloadProfile(4f),
     inventory = InventoryProfile(unlimited = false, startingCount = 3),
     flight = FlightProfile(
         mass = 1.2f,
@@ -335,7 +336,7 @@ object FireRainAmmunition : AmmunitionDefinition(
 object PlagueCauldronAmmunition : AmmunitionDefinition(
     type = AmmunitionType.PLAGUE_CAULDRON,
     displayKey = "ammunition.plague_cauldron",
-    reload = ReloadProfile(15f),
+    reload = ReloadProfile(7.5f),
     inventory = InventoryProfile(unlimited = false, startingCount = 3),
     flight = FlightProfile(mass = 3f, windResponse = 0.6f),
     collision = CollisionProfile(
@@ -364,16 +365,71 @@ object PlagueCauldronAmmunition : AmmunitionDefinition(
     availableLayers = setOf(AmmunitionHitLayer.TERRAIN, AmmunitionHitLayer.FORTRESS),
 )
 
-object AmmunitionCatalog {
-    val all: List<AmmunitionDefinition> = listOf(
-        RockAmmunition,
-        SiegeBombAmmunition,
-        PowderBarrelAmmunition,
-        FireRainAmmunition,
-        PlagueCauldronAmmunition,
-    )
-
+/** Ammunition lookup. [default] is the shipped balance; tuned catalogs come from [GameBalance]. */
+class AmmunitionCatalog(
+    val all: List<AmmunitionDefinition>,
+) {
     fun definition(type: AmmunitionType): AmmunitionDefinition =
         all.firstOrNull { it.type == type }
             ?: error("unknown ammunition definition: ${type.name}")
+
+    companion object {
+        val default = AmmunitionCatalog(
+            listOf(
+                RockAmmunition,
+                SiegeBombAmmunition,
+                PowderBarrelAmmunition,
+                FireRainAmmunition,
+                PlagueCauldronAmmunition,
+            ),
+        )
+
+        fun definition(type: AmmunitionType): AmmunitionDefinition = default.definition(type)
+
+        val all: List<AmmunitionDefinition> get() = default.all
+    }
+}
+
+/** Multipliers applied to one ammunition's shipped definition. */
+data class AmmunitionTuning(
+    val reloadMultiplier: Float = 1f,
+    val damageMultiplier: Float = 1f,
+) {
+    init {
+        require(reloadMultiplier >= 0f) { "reload multiplier must not be negative" }
+        require(damageMultiplier >= 0f) { "damage multiplier must not be negative" }
+    }
+}
+
+/** A shipped definition with reload and damage scaled by an [AmmunitionTuning]. */
+class TunedAmmunitionDefinition(
+    base: AmmunitionDefinition,
+    tuning: AmmunitionTuning,
+) : AmmunitionDefinition(
+    type = base.type,
+    displayKey = base.displayKey,
+    reload = ReloadProfile(base.reload.reloadSeconds * tuning.reloadMultiplier),
+    inventory = base.inventory,
+    flight = base.flight,
+    collision = base.collision,
+    damage = base.damage.scaled(tuning.damageMultiplier),
+    terrain = base.terrain,
+    behavior = base.behavior.scaled(tuning.damageMultiplier),
+    availableLayers = base.availableLayers,
+)
+
+private fun scale(value: Int, multiplier: Float): Int = (value * multiplier).roundToInt()
+
+private fun DamageProfile.scaled(multiplier: Float) = copy(
+    unitDamage = scale(unitDamage, multiplier),
+    fortressDamage = scale(fortressDamage, multiplier),
+    minimumDamage = scale(minimumDamage, multiplier),
+)
+
+private fun AmmunitionImpactBehavior.scaled(multiplier: Float): AmmunitionImpactBehavior = when (this) {
+    is AmmunitionImpactBehavior.LingeringArea -> copy(
+        damagePerTick = scale(damagePerTick, multiplier),
+        fortressDamagePerTick = scale(fortressDamagePerTick, multiplier),
+    )
+    else -> this
 }

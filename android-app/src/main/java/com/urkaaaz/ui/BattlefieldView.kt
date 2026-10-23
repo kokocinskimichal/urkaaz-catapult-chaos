@@ -801,7 +801,7 @@ class BattlefieldView(context: Context) : View(context) {
     companion object {
         private const val VISUAL_MAX_PULL_DISTANCE = 96f
         private const val RELOAD_INDICATOR_RADIUS = 12f
-        private const val RELOAD_INDICATOR_DURATION = 5.5f
+        private const val RELOAD_INDICATOR_DURATION = 2.75f
         private const val FORTRESS_RENDER_WIDTH = 280f
         private const val FORTRESS_CENTER_MARGIN = 490f
         private const val PROJECTILE_SPEED_SCALE = 8f

@@ -81,7 +81,8 @@ class SlingmasterUnit(
     override val participatesInMeleeSynergy = false
 }
 
-object UnitFactory {
+/** Unit lookup over a set of configurations; [default] is the shipped balance. */
+class UnitCatalog(val configurations: List<UnitConfiguration>) {
     fun create(configuration: UnitConfiguration): UnitDefinition = when (configuration.id) {
         UnitConfigurations.DEFENDER.id -> DefenderUnit(configuration)
         UnitConfigurations.SAPPER.id -> SapperUnit(configuration)
@@ -92,12 +93,26 @@ object UnitFactory {
     }
 
     fun create(id: String): UnitDefinition =
-        UnitConfigurations.all.firstOrNull { it.id == id }?.let(::create)
+        configurations.firstOrNull { it.id == id }?.let(::create)
             ?: error("unknown unit definition: $id")
 
-    fun all(): Set<UnitDefinition> = UnitConfigurations.all.map(::create).toSet()
+    fun all(): Set<UnitDefinition> = configurations.map(::create).toSet()
 
     fun byId(id: String): UnitDefinition = create(id)
+
+    companion object {
+        val default = UnitCatalog(UnitConfigurations.all)
+    }
+}
+
+object UnitFactory {
+    fun create(configuration: UnitConfiguration): UnitDefinition = UnitCatalog.default.create(configuration)
+
+    fun create(id: String): UnitDefinition = UnitCatalog.default.create(id)
+
+    fun all(): Set<UnitDefinition> = UnitCatalog.default.all()
+
+    fun byId(id: String): UnitDefinition = UnitCatalog.default.byId(id)
 
     fun defender(): UnitDefinition = create(UnitConfigurations.DEFENDER)
     fun sapper(): UnitDefinition = create(UnitConfigurations.SAPPER)

@@ -9,7 +9,7 @@ import com.urkaaaz.contracts.MatchScenario
 import com.urkaaaz.contracts.MapDefinition
 import com.urkaaaz.domain.AmmunitionType
 import com.urkaaaz.domain.WorldBounds
-import com.urkaaaz.domain.UnitFactory
+import com.urkaaaz.domain.GameBalance
 import com.urkaaaz.domain.SpellCatalog
 import com.urkaaaz.domain.SpellType
 import com.urkaaaz.contracts.Team
@@ -34,6 +34,7 @@ class MatchSession(
     private val redFortressMaxHealth: Int = 500,
     private val combatLogSink: CombatLogSink = NoOpCombatLogSink,
     private val ammunitionLogSink: AmmunitionLogSink = NoOpAmmunitionLogSink,
+    private val balance: GameBalance = GameBalance.default,
     private val randomSeedProvider: () -> Long = { Random.nextLong() },
 ) {
     private var simulation: DeterministicMatchSimulation? = null
@@ -81,7 +82,7 @@ class MatchSession(
             }
             is MatchCommand.DeployUnit -> {
                 enforceUnitSelection(command.playerId, command.unitType)
-                val unitType = UnitFactory.byId(command.unitType)
+                val unitType = balance.units.byId(command.unitType)
                 requireRunning().deployUnit(unitType, teamForPlayer(command.playerId))
                 latestEvents = requireRunning().drainEvents()
                 requireRunning().snapshot()
@@ -252,7 +253,7 @@ class MatchSession(
                 if (loadout != null && unitType !in loadout.unitTypes) return false
             }
         }
-        val definition = runCatching { UnitFactory.byId(unitType) }.getOrNull() ?: return false
+        val definition = runCatching { balance.units.byId(unitType) }.getOrNull() ?: return false
         val resources = latestSnapshot.resourcesByTeam[team] ?: return false
         if (resources.supply < definition.supplyCost) return false
         return definition !is com.urkaaaz.domain.SapperUnit ||
@@ -275,6 +276,7 @@ class MatchSession(
                     height = WorldDimensions.HEIGHT,
                 ),
                 terrainBiome = terrainBiome,
+                balance = balance,
                 windAccelerationX = initialWind.direction * initialWind.strength,
                 blueFortressMaxHealth = blueFortressMaxHealth,
                 redFortressMaxHealth = redFortressMaxHealth,

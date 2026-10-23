@@ -419,7 +419,7 @@ class MatchSessionTest {
                 CommandId("wait-for-ammo-reload"),
                 matchId,
                 playerId,
-                5_500,
+                2_750,
             ),
         )
 
@@ -433,7 +433,7 @@ class MatchSessionTest {
         )
 
         assertEquals("SIEGE_BOMB", snapshot.projectiles.single().ammunitionType)
-        assertEquals(5.5f, snapshot.reloadRemainingSeconds[com.urkaaaz.contracts.Team.BLUE])
+        assertEquals(2.75f, snapshot.reloadRemainingSeconds[com.urkaaaz.contracts.Team.BLUE])
     }
 
     @Test
@@ -452,7 +452,7 @@ class MatchSessionTest {
             ),
         )
         assertEquals(
-            5.5f,
+            2.75f,
             snapshot.reloadRemainingSecondsByAmmunition[Team.BLUE]?.get("SIEGE_BOMB"),
         )
 
@@ -461,11 +461,11 @@ class MatchSessionTest {
                 CommandId("advance-siege-reload"),
                 matchId,
                 playerId,
-                2_000,
+                1_000,
             ),
         )
         assertEquals(
-            3.5f,
+            1.75f,
             snapshot.reloadRemainingSecondsByAmmunition[Team.BLUE]?.get("SIEGE_BOMB"),
         )
 
@@ -478,7 +478,7 @@ class MatchSessionTest {
             ),
         )
         assertEquals(
-            3.5f,
+            1.75f,
             snapshot.reloadRemainingSecondsByAmmunition[Team.BLUE]?.get("SIEGE_BOMB"),
         )
 
@@ -499,7 +499,7 @@ class MatchSessionTest {
             ),
         )
         assertEquals(
-            5.5f,
+            2.75f,
             snapshot.reloadRemainingSecondsByAmmunition[Team.BLUE]?.get("SIEGE_BOMB"),
         )
     }

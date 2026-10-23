@@ -23,7 +23,6 @@ import com.urkaaaz.contracts.TerrainSnapshot
 import com.urkaaaz.contracts.WindSnapshot
 import com.urkaaaz.domain.Aim
 import com.urkaaaz.domain.AmmunitionType
-import com.urkaaaz.domain.AmmunitionCatalog
 import com.urkaaaz.domain.AmmunitionImpactBehavior
 import com.urkaaaz.domain.Catapult
 import com.urkaaaz.domain.Fortress
@@ -120,7 +119,7 @@ class DeterministicMatchSimulation(
     private val reloadRemainingSecondsByAmmunition =
         mutableMapOf<Team, MutableMap<AmmunitionType, Float>>().apply {
             Team.entries.forEach { team ->
-                this[team] = AmmunitionCatalog.all.associate { it.type to 0f }.toMutableMap()
+                this[team] = config.balance.ammunition.all.associate { it.type to 0f }.toMutableMap()
             }
         }
     private val pendingEvents = mutableListOf<MatchEvent>()
@@ -217,7 +216,7 @@ class DeterministicMatchSimulation(
 
     private fun resolveShieldImpact(projectile: Projectile, target: Fortress) {
         phase = MatchPhase.RESOLVING_IMPACT
-        val damage = AmmunitionCatalog.definition(projectile.ammunition).damage.fortressDamage
+        val damage = config.balance.ammunition.definition(projectile.ammunition).damage.fortressDamage
         val remainingHealth = (requireNotNull(target.shield).health.current - damage)
             .coerceAtLeast(0)
         setFortress(target.withShieldDamage(damage))
@@ -261,7 +260,7 @@ class DeterministicMatchSimulation(
     ): List<MatchEvent> {
         check(status == MatchStatus.RUNNING) { "match is not running" }
         val catapult = catapult(catapultId)
-        val ammunitionDefinition = AmmunitionCatalog.definition(ammunition)
+        val ammunitionDefinition = config.balance.ammunition.definition(ammunition)
         check(
             reloadRemainingSecondsByAmmunition
                 .getValue(catapult.team)
@@ -334,7 +333,7 @@ class DeterministicMatchSimulation(
     fun beginAmmunitionReload(team: Team, ammunition: AmmunitionType) {
         check(status == MatchStatus.RUNNING) { "match is not running" }
         reloadRemainingSecondsByAmmunition
-            .getValue(team)[ammunition] = AmmunitionCatalog.definition(ammunition).reloadSeconds
+            .getValue(team)[ammunition] = config.balance.ammunition.definition(ammunition).reloadSeconds
     }
 
     fun aim(catapultId: EntityId, directionDegrees: Float, power: Float) {
@@ -599,7 +598,7 @@ class DeterministicMatchSimulation(
                 null
             }
             outsideBounds(advanced.position) ||
-                advanced.ageSeconds >= AmmunitionCatalog
+                advanced.ageSeconds >= config.balance.ammunition
                     .definition(advanced.ammunition)
                     .flight
                     .maximumLifetimeSeconds -> null
@@ -901,7 +900,7 @@ class DeterministicMatchSimulation(
 
     private fun resolveTerrainImpact(projectile: Projectile) {
         phase = MatchPhase.RESOLVING_IMPACT
-        val definition = AmmunitionCatalog.definition(projectile.ammunition)
+        val definition = config.balance.ammunition.definition(projectile.ammunition)
         if (definition.terrain.deformsTerrain) {
             terrain = terrain.deform(
                 projectile.position,
@@ -1725,9 +1724,9 @@ class DeterministicMatchSimulation(
                 return@forEach
             }
             val progress = supplyRegenProgressSeconds.getValue(team) + deltaSeconds
-            val replenished = (progress / SUPPLY_REGEN_INTERVAL_SECONDS).toInt()
+            val replenished = (progress / config.balance.supply.regenIntervalSeconds).toInt()
             supplyRegenProgressSeconds[team] =
-                progress - replenished * SUPPLY_REGEN_INTERVAL_SECONDS
+                progress - replenished * config.balance.supply.regenIntervalSeconds
             if (replenished > 0) {
                 resources[team] = wallet.copy(
                     supply = (wallet.supply + replenished)
@@ -1789,7 +1788,7 @@ class DeterministicMatchSimulation(
         projectile: Projectile,
         hitLayer: com.urkaaaz.domain.AmmunitionHitLayer? = null,
     ) {
-        val definition = AmmunitionCatalog.definition(projectile.ammunition)
+        val definition = config.balance.ammunition.definition(projectile.ammunition)
         val damageFactor = damageVarianceFactor(teamLuckBias = 0f)
         when (val behavior = definition.behavior) {
             is com.urkaaaz.domain.AmmunitionImpactBehavior.LingeringArea -> {
@@ -1980,7 +1979,7 @@ class DeterministicMatchSimulation(
         if (lingeringEffects.isEmpty()) return
         val updated = mutableListOf<LingeringEffect>()
         lingeringEffects.forEach { effect ->
-            val definition = AmmunitionCatalog.definition(effect.ammunition)
+            val definition = config.balance.ammunition.definition(effect.ammunition)
             val behavior = definition.behavior as? AmmunitionImpactBehavior.LingeringArea
                 ?: error("lingering effect has a non-lingering ammunition definition")
             var remaining = effect.remainingSeconds - deltaSeconds
@@ -2069,7 +2068,7 @@ class DeterministicMatchSimulation(
         targetTeam != sourceTeam
 
     private fun targetHitBy(projectile: Projectile): EntityTarget? {
-        val definition = AmmunitionCatalog.definition(projectile.ammunition)
+        val definition = config.balance.ammunition.definition(projectile.ammunition)
         val targetUnit = if (com.urkaaaz.domain.AmmunitionHitLayer.UNIT in definition.collision.hitLayers) {
             if (definition.collision.mode ==
                 com.urkaaaz.domain.AmmunitionCollisionMode.IGNORE_UNITS
@@ -2220,7 +2219,7 @@ class DeterministicMatchSimulation(
 
     private fun initialWallet(): ResourceWallet = ResourceWallet(
         gold = 100,
-        supply = SupplyConfiguration.MAXIMUM_SUPPLY,
+        supply = config.balance.supply.startingSupply,
         mana = config.startingMana,
         ammunition = AmmunitionType.entries
             .filter {
@@ -2265,7 +2264,6 @@ class DeterministicMatchSimulation(
     )
 
     companion object {
-        private const val SUPPLY_REGEN_INTERVAL_SECONDS = 3f
         private const val MIN_DAMAGE_VARIANCE_FACTOR = 0.80f
         private const val MAX_DAMAGE_VARIANCE_FACTOR = 1.20f
         private const val MAX_INITIAL_ATTACK_DELAY_RATIO = 0.5f

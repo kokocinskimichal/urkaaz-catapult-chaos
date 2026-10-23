@@ -12,17 +12,20 @@ import com.urkaaaz.contracts.PlayerId
 import com.urkaaaz.contracts.Team
 import com.urkaaaz.domain.AmmunitionType
 import com.urkaaaz.domain.UnitDefinition
-import com.urkaaaz.domain.UnitFactory
+import com.urkaaaz.domain.GameBalance
 
 class AiMatchCoordinator(
     private val scenario: MatchScenario? = null,
     private val registry: AiStrategyRegistry = AiStrategyRegistry.standard(),
+    private val team: Team = Team.RED,
+    profileOverride: AiProfileSelection? = null,
+    private val balance: GameBalance = GameBalance.default,
 ) {
     private val aiPlayerId = scenario?.players
-        ?.firstOrNull { it.team == Team.RED }
+        ?.firstOrNull { it.team == team }
         ?.playerId
-        ?: PlayerId("local-ai")
-    private val profile = scenario?.aiProfile ?: AiProfileSelection()
+        ?: PlayerId(if (team == Team.RED) "local-ai" else "local-ai-${team.name.lowercase()}")
+    private val profile = profileOverride ?: scenario?.aiProfile ?: AiProfileSelection()
     private val scenarioUnitIds = scenario?.availableUnits
         ?.takeIf { it.isNotEmpty() }
         ?.toSet()
@@ -41,10 +44,10 @@ class AiMatchCoordinator(
 
     fun start(randomSeed: Long) {
         val allowedUnits = allowedUnitIdsOverride
-            ?.map(UnitFactory::byId)
+            ?.map(balance.units::byId)
             ?.toSet()
-            ?: scenarioUnitIds?.map(UnitFactory::byId)?.toSet()
-            ?: UnitFactory.all()
+            ?: scenarioUnitIds?.map(balance.units::byId)?.toSet()
+            ?: balance.units.all()
         val allowedAmmunition = allowedAmmunitionIdsOverride
             ?.map(::ammunitionById)
             ?.toSet()
@@ -53,7 +56,7 @@ class AiMatchCoordinator(
         agent = AiAgent(
             configuration = AiConfiguration(
                 playerId = aiPlayerId,
-                team = Team.RED,
+                team = team,
                 profile = profile,
                 allowedUnits = allowedUnits,
                 randomSeed = randomSeed,
@@ -101,9 +104,9 @@ class AiMatchCoordinator(
                 }
             }
         }
-        val selectedReload = snapshot.reloadRemainingSecondsByAmmunition[Team.RED]
+        val selectedReload = snapshot.reloadRemainingSecondsByAmmunition[team]
             ?.get(selectedAmmunition.name)
-            ?: snapshot.reloadRemainingSeconds[Team.RED]
+            ?: snapshot.reloadRemainingSeconds[team]
             ?: 0f
         if (selectedReload > 0f) {
             commands = commands.filterNot {
@@ -142,7 +145,7 @@ class AiMatchCoordinator(
 
     fun setAllowedUnitIds(ids: Set<String>) {
         require(ids.isNotEmpty()) { "AI must have at least one allowed unit" }
-        val units = ids.map(UnitFactory::byId).toSet()
+        val units = ids.map(balance.units::byId).toSet()
         allowedUnitIdsOverride = units.map(UnitDefinition::id).toSet()
         agent?.setAllowedUnits(units)
     }
@@ -151,7 +154,7 @@ class AiMatchCoordinator(
         agent?.allowedUnitIds()
             ?: allowedUnitIdsOverride
             ?: scenarioUnitIds
-            ?: UnitFactory.all().map(UnitDefinition::id).toSet()
+            ?: balance.units.all().map(UnitDefinition::id).toSet()
 
     fun setAllowedAmmunitionIds(ids: Set<String>) {
         require(ids.isNotEmpty()) { "AI must have allowed ammunition" }

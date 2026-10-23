@@ -113,6 +113,7 @@ layer and **campaign level** for the selected level definition.
 | `game-application` | Match session/gateway and campaign/loadout use cases |
 | `game-campaign` | Campaign level and milestone definitions |
 | `game-ai` | AI decisions based on game state |
+| `game-balance` | Headless Balance Simulation: AI-vs-AI runs, metrics, difficulty targets, tuning (no Android) |
 | `android-app` | Android lifecycle, navigation, screens and rendering |
 
 ## Android screen architecture
