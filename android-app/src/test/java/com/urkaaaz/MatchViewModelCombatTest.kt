@@ -65,6 +65,17 @@ class MatchViewModelCombatTest {
     }
 
     @Test
+    fun retreatFinishesTheMatchWithTheSurrenderOutcome() {
+        val viewModel = MatchViewModel()
+        viewModel.dispatch(MatchUiAction.StartMatch)
+
+        val state = viewModel.dispatch(MatchUiAction.Retreat)
+
+        assertEquals("FINISHED", state.statusLabel)
+        assertEquals("SURRENDER", state.outcomeLabel)
+    }
+
+    @Test
     fun equippedSpellCanBeCastThroughTheSharedSpellAction() {
         val viewModel = MatchViewModel(
             campaignLevel = 1,

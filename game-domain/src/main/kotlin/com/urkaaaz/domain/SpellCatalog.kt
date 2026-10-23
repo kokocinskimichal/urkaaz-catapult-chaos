@@ -161,6 +161,6 @@ object SpellCatalog {
 object ManaConfiguration {
     const val STARTING_MANA = 100
     const val MAXIMUM_MANA = 100
-    const val REGENERATION_AMOUNT = 10
-    const val REGENERATION_INTERVAL_MILLISECONDS = 8_000L
+    const val REGENERATION_AMOUNT = 1
+    const val REGENERATION_INTERVAL_MILLISECONDS = 800L
 }

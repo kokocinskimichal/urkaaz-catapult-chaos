@@ -6,6 +6,7 @@ import android.graphics.Typeface
 import android.view.Gravity
 import android.view.View
 import android.widget.Button
+import android.widget.ImageButton
 import android.widget.ImageView
 import android.widget.LinearLayout
 import android.widget.Space
@@ -13,7 +14,7 @@ import android.widget.TextView
 import com.urkaaaz.android.R
 
 class MatchHudView(context: Context) : LinearLayout(context) {
-    private val timerText = hudText("0:00", 20f).apply {
+    private val timerText = hudText("0:00", 13f).apply {
         setTypeface(typeface, Typeface.BOLD)
     }
     private val windIndicator = ImageView(context).apply {
@@ -21,14 +22,19 @@ class MatchHudView(context: Context) : LinearLayout(context) {
         contentDescription = "Wind direction and strength"
         scaleType = ImageView.ScaleType.FIT_CENTER
     }
-    private val windText = hudText("LOW", 8f).apply {
-        setTypeface(typeface, Typeface.BOLD)
-        setSingleLine(true)
+    private val retreatButton = ImageButton(context).apply {
+        setImageResource(R.drawable.match_hud_retreat_runner)
+        scaleType = ImageView.ScaleType.CENTER_INSIDE
+        setBackgroundColor(Color.TRANSPARENT)
+        minimumWidth = 0
+        minimumHeight = 0
+        setPadding(dp(4), dp(4), dp(4), dp(4))
+        contentDescription = context.getString(R.string.match_hud_retreat_accessibility)
     }
     private val pauseButton = Button(context).apply {
         text = "II"
         UiTypography.applyButtonTypeface(this)
-        textSize = 11f
+        textSize = 8f
         setTextColor(Color.WHITE)
         setBackgroundColor(Color.TRANSPARENT)
         minWidth = 0
@@ -54,14 +60,14 @@ class MatchHudView(context: Context) : LinearLayout(context) {
         gravity = Gravity.CENTER_VERTICAL
         clipChildren = false
         clipToPadding = false
-        setPadding(dp(6), dp(4), dp(6), dp(4))
+        setPadding(dp(6), dp(2), dp(6), dp(2))
         addView(
             blueHealth,
-            LayoutParams(0, dp(42), 0.7f),
+            LayoutParams(0, dp(25), 0.45f),
         )
         addView(
             Space(context),
-            LayoutParams(0, dp(42), 0.3f),
+            LayoutParams(0, dp(25), 0.55f),
         )
         addView(
             LinearLayout(context).apply {
@@ -69,42 +75,55 @@ class MatchHudView(context: Context) : LinearLayout(context) {
                 gravity = Gravity.CENTER
                 background = HudPanelStyle.universalFrameBackground(context)
                 HudPanelStyle.applyShadow(this, elevationDp = 2f)
-                setPadding(dp(8), dp(3), dp(8), dp(3))
-                addView(timerText, LayoutParams(dp(64), -1))
-                addView(windIndicator, LayoutParams(dp(32), dp(32)))
+                setPadding(dp(4), dp(1), dp(4), dp(1))
                 addView(
-                    windText,
-                    LayoutParams(dp(38), -1),
+                    retreatButton,
+                    LayoutParams(dp(32), dp(32)).apply {
+                        marginEnd = dp(2)
+                    },
                 )
                 addView(
                     View(context).apply {
                         setBackgroundColor(Color.argb(88, 181, 143, 78))
                     },
-                    LayoutParams(dp(1), dp(32)).apply {
-                        marginStart = dp(3)
-                        marginEnd = dp(3)
+                    LayoutParams(dp(1), dp(22)).apply {
+                        marginStart = dp(2)
+                        marginEnd = dp(2)
+                    },
+                )
+                addView(timerText, LayoutParams(dp(40), -1))
+                addView(windIndicator, LayoutParams(dp(28), dp(28)))
+                addView(
+                    View(context).apply {
+                        setBackgroundColor(Color.argb(88, 181, 143, 78))
+                    },
+                    LayoutParams(dp(1), dp(22)).apply {
+                        marginStart = dp(2)
+                        marginEnd = dp(2)
                     },
                 )
                 addView(
                     pauseButton,
-                    LayoutParams(dp(48), dp(48)).apply {
-                        marginStart = dp(4)
+                    LayoutParams(dp(32), dp(32)).apply {
+                        marginStart = dp(2)
                     },
                 )
             },
-            LayoutParams(dp(226), -1),
+            LayoutParams(dp(176), dp(36)),
         )
         addView(
             Space(context),
-            LayoutParams(0, dp(42), 0.3f),
+            LayoutParams(0, dp(25), 0.55f),
         )
         addView(
             redHealth,
-            LayoutParams(0, dp(42), 0.7f),
+            LayoutParams(0, dp(25), 0.45f),
         )
+        retreatButton.setOnClickListener { onRetreatClicked?.invoke() }
         pauseButton.setOnClickListener { onPauseClicked?.invoke() }
     }
 
+    var onRetreatClicked: (() -> Unit)? = null
     var onPauseClicked: (() -> Unit)? = null
 
     fun render(state: RenderState) {
@@ -114,7 +133,7 @@ class MatchHudView(context: Context) : LinearLayout(context) {
         windIndicator.setImageResource(
             windIndicatorResource(state.windDirection, state.windStrength),
         )
-        windText.text = when {
+        val windStrengthLabel = when {
             state.windStrength >= 0.75f -> context.getString(R.string.match_hud_wind_high)
             state.windStrength >= 0.5f -> context.getString(R.string.match_hud_wind_medium)
             else -> context.getString(R.string.match_hud_wind_low)
@@ -126,7 +145,7 @@ class MatchHudView(context: Context) : LinearLayout(context) {
             } else {
                 context.getString(R.string.match_hud_wind_right)
             },
-            windText.text,
+            windStrengthLabel,
         )
         pauseButton.text = if (state.statusLabel == "PAUSED") "▶" else "II"
         pauseButton.contentDescription = context.getString(

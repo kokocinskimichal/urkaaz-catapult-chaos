@@ -2,8 +2,10 @@ package com.urkaaaz.ui
 
 import android.content.Context
 import android.graphics.Color
+import android.graphics.drawable.GradientDrawable
 import android.view.Gravity
 import android.view.View
+import android.widget.FrameLayout
 import android.widget.ImageButton
 import android.widget.ImageView
 import android.widget.LinearLayout
@@ -59,32 +61,35 @@ class UnitPanelView(
         orientation = VERTICAL
         gravity = Gravity.CENTER
         setPadding(dp(5), dp(8), dp(5), dp(3))
+        val supplyColumnWidth = dp(80)
+        val unitHeaderWidth = options.size * (dp(48) + dp(2)) +
+            dp(48) + dp(3) - dp(2)
         addView(
             LinearLayout(context).apply {
                 orientation = HORIZONTAL
                 gravity = Gravity.CENTER
                 addView(
                     groupHeader(context.getString(R.string.match_hud_supply)),
-                    LayoutParams(dp(58), -1),
+                    LayoutParams(supplyColumnWidth, -1),
                 )
                 addView(
                     groupHeader(context.getString(R.string.match_hud_units)),
-                    LayoutParams(0, -1, 1f).apply {
+                    LayoutParams(unitHeaderWidth, -1).apply {
                         marginStart = dp(2)
                     },
                 )
             },
-            LayoutParams(-1, dp(13)),
+            LayoutParams(supplyColumnWidth + dp(2) + unitHeaderWidth, dp(13)),
         )
         addView(
             LinearLayout(context).apply {
                 orientation = HORIZONTAL
                 gravity = Gravity.CENTER
-                addView(supplyGauge, LayoutParams(dp(58), dp(64)))
+                addView(supplyGauge, LayoutParams(supplyColumnWidth, dp(80)))
                 options.forEach { option ->
                     addView(
                         unitSlot(option, buttons.getValue(option)),
-                        LayoutParams(dp(48), dp(74)).apply {
+                        LayoutParams(dp(48), dp(64)).apply {
                             marginStart = dp(2)
                         },
                     )
@@ -130,7 +135,39 @@ class UnitPanelView(
         LinearLayout(context).apply {
             orientation = VERTICAL
             gravity = Gravity.CENTER
-            addView(button, LayoutParams(dp(48), dp(48)))
+            val costBadge = TextView(context).apply {
+                text = option.supplyCost.toString()
+                gravity = Gravity.CENTER
+                includeFontPadding = false
+                textSize = 7f
+                setTextColor(Color.rgb(239, 220, 179))
+                setPadding(dp(1), 0, dp(1), 0)
+                background = GradientDrawable().apply {
+                    shape = GradientDrawable.OVAL
+                    setColor(Color.argb(225, 26, 26, 26))
+                    setStroke(dp(1), Color.rgb(225, 193, 119))
+                }
+                importantForAccessibility = View.IMPORTANT_FOR_ACCESSIBILITY_NO
+                isClickable = false
+                isFocusable = false
+            }
+            addView(
+                FrameLayout(context).apply {
+                    addView(button, FrameLayout.LayoutParams(-1, -1))
+                    addView(
+                        costBadge,
+                        FrameLayout.LayoutParams(
+                            dp(16),
+                            dp(16),
+                            Gravity.TOP or Gravity.END,
+                        ).apply {
+                            topMargin = dp(1)
+                            marginEnd = dp(1)
+                        },
+                    )
+                },
+                LayoutParams(dp(48), dp(48)),
+            )
             addView(
                 TextView(context).apply {
                     text = context.getString(option.shortNameResource)
@@ -141,17 +178,6 @@ class UnitPanelView(
                     UiTypography.applyButtonTypeface(this)
                 },
                 LayoutParams(-1, dp(14)),
-            )
-            addView(
-                TextView(context).apply {
-                    text = option.supplyCost.toString()
-                    textSize = 8f
-                    gravity = Gravity.CENTER
-                    maxLines = 1
-                    setTextColor(Color.rgb(225, 193, 119))
-                    UiTypography.applyButtonTypeface(this)
-                },
-                LayoutParams(-1, dp(12)),
             )
         }
 

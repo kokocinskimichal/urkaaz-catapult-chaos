@@ -227,7 +227,7 @@ target:
 
 - Display only information backed by the supplied screenshot, current match,
   committed loadout, or existing application contracts.
-- Current/max mana is 100, with regeneration of 10 every eight seconds of
+- Current/max mana is 100, with regeneration of 1 every 0.8 seconds of
   simulation time. Use an actual screenshot value if visible; otherwise use a
   neutral placeholder such as `--/100`.
 - Supply capacity is 20. Do not use the sample image's `34/50`.

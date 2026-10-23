@@ -105,6 +105,51 @@ class AiMatchCoordinatorTest {
     }
 
     @Test
+    fun switchingAmmunitionStartsItsReloadBeforeTheAiFires() {
+        val coordinator = AiMatchCoordinator(
+            scenario.copy(availableAmmunition = listOf("SIEGE_BOMB")),
+        )
+        coordinator.setUnitAutomationEnabled(false)
+        coordinator.start(randomSeed = 16L)
+
+        val previousAmmunitionReloading = snapshot.copy(
+            reloadRemainingSecondsByAmmunition = mapOf(
+                Team.RED to mapOf("ROCK" to 2f),
+            ),
+        )
+        val selection = coordinator.decide(
+            previousAmmunitionReloading,
+            elapsedMilliseconds = 33,
+        )
+        assertEquals(1, selection.size)
+        assertTrue(selection.single() is MatchCommand.SelectAmmo)
+
+        val reloadingSnapshot = snapshot.copy(
+            reloadRemainingSecondsByAmmunition = mapOf(
+                Team.RED to mapOf("SIEGE_BOMB" to 5.5f),
+            ),
+        )
+        assertTrue(
+            coordinator.decide(
+                reloadingSnapshot,
+                elapsedMilliseconds = 1_100,
+            ).isEmpty(),
+        )
+
+        val loadedSnapshot = reloadingSnapshot.copy(
+            reloadRemainingSecondsByAmmunition = mapOf(
+                Team.RED to mapOf("SIEGE_BOMB" to 0f),
+            ),
+        )
+        assertTrue(
+            coordinator.decide(
+                loadedSnapshot,
+                elapsedMilliseconds = 1_100,
+            ).any { it is MatchCommand.Fire },
+        )
+    }
+
+    @Test
     fun pausedAndStoppedMatchesDoNotProduceAiCommands() {
         val coordinator = AiMatchCoordinator(scenario)
         coordinator.start(randomSeed = 14L)

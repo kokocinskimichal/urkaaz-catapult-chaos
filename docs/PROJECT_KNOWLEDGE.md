@@ -143,7 +143,7 @@ implemented runtime effect: `FORTRESS_SHIELD`; the other ten spell effects and
 AI spell casting remain unimplemented. The shield costs 80 mana, has 80 HP, and
 intercepts projectiles within the same fortress-centered ellipse used by its
 world-space rendering. `FortressShieldGeometry` in `game-contracts` is the
-shared shape definition. Mana starts at 100, regenerates 10 every eight seconds
+shared shape definition. Mana starts at 100, regenerates 1 every 0.8 seconds
 of simulation time, and is exposed through match snapshots. Spell-card artwork
 is available, but artwork for the remaining world effects still needs to be
 mapped as those effects are implemented.
@@ -234,10 +234,10 @@ scales around the visual center while angular dragging rotates; the selected
 object panel remains available for precise numeric transforms.
 
 The current match HUD uses a three-zone top rail (BLUE fortress health,
-timer/wind/pause, RED fortress health) and a three-group bottom dock (Supply
-and units/orders, ammunition, spells and Mana). The left and right dock groups
-have equal widths, with ammunition centered between them. Dock headings are
-aligned to their subareas: Supply/Units, Ammunition, and Spells/Mana. Each
+Retreat/timer/wind/pause, RED fortress health) and a three-group bottom dock
+(Supply and units/orders, ammunition, spells and Mana). The left and right dock
+groups have equal widths, with ammunition centered between them. Dock headings
+are aligned to their subareas: Supply/Units, Ammunition, and Spells/Mana. Each
 loadout group displays at most three real choices. Unit and ammunition choices
 follow the committed loadout and level availability; spell choices follow
 those filters, use a shared `MatchUiAction.CastSpell(spellType)` path, and
@@ -245,6 +245,12 @@ remain disabled when their canonical catalog definition has no implemented
 effect. Spell costs, unit Supply costs and mana capacity come from
 `LoadoutCatalog`; the simulation and HUD share
 `SupplyConfiguration.MAXIMUM_SUPPLY`.
+The Supply gauge uses the approved 256 x 256 crate icon from
+`assets_src/match/hud/match_hud_supply_icon.png`, mirrored in the Android
+`drawable-nodpi` resources. Its live current/maximum counter is centered over
+the icon like the Mana value on a subtly darkened translucent backing. The
+Supply progress ring is retained around it and animates smoothly between
+values; the complete Supply gauge is 80 x 80 dp, matching the Mana orb.
 Mana is rendered as a dynamic deep-blue liquid fill (`#18598E`) with a
 transparent gold-filigree shell supplied by the user, normalized to 512 x 512
 and layered above it. The orb occupies an 80 x 80 dp view, with its
@@ -263,10 +269,29 @@ Major HUD panels use a subtle, rounded Android elevation shadow rendered in
 code; shadows are not baked into panel assets. Spell feedback is shown as text
 only above the dock after an actual cast attempt, then fades after 2.5 seconds.
 No persistent `READY` panel or reserved strip space is used.
+Retreat opens a confirmation dialog, pausing a running match until the player
+chooses. Cancelling resumes only a match paused by the dialog; confirming sends
+`MatchCommand.Surrender`, records `MatchOutcome.SURRENDER`, and opens the
+standard defeat result without campaign completion. The Retreat button uses a
+transparent 256 × 256 PNG at
+`assets_src/match/hud/match_hud_retreat_runner.png`, integrated as
+`android-app/src/main/res/drawable-nodpi/match_hud_retreat_runner.png`.
+The ammunition selector shows only each ammunition name below its icon, with
+finite stock as a small numeric badge and unlimited stock as an infinity-icon
+badge. Reload countdowns are drawn over the icon; a dark overlay recedes across
+the icon and selected orange background with reload progress, and the icon is
+disabled until it is ready. Changing the selected ammunition starts that type's
+full catalog-defined reload; selecting the same type again does not reset its
+timer. AI waits for a newly selected type's reload before issuing its shot.
+Unit selector names appear beneath icons, with Supply costs in small badges on
+the icons.
+The wind indicator is 28 dp and selects a directional icon variant for low,
+medium, or high strength; the textual strength label is reserved for its
+accessibility description.
 
 The current match HUD also displays:
 
-- match countdown timer, wind direction/strength, and pause/resume control;
+- match countdown timer, wind direction/strength, and Retreat/pause controls;
 - BLUE and RED fortress health in the top rail, while world reload indicators
   remain beside their catapults;
 - Supply, committed unit choices with canonical costs, and `SEND WAVE`;
@@ -411,9 +436,9 @@ does not decode the full animation set again for every frame or every unit.
   during that interval.
 - BLUE and RED both start with 20 supply and regenerate one supply every three
   seconds, up to a shared cap of 20.
-- Fortress and unit HP bars share one renderer style: a rounded dark track,
-8-unit height, and green above 60% health, orange from 30% through 60%, or
-red below 30%. Zero health leaves the dark track unfilled.
+- Unit HP bars use a rounded dark track, 8-unit height, and green above 60%
+  health, orange from 30% through 60%, or red below 30%. Fortress health is
+  shown only in the match HUD's top panels.
 - Enemy units are constrained by an allied-unit debug selector in `DEBUG
 TOOLS`. The selector updates the AI's allowed unit definitions at runtime and
 requires at least one enabled type. Allied units in the same wave keep a
@@ -538,11 +563,11 @@ must go through commands and domain/application boundaries.
 | `android-app/.../screens/campaign/CampaignScreen.kt` | Legacy-style campaign level selector |
 | `game-application/.../progression/PlayerProgressionUseCases.kt` | Local profile initialization and snapshot validation |
 | `android-app/.../persistence/DataStorePlayerProgressionRepository.kt` | Versioned profile storage |
-| `android-app/.../persistence/DataStoreLoadoutRepository.kt` | Versioned per-level loadout storage |
+| `android-app/.../persistence/DataStoreLoadoutRepository.kt` | Versioned campaign-level and demo loadout storage |
 | `android-app/.../screens/loadout/LoadoutViewModel.kt` | Async loadout state and guarded commit |
 | `android-app/.../screens/match/MatchScreen.kt` | Match screen boundary |
 | `android-app/.../ui/MatchScreenController.kt` | Match composition and lifecycle |
-| `android-app/.../ui/MatchHudView.kt` | Top rail, timer, wind, fortress health and pause |
+| `android-app/.../ui/MatchHudView.kt` | Top rail, timer, wind, fortress health, Retreat and pause controls |
 | `android-app/.../ui/AmmunitionPanelView.kt` | Three-slot ammunition selector |
 | `android-app/.../ui/UnitPanelView.kt` | Supply, unit deployment and wave controls |
 | `android-app/.../ui/SpellPanelView.kt` | Loadout spell slots and Mana orb |
@@ -611,16 +636,16 @@ must go through commands and domain/application boundaries.
 - Soil textures repeat at a base tile width of 256 view units in both the
   Android battlefield and web map preview. Android tiles preserve the source
   aspect ratio and repeat vertically rather than stretching to the soil depth.
-- Fortress and unit health bars share the same rounded track, 8-unit height and
-  health-ratio colors; fortress bars are narrower than the fortress canvas, and
-  compact reload indicators sit beside the bar instead of over the fortress.
+- Unit health bars use the rounded track, 8-unit height and health-ratio colors.
+  Fortress health is shown only in the top HUD panels; compact reload
+  indicators sit beside their catapults.
 - Raging Boar world sprites use one shared 368x301 crop across all animation
   frames and both facing directions. Their render height compensates for the
   crop so visible size is preserved while the alpha-bounded feet meet the
   ground baseline.
-- The ammunition selector remains clickable when the equipped limited
-  ammunition is depleted; only depleted entries inside the selection popup are
-  disabled so the player can switch to another ammunition type.
+- Match ammunition slots with no remaining stock or an active reload are
+  disabled. A different ready type can still be selected while the current
+  type is reloading.
 - Terrain impact detection samples the projectile's full movement interval and
   binary-searches the first terrain crossing, rather than checking only the
   final position of a simulation tick. This also handles a projectile that

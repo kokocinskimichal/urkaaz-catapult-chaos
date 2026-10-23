@@ -31,8 +31,13 @@
     <string name="match_result_completion_failed">Progress save failed. Retry this level or return.</string>
     <string name="match_hud_blue">BLUE</string>
     <string name="match_hud_red">RED</string>
+    <string name="match_hud_retreat_accessibility">Retreat from match</string>
     <string name="match_hud_pause">Pause match</string>
     <string name="match_hud_resume">Resume match</string>
+    <string name="match_retreat_confirmation_title">Retreat from match?</string>
+    <string name="match_retreat_confirmation_message">Retreating will end the match immediately as a defeat. Continue?</string>
+    <string name="match_retreat_confirm">Retreat</string>
+    <string name="match_retreat_cancel">Cancel</string>
     <string name="match_hud_wind_low">LOW</string>
     <string name="match_hud_wind_medium">MED</string>
     <string name="match_hud_wind_high">HIGH</string>

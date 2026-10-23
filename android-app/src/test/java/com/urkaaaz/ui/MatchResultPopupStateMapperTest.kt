@@ -66,6 +66,17 @@ class MatchResultPopupStateMapperTest {
     }
 
     @Test
+    fun surrenderUsesTheStandardDefeatResult() {
+        val state = popup(outcome = MatchOutcome.SURRENDER)
+
+        assertEquals(MatchResultKind.DEFEAT, state?.result)
+        assertEquals(
+            listOf(MatchResultActionType.RETRY, MatchResultActionType.EXIT_TO_CAMPAIGN),
+            state?.actions?.map { it.type },
+        )
+    }
+
+    @Test
     fun demoOffersRetryAndDashboardReturnForAnyOutcome() {
         val state = popup(demoMode = true)
 

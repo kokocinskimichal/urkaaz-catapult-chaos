@@ -2,16 +2,22 @@ package com.urkaaaz.ui
 
 import android.content.Context
 import android.graphics.Color
+import android.graphics.Rect
+import android.graphics.drawable.GradientDrawable
 import android.view.Gravity
+import android.view.View
+import android.widget.FrameLayout
 import android.widget.ImageButton
 import android.widget.ImageView
 import android.widget.LinearLayout
 import android.widget.TextView
 import com.urkaaaz.android.R
+import com.urkaaaz.application.loadout.LoadoutCatalog
 import com.urkaaaz.screens.loadout.LoadoutAssetCatalog
 import com.urkaaaz.screens.loadout.LoadoutAssetLookup
 import com.urkaaaz.screens.loadout.LoadoutItemReference
 import java.util.Locale
+import kotlin.math.roundToInt
 
 class AmmunitionPanelView(
     context: Context,
@@ -58,8 +64,14 @@ class AmmunitionPanelView(
                 } else {
                     0f
                 }
+            val reloading = reload > 0f
+            val reloadProgress = ammunitionReloadProgress(
+                remainingSeconds = reload,
+                reloadDurationSeconds = slot.reloadDurationSeconds,
+            )
             val selected = slot.type == state.selectedAmmunitionType
-            slot.button.isEnabled = available && state.statusLabel == "RUNNING"
+            slot.button.isEnabled =
+                available && !reloading && state.statusLabel == "RUNNING"
             slot.button.alpha = if (available) 1f else 0.38f
             if (selected != slot.selected) {
                 if (selected) {
@@ -76,12 +88,17 @@ class AmmunitionPanelView(
                 }
                 slot.selected = selected
             }
-            slot.stockText.text = when {
-                !available -> context.getString(R.string.match_hud_out_of_stock)
-                count == null -> context.getString(R.string.match_hud_unlimited)
-                else -> context.getString(R.string.match_hud_stock, count)
+            slot.stockBadge.visibility = View.VISIBLE
+            slot.stockCountText.text = count?.let {
+                context.getString(R.string.match_hud_stock, it)
             }
-            slot.reloadText.text = if (reload > 0f) {
+            slot.stockCountText.visibility =
+                if (count == null) View.GONE else View.VISIBLE
+            slot.unlimitedStockIcon.visibility =
+                if (count == null) View.VISIBLE else View.GONE
+            slot.reloadShade.coveredFraction = 1f - reloadProgress
+            slot.reloadShade.visibility = if (reloading) View.VISIBLE else View.GONE
+            val reloadDescription = if (reloading) {
                 context.getString(
                     R.string.match_hud_reload_seconds,
                     String.format(Locale.US, "%.1f", reload),
@@ -89,11 +106,18 @@ class AmmunitionPanelView(
             } else {
                 context.getString(R.string.match_hud_ready)
             }
+            slot.reloadText.text = if (reloading) reloadDescription else ""
+            slot.reloadText.visibility = if (reloading) View.VISIBLE else View.GONE
+            val stockDescription = when {
+                !available -> context.getString(R.string.match_hud_out_of_stock)
+                count == null -> context.getString(R.string.match_hud_unlimited)
+                else -> context.getString(R.string.match_hud_stock, count)
+            }
             slot.button.contentDescription = context.getString(
                 R.string.match_hud_ammunition_accessibility,
                 context.getString(slot.nameResource),
-                slot.stockText.text,
-                slot.reloadText.text,
+                stockDescription,
+                reloadDescription,
             )
         }
     }
@@ -110,20 +134,98 @@ class AmmunitionPanelView(
             background = HudPanelStyle.background(context, Color.argb(82, 28, 33, 36))
             setOnClickListener { onAmmoSelected?.invoke(type) }
         }
+        val reloadShade = AmmoReloadShade(context, dp(9).toFloat())
         val nameText = slotText().apply {
             text = context.getString(ammunitionShortNameResource(type) ?: nameResource)
         }
-        val stockText = slotText()
-        val reloadText = slotText()
+        val stockCountText = TextView(context).apply {
+            gravity = Gravity.CENTER
+            includeFontPadding = false
+            textSize = 7f
+            setTextColor(Color.WHITE)
+            importantForAccessibility = View.IMPORTANT_FOR_ACCESSIBILITY_NO
+            isClickable = false
+            isFocusable = false
+        }
+        val unlimitedStockIcon = ImageView(context).apply {
+            setImageResource(LoadoutAssetCatalog.unlimitedIcon())
+            scaleType = ImageView.ScaleType.FIT_CENTER
+            setPadding(dp(2), dp(2), dp(2), dp(2))
+            importantForAccessibility = View.IMPORTANT_FOR_ACCESSIBILITY_NO
+            isClickable = false
+            isFocusable = false
+            visibility = View.GONE
+        }
+        val stockBadge = FrameLayout(context).apply {
+            background = GradientDrawable().apply {
+                shape = GradientDrawable.OVAL
+                setColor(Color.argb(225, 26, 26, 26))
+                setStroke(dp(1), Color.rgb(225, 193, 119))
+            }
+            importantForAccessibility = View.IMPORTANT_FOR_ACCESSIBILITY_NO
+            addView(stockCountText, FrameLayout.LayoutParams(-1, -1))
+            addView(unlimitedStockIcon, FrameLayout.LayoutParams(-1, -1))
+        }
+        val reloadText = TextView(context).apply {
+            gravity = Gravity.CENTER
+            includeFontPadding = false
+            textSize = 8f
+            maxLines = 1
+            setTextColor(Color.WHITE)
+            UiTypography.applyButtonTypeface(this)
+            setPadding(dp(3), 0, dp(3), 0)
+            background = GradientDrawable().apply {
+                setColor(Color.argb(220, 20, 20, 20))
+                cornerRadius = dp(3).toFloat()
+            }
+            importantForAccessibility = View.IMPORTANT_FOR_ACCESSIBILITY_NO
+            isClickable = false
+            isFocusable = false
+            visibility = View.GONE
+        }
+        val iconFrame = FrameLayout(context).apply {
+            addView(button, FrameLayout.LayoutParams(-1, -1))
+            addView(reloadShade, FrameLayout.LayoutParams(-1, -1))
+            addView(
+                stockBadge,
+                FrameLayout.LayoutParams(
+                    dp(16),
+                    dp(16),
+                    Gravity.TOP or Gravity.END,
+                ).apply {
+                    topMargin = dp(1)
+                    marginEnd = dp(1)
+                },
+            )
+            addView(
+                reloadText,
+                FrameLayout.LayoutParams(
+                    FrameLayout.LayoutParams.WRAP_CONTENT,
+                    dp(16),
+                    Gravity.CENTER,
+                ),
+            )
+        }
         val root = LinearLayout(context).apply {
             orientation = VERTICAL
             gravity = Gravity.CENTER
-            addView(button, LayoutParams(dp(48), dp(48)))
+            addView(iconFrame, LayoutParams(dp(48), dp(48)))
             addView(nameText, LayoutParams(-1, dp(11)))
-            addView(stockText, LayoutParams(-1, dp(12)))
-            addView(reloadText, LayoutParams(-1, dp(12)))
         }
-        return AmmoSlot(type, nameResource, button, stockText, reloadText, root)
+        val reloadDurationSeconds =
+            LoadoutCatalog.findAmmunition(type)?.reloadSeconds ?: 0f
+        return AmmoSlot(
+            type = type,
+            nameResource = nameResource,
+            reloadDurationSeconds = reloadDurationSeconds,
+            button = button,
+            stockBadge = stockBadge,
+            stockCountText = stockCountText,
+            unlimitedStockIcon = unlimitedStockIcon,
+            reloadShade = reloadShade,
+            reloadText = reloadText,
+            root = root,
+        )
     }
 
     private fun ammunitionNameResource(type: String): Int? = when (type) {
@@ -168,8 +270,12 @@ class AmmunitionPanelView(
     private data class AmmoSlot(
         val type: String,
         val nameResource: Int,
+        val reloadDurationSeconds: Float,
         val button: ImageButton,
-        val stockText: TextView,
+        val stockBadge: FrameLayout,
+        val stockCountText: TextView,
+        val unlimitedStockIcon: ImageView,
+        val reloadShade: AmmoReloadShade,
         val reloadText: TextView,
         val root: LinearLayout,
         var selected: Boolean = false,
@@ -177,5 +283,44 @@ class AmmunitionPanelView(
 
     private companion object {
         const val MAX_VISIBLE_AMMUNITION = 3
+    }
+}
+
+internal fun ammunitionReloadProgress(
+    remainingSeconds: Float,
+    reloadDurationSeconds: Float,
+): Float = if (reloadDurationSeconds <= 0f) {
+    1f
+} else {
+    (1f - remainingSeconds / reloadDurationSeconds).coerceIn(0f, 1f)
+}
+
+private class AmmoReloadShade(
+    context: Context,
+    cornerRadius: Float,
+) : View(context) {
+    var coveredFraction: Float = 0f
+        set(value) {
+            field = value.coerceIn(0f, 1f)
+            updateClipBounds()
+        }
+
+    init {
+        background = GradientDrawable().apply {
+            setColor(Color.argb(176, 0, 0, 0))
+            this.cornerRadius = cornerRadius
+        }
+        importantForAccessibility = View.IMPORTANT_FOR_ACCESSIBILITY_NO
+        isClickable = false
+        isFocusable = false
+    }
+
+    override fun onSizeChanged(width: Int, height: Int, oldWidth: Int, oldHeight: Int) {
+        super.onSizeChanged(width, height, oldWidth, oldHeight)
+        updateClipBounds()
+    }
+
+    private fun updateClipBounds() {
+        clipBounds = Rect(0, 0, width, (height * coveredFraction).roundToInt())
     }
 }

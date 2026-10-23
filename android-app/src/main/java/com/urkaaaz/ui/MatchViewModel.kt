@@ -208,6 +208,13 @@ class MatchViewModel(
                 )
                     .also { renderState = it }
             }
+            MatchUiAction.Retreat -> gateway.dispatch(
+                MatchCommand.Surrender(
+                    commandId = CommandId("ui-${++commandSequence}"),
+                    matchId = matchId,
+                    playerId = playerId,
+                ),
+            )
             is MatchUiAction.Aim -> gateway.dispatch(
                 MatchCommand.Aim(
                     commandId = CommandId("ui-${++commandSequence}"),

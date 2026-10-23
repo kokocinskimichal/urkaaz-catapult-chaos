@@ -72,8 +72,12 @@ class MatchSession(
                     it.name == command.ammunitionType
                 } ?: throw LoadoutCommandRejectedException(LoadoutError.UNKNOWN_AMMUNITION)
                 enforceAmmunitionSelection(command.playerId, command.ammunitionType)
+                val runningSimulation = requireRunning()
+                if (selectedAmmunition[team] != ammunition) {
+                    runningSimulation.beginAmmunitionReload(team, ammunition)
+                }
                 selectedAmmunition[team] = ammunition
-                requireRunning().snapshot()
+                runningSimulation.snapshot()
             }
             is MatchCommand.DeployUnit -> {
                 enforceUnitSelection(command.playerId, command.unitType)
@@ -86,6 +90,11 @@ class MatchSession(
                 requireRunning().sendWave(teamForPlayer(command.playerId))
                 latestEvents = requireRunning().drainEvents()
                 requireRunning().snapshot()
+            }
+            is MatchCommand.Surrender -> {
+                val runningSimulation = requireRunning()
+                latestEvents = runningSimulation.surrender(teamForPlayer(command.playerId))
+                runningSimulation.snapshot()
             }
             is MatchCommand.Aim -> {
                 requireRunning().aim(command.catapultId, command.directionDegrees, command.power)

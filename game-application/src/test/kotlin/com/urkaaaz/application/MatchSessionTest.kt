@@ -6,6 +6,7 @@ import com.urkaaaz.contracts.CommandResult
 import com.urkaaaz.contracts.MatchEvent
 import com.urkaaaz.contracts.MatchError
 import com.urkaaaz.contracts.MatchId
+import com.urkaaaz.contracts.MatchOutcome
 import com.urkaaaz.contracts.MatchStatus
 import com.urkaaaz.contracts.PlayerId
 import com.urkaaaz.contracts.EntityId
@@ -372,6 +373,34 @@ class MatchSessionTest {
     }
 
     @Test
+    fun surrenderFinishesEvenWhenPausedAndReplaysTheDefeatOutcome() {
+        val session = MatchSession(randomSeedProvider = { 17L })
+        val matchId = MatchId("retreat-match")
+        val playerId = PlayerId("player")
+        session.dispatch(MatchCommand.Start(CommandId("retreat-start"), matchId, playerId))
+        session.pause()
+
+        val snapshot = session.dispatch(
+            MatchCommand.Surrender(CommandId("retreat"), matchId, playerId),
+        )
+        val finished = session.consumeEvents()
+            .filterIsInstance<MatchEvent.MatchFinished>()
+            .single()
+
+        assertEquals(MatchStatus.FINISHED, snapshot.status)
+        assertEquals(MatchOutcome.SURRENDER, snapshot.outcome)
+        assertEquals(MatchOutcome.SURRENDER, finished.outcome)
+
+        val replay = MatchReplayPlayer.play(requireNotNull(session.replay()))
+        assertEquals(MatchStatus.FINISHED, replay.snapshot.status)
+        assertEquals(MatchOutcome.SURRENDER, replay.snapshot.outcome)
+        assertEquals(
+            MatchOutcome.SURRENDER,
+            replay.events.filterIsInstance<MatchEvent.MatchFinished>().single().outcome,
+        )
+    }
+
+    @Test
     fun selectedAmmunitionIsUsedByTheNextProjectile() {
         val session = MatchSession()
         val matchId = MatchId("match-ammo")
@@ -383,6 +412,14 @@ class MatchSessionTest {
                 matchId,
                 playerId,
                 "SIEGE_BOMB",
+            ),
+        )
+        session.dispatch(
+            MatchCommand.AdvanceSimulation(
+                CommandId("wait-for-ammo-reload"),
+                matchId,
+                playerId,
+                5_500,
             ),
         )
 
@@ -397,6 +434,74 @@ class MatchSessionTest {
 
         assertEquals("SIEGE_BOMB", snapshot.projectiles.single().ammunitionType)
         assertEquals(5.5f, snapshot.reloadRemainingSeconds[com.urkaaaz.contracts.Team.BLUE])
+    }
+
+    @Test
+    fun changingAmmunitionRestartsItsReloadButReselectingDoesNot() {
+        val session = MatchSession()
+        val matchId = MatchId("match-ammo-selection-reload")
+        val playerId = PlayerId("player-1")
+        session.dispatch(MatchCommand.Start(CommandId("start-selection-reload"), matchId, playerId))
+
+        var snapshot = session.dispatch(
+            MatchCommand.SelectAmmo(
+                CommandId("select-siege-first"),
+                matchId,
+                playerId,
+                "SIEGE_BOMB",
+            ),
+        )
+        assertEquals(
+            5.5f,
+            snapshot.reloadRemainingSecondsByAmmunition[Team.BLUE]?.get("SIEGE_BOMB"),
+        )
+
+        snapshot = session.dispatch(
+            MatchCommand.AdvanceSimulation(
+                CommandId("advance-siege-reload"),
+                matchId,
+                playerId,
+                2_000,
+            ),
+        )
+        assertEquals(
+            3.5f,
+            snapshot.reloadRemainingSecondsByAmmunition[Team.BLUE]?.get("SIEGE_BOMB"),
+        )
+
+        snapshot = session.dispatch(
+            MatchCommand.SelectAmmo(
+                CommandId("reselect-siege"),
+                matchId,
+                playerId,
+                "SIEGE_BOMB",
+            ),
+        )
+        assertEquals(
+            3.5f,
+            snapshot.reloadRemainingSecondsByAmmunition[Team.BLUE]?.get("SIEGE_BOMB"),
+        )
+
+        session.dispatch(
+            MatchCommand.SelectAmmo(
+                CommandId("select-rock"),
+                matchId,
+                playerId,
+                "ROCK",
+            ),
+        )
+        snapshot = session.dispatch(
+            MatchCommand.SelectAmmo(
+                CommandId("select-siege-again"),
+                matchId,
+                playerId,
+                "SIEGE_BOMB",
+            ),
+        )
+        assertEquals(
+            5.5f,
+            snapshot.reloadRemainingSecondsByAmmunition[Team.BLUE]?.get("SIEGE_BOMB"),
+        )
     }
 
     @Test

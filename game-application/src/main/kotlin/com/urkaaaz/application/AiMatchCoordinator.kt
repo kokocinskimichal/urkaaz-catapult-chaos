@@ -37,6 +37,7 @@ class AiMatchCoordinator(
     private var initialDecisionPending = true
     private var elapsedSinceDecision = 0L
     private var recruitmentCooldownRemainingMilliseconds = 0L
+    private var selectedAmmunition = AmmunitionType.ROCK
 
     fun start(randomSeed: Long) {
         val allowedUnits = allowedUnitIdsOverride
@@ -64,6 +65,7 @@ class AiMatchCoordinator(
         initialDecisionPending = true
         elapsedSinceDecision = 0L
         recruitmentCooldownRemainingMilliseconds = 0L
+        selectedAmmunition = AmmunitionType.ROCK
     }
 
     fun decide(
@@ -84,10 +86,30 @@ class AiMatchCoordinator(
         } else {
             initialDecisionPending = false
         }
-        val commands = currentAgent.decide(
+        var commands = currentAgent.decide(
             snapshot = snapshot,
             includeUnitActions = unitAutomationEnabled,
         )
+        val ammoSelection = commands.filterIsInstance<MatchCommand.SelectAmmo>().firstOrNull()
+        if (ammoSelection != null) {
+            val requestedAmmunition = ammunitionById(ammoSelection.ammunitionType)
+            val changingAmmunition = requestedAmmunition != selectedAmmunition
+            if (changingAmmunition) {
+                selectedAmmunition = requestedAmmunition
+                commands = commands.filterNot {
+                    it is MatchCommand.Aim || it is MatchCommand.Fire
+                }
+            }
+        }
+        val selectedReload = snapshot.reloadRemainingSecondsByAmmunition[Team.RED]
+            ?.get(selectedAmmunition.name)
+            ?: snapshot.reloadRemainingSeconds[Team.RED]
+            ?: 0f
+        if (selectedReload > 0f) {
+            commands = commands.filterNot {
+                it is MatchCommand.Aim || it is MatchCommand.Fire
+            }
+        }
         if (recruitmentCooldownRemainingMilliseconds > 0L) {
             return commands.filterNot { it is MatchCommand.DeployUnit }
         }

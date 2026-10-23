@@ -98,20 +98,17 @@ class BattlefieldRenderer(
         val redFortressBaseline = worldToViewY(redFortressGroundY, viewportHeight)
         val blueFortressCenterY = blueFortressBaseline - fortressRenderHeight / 2f
         val redFortressCenterY = redFortressBaseline - fortressRenderHeight / 2f
-        val fortressHealthBarWidth = fortressRenderWidth * FORTRESS_HEALTH_BAR_WIDTH_RATIO
-        val blueHealthBarLeft = blueFortressCenterX - fortressHealthBarWidth / 2f
-        val redHealthBarLeft = redFortressCenterX - fortressHealthBarWidth / 2f
-        val blueHealthBarTop =
-            blueFortressBaseline - fortressRenderHeight -
-                worldToViewHeight(FORTRESS_HEALTH_BAR_TOP_OFFSET, viewportHeight)
-        val redHealthBarTop =
-            redFortressBaseline - fortressRenderHeight -
-                worldToViewHeight(FORTRESS_HEALTH_BAR_TOP_OFFSET, viewportHeight)
         val blueCatapultCenterX = worldToViewX(state.blueCatapultX, viewportWidth)
         val redCatapultCenterX = worldToViewX(state.redCatapultX, viewportWidth)
         val catapultRenderWidth = worldToViewWidth(CATAPULT_RENDER_WIDTH, viewportWidth)
         val catapultBaseline = worldToViewY(state.blueCatapultY, viewportHeight)
         val redCatapultBaseline = worldToViewY(state.redCatapultY, viewportHeight)
+        val blueCatapultHeight = assets.blueCatapult?.let {
+            catapultRenderWidth * it.height / it.width.coerceAtLeast(1)
+        } ?: catapultRenderWidth
+        val redCatapultHeight = assets.redCatapult?.let {
+            catapultRenderWidth * it.height / it.width.coerceAtLeast(1)
+        } ?: catapultRenderWidth
         drawTextureAtBaseline(
             canvas,
             assets.blueCatapult,
@@ -177,15 +174,17 @@ class BattlefieldRenderer(
 
         drawReloadIndicator(
             canvas,
-            blueHealthBarLeft + fortressHealthBarWidth + FORTRESS_RELOAD_BADGE_GAP,
-            blueHealthBarTop + HEALTH_BAR_HEIGHT / 2f,
+            blueCatapultCenterX - catapultRenderWidth / 2f -
+                RELOAD_INDICATOR_RADIUS - CATAPULT_RELOAD_BADGE_GAP,
+            catapultBaseline - blueCatapultHeight / 2f,
             state.playerReloadRemainingSeconds,
             state.playerProjectileActive,
         )
         drawReloadIndicator(
             canvas,
-            redHealthBarLeft - FORTRESS_RELOAD_BADGE_GAP,
-            redHealthBarTop + HEALTH_BAR_HEIGHT / 2f,
+            redCatapultCenterX + catapultRenderWidth / 2f +
+                RELOAD_INDICATOR_RADIUS + CATAPULT_RELOAD_BADGE_GAP,
+            redCatapultBaseline - redCatapultHeight / 2f,
             state.enemyReloadRemainingSeconds,
             state.projectiles.any { it.teamLabel == "RED" },
         )
@@ -310,29 +309,6 @@ class BattlefieldRenderer(
         }
         drawCombatFeedback(canvas, combatFeedback, viewportWidth, viewportHeight, groundTop)
 
-        drawHealthBar(
-            canvas,
-            blueFortressCenterX,
-            blueHealthBarTop + HEALTH_BAR_HEIGHT / 2f,
-            fortressHealthBarWidth,
-            state.blueFortressHealth,
-            state.blueFortressMaxHealth,
-        )
-        drawHealthBar(
-            canvas,
-            redFortressCenterX,
-            redHealthBarTop + HEALTH_BAR_HEIGHT / 2f,
-            fortressHealthBarWidth,
-            state.redFortressHealth,
-            state.redFortressMaxHealth,
-        )
-        drawFortressLabels(
-            canvas,
-            blueHealthBarLeft,
-            redHealthBarLeft + fortressHealthBarWidth,
-            blueHealthBarTop,
-            redHealthBarTop,
-        )
         if (debugHitboxesVisible) {
             drawDebugHitboxes(
                 canvas = canvas,
@@ -1103,35 +1079,6 @@ class BattlefieldRenderer(
         canvas.restore()
     }
 
-    private fun drawFortressLabels(
-        canvas: Canvas,
-        blueBarLeft: Float,
-        redBarRight: Float,
-        blueBarTop: Float,
-        redBarTop: Float,
-    ) {
-        val paint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-            color = Color.WHITE
-            textSize = 14f
-            typeface = textTypeface
-            setShadowLayer(4f, 1f, 1f, Color.BLACK)
-        }
-        paint.textAlign = Paint.Align.LEFT
-        canvas.drawText(
-            "YOU",
-            blueBarLeft,
-            blueBarTop - FORTRESS_LABEL_GAP,
-            paint,
-        )
-        paint.textAlign = Paint.Align.RIGHT
-        canvas.drawText(
-            "ENEMY",
-            redBarRight,
-            redBarTop - FORTRESS_LABEL_GAP,
-            paint,
-        )
-    }
-
     private fun drawOutcome(
         canvas: Canvas,
         outcome: String?,
@@ -1175,10 +1122,8 @@ class BattlefieldRenderer(
         private const val SOIL_TILE_WIDTH = 256f
         private const val HEALTH_BAR_HEIGHT = 8f
         private const val HEALTH_BAR_CORNER_RADIUS = 3f
-        private const val FORTRESS_HEALTH_BAR_WIDTH_RATIO = 0.68f
-        private const val FORTRESS_HEALTH_BAR_TOP_OFFSET = 18f
-        private const val FORTRESS_RELOAD_BADGE_GAP = 24f
-        private const val FORTRESS_LABEL_GAP = 6f
+        private const val RELOAD_INDICATOR_RADIUS = 12f
+        private const val CATAPULT_RELOAD_BADGE_GAP = 8f
         private const val UNIT_HEALTH_BAR_WIDTH_WORLD = 46.2f
         private const val BOAR_SOURCE_CROP_HEIGHT_RATIO = 301f / 512f
         private const val GENERATED_DEFENDER_CANVAS_SCALE = 2f

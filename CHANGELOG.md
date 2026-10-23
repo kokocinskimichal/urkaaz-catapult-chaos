@@ -2,6 +2,13 @@
 
 ## 2026-10-23
 
+### Added
+
+- Added a subtle Retreat control with a resized 256 × 256 runner icon beside
+  the match timer. It pauses the match while confirmation is open; confirming
+  ends the match as a defeat, while cancelling restores the prior
+  running/paused state.
+
 ### Changed
 
 - Added a demo-only Loadout flow with independent persistence and schema
@@ -9,6 +16,17 @@
   campaign-level loadouts.
 - Replaced the Mana orb shell with the supplied transparent gold-filigree
   asset; centered the live Mana count and changed the liquid to deep blue.
+- The Supply gauge now uses the approved crate icon, with its live count
+  centered over the icon, a smoothly animated progress ring, and the same
+  80 × 80 dp footprint as the Mana orb.
+- Match ammunition slots now show stock badges (including an infinity icon for
+  unlimited stock) and an overlaid reload countdown/progress. Changing types
+  restarts that type's reload, and the AI waits for the selected type to finish
+  loading before firing.
+- Replaced the visible wind-strength text with strength-specific wind icons,
+  enlarged the icon, and reduced the match health/timer panels.
+- Mana now regenerates in 1-point steps every 0.8 seconds instead of 10-point
+  steps every eight seconds.
 
 ## 2026-10-21
 

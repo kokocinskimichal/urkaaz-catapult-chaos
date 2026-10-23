@@ -16,7 +16,7 @@ internal class HealthCardView(
     label: String,
     healthColor: Int,
 ) : LinearLayout(context) {
-    private val healthValue = hudText("--/--", 10f).apply {
+    private val healthValue = hudText("--/--", 7f).apply {
         setTypeface(typeface, Typeface.BOLD)
         gravity = Gravity.END or Gravity.CENTER_VERTICAL
     }
@@ -36,11 +36,11 @@ internal class HealthCardView(
         gravity = Gravity.CENTER_VERTICAL
         background = HudPanelStyle.universalFrameBackground(context)
         HudPanelStyle.applyShadow(this, elevationDp = 2f)
-        setPadding(dp(7), dp(3), dp(7), dp(3))
+        setPadding(dp(4), dp(1), dp(4), dp(1))
         addView(
             FrameLayout(context).apply {
                 addView(
-                    hudText(label, 10f).apply {
+                    hudText(label, 7f).apply {
                         setTypeface(typeface, Typeface.BOLD)
                         gravity = Gravity.CENTER
                     },
@@ -50,21 +50,21 @@ internal class HealthCardView(
                     healthValue,
                     FrameLayout.LayoutParams(
                         -2,
-                        dp(15),
+                        dp(11),
                         Gravity.END or Gravity.CENTER_VERTICAL,
                     ).apply {
-                        marginEnd = dp(8)
+                        marginEnd = dp(5)
                     },
                 )
             },
-            LayoutParams(-1, dp(15)),
+            LayoutParams(-1, dp(11)),
         )
         addView(
             healthProgress,
-            LayoutParams(-1, dp(4)).apply {
-                topMargin = dp(3)
-                marginStart = dp(6)
-                marginEnd = dp(6)
+            LayoutParams(-1, dp(2)).apply {
+                topMargin = dp(1)
+                marginStart = dp(4)
+                marginEnd = dp(4)
             },
         )
     }

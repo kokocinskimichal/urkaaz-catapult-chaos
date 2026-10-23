@@ -71,6 +71,7 @@ class DeterministicMatchSimulation(
     private var status = MatchStatus.NOT_STARTED
     private var phase = MatchPhase.CREATED
     private var activeTeam = Team.BLUE
+    private var finalOutcome: MatchOutcome? = null
     private var simulationTimeMilliseconds = 0L
     private var remainingMatchTimeMilliseconds = config.matchDurationMilliseconds
     private var sequence = 0L
@@ -141,6 +142,18 @@ class DeterministicMatchSimulation(
         }
         emit { MatchEvent.TurnChanged(it, matchId, simulationTimeMilliseconds, activeTeam) }
         logCombatState("match-started")
+        return drainEvents()
+    }
+
+    fun surrender(surrenderingTeam: Team): List<MatchEvent> {
+        check(status == MatchStatus.RUNNING) { "match is not running" }
+        finish(
+            if (surrenderingTeam == Team.BLUE) {
+                MatchOutcome.SURRENDER
+            } else {
+                MatchOutcome.BLUE_WIN
+            },
+        )
         return drainEvents()
     }
 
@@ -316,6 +329,12 @@ class DeterministicMatchSimulation(
             remainingReloadSeconds = ammunitionDefinition.reloadSeconds,
         )
         return drainEvents()
+    }
+
+    fun beginAmmunitionReload(team: Team, ammunition: AmmunitionType) {
+        check(status == MatchStatus.RUNNING) { "match is not running" }
+        reloadRemainingSecondsByAmmunition
+            .getValue(team)[ammunition] = AmmunitionCatalog.definition(ammunition).reloadSeconds
     }
 
     fun aim(catapultId: EntityId, directionDegrees: Float, power: Float) {
@@ -2014,16 +2033,22 @@ class DeterministicMatchSimulation(
 
     private fun finishIfFortressDestroyed() {
         if (!currentBlueFortress.isAlive || !currentRedFortress.isAlive) {
-            status = MatchStatus.FINISHED
-            phase = MatchPhase.FINISHED
-            emit {
-                MatchEvent.MatchFinished(
-                    it,
-                    matchId,
-                    simulationTimeMilliseconds,
-                    outcome() ?: MatchOutcome.DRAW,
-                )
-            }
+            finish(outcome() ?: MatchOutcome.DRAW)
+        }
+    }
+
+    private fun finish(outcome: MatchOutcome) {
+        if (status == MatchStatus.FINISHED) return
+        status = MatchStatus.FINISHED
+        phase = MatchPhase.FINISHED
+        finalOutcome = outcome
+        emit {
+            MatchEvent.MatchFinished(
+                it,
+                matchId,
+                simulationTimeMilliseconds,
+                outcome,
+            )
         }
     }
 
@@ -2115,7 +2140,7 @@ class DeterministicMatchSimulation(
     private fun outsideBounds(position: WorldPosition): Boolean =
         position.x < 0f || position.x > config.bounds.width || position.y < -config.bounds.height
 
-    private fun outcome(): MatchOutcome? = when {
+    private fun outcome(): MatchOutcome? = finalOutcome ?: when {
         currentBlueFortress.isAlive && currentRedFortress.isAlive -> null
         currentBlueFortress.isAlive -> MatchOutcome.BLUE_WIN
         currentRedFortress.isAlive -> MatchOutcome.RED_WIN

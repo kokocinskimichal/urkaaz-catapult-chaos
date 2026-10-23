@@ -1,6 +1,7 @@
 package com.urkaaaz.ui
 
 import android.app.Activity
+import android.app.AlertDialog
 import android.app.Dialog
 import android.content.res.ColorStateList
 import android.graphics.Color
@@ -15,6 +16,7 @@ import android.widget.LinearLayout
 import android.widget.CheckBox
 import android.widget.ScrollView
 import android.widget.TextView
+import com.urkaaaz.android.R
 import com.urkaaaz.campaign.MapDefinitionRepository
 import com.urkaaaz.contracts.MatchEvent
 import com.urkaaaz.contracts.MatchOutcome
@@ -91,6 +93,7 @@ class MatchScreenController(
             onPauseClicked = {
                 render(viewModel.dispatch(MatchUiAction.TogglePause))
             }
+            onRetreatClicked = ::showRetreatConfirmationDialog
         }
         ammunitionPanel = AmmunitionPanelView(
             activity,
@@ -323,6 +326,39 @@ class MatchScreenController(
         aimAngle = 45f
         aimPower = 50f
         render(viewModel.dispatch(MatchUiAction.RestartMatch))
+    }
+
+    private fun showRetreatConfirmationDialog() {
+        val status = viewModel.renderState.statusLabel
+        if (status != MatchStatus.RUNNING.name && status != "PAUSED") return
+
+        val wasRunning = status == MatchStatus.RUNNING.name
+        if (wasRunning) {
+            render(viewModel.dispatch(MatchUiAction.TogglePause))
+        }
+        var retreatConfirmed = false
+        AlertDialog.Builder(activity)
+            .setTitle(R.string.match_retreat_confirmation_title)
+            .setMessage(R.string.match_retreat_confirmation_message)
+            .setNegativeButton(R.string.match_retreat_cancel, null)
+            .setPositiveButton(R.string.match_retreat_confirm) { _, _ ->
+                retreatConfirmed = true
+                feedbackToast.hideImmediately()
+                render(viewModel.dispatch(MatchUiAction.Retreat))
+            }
+            .create()
+            .apply {
+                setOnDismissListener {
+                    if (
+                        !retreatConfirmed &&
+                        wasRunning &&
+                        viewModel.renderState.statusLabel == "PAUSED"
+                    ) {
+                        render(viewModel.dispatch(MatchUiAction.TogglePause))
+                    }
+                }
+            }
+            .show()
     }
 
     private fun showDebugToolsDialog() {

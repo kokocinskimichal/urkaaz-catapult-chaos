@@ -75,9 +75,11 @@ class DeterministicMatchSimulationTest {
         simulation.start()
 
         assertEquals(20, simulation.snapshot().resources.mana)
-        simulation.advance(7_999)
+        simulation.advance(799)
         assertEquals(20, simulation.snapshot().resourcesByTeam[Team.BLUE]?.mana)
         simulation.advance(1)
+        assertEquals(21, simulation.snapshot().resourcesByTeam[Team.BLUE]?.mana)
+        simulation.advance(7_200)
         assertEquals(30, simulation.snapshot().resourcesByTeam[Team.BLUE]?.mana)
         simulation.advance(56_000)
         assertEquals(100, simulation.snapshot().resourcesByTeam[Team.BLUE]?.mana)
@@ -85,10 +87,10 @@ class DeterministicMatchSimulationTest {
             null,
             simulation.castFortressShield(PlayerId("blue-player"), Team.BLUE, targetId = null),
         )
-        simulation.advance(7_999)
+        simulation.advance(799)
         assertEquals(20, simulation.snapshot().resourcesByTeam[Team.BLUE]?.mana)
         simulation.advance(1)
-        assertEquals(30, simulation.snapshot().resourcesByTeam[Team.BLUE]?.mana)
+        assertEquals(21, simulation.snapshot().resourcesByTeam[Team.BLUE]?.mana)
     }
 
     @Test

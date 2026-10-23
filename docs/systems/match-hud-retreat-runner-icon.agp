@@ -1,0 +1,63 @@
+# AGP — Match HUD Retreat runner icon
+
+Create one production-ready, small HUD icon asset for the Retreat control in
+Urkaaaz.
+
+## Asset
+
+- Filename: `match_hud_retreat_runner.png`
+- Format: PNG with true transparency (RGBA)
+- Canvas: square, 256 × 256 px
+- Intended display size: 24 × 24 dp inside a 48 × 48 dp HUD control
+- Keep the full silhouette within the central 80% of the canvas. Leave clear,
+  even transparent padding on every side.
+
+## Visual direction
+
+Draw a bold, instantly readable silhouette of a generic human fleeing at a
+sprint, seen in side profile and moving to the left. Use a forward-leaning
+torso, a clearly separated head, and arms and legs in an unmistakable running
+stride. Add at most two or three short, chunky motion marks trailing behind the
+figure on the right to reinforce urgency and direction.
+
+Use a single warm, muted ivory-gold fill that fits the existing match HUD,
+approximately `#EFDCAF`. If needed for contrast at small sizes, use only a
+subtle dark bronze edge, approximately `#705B39`; do not rely on a thin outline
+to define the shape. Prefer solid, compact shapes over stick limbs or delicate
+line work. All limbs and gaps must remain legible when the image is reduced to
+24 × 24 px.
+
+The result should feel like a restrained game HUD pictogram: clear and
+purposeful, not cartoonish, decorative, or realistic. Match the existing HUD
+icon weight and palette. Use the current match HUD screenshot as a scale and
+contrast reference, and the integrated universal HUD frame only as a palette
+reference; do not reproduce either in the asset.
+
+## Do not include
+
+- Any background, panel, button, circle, badge, border, frame, shadow, or glow.
+- Text, letters, numbers, labels, arrows, logos, or faction symbols.
+- Weapons, armor, facial features, clothing details, or a specific existing
+  character/unit design.
+- Thin speed lines, hairline limbs, gradients, texture, noise, or scenery.
+- Multiple people or any additional interface elements.
+
+## Acceptance checks
+
+1. The transparent PNG contains only the icon artwork.
+2. The figure is immediately recognizable as running away, not standing,
+   walking, attacking, or celebrating.
+3. Direction is clear at 24 × 24 px on the existing dark translucent HUD
+   control.
+4. The head, torso, arms, and legs remain distinguishable without tiny details.
+5. The icon is balanced within its transparent canvas and is not cropped.
+6. The asset is delivered as a single PNG, with no mockup or alternate
+   variations.
+
+## Project integration target
+
+After visual review and approval, copy the source to
+`assets_src/match/hud/match_hud_retreat_runner.png` and integrate it as
+`android-app/src/main/res/drawable-nodpi/match_hud_retreat_runner.png`. Replace
+the temporary `RETREAT` text in the control only after the generated icon is
+approved.

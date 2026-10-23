@@ -1,7 +1,7 @@
 # Plan dostosowania HUD-u meczu
 
-**Status:** Zmiana HUD-u zaimplementowana z natywnie rysowanymi ramkami
-zastępczymi; wygenerowane assety HUD-u pozostają do dodania.
+**Status:** HUD zaimplementowany; wspólna ramka Nine-patch i oprawa kuli many
+są zintegrowane, a warianty ramek slotów i grup doku pozostają nieużywane.
 
 ## Cel
 
@@ -20,11 +20,18 @@ akcje przez istniejące callbacki / `MatchUiAction`.
 
 - Jedna smukła kompozycja z trzema wyrównanymi strefami:
   - po lewej: zdrowie niebieskiej fortecy;
-  - pośrodku: timer, wiatr i jeden przycisk pauzy w niskim, płaskim module;
+  - pośrodku: timer i wiatr między subtelnymi kontrolkami Retreat (po lewej)
+    i pauzy (po prawej), oddzielonymi delikatnymi liniami;
   - po prawej: zdrowie czerwonej fortecy.
-- Timer pozostaje głównym elementem środkowej strefy; wiatr jest informacją
-  drugorzędną.
-- Karty HP zajmują po 70% dostępnego miejsca swoich bocznych stref i pozostają
+- Timer pozostaje głównym elementem środkowej strefy; kierunek i siłę wiatru
+  komunikuje wariant ikony, bez tekstowej etykiety LOW/MED/HIGH.
+- Górny rail ma kompaktowe wymiary: karty HP mają 25 dp wysokości i zajmują
+  45% szerokości bocznych stref; środkowy panel ma 176 dp szerokości, a
+  kontrolki Retreat i pauzy mają 32 dp.
+- Retreat wymaga potwierdzenia. Otwarcie dialogu wstrzymuje działający mecz;
+  anulowanie przywraca wcześniejszy stan, a potwierdzenie kończy mecz
+  wynikiem przegranej.
+- Karty HP zajmują po 45% dostępnego miejsca swoich bocznych stref i pozostają
   dosunięte do zewnętrznych krawędzi; pozostała przestrzeń oddziela je od
   środkowego modułu.
 - Nie dodawać nowego panelu wiatru, dodatkowych celów, wyników ani innych
@@ -38,13 +45,16 @@ Jeden kompaktowy dok z trzema sąsiadującymi grupami, w tej kolejności:
 
 1. **Supply, jednostki i rozkazy — lewa strona**
    - Supply na skrajnym lewym brzegu grupy, w bursztynowo-złotej oprawie i z
-     ikoną skrzyni.
-   - Pokazywać bieżącą wartość i pojemność; zachować zwarty, czytelny wskaźnik,
-     np. pierścień lub segmenty.
+     ikoną skrzyni; cały wskaźnik ma 80 × 80 dp, tyle samo co kula many.
+   - Pokazywać bieżącą wartość i pojemność na środku ikony skrzyni, analogicznie
+     do licznika many na orbie, na delikatnym półprzezroczystym ciemnym tle;
+     zachować zwarty pierścień postępu wokół ikony i płynnie animować jego
+     zmiany.
    - Umieścić podpisy `SUPPLY` nad wskaźnikiem oraz `UNITS` nad wyborem
      jednostek i akcją wysłania fali.
    - Wyświetlać najwyżej trzy jednostki z zatwierdzonego loadoutu i poziomu;
-     przy każdej podawać rzeczywisty koszt Supply oraz stan dostępności.
+     pod ikoną pokazywać nazwę, a koszt Supply w plakietce na ikonie, zachowując
+     stan dostępności.
    - Zachować wybór jednostki do wystawienia i akcję `SEND WAVE`. Nie dodawać
      przycisku ataku.
 
@@ -52,8 +62,15 @@ Jeden kompaktowy dok z trzema sąsiadującymi grupami, w tej kolejności:
    - Wyświetlać najwyżej trzy rzeczywiste pozycje z zatwierdzonego loadoutu i
      dostępności poziomu.
    - Umieścić podpis `AMMUNITION` pośrodku górnej części panelu.
-   - Zachować wybór amunicji i aktualne źródła informacji o zapasie oraz
-     przeładowaniu.
+   - Pod każdą ikoną pokazywać wyłącznie nazwę amunicji; skończony zapas
+     prezentować liczbą w plakietce, a nieograniczony zapas ikoną nieskończoności
+     w tej samej plakietce.
+   - Podczas przeładowania nakładać na ikonę licznik oraz przyciemnioną maskę,
+     która obejmuje ikonę i pomarańczowe zaznaczenie oraz odsłania je
+     proporcjonalnie do postępu. Bez napisu `READY`; gotowa ikona jest aktywna,
+     a ikona w trakcie przeładowania nieaktywna.
+   - Każda zmiana wybranego typu rozpoczyna jego pełne przeładowanie od zera
+     postępu; ponowne wybranie tego samego typu nie resetuje timera.
    - Nie pokazywać slotów zastępczych ani amunicji niedostępnej w meczu.
 
 3. **Czary i mana — prawa strona**
@@ -111,7 +128,8 @@ panelami HUD-u jest lekki i renderowany programowo; nie wypalać go w assetach.
 
 | Kolejność | Asset | Zakres i wymagania | Status |
 |---|---|---|---|
-| 1 | `match_hud_universal_frame.png` | Jedna wspólna ramka Nine-patch użyta raz wokół całego dolnego doku oraz osobno wokół obu kart HP i środkowego panelu timera, wiatru i pauzy. Trzy grupy doku rozdzielają delikatne linie rysowane przez UI, nie osobne ramki. Środek przezroczysty; oddzielne wypełnienie `#1A1A1A` o kryciu 80%. | Zatwierdzone źródło PNG i Android Nine-patch zintegrowane; dolny dock ma jedną ramkę, a podziały doku i pauzy są rysowane przez UI |
+| 1 | `match_hud_universal_frame.png` | Jedna wspólna ramka Nine-patch użyta raz wokół całego dolnego doku oraz osobno wokół obu kart HP i środkowego panelu Retreat/timera/wiatru/pauzy. Trzy grupy doku rozdzielają delikatne linie rysowane przez UI, nie osobne ramki. Środek przezroczysty; oddzielne wypełnienie `#1A1A1A` o kryciu 80%. | Zatwierdzone źródło PNG i Android Nine-patch zintegrowane; dolny dock ma jedną ramkę, a podziały doku, Retreat/timera i wiatru/pauzy są rysowane przez UI |
+| 1a | `match_hud_retreat_runner.png` | Uproszczona sylwetka uciekającego ludzika, czytelna przy 24 dp; transparentne tło, bez ramki i tekstu. | Wygenerowany asset zmniejszony do 256 × 256 px i zintegrowany w HUD-zie; źródło w `assets_src/match/hud/`, Android drawable w `drawable-nodpi/` |
 | 2 | `match_hud_slot_frame_normal.png` | Lekka, cienka oprawa pojedynczego slotu HUD, przygotowana do Nine-patch: stałe narożniki i rozciągliwy środek; bez masywnego rantu i poświaty. | Źródłowy PNG i Android Nine-patch przygotowane; nie są używane w UI |
 | 3 | `match_hud_slot_frame_selected.png` | Złota, czytelna oprawa wybranego slotu, dopasowana do wariantu neutralnego. Stany niedostępne można nadal pokazywać przez przygaszenie w UI; osobny asset nie jest potrzebny. | Do wygenerowania |
 | 4 | `match_hud_supply_crate_icon.png` | Mała, czytelna ikona skrzyni Supply w złoto-bursztynowym stylu. | Do wygenerowania |
@@ -146,8 +164,8 @@ amunicji i biome'ów także pozostają bez zmian.
 
 | Obszar | Obecny właściciel / stan | Planowana zmiana |
 |---|---|---|
-| Kompozycja ekranu meczu | `MatchScreenController` | Uporządkować warstwy w górny pasek i dock; pokazywać wynik próby czaru jako tekstową, przejściową informację nad dokiem bez stałego panelu. |
-| Timer, wiatr, pauza, mana i czary | `MatchHudView` | Zawęzić odpowiedzialność lub wydzielić screen-owned komponenty dla górnego paska i sekcji czarów; zastąpić dedykowany przycisk czaru wspólnym układem slotów i wspólną akcją rzucania czaru, bez wyróżniania konkretnego czaru. |
+| Kompozycja ekranu meczu | `MatchScreenController` | Uporządkować warstwy w górny pasek i dock; pokazywać wynik próby czaru jako tekstową, przejściową informację nad dokiem bez stałego panelu; potwierdzać Retreat i obsłużyć jego pauzę. |
+| Timer, wiatr, Retreat, pauza, mana i czary | `MatchHudView` | Zawęzić odpowiedzialność lub wydzielić screen-owned komponenty dla górnego paska i sekcji czarów; zastąpić dedykowany przycisk czaru wspólnym układem slotów i wspólną akcją rzucania czaru, bez wyróżniania konkretnego czaru. |
 | Wybór jednostek / Supply / fala | `UnitPanelView`, `SupplyGaugeView` | Przeorganizować do lewej grupy doku, ograniczyć wybór do loadoutu i maksymalnie trzech pozycji, pokazać koszt pochodzący z katalogu balansu. |
 | Wybór amunicji | `AmmunitionPanelView` | Zastąpić pojedynczy widoczny selektor trzema lub mniejszą liczbą rzeczywistych slotów wyboru; zachować kontrakt wyboru i dane zapasu/przeładowania. |
 | Dane dla widoków | `MatchViewModel`, `RenderStateMapper`, `RenderState` | Wystawiać wyłącznie potrzebne dane prezentacyjne z snapshotu i zatwierdzonego loadoutu, w tym listy pozycji, limity oraz stany. Nie tworzyć drugiego źródła prawdy. |
@@ -251,7 +269,7 @@ albo jawna decyzja, które elementy tymczasowo rysować natywnie.
 
 ## Kryteria akceptacji
 
-- Górny pasek pokazuje BLUE HP, timer/wiatr/pauzę i RED HP w trzech
+- Górny pasek pokazuje BLUE HP, Retreat/timer/wiatr/pauzę i RED HP w trzech
   spójnych strefach; środkowy moduł jest płaski i kompaktowy.
 - Dolny dok ma kolejność: Supply/jednostki/rozkazy, amunicja, czary/mana.
 - Boczne grupy Supply/jednostek i czarów/many mają równą szerokość; grupa

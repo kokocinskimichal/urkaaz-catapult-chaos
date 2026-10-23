@@ -1,0 +1,74 @@
+# AGP — Match HUD Supply icon
+
+Create one production-ready, small HUD icon representing the player's Supply
+resource in Urkaaaz. It will visually identify the Supply gauge beside the
+unit deployment controls.
+
+## Asset
+
+- Filename: `match_hud_supply_icon.png`
+- Format: PNG with true transparency (RGBA)
+- Canvas: square, 256 × 256 px
+- Intended display size: approximately 48 × 48 dp as the Supply gauge icon
+- Keep the complete silhouette inside the central 88% of the canvas, with
+  balanced transparent padding on every side.
+
+## Visual direction
+
+Use the attached crate image as the visual reference for a supply crate filled
+with field provisions. Create a simpler, instantly readable version: a sturdy
+wooden crate with a few clearly shaped supplies, restrained bronze-gold corner
+bands, and one warm ivory-gold highlight. The image should communicate stored
+provisions available for deploying units, not a purchasable currency.
+
+Match the Urkaaaz match HUD's restrained fantasy style: dark warm wood,
+blackened bronze, and muted amber-gold details. Use approximately `#EFDCAF`
+for the brightest highlight and `#E1C177` for restrained gold accents. Keep
+the crate silhouette and contrast clear when reduced to 48 × 48 dp. Prefer
+solid, chunky forms over fine line work, texture, or small decoration.
+
+The icon will sit behind a live Supply counter, in the same way the Mana
+counter is rendered over the Mana orb. Keep a broad, dark, uncluttered wooden
+area across the center/front face of the crate so an ivory `current/maximum`
+value remains legible when rendered over it. Treat the counter as a separate
+UI overlay, centered on the icon: do not draw digits into the PNG.
+
+The icon must remain visually distinct from the blue Mana orb, ammunition
+icons, unit portraits, and the Send Wave command icon. It should read as the
+Supply resource marker, with the live amount/capacity counter overlaid on it.
+
+## Do not include
+
+- Any background, panel, badge, circle, border, frame, shadow, or glow.
+- Text, letters, numbers, currency symbols, labels, logos, or faction marks.
+- A blue orb, potion, gemstone, coin, ammunition, weapon, or character.
+- Detailed scenery, tiny marks, thin outlines, gradients, noise, or realistic
+  photographic rendering.
+- Any extra interface element or mockup.
+
+## Acceptance checks
+
+1. The transparent PNG contains only the standalone Supply icon.
+2. The silhouette reads as stored provisions or deployment supplies at
+   48 × 48 dp.
+3. Its warm palette distinguishes it from Mana and ammunition at a glance.
+4. The central crate face is dark and visually calm enough to support a live
+   ivory `current/maximum` counter centered over it.
+5. The image is centered, fully visible, and not cropped.
+6. The asset contains no text or unintended background.
+
+## Output and review
+
+Return exactly one PNG with the filename, dimensions, and alpha transparency
+specified above. Save it for review under:
+
+```text
+assets_src/match/hud/
+```
+
+Show the icon at its intended HUD size against both the existing dark panel
+and a bright background, with a separate sample `20/20` overlay centered on
+the crate to demonstrate legibility. Keep that sample out of the delivered
+PNG. The user-approved supplied artwork is integrated as the 256 × 256 source
+asset and Android drawable; Android renders the live counter at the icon's
+center and retains the surrounding Supply progress ring.

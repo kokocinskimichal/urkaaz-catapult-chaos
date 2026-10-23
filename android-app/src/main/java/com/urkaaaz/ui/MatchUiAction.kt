@@ -7,6 +7,7 @@ sealed interface MatchUiAction {
     data object FireRock : MatchUiAction
     data object AdvanceSimulation : MatchUiAction
     data object TogglePause : MatchUiAction
+    data object Retreat : MatchUiAction
     data class CastSpell(val spellType: String) : MatchUiAction
     data class Aim(val directionDegrees: Float, val power: Float) : MatchUiAction
     data class SelectAmmo(val ammunitionType: String) : MatchUiAction
