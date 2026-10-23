@@ -133,8 +133,7 @@ class MatchScreenController(
             background = HudPanelStyle.universalFrameBackground(activity)
             HudPanelStyle.applyShadow(this)
             setPadding(dp(4), 0, dp(4), 0)
-            val sidePanelWeight = 1.3f
-            addView(unitPanel, LinearLayout.LayoutParams(0, -1, sidePanelWeight))
+            addView(unitPanel, LinearLayout.LayoutParams(0, -1, 1.45f))
             addView(
                 View(activity).apply {
                     setBackgroundColor(Color.argb(88, 181, 143, 78))
@@ -144,7 +143,7 @@ class MatchScreenController(
                     bottomMargin = dp(14)
                 },
             )
-            addView(ammunitionPanel, LinearLayout.LayoutParams(0, -1, 0.88f))
+            addView(ammunitionPanel, LinearLayout.LayoutParams(0, -1, 0.87f))
             addView(
                 View(activity).apply {
                     setBackgroundColor(Color.argb(88, 181, 143, 78))
@@ -154,7 +153,7 @@ class MatchScreenController(
                     bottomMargin = dp(14)
                 },
             )
-            addView(spellPanel, LinearLayout.LayoutParams(0, -1, sidePanelWeight))
+            addView(spellPanel, LinearLayout.LayoutParams(0, -1, 1.2f))
         }
         debugButton = TextView(activity).apply {
                 text = "DEBUG"

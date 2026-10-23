@@ -55,8 +55,8 @@ includes:
   selector that currently unlocks every level, and match event consumption in
   `MatchViewModel`.
 - `docs/systems/campaign-system.md`, `player-progression-system.md`,
-  `loadout-system.md`, `architecture.md`, `AI_PROJECT_MAP.md`, and
-  `docs/PROJECT_KNOWLEDGE.md`.
+  `loadout-system.md`, `docs/architecture/architecture.md`, `docs/architecture/project-map.md`, and
+  `docs/project/knowledge.md`.
 
 Treat documentation as intended design, not proof of working behavior.
 Preserve pre-existing working-tree changes and integrate with them rather
@@ -179,8 +179,8 @@ than reverting or overwriting them.
   `docs/systems/loadout-system.md` so campaign entitlements and the new-default
   behavior are accurate. Clearly state that tutorials remain deferred to
   TutorialSystem and are not part of milestone persistence.
-- Update `architecture.md`, `AI_PROJECT_MAP.md`, and
-  `docs/PROJECT_KNOWLEDGE.md` only for durable architecture and current-state
+- Update `docs/architecture/architecture.md`, `docs/architecture/project-map.md`, and
+  `docs/project/knowledge.md` only for durable architecture and current-state
   facts. Do not leave stale statements that all levels are unlocked or that
   milestone authorization is still entirely blocked.
 - Keep this prompt and its plan linked from directly related system docs.

@@ -1,13 +1,13 @@
-# Dokumentacja projektu
+# Dokumenty etapów migracji
 
-Wszystkie nowe dokumenty opisujące strukturę, decyzje i proces migracji należy
-zapisywać w tym katalogu jako pliki Markdown.
+Ten katalog grupuje plany i raporty etapów migracji. Pełny indeks dokumentacji
+projektu znajduje się w automatycznie wczytywanym pliku [`AGENTS.md`](../../AGENTS.md).
 
 ## Dokumenty
 
 | Plik | Zakres | Status |
 |---|---|---|
-| [`project-structure.md`](project-structure.md) | struktura katalogów i modułów po M1 | gotowy |
+| [`../architecture/project-structure.md`](../architecture/project-structure.md) | struktura katalogów i modułów po M1 | gotowy |
 | [`m2-contracts.md`](m2-contracts.md) | zakres kontraktów i modeli bazowych M2 | zaakceptowany plan |
 | [`m2-report.md`](m2-report.md) | raport implementacji i walidacji M2 | gotowy do odbioru |
 | [`m3-domain.md`](m3-domain.md) | zakres przeniesienia domeny gry | zaakceptowany plan |
@@ -16,7 +16,7 @@ zapisywać w tym katalogu jako pliki Markdown.
 | [`m4-report.md`](m4-report.md) | raport implementacji i walidacji M4 | zaakceptowany |
 | [`m5-campaign.md`](m5-campaign.md) | zakres migracji scenariuszy kampanii | gotowy do odbioru |
 | [`m5-report.md`](m5-report.md) | raport implementacji i walidacji M5 | zaakceptowany |
-| [`m6-ai.md`](m6-ai.md) | zakres migracji AI | gotowy do odbioru |
+| [`m6-ai.md`](m6-ai.md) | zakres migracji AI | zaakceptowany plan |
 | [`m6-report.md`](m6-report.md) | raport implementacji i walidacji M6 | zaakceptowany |
 | [`m7-assets.md`](m7-assets.md) | zakres inwentaryzacji assetów | gotowy do odbioru |
 | [`m7-report.md`](m7-report.md) | raport implementacji i walidacji M7 | zaakceptowany |
@@ -28,8 +28,8 @@ zapisywać w tym katalogu jako pliki Markdown.
 | [`m10-report.md`](m10-report.md) | raport implementacji i walidacji M10 | zaakceptowany |
 | [`m11-comparison.md`](m11-comparison.md) | macierz porównania regresyjnego | gotowy do odbioru |
 | [`m11-report.md`](m11-report.md) | raport implementacji i walidacji M11 | gotowy do odbioru |
-| [`MAP_JSON_CAMPAIGN_MIGRATION_PLAN.md`](MAP_JSON_CAMPAIGN_MIGRATION_PLAN.md) | plan zastąpienia Kotlinowych map kampanii plikami JSON | zaakceptowany plan |
-| [`MAP_JSON_CAMPAIGN_IMPLEMENTATION_PROMPT.md`](MAP_JSON_CAMPAIGN_IMPLEMENTATION_PROMPT.md) | prompt do pełnej implementacji migracji kampanii na JSON | gotowy |
+| [`../campaign/map-json-migration-plan.md`](../campaign/map-json-migration-plan.md) | plan zastąpienia Kotlinowych map kampanii plikami JSON | zaakceptowany plan |
+| [`../campaign/map-json-implementation-prompt.md`](../campaign/map-json-implementation-prompt.md) | prompt do pełnej implementacji migracji kampanii na JSON | gotowy |
 
 ## Zasady
 

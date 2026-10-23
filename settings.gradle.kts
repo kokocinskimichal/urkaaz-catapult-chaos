@@ -27,6 +27,4 @@ include(
     ":map-editor-domain",
     ":map-editor-format",
     ":map-editor-rendering",
-    ":map-editor-assets",
-    ":map-editor-desktop",
 )

@@ -2,7 +2,7 @@
 
 **Status:** Completed historical prompt. It captures the original first-pass
 scope; approved outcome plaques and biome illustrations were integrated
-afterward. See `docs/PROJECT_KNOWLEDGE.md` for the current implementation.
+afterward. See `docs/project/knowledge.md` for the current implementation.
 
 Implement the first version of the Urkaaaz Victory/Defeat popup in the
 Android app. Follow `docs/systems/match-result-popup-implementation-plan.md`
@@ -49,9 +49,9 @@ as the implementation scope and acceptance checklist.
   `drawable-nodpi`. Its 2400 x 1680 RGBA image was upscaled from a
   1499 x 1049 preview; do not resize or modify it as part of this task.
 
-Before coding, inspect `AGENTS.md`, `architecture.md`,
-`docs/PROJECT_KNOWLEDGE.md`, `AI_IMPLEMENTATION_RULES.md`,
-`AI_PROJECT_MAP.md`, and the current implementation of the files above.
+Before coding, inspect `AGENTS.md`, `docs/architecture/architecture.md`,
+`docs/project/knowledge.md`, `docs/architecture/implementation-rules.md`,
+`docs/architecture/project-map.md`, and the current implementation of the files above.
 Follow any repository-local instructions.
 
 ## UI behavior

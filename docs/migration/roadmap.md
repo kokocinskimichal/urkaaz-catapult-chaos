@@ -8,7 +8,7 @@ Migration dotyczy utworzenia nowego projektu w:
 ~/workspace/urkaaz
 ```
 
-Nowy projekt ma zostać zbudowany według `architecture.md`, a następnie
+Nowy projekt ma zostać zbudowany według `docs/architecture/architecture.md`, a następnie
 uzupełniony logiką gry wybraną ze starego projektu.
 
 Nie przenosimy starego projektu plik po pliku. Przenosimy:
@@ -443,8 +443,8 @@ urkaaz/
 ├── android-app/
 ├── tools/
 ├── tests/
-├── architecture.md
-└── migration.md
+├── docs/architecture/architecture.md
+└── docs/migration/roadmap.md
 ```
 
 Na początku dopuszczalne jest rozpoczęcie od jednego modułu Androidowego
@@ -464,7 +464,7 @@ rozmyte.
 - [ ] Skonfigurować testy Androidowe wyłącznie dla warstwy Android.
 - [ ] Ustawić lint, formatting i static analysis.
 - [ ] Dodać podstawowe testy zależności pakietów.
-- [ ] Dodać `architecture.md` i `migration.md` do nowego projektu.
+- [ ] Dodać `docs/architecture/architecture.md` i `docs/migration/roadmap.md` do nowego projektu.
 - [ ] Utworzyć minimalną pustą aplikację uruchamiającą się na emulatorze.
 
 ### Bramka M1

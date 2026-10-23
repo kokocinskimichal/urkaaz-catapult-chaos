@@ -26,44 +26,42 @@ class UnitPanelView(
         ImageButton(context).apply {
             contentDescription = context.getString(option.nameResource)
             scaleType = ImageView.ScaleType.CENTER_INSIDE
-            setPadding(dp(4), dp(4), dp(4), dp(4))
+            setPadding(dp(5), dp(5), dp(5), dp(5))
             setImageResource(option.iconResource)
             background = HudPanelStyle.background(context, Color.argb(80, 28, 33, 36))
+            clipToOutline = true
             setOnClickListener { onUnitSelected?.invoke(option.type) }
         }
     }
     private val sendWaveButton = ImageButton(context).apply {
         contentDescription = context.getString(R.string.match_hud_send_wave)
-        scaleType = ImageView.ScaleType.CENTER_INSIDE
-        setPadding(dp(3), dp(3), dp(3), dp(3))
-        setImageResource(R.drawable.send_wave_icon)
-        background = HudPanelStyle.background(context, Color.argb(100, 58, 50, 36))
+        scaleType = ImageView.ScaleType.FIT_CENTER
+        setPadding(0, 0, 0, 0)
+        setImageResource(R.drawable.match_hud_send_wave_button_states)
+        background = null
         setOnClickListener { onSendWave?.invoke() }
     }
-    private val sendWaveSlot = LinearLayout(context).apply {
-        orientation = VERTICAL
-        gravity = Gravity.CENTER
-        addView(sendWaveButton, LayoutParams(dp(48), dp(48)))
+    private val sendWaveSlot = FrameLayout(context).apply {
         addView(
-            TextView(context).apply {
-                text = context.getString(R.string.match_hud_send_wave_label)
-                gravity = Gravity.CENTER
-                textSize = 7f
-                maxLines = 1
-                setTextColor(Color.rgb(239, 220, 179))
-                UiTypography.applyButtonTypeface(this)
-            },
-            LayoutParams(-1, dp(12)),
+            sendWaveButton,
+            FrameLayout.LayoutParams(
+                dp(66),
+                dp(66),
+                Gravity.TOP or Gravity.CENTER_HORIZONTAL,
+            ),
         )
     }
 
     init {
         orientation = VERTICAL
         gravity = Gravity.CENTER
-        setPadding(dp(5), dp(8), dp(5), dp(3))
+        setPadding(dp(2), dp(8), dp(2), dp(3))
         val supplyColumnWidth = dp(80)
-        val unitHeaderWidth = options.size * (dp(48) + dp(2)) +
-            dp(48) + dp(3) - dp(2)
+        val unitSlotWidth = dp(60)
+        val unitSlotSpacing = dp(1)
+        val sendWaveSlotWidth = dp(66)
+        val unitHeaderWidth = options.size * (unitSlotWidth + unitSlotSpacing) +
+            sendWaveSlotWidth + unitSlotSpacing
         addView(
             LinearLayout(context).apply {
                 orientation = HORIZONTAL
@@ -75,11 +73,11 @@ class UnitPanelView(
                 addView(
                     groupHeader(context.getString(R.string.match_hud_units)),
                     LayoutParams(unitHeaderWidth, -1).apply {
-                        marginStart = dp(2)
+                        marginStart = dp(1)
                     },
                 )
             },
-            LayoutParams(supplyColumnWidth + dp(2) + unitHeaderWidth, dp(13)),
+            LayoutParams(supplyColumnWidth + dp(1) + unitHeaderWidth, dp(13)),
         )
         addView(
             LinearLayout(context).apply {
@@ -89,15 +87,15 @@ class UnitPanelView(
                 options.forEach { option ->
                     addView(
                         unitSlot(option, buttons.getValue(option)),
-                        LayoutParams(dp(48), dp(64)).apply {
-                            marginStart = dp(2)
+                        LayoutParams(unitSlotWidth, dp(76)).apply {
+                            marginStart = unitSlotSpacing
                         },
                     )
                 }
                 addView(
                     sendWaveSlot,
-                    LayoutParams(dp(48), dp(64)).apply {
-                        marginStart = dp(3)
+                    LayoutParams(sendWaveSlotWidth, dp(76)).apply {
+                        marginStart = unitSlotSpacing
                     },
                 )
             },
@@ -139,7 +137,7 @@ class UnitPanelView(
                 text = option.supplyCost.toString()
                 gravity = Gravity.CENTER
                 includeFontPadding = false
-                textSize = 7f
+                textSize = 9f
                 setTextColor(Color.rgb(239, 220, 179))
                 setPadding(dp(1), 0, dp(1), 0)
                 background = GradientDrawable().apply {
@@ -157,8 +155,8 @@ class UnitPanelView(
                     addView(
                         costBadge,
                         FrameLayout.LayoutParams(
-                            dp(16),
-                            dp(16),
+                            dp(20),
+                            dp(20),
                             Gravity.TOP or Gravity.END,
                         ).apply {
                             topMargin = dp(1)
@@ -166,7 +164,7 @@ class UnitPanelView(
                         },
                     )
                 },
-                LayoutParams(dp(48), dp(48)),
+                LayoutParams(dp(60), dp(60)),
             )
             addView(
                 TextView(context).apply {

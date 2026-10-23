@@ -72,7 +72,7 @@ internal class ManaOrbView(context: Context) : View(context) {
     override fun onDraw(canvas: Canvas) {
         super.onDraw(canvas)
         val centerX = width / 2f
-        val radius = min(width * 0.38f, height * 0.30f)
+        val radius = min(width * 0.3125f, height * 0.3125f)
         val centerY = height / 2f
         val shellSize = min(width, height).toFloat()
         val shellLeft = (width - shellSize) / 2f

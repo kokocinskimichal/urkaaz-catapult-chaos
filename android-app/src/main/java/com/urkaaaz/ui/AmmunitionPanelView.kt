@@ -31,7 +31,7 @@ class AmmunitionPanelView(
     init {
         orientation = VERTICAL
         gravity = Gravity.CENTER
-        setPadding(dp(5), dp(8), dp(5), dp(3))
+        setPadding(dp(3), dp(8), dp(3), dp(3))
         addView(
             groupHeader(context.getString(R.string.match_hud_ammunition)),
             LayoutParams(-1, dp(13)),
@@ -44,8 +44,8 @@ class AmmunitionPanelView(
                     addView(
                         slot.root,
                         LayoutParams(0, -1, 1f).apply {
-                            marginStart = dp(2)
-                            marginEnd = dp(2)
+                            marginStart = dp(1)
+                            marginEnd = dp(1)
                         },
                     )
                 }
@@ -129,9 +129,10 @@ class AmmunitionPanelView(
             ?: return null
         val button = ImageButton(context).apply {
             scaleType = ImageView.ScaleType.CENTER_INSIDE
-            setPadding(dp(4), dp(4), dp(4), dp(4))
+            setPadding(dp(5), dp(5), dp(5), dp(5))
             setImageResource(iconResource)
             background = HudPanelStyle.background(context, Color.argb(82, 28, 33, 36))
+            clipToOutline = true
             setOnClickListener { onAmmoSelected?.invoke(type) }
         }
         val reloadShade = AmmoReloadShade(context, dp(9).toFloat())
@@ -141,7 +142,7 @@ class AmmunitionPanelView(
         val stockCountText = TextView(context).apply {
             gravity = Gravity.CENTER
             includeFontPadding = false
-            textSize = 7f
+            textSize = 9f
             setTextColor(Color.WHITE)
             importantForAccessibility = View.IMPORTANT_FOR_ACCESSIBILITY_NO
             isClickable = false
@@ -150,7 +151,7 @@ class AmmunitionPanelView(
         val unlimitedStockIcon = ImageView(context).apply {
             setImageResource(LoadoutAssetCatalog.unlimitedIcon())
             scaleType = ImageView.ScaleType.FIT_CENTER
-            setPadding(dp(2), dp(2), dp(2), dp(2))
+            setPadding(0, 0, 0, 0)
             importantForAccessibility = View.IMPORTANT_FOR_ACCESSIBILITY_NO
             isClickable = false
             isFocusable = false
@@ -169,11 +170,11 @@ class AmmunitionPanelView(
         val reloadText = TextView(context).apply {
             gravity = Gravity.CENTER
             includeFontPadding = false
-            textSize = 8f
+            textSize = 9f
             maxLines = 1
             setTextColor(Color.WHITE)
             UiTypography.applyButtonTypeface(this)
-            setPadding(dp(3), 0, dp(3), 0)
+            setPadding(dp(2), 0, dp(2), 0)
             background = GradientDrawable().apply {
                 setColor(Color.argb(220, 20, 20, 20))
                 cornerRadius = dp(3).toFloat()
@@ -189,8 +190,8 @@ class AmmunitionPanelView(
             addView(
                 stockBadge,
                 FrameLayout.LayoutParams(
-                    dp(16),
-                    dp(16),
+                    dp(20),
+                    dp(20),
                     Gravity.TOP or Gravity.END,
                 ).apply {
                     topMargin = dp(1)
@@ -201,7 +202,7 @@ class AmmunitionPanelView(
                 reloadText,
                 FrameLayout.LayoutParams(
                     FrameLayout.LayoutParams.WRAP_CONTENT,
-                    dp(16),
+                    dp(20),
                     Gravity.CENTER,
                 ),
             )
@@ -209,7 +210,7 @@ class AmmunitionPanelView(
         val root = LinearLayout(context).apply {
             orientation = VERTICAL
             gravity = Gravity.CENTER
-            addView(iconFrame, LayoutParams(dp(48), dp(48)))
+            addView(iconFrame, LayoutParams(dp(60), dp(60)))
             addView(nameText, LayoutParams(-1, dp(11)))
         }
         val reloadDurationSeconds =

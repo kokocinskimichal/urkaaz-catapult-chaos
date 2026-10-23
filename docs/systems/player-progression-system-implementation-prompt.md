@@ -16,10 +16,10 @@ wyboru.
 Przed zmianami przeczytaj:
 
 - `AGENTS.md`;
-- `architecture.md`;
-- `AI_IMPLEMENTATION_RULES.md`;
-- `AI_PROJECT_MAP.md`;
-- `docs/PROJECT_KNOWLEDGE.md`;
+- `docs/architecture/architecture.md`;
+- `docs/architecture/implementation-rules.md`;
+- `docs/architecture/project-map.md`;
+- `docs/project/knowledge.md`;
 - `docs/systems/player-progression-system.md`;
 - `docs/systems/loadout-system.md`;
 - `docs/systems/loadout-system-implementation-prompt.md`;
@@ -220,8 +220,8 @@ niezachodzenia nawigacji po błędzie. Dla poprawnego startu sprawdź, że
   legacy.
 - Zaktualizuj `docs/systems/player-progression-system.md`,
   `docs/systems/loadout-system.md`, `docs/systems/campaign-system.md`,
-  `architecture.md`, `AI_PROJECT_MAP.md`, `docs/PROJECT_KNOWLEDGE.md` i
-  `GLOSSARY.md` tylko w zakresie faktycznie zaimplementowanego stanu.
+  `docs/architecture/architecture.md`, `docs/architecture/project-map.md`, `docs/project/knowledge.md` i
+  `docs/reference/GLOSSARY.md` tylko w zakresie faktycznie zaimplementowanego stanu.
   Rozróżnij kontrakty, działające adaptery i pozostałe blokery.
 - Jeśli źródła legacy wymagały decyzji użytkownika, najpierw ją uzyskaj;
   nie oznaczaj implementacji jako kompletnej przed rozstrzygnięciem.

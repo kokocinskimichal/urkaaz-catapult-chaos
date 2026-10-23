@@ -1,0 +1,94 @@
+# AGP — Match HUD Send Wave button
+
+Create a production-ready **Send Wave** button graphic for the Urkaaaz match
+HUD, matching the supplied blank normal and pressed button references used
+elsewhere in the game. It replaces the current square icon tile, so use a
+square button shape, not a wide or tall rectangular button. The button graphic
+contains the complete button art and icon only. Do not add a visible text
+label; the game uses the button without a `SEND WAVE` caption.
+
+## Required references
+
+Attach both blank button assets to the generation request:
+
+1. The normal-state button background.
+2. Its matching pressed-state button background.
+
+Choose a matching pair with a square 1:1 silhouette suitable for the current
+66 × 66 dp square display size, 10% larger than neighboring 60 × 60 dp icons.
+Do not use the long rectangular variants. Use the pair as
+the exact button templates. Preserve their canvas dimensions, square
+silhouette, corner cuts, bevels, material, palette, transparent margins, and
+decorative details. Do not redraw, restyle, resize, crop, or stretch the button
+backgrounds. Add the same simple icon to both references; the new normal and
+pressed outputs must align pixel-for-pixel with their corresponding templates.
+
+## Output assets
+
+Create exactly two PNG files:
+
+- `match_hud_send_wave_button_normal.png` — square normal reference with icon.
+- `match_hud_send_wave_button_pressed.png` — square pressed reference with the
+  same icon.
+
+Each output must use the exact square canvas dimensions and RGBA format of its
+matching attached reference. Target a 66 × 66 dp control; for a 4x asset this
+is 264 × 264 px. Preserve transparency outside the button silhouette.
+
+## Button content
+
+Place one simple, bold rally-command icon in the center of the square button: a
+war horn sounding toward a small, forward-moving formation mark. Use only a
+few chunky shapes; do not depict individual characters or a detailed battle
+scene. Keep the icon centered, fully inside the button face, and clearly
+recognizable within the 66 × 66 dp button.
+
+Do not bake words or other text into either image. Keep the same icon, scale,
+and placement in both state outputs. Only the button appearance should differ
+between normal and pressed, exactly as in the provided references.
+
+The existing `send_wave_icon.png` may be used only as a semantic reference for
+the action. Simplify it substantially; do not reproduce its detailed character
+collage.
+
+## Do not
+
+- Change or cover the reference button silhouette, bevels, corners, or
+  material.
+- Add any surrounding HUD, screen, landscape, device mockup, or extra button.
+- Add any text, letters, numbers, labels, badges, counters, resource values,
+  logos, or watermarks.
+- Depict unit portraits, individual characters, a fourth unit card,
+  ammunition, spells, or unsupported gameplay elements.
+- Add delicate line work, thin outlines, gradients, noise, or photographic
+  detail.
+- Change the icon, its alignment, or its color between states.
+
+## Acceptance checks
+
+1. Both outputs exactly match their respective square reference dimensions and
+   button silhouettes.
+2. The command icon is clearly distinct from unit portrait artwork and reads
+   as a rally/send action at 66 × 66 dp, 10% larger than neighboring slots.
+3. The icon is centered, unobstructed, and fully inside the reference button
+   face.
+4. Normal and pressed outputs align with their reference templates and use
+   identical icon placement.
+5. Both files are RGBA PNGs with the reference transparency preserved and
+   contain no text.
+6. Deliver exactly the two requested files, without a mockup or extra states.
+
+## Output and integration target
+
+Save both files for review under:
+
+```text
+assets_src/match/hud/
+```
+
+Show the two button states side by side and a separate preview at their
+66 × 66 dp display size beside the existing square unit tiles, without any
+caption. After visual review and approval, integrate both assets into
+`android-app/src/main/res/drawable-nodpi/` as the Send Wave button's normal and
+pressed states. Render the matching state graphic on the square button in
+`UnitPanelView`; do not add a separate text label.

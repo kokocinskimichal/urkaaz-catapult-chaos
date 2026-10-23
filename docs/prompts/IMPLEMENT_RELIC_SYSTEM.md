@@ -3,7 +3,7 @@
 Zaimplementuj kompletny system reliktów dekoracyjnych w repozytorium Urkaaaz.
 
 Pracuj autonomicznie i doprowadź zadanie do końca bez zatrzymywania się na
-pytania do użytkownika. Podejmuj decyzje zgodne z `architecture.md`,
+pytania do użytkownika. Podejmuj decyzje zgodne z `docs/architecture/architecture.md`,
 `AGENTS.md` oraz `docs/systems/relic-system.md`.
 
 ## Zakres
@@ -191,8 +191,8 @@ dodawaj reliktów `MEDIUM` ani `LARGE`.
 Zaktualizuj tylko bezpośrednio powiązaną dokumentację:
 
 - `docs/systems/relic-system.md`;
-- `docs/PROJECT_KNOWLEDGE.md`;
-- `GLOSSARY.md`, jeśli nowe typy lub nazwy nie są jeszcze opisane.
+- `docs/project/knowledge.md`;
+- `docs/reference/GLOSSARY.md`, jeśli nowe typy lub nazwy nie są jeszcze opisane.
 
 Nie twórz ogólnych notatek ani planów. Dokumentuj wyłącznie faktycznie
 zaimplementowane zachowanie.

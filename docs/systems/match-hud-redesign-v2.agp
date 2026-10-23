@@ -158,12 +158,15 @@ Use one dock with three adjacent groups in this exact left-to-right order:
      vertical meter inspired by classic action-RPG resource placement, with a
      clear numeric value such as `78/100`. Do not copy Diablo artwork, logos,
      interface assets, or exact visual styling.
-   - Keep all three spell choices readable and comfortably tappable; the mana
-     display must not dominate or squeeze the spell cards.
-   - Show cast/ready/active/unavailable status with both icon treatment and
-     readable text or symbols. Show effect details only when supplied by the
-     runtime: remaining duration for a timed effect, current/max HP for a
-     shield, or cooldown only if one exists.
+   - Keep all three spell choices readable and comfortably tappable; contain
+     each illustration at up to 50 × 50 dp within a 60 × 60 dp framed icon
+     slot so it does not protrude. Show only the spell name below each icon and
+     the Mana cost in a 20 × 20 dp badge over the icon.
+   - Show cast-ready, active, and unavailable states through icon treatment;
+     do not add persistent READY, ACTIVE, PLANNED, or LOW MANA labels under
+     spell icons. Show effect details only when supplied by the runtime:
+     remaining duration for a timed effect, current/max HP for a shield, or
+     cooldown only if one exists.
    - The implemented `FORTRESS_SHIELD` costs 80 mana and has 80 HP. It protects
      its own fortress and does not require manual target selection. It has no
      duration timer or cooldown. Do not show invented shield values or states.
@@ -191,15 +194,11 @@ narrower.
 
 ### Feedback and debug controls
 
-- Keep one compact, fixed message strip centered immediately above the bottom
-  command dock, as shown in the latest reference. The strip remains visible
-  throughout the match; in the neutral state it may read `READY`.
-- Change only the message content inside this same strip for current states
-  such as target selection, insufficient mana, unavailable selection, or
-  successful activation. Do not create a separate toast/banner, move or resize
-  the strip, or let messages reflow the dock.
-- Keep the strip shallow and non-blocking so it does not cover the aiming path,
-  active projectile, or important battlefield action.
+- Do not show a persistent READY strip or reserve space for one above the
+  command dock. Show text-only feedback transiently after an actual spell cast
+  attempt; hide it when there is no current feedback.
+- Keep transient feedback shallow and non-blocking so it does not cover the
+  aiming path, active projectile, or important battlefield action.
 - Keep DEBUG out of the normal production presentation. If the reference
   requires it, show it as a clearly secondary debug-only control, not part of
   the primary dock.

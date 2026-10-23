@@ -2,7 +2,10 @@ package com.urkaaaz.ui
 
 import android.content.Context
 import android.graphics.Color
+import android.graphics.drawable.GradientDrawable
 import android.view.Gravity
+import android.view.View
+import android.widget.FrameLayout
 import android.widget.ImageButton
 import android.widget.ImageView
 import android.widget.LinearLayout
@@ -25,7 +28,7 @@ class SpellPanelView(
     init {
         orientation = VERTICAL
         gravity = Gravity.CENTER
-        setPadding(dp(5), dp(8), dp(5), dp(3))
+        setPadding(dp(3), dp(8), dp(3), dp(3))
         addView(
             LinearLayout(context).apply {
                 orientation = HORIZONTAL
@@ -50,16 +53,13 @@ class SpellPanelView(
                 slots.forEach { slot ->
                     addView(
                         slot.root,
-                        LayoutParams(0, -1, 1f).apply {
-                            marginStart = dp(1)
-                            marginEnd = dp(1)
-                        },
+                        LayoutParams(0, -1, 1f),
                     )
                 }
                 addView(
                     manaOrb,
                     LayoutParams(dp(80), dp(80)).apply {
-                        marginStart = dp(2)
+                        marginStart = dp(1)
                     },
                 )
             },
@@ -102,11 +102,6 @@ class SpellPanelView(
                 slot.active = active
                 slot.ready = ready
             }
-            slot.statusText.text = context.getString(
-                R.string.match_hud_spell_cost_status,
-                slot.manaCost,
-                status,
-            )
             slot.button.contentDescription = context.getString(
                 R.string.match_hud_spell_accessibility,
                 context.getString(slot.nameResource),
@@ -123,10 +118,11 @@ class SpellPanelView(
         val iconResource = (artwork as? LoadoutAssetLookup.Found)?.drawableId
             ?: return null
         val button = ImageButton(context).apply {
-            scaleType = ImageView.ScaleType.CENTER_CROP
-            setPadding(dp(2), dp(2), dp(2), dp(2))
+            scaleType = ImageView.ScaleType.CENTER_INSIDE
+            setPadding(dp(5), dp(5), dp(5), dp(5))
             setImageResource(iconResource)
             background = HudPanelStyle.background(context, Color.argb(82, 28, 33, 36))
+            clipToOutline = true
             setOnClickListener { onSpellCast?.invoke(type) }
         }
         val name = TextView(context).apply {
@@ -139,20 +135,47 @@ class SpellPanelView(
             setTextColor(Color.rgb(239, 220, 179))
             UiTypography.applyButtonTypeface(this)
         }
-        val status = TextView(context).apply {
+        val costBadge = TextView(context).apply {
+            text = spell.manaCost.toString()
             gravity = Gravity.CENTER
             includeFontPadding = false
-            textSize = 7f
-            maxLines = 1
-            setTextColor(Color.rgb(225, 193, 119))
-            UiTypography.applyButtonTypeface(this)
+            textSize = 9f
+            setTextColor(Color.rgb(239, 220, 179))
+            setPadding(dp(1), 0, dp(1), 0)
+            background = GradientDrawable().apply {
+                shape = GradientDrawable.OVAL
+                setColor(Color.argb(225, 26, 26, 26))
+                setStroke(dp(1), Color.rgb(225, 193, 119))
+            }
+            importantForAccessibility = View.IMPORTANT_FOR_ACCESSIBILITY_NO
+            isClickable = false
+            isFocusable = false
         }
         val root = LinearLayout(context).apply {
             orientation = VERTICAL
             gravity = Gravity.CENTER
-            addView(button, LayoutParams(dp(48), dp(48)))
+            clipChildren = true
+            clipToPadding = true
+            addView(
+                FrameLayout(context).apply {
+                    clipChildren = true
+                    clipToPadding = true
+                    addView(button, FrameLayout.LayoutParams(-1, -1))
+                    addView(
+                        costBadge,
+                        FrameLayout.LayoutParams(
+                            dp(20),
+                            dp(20),
+                            Gravity.TOP or Gravity.END,
+                        ).apply {
+                            topMargin = dp(1)
+                            marginEnd = dp(1)
+                        },
+                    )
+                },
+                LayoutParams(dp(60), dp(60)),
+            )
             addView(name, LayoutParams(-1, dp(12)))
-            addView(status, LayoutParams(-1, dp(10)))
         }
         return SpellSlot(
             type = type,
@@ -160,7 +183,6 @@ class SpellPanelView(
             implemented = spell.implemented,
             nameResource = nameResource,
             button = button,
-            statusText = status,
             root = root,
             active = false,
             ready = false,
@@ -208,7 +230,6 @@ class SpellPanelView(
         val implemented: Boolean,
         val nameResource: Int,
         val button: ImageButton,
-        val statusText: TextView,
         val root: LinearLayout,
         var active: Boolean,
         var ready: Boolean,

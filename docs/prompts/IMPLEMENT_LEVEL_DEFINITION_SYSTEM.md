@@ -3,7 +3,7 @@
 ## Cel
 
 Zaimplementuj kompletny system definicji i przechowywania poziomów Urkaaaz
-zgodnie z dokumentem `LEVEL_DEFINITION_ARCHITECTURE.md`.
+zgodnie z dokumentem `docs/architecture/level-definition-architecture.md`.
 
 System ma dostarczać niemutowalne, deterministyczne i walidowalne definicje
 poziomów kampanii. Definicja poziomu ma opisywać bazowy teren, fundamenty,
@@ -18,9 +18,9 @@ Pracuj bezpośrednio na gałęzi `develop`. Nie twórz commita i nie wykonuj pus
 Przed zmianami przeczytaj:
 
 - `AGENTS.md`;
-- `architecture.md`;
-- `docs/PROJECT_KNOWLEDGE.md`;
-- `LEVEL_DEFINITION_ARCHITECTURE.md`;
+- `docs/architecture/architecture.md`;
+- `docs/project/knowledge.md`;
+- `docs/architecture/level-definition-architecture.md`;
 - istniejące kontrakty w `game-contracts`;
 - istniejące definicje i testy `game-campaign`;
 - istniejące modele, snapshoty i testy `game-simulation`;
@@ -461,9 +461,9 @@ Testuj:
 
 Zaktualizuj dokumentację bez kopiowania całej implementacji:
 
-- `LEVEL_DEFINITION_ARCHITECTURE.md` — jeśli kontrakty lub reguły wymagają
+- `docs/architecture/level-definition-architecture.md` — jeśli kontrakty lub reguły wymagają
   doprecyzowania;
-- `docs/PROJECT_KNOWLEDGE.md` — bieżący stan wdrożenia;
+- `docs/project/knowledge.md` — bieżący stan wdrożenia;
 - odpowiedni dokument `docs/` dla etapu migracji;
 - dokumentację skilla `/addLevel`, jeżeli został dodany lub zmieniony.
 
@@ -485,7 +485,7 @@ Po implementacji systemu wymagaj, aby:
   `CampaignLevelDefinition`, `CampaignLevelRegistry` i `MatchScenario`;
 - skill nie tworzył własnych, równoległych modeli definicji, builderów,
   validatorów, registry, scenariuszy ani snapshotów;
-- każda twarda reguła z `LEVEL_DEFINITION_ARCHITECTURE.md` była sprawdzana
+- każda twarda reguła z `docs/architecture/level-definition-architecture.md` była sprawdzana
   zarówno przez runtime validator, jak i przez workflow skilla;
 - skill nie generował kodu, który omija validator, wpisuje dane bezpośrednio do
   symulacji albo obchodzi granice Clean Architecture;
@@ -573,8 +573,8 @@ Przed zakończeniem wykonaj ręczny review:
 - typowanie kontraktów;
 - deterministyczność;
 - testowalność;
-- zgodność z `architecture.md`;
-- zgodność z `LEVEL_DEFINITION_ARCHITECTURE.md`;
+- zgodność z `docs/architecture/architecture.md`;
+- zgodność z `docs/architecture/level-definition-architecture.md`;
 - wykorzystanie istniejących typów i mechanizmów;
 - brak kopiowania `GameEngine`;
 - brak maga;

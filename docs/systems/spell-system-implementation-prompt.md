@@ -11,8 +11,8 @@ przenieś do niego wszystkie zaklęcia legacy, zgodnie z:
 
 - `docs/systems/spell-system.md` — zaakceptowana architektura, kategorie celu,
   źródłowy balans i etapowy plan migracji;
-- `architecture.md`, `AGENTS.md`, `AI_IMPLEMENTATION_RULES.md`,
-  `AI_PROJECT_MAP.md` i `docs/PROJECT_KNOWLEDGE.md` — granice modułów i
+- `docs/architecture/architecture.md`, `AGENTS.md`, `docs/architecture/implementation-rules.md`,
+  `docs/architecture/project-map.md` i `docs/project/knowledge.md` — granice modułów i
   obowiązujący workflow;
 - `.github/skills/addSpell/SKILL.md` — standard przyszłego dodawania czarów;
 - aktualnym kodem oraz jego testami, nie samymi opisami planowanej
@@ -124,7 +124,7 @@ automatycznie albo działają na całą armię/obiekt.
 
 Rozszerz istniejące `MatchCommand.CastSpell`, `MatchEvent.SpellCast`/
 eventy gameplayowe, wyniki komend i snapshoty w sposób zgodny z
-`architecture.md`.
+`docs/architecture/architecture.md`.
 
 - `game-contracts` nie może zależeć od `game-domain` ani Androida.
 - Nie zmieniaj serializowanych nazw istniejących ID.
@@ -280,7 +280,7 @@ Zaktualizuj:
 - `.github/skills/addSpell/SKILL.md`: dopasuj ścieżki i workflow do
   faktycznie dostarczonej architektury, nadal respektując oddzielny
   LoadoutSystem;
-- `docs/PROJECT_KNOWLEDGE.md` i `GLOSSARY.md`, jeśli pojawiły się trwałe
+- `docs/project/knowledge.md` i `docs/reference/GLOSSARY.md`, jeśli pojawiły się trwałe
   fakty lub nowe pojęcia.
 
 Nie deklaruj ukończenia, jeśli którakolwiek z tych rzeczy nie działa:

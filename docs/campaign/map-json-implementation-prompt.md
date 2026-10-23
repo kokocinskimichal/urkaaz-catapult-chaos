@@ -2,11 +2,11 @@
 
 > Status: implementacja tego promptu znajduje się w repozytorium. Wynik i
 > aktualne przypisanie map opisano w
-> [`MAP_JSON_CAMPAIGN_MIGRATION_PLAN.md`](MAP_JSON_CAMPAIGN_MIGRATION_PLAN.md).
+> [`map-json-migration-plan.md`](map-json-migration-plan.md).
 
 Skopiuj cały prompt z następnej linii do agenta implementującego. Ma on
 zrealizować plan z
-[`MAP_JSON_CAMPAIGN_MIGRATION_PLAN.md`](MAP_JSON_CAMPAIGN_MIGRATION_PLAN.md).
+[`map-json-migration-plan.md`](map-json-migration-plan.md).
 
 ---
 
@@ -25,9 +25,9 @@ Najpierw przeczytaj:
 
 ```text
 AGENTS.md
-architecture.md
-docs/MAP_JSON_CAMPAIGN_MIGRATION_PLAN.md
-docs/PROJECT_KNOWLEDGE.md
+docs/architecture/architecture.md
+docs/campaign/map-json-migration-plan.md
+docs/project/knowledge.md
 game-contracts/src/main/kotlin/com/urkaaaz/contracts/MapDefinition.kt
 game-contracts/src/main/kotlin/com/urkaaaz/contracts/WorldDimensions.kt
 game-campaign/src/main/kotlin/com/urkaaaz/campaign/CampaignLevelDefinition.kt
@@ -341,9 +341,9 @@ Nie commituj, nie pushuj i nie zmieniaj branchy.
 
 Zaktualizuj dokumentację, aby opisywała implementację, a nie dawne założenia:
 
-- `docs/MAP_JSON_CAMPAIGN_MIGRATION_PLAN.md`;
-- `docs/PROJECT_KNOWLEDGE.md`;
-- `docs/README.md`;
+- `docs/campaign/map-json-migration-plan.md`;
+- `docs/project/knowledge.md`;
+- `docs/migration/README.md`;
 - instrukcję map-editor-web, jeśli zmieni się eksport lub kontrakt.
 
 Na końcu podaj:

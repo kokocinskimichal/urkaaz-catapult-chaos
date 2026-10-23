@@ -2,7 +2,7 @@
 
 **Status:** Completed; this document records the popup's first implementation.
 The approved outcome plaques and biome illustrations were added afterward. See
-`docs/PROJECT_KNOWLEDGE.md` for the current assets and behavior.
+`docs/project/knowledge.md` for the current assets and behavior.
 
 ## Goal
 

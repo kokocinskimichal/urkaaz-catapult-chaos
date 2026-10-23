@@ -385,7 +385,7 @@ Integracja wykorzystuje istniejące granice odpowiedzialności:
   kompletność i poprawność wygenerowanych sekwencji;
 - `android-app/src/main/res/drawable-nodpi/` — nowe, zatwierdzone klatki;
 - `assets_src/ammunition/fire-rain/` — zatwierdzone oryginały i podglądy;
-- `docs/PROJECT_KNOWLEDGE.md` — po implementacji, trwałe fakty o
+- `docs/project/knowledge.md` — po implementacji, trwałe fakty o
   zatwierdzonych assetach i zachowaniu renderera.
 
 Dokument nie zatwierdza nowych nazw kontraktów gameplayowych ani zmian

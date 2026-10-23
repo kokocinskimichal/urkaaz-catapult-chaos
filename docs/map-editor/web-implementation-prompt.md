@@ -1,7 +1,7 @@
 # Prompt implementacyjny: webowy edytor map Urkaaaz
 
 Skopiuj cały tekst od następnej linii do agenta implementującego. Prompt
-realizuje kompletny plan z `docs/MAP_EDITOR_WEB_MIGRATION_PLAN.md`.
+realizuje kompletny plan z `docs/map-editor/web-migration-plan.md`.
 
 ---
 
@@ -12,12 +12,11 @@ Wykonaj zadanie od początku do końca: analiza repozytorium, projekt kontraktu,
 implementacja, migracja, testy, uruchomienie i dokumentacja. Nie zatrzymuj się
 na szkielecie UI, makiecie ani ekranie demonstracyjnym. Nie pytaj o akceptację
 po każdym etapie. Podejmuj decyzje zgodne z tym promptem, planem migracji i
-istniejącą architekturą. Jeśli napotkasz niezgodność z dawnym dokumentem
-desktopowym, nowszy plan webowy i ten prompt mają pierwszeństwo.
+istniejącą architekturą. Dokumenty dawnego edytora desktopowego są
+nieaktualne; nie odtwarzaj usuniętego interfejsu ani jego adaptera assetów.
 
-Nie commituj, nie pushuj i nie usuwaj istniejącego edytora Swing bez wyraźnego
-polecenia użytkownika. Nowy edytor webowy ma początkowo działać równolegle ze
-starym.
+Nie commituj ani nie pushuj bez wyraźnego polecenia użytkownika. Webowy
+edytor jest jedynym interfejsem authoringu map.
 
 ## 1. Dokumentacja i analiza przed zmianami
 
@@ -31,11 +30,11 @@ Najpierw przeczytaj:
 
 ```text
 AGENTS.md
-architecture.md
-docs/MAP_EDITOR_WEB_MIGRATION_PLAN.md
-docs/MAP_EDITOR_DESIGN.md
-docs/MAP_EDITOR_RISKS.md
-docs/PROJECT_KNOWLEDGE.md
+docs/architecture/architecture.md
+docs/map-editor/web-migration-plan.md
+docs/map-editor/design.md
+docs/map-editor/risks.md
+docs/project/knowledge.md
 ```
 
 Następnie przeanalizuj:
@@ -47,8 +46,6 @@ game-assets
 map-editor-domain
 map-editor-format
 map-editor-rendering
-map-editor-assets
-map-editor-desktop
 android-app
 ```
 
@@ -68,9 +65,8 @@ Znajdź i wykorzystaj istniejące:
 - testy kontraktów, kampanii, formatu oraz obecnego edytora.
 
 Nie twórz drugiego równoległego modelu mapy, drugiego systemu biomów ani
-drugiego ręcznie utrzymywanego walidatora. Jeśli obecny kod jest jeszcze
-desktopowy lub kafelkowy, zachowaj kompatybilność danych, ale zmień główny
-workflow UI na rysowanie profilu.
+drugiego ręcznie utrzymywanego walidatora. Zachowaj kompatybilność danych
+legacy, ale używaj webowego workflow rysowania profilu.
 
 ## 2. Cel końcowy
 
@@ -565,11 +561,10 @@ Dodaj testy jednostkowe i integracyjne dla:
 
 Zaktualizuj:
 
-- `docs/MAP_EDITOR_WEB_MIGRATION_PLAN.md`, jeśli implementacja ujawni
+- `docs/map-editor/web-migration-plan.md`, jeśli implementacja ujawni
   konieczne korekty planu;
-- `docs/MAP_EDITOR_DESIGN.md`, oznaczając które założenia desktopowe są
-  nieaktualne;
-- `docs/PROJECT_KNOWLEDGE.md`, dodając faktycznie wdrożone decyzje;
+- `docs/map-editor/design.md`, opisując aktualny webowy workflow;
+- `docs/project/knowledge.md`, dodając faktycznie wdrożone decyzje;
 - README lub dokument uruchamiania, jeśli repozytorium posiada odpowiednią
   sekcję.
 

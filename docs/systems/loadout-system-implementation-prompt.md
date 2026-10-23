@@ -30,8 +30,8 @@ amunicji i czarów zgodnie z:
 - zrzutem ekranu Loadoutu dostarczonym przez użytkownika — układ landscape
   16:9, trzy sąsiadujące panele jednostek/amunicji/czarów oraz stały dolny
   pasek z podsumowaniem i akcją startu; nie kopiuj fikcyjnej zawartości;
-- `architecture.md`, `AGENTS.md`, `AI_IMPLEMENTATION_RULES.md`,
-  `AI_PROJECT_MAP.md` i `docs/PROJECT_KNOWLEDGE.md` — aktualną architekturą,
+- `docs/architecture/architecture.md`, `AGENTS.md`, `docs/architecture/implementation-rules.md`,
+  `docs/architecture/project-map.md` i `docs/project/knowledge.md` — aktualną architekturą,
   workflow i stanem repozytorium;
 - `docs/systems/campaign-system.md` — przepływem Campaign → Loadout → Match;
 - `docs/systems/spell-system.md` — granicą odpowiedzialności spelli i
@@ -188,7 +188,7 @@ Utwórz lub uzupełnij jedną kanoniczną, niemutowalną reprezentację
 `MatchLoadout` dla jednostek, trzech slotów amunicji i czarów.
 
 - Umieść ją w warstwie zgodnej z istniejącym `application.loadout` i
-  `architecture.md`.
+  `docs/architecture/architecture.md`.
 - Zbadaj obecny `game-domain.SpellLoadout` oraz wszystkich jego konsumentów.
   Reużyj/przenieś odpowiedzialność, nie utrzymuj drugiej niezależnej listy
   defaultów ani równoległego modelu.
@@ -348,8 +348,8 @@ Zaktualizuj `docs/systems/loadout-system.md`, tak aby odróżniał pierwotny pla
 od faktycznie zaimplementowanych kontraktów i zachowań. Zachowaj link do tego
 promptu oraz do plików AGP; odnotuj, że grafiki są oczekiwane w osobnym kroku.
 Zaktualizuj też
-`docs/PROJECT_KNOWLEDGE.md`, `AI_PROJECT_MAP.md`, `architecture.md` i/lub
-`GLOSSARY.md` tylko tam, gdzie implementacja wprowadza trwałą zmianę
+`docs/project/knowledge.md`, `docs/architecture/project-map.md`, `docs/architecture/architecture.md` i/lub
+`docs/reference/GLOSSARY.md` tylko tam, gdzie implementacja wprowadza trwałą zmianę
 odpowiedzialności, przepływu lub nowy termin.
 
 Nie deklaruj funkcji jako zaimplementowanej, jeśli istnieją tylko modele,

@@ -147,4 +147,4 @@ git status --short
 
 `SimulationReplayRegressionTest` uruchamia tę samą sekwencję komend i ticków
 dwukrotnie oraz porównuje snapshoty i eventy. Zmiany Android UI powinny
-uwzględniać `architecture.md` i odpowiednie testy graniczne.
+uwzględniać `docs/architecture/architecture.md` i odpowiednie testy graniczne.

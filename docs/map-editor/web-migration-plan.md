@@ -2,15 +2,14 @@
 
 ## Status dokumentu
 
-Etapy 1–7 mają pierwszą lokalną implementację w `map-editor-web`. Swing
-pozostaje utrzymany równolegle. Webowy edytor używa tego samego wersjonowanego
-JSON i zachowuje `terrainTiles` przy imporcie/eksporcie; przeglądarkowa
-walidacja jest raportem interaktywnym, a Kotlinowy validator nadal pozostaje
-źródłem autorytatywnym.
+Etapy 1–7 mają lokalną implementację w `map-editor-web`. Edytor Swing i jego
+adapter assetów zostały usunięte; webowy edytor jest jedynym narzędziem
+authoringu map. Używa tego samego wersjonowanego JSON i zachowuje
+`terrainTiles` przy imporcie/eksporcie; walidacja Kotlinowa pozostaje
+autorytatywnym runtime gate.
 
-Ten dokument jest planem działania. Nie oznacza rozpoczęcia implementacji ani
-zmiany obecnego edytora. Aktualny edytor Swing pozostaje bez zmian do czasu
-osobnej decyzji o rozpoczęciu prac.
+Ten dokument opisuje migrację i decyzje, które doprowadziły do obecnej
+implementacji webowej.
 
 ## Cel
 
@@ -134,12 +133,12 @@ w obecnym modelu domenowym.
 
 ## Plan prac
 
-### Etap 0 — decyzja i kontrakt
+### Etap 0 — decyzja i kontrakt (ukończony)
 
 - zaakceptować kierunek webowy;
 - ustalić, czy aplikacja ma działać wyłącznie lokalnie, czy również jako
   hostowana strona;
-- ustalić, czy pierwsza wersja ma zastąpić Swing, czy działać równolegle;
+- webowy edytor działa lokalnie jako główne narzędzie authoringu;
 - opisać docelowy kontrakt operacji rysowania profilu;
 - nie zmieniać jeszcze kodu.
 
@@ -231,13 +230,12 @@ bez utraty właściwości.
 **Kryterium zakończenia:** eksport webowy jest akceptowany przez istniejący
 loader i walidator map.
 
-### Etap 8 — decyzja o zastąpieniu Swing
+### Etap 8 — usunięcie edytora desktopowego (ukończony)
 
-- porównać wygodę rysowania z obecnym Swing;
-- wykonać test na kilku mapach kampanii;
-- sprawdzić import, eksport, zoom, historię i fundamenty;
-- zdecydować, czy Swing pozostaje jako narzędzie awaryjne;
-- dopiero po akceptacji usunąć lub zdeprecjonować stare UI.
+- usunięto moduł Swing `map-editor-desktop`;
+- usunięto używany wyłącznie przez niego moduł `map-editor-assets`;
+- zaktualizowano konfigurację Gradle i dokumentację;
+- `map-editor-web` pozostaje jedynym interfejsem do authoringu map.
 
 ## Testy i walidacja
 

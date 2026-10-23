@@ -89,7 +89,7 @@ class SupplyGaugeView(context: Context) : View(context) {
             ringPaint,
         )
 
-        val iconSize = min(width * 0.83f, height * 0.76f)
+        val iconSize = min(width * 0.625f, height * 0.625f)
         val iconBounds = RectF(
             centerX - iconSize / 2f,
             centerY - iconSize / 2f,

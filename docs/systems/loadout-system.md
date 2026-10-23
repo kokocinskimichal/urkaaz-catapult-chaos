@@ -61,7 +61,7 @@ Poza zakresem:
 
 ## Istniejące rozwiązania i ryzyko duplikacji
 
-`architecture.md` już przewiduje `application.loadout` z
+`docs/architecture/architecture.md` już przewiduje `application.loadout` z
 `MatchLoadout`, `LoadoutValidator` i `LoadoutRepository`, a
 `campaign-system.md` opisuje przepływ `Campaign → Loadout → Match`. To
 zatwierdzony kierunek, który należy uzupełnić, a nie zastępować nowym modułem
@@ -548,7 +548,7 @@ pokrywają core, mapowanie scenariusza i odrzucenia komend.
 
 - `docs/systems/loadout-system-implementation-prompt.md` — kopiowalny prompt
   do end-to-end dokończenia LoadoutSystemu; nowe grafiki są dodawane osobno.
-- `architecture.md` — granica `application.loadout` i kontrakt `MatchScenario`;
+- `docs/architecture/architecture.md` — granica `application.loadout` i kontrakt `MatchScenario`;
 - `docs/systems/campaign-system.md` — kolejność Campaign → Loadout → Match;
 - `docs/systems/player-progression-system.md` — profil, stock i granica
   zakupów;

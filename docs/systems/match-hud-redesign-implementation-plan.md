@@ -54,7 +54,11 @@ Jeden kompaktowy dok z trzema sąsiadującymi grupami, w tej kolejności:
      jednostek i akcją wysłania fali.
    - Wyświetlać najwyżej trzy jednostki z zatwierdzonego loadoutu i poziomu;
      pod ikoną pokazywać nazwę, a koszt Supply w plakietce na ikonie, zachowując
-     stan dostępności.
+     stan dostępności. Grafika jednostek ma do 50 × 50 dp w slotach 60 × 60 dp,
+     a plakietka Supply ma 20 × 20 dp. `SEND WAVE` używa kwadratowych grafik
+     stanów normalnego i wciśniętego o rozmiarze 66 × 66 dp, bez tekstowej
+     etykiety. Sekcja jednostek i rozkazów jest szersza; mniejsze odstępy
+     amunicji i czarów pomagają zachować miejsce w doku.
    - Zachować wybór jednostki do wystawienia i akcję `SEND WAVE`. Nie dodawać
      przycisku ataku.
 
@@ -64,11 +68,13 @@ Jeden kompaktowy dok z trzema sąsiadującymi grupami, w tej kolejności:
    - Umieścić podpis `AMMUNITION` pośrodku górnej części panelu.
    - Pod każdą ikoną pokazywać wyłącznie nazwę amunicji; skończony zapas
      prezentować liczbą w plakietce, a nieograniczony zapas ikoną nieskończoności
-     w tej samej plakietce.
+     w tej samej plakietce. Grafika ma do 50 × 50 dp w slocie 60 × 60 dp, a
+     plakietka zapasu ma 20 × 20 dp.
    - Podczas przeładowania nakładać na ikonę licznik oraz przyciemnioną maskę,
      która obejmuje ikonę i pomarańczowe zaznaczenie oraz odsłania je
-     proporcjonalnie do postępu. Bez napisu `READY`; gotowa ikona jest aktywna,
-     a ikona w trakcie przeładowania nieaktywna.
+     proporcjonalnie do postępu. Plakietka licznika przeładowania ma 20 dp
+     wysokości. Bez napisu `READY`; gotowa ikona jest aktywna, a ikona w trakcie
+     przeładowania nieaktywna.
    - Każda zmiana wybranego typu rozpoczyna jego pełne przeładowanie od zera
      postępu; ponowne wybranie tego samego typu nie resetuje timera.
    - Nie pokazywać slotów zastępczych ani amunicji niedostępnej w meczu.
@@ -77,6 +83,13 @@ Jeden kompaktowy dok z trzema sąsiadującymi grupami, w tej kolejności:
    - Umieścić podpis `SPELLS` nad slotami czarów, a `MANA` nad kulą many.
    - Wyświetlać najwyżej trzy czary z zatwierdzonego loadoutu i dostępności
      poziomu. Nie sugerować, że czar bez runtime'u można rzucić.
+   - Każda ikona mieści się w ramce slotu i wypełnia ją z minimalnym
+     wewnętrznym odstępem; pod ikoną pokazuje się wyłącznie nazwa czaru, a
+     koszt many znajduje się w plakietce 20 × 20 dp na grafice do 50 × 50 dp
+     w slocie 60 × 60 dp.
+   - Nie wyświetlać stałych etykiet `READY`, `ACTIVE`, `PLANNED` ani
+     `LOW MANA`; dostępność i aktywny stan przekazują styl slotu oraz opis
+     dostępności dla czytnika ekranu.
    - Kulę many umieścić na skrajnym prawym brzegu sekcji czarów.
    - Pokazywać wartość liczbową many oraz maksymalną pojemność pośrodku kuli.
    - Poziom ciemnoniebieskiego płynu w kuli ma odpowiadać proporcji aktualnej many:
@@ -87,12 +100,12 @@ Jeden kompaktowy dok z trzema sąsiadującymi grupami, w tej kolejności:
      są renderowane dynamicznie, nie wypalane w jednym PNG ani nie generowane
      jako osobne grafiki dla kolejnych wartości many.
    - Każdy czar, w tym `FORTRESS_SHIELD`, zajmuje zwykły slot i korzysta z
-     tego samego układu oraz wzorca interakcji. Koszt, dostępność i status
-     prezentować na podstawie danych danego czaru; szczegóły efektu pokazywać
-     tylko wtedy, gdy są zdefiniowane i dostępne w stanie prezentacyjnym.
+     tego samego układu oraz wzorca interakcji. Koszt i dostępność pochodzą z
+     danych danego czaru; szczegóły efektu pokazywać tylko wtedy, gdy są
+     zdefiniowane i dostępne w stanie prezentacyjnym.
 
-Lewa grupa Supply/jednostki/rozkazy i prawa grupa czary/mana mają mieć tę samą
-szerokość. Środkowa grupa amunicji może być węższa.
+Grupa Supply/jednostki/rozkazy jest szersza od grupy czary/mana. Środkowa
+grupa amunicji pozostaje węższa i ma ograniczone odstępy między slotami.
 
 ### Przejściowe komunikaty czarów
 

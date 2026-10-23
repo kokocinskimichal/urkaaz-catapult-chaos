@@ -11,8 +11,8 @@ repozytorium Urkaaaz, zgodnie z:
 
 - `docs/systems/fire-rain-presentation.md` — źródło prawdy dla zatwierdzonej
   architektury, zakresu, etapów, kryteriów akceptacji i otwartych decyzji;
-- `architecture.md`, `AI_IMPLEMENTATION_RULES.md`, `AI_PROJECT_MAP.md` oraz
-  `docs/PROJECT_KNOWLEDGE.md` — reguły i kontekst projektu;
+- `docs/architecture/architecture.md`, `docs/architecture/implementation-rules.md`, `docs/architecture/project-map.md` oraz
+  `docs/project/knowledge.md` — reguły i kontekst projektu;
 - istniejącymi kontraktami, mapperem, katalogiem assetów, widokiem,
   rendererem i ich testami.
 
@@ -224,7 +224,7 @@ Dodaj lub rozszerz focused testy dla:
 - braku mutacji gameplayu i braku zależności Androida w core.
 
 Zaktualizuj `docs/systems/fire-rain-presentation.md` o rozstrzygnięte
-decyzje i rzeczywiście dostarczone zachowanie oraz `docs/PROJECT_KNOWLEDGE.md`
+decyzje i rzeczywiście dostarczone zachowanie oraz `docs/project/knowledge.md`
 o trwałe fakty dotyczące assetów i renderera. Nie opisuj planowanych
 elementów jako ukończonych.
 

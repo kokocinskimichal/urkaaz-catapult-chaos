@@ -211,10 +211,12 @@ osobnego podglądu symulacji, jeśli pojawią się problemy w rozgrywce.
 
 ## Ryzyko 17: platforma edytora
 
-**Pytanie:** Czy edytor ma być osobną aplikacją desktopową na komputer?
+**Pytanie:** Czy edytor ma być aplikacją webową czy natywną aplikacją
+desktopową?
 
-**Decyzja:** Tak. Edytor będzie osobną aplikacją desktopową.
+**Decyzja:** Edytor jest lokalną aplikacją webową uruchamianą w przeglądarce.
+Osobny edytor desktopowy Swing został usunięty.
 
-**Konsekwencja:** Interfejs może korzystać z myszy, klawiatury, drag-and-drop,
-lokalnego systemu plików i większego viewportu. Android pozostaje klientem
-runtime map i nie przejmuje odpowiedzialności za authoring.
+**Konsekwencja:** Interfejs korzysta z przeglądarkowego Canvas i importu/
+eksportu plików. Android pozostaje klientem runtime map i nie przejmuje
+odpowiedzialności za authoring.

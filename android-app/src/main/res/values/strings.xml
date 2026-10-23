@@ -51,7 +51,6 @@
     <string name="match_hud_spells">SPELLS</string>
     <string name="match_hud_mana">MANA</string>
     <string name="match_hud_send_wave">Send deployed unit wave</string>
-    <string name="match_hud_send_wave_label">WAVE</string>
     <string name="match_hud_supply_description">Supply %1$d of %2$d</string>
     <string name="match_hud_unit_accessibility">%1$s, costs %2$d supply, %3$s</string>
     <string name="match_hud_unit_sapper">SAPPER</string>
@@ -74,7 +73,6 @@
     <string name="match_hud_active">ACTIVE</string>
     <string name="match_hud_planned">PLANNED</string>
     <string name="match_hud_low_mana">LOW MANA</string>
-    <string name="match_hud_spell_cost_status">%1$d MANA · %2$s</string>
     <string name="match_hud_spell_accessibility">%1$s, costs %2$d mana, %3$s</string>
     <string name="match_hud_spell_short_ice_trap">ICE</string>
     <string name="match_hud_spell_short_runic_bastion">BASTION</string>

@@ -1,5 +1,91 @@
 # Urkaaaz agent guide
 
+## Dokumentacja i punkt wejścia
+
+Ten plik jest punktem wejścia dla agenta i jest wczytywany na początku każdej
+sesji. Poniższy indeks obejmuje dokumentację projektu poza instrukcjami skilli
+w `.github/skills/`. Do zadania czytaj dokumenty z odpowiednich sekcji zamiast
+wczytywać cały zbiór.
+
+### Architektura i kontrakty
+
+- [Architektura](docs/architecture/architecture.md)
+- [Reguły implementacji](docs/architecture/implementation-rules.md)
+- [Architektura definicji poziomów](docs/architecture/level-definition-architecture.md)
+- [Mapa projektu i przepływów](docs/architecture/project-map.md)
+- [Struktura projektu](docs/architecture/project-structure.md)
+
+### Stan i wiedza projektu
+
+- [Changelog](docs/project/CHANGELOG.md)
+- [Bieżący stan](docs/project/current-state.md)
+- [Skrzynka pomysłów](docs/project/idea-inbox.md)
+- [Przekrojowy backlog pomysłów](docs/project/ideas.md)
+- [Wiedza implementacyjna](docs/project/knowledge.md)
+- [Postęp refaktoryzacji](docs/project/refactor-progress.md)
+- [Słownik](docs/reference/GLOSSARY.md)
+
+### Migracja
+
+- [Indeks dokumentów migracji](docs/migration/README.md)
+- [Plan migracji](docs/migration/roadmap.md)
+- [M0 — inwentaryzacja](docs/migration/m0-inventory.md)
+- [M1 — raport](docs/migration/m1-report.md)
+- [M2 — kontrakty](docs/migration/m2-contracts.md) · [raport](docs/migration/m2-report.md)
+- [M3 — domena](docs/migration/m3-domain.md) · [raport](docs/migration/m3-report.md)
+- [M4 — symulacja](docs/migration/m4-simulation.md) · [raport](docs/migration/m4-report.md)
+- [M5 — kampania](docs/migration/m5-campaign.md) · [raport](docs/migration/m5-report.md)
+- [M6 — AI](docs/migration/m6-ai.md) · [raport](docs/migration/m6-report.md)
+- [M7 — assety](docs/migration/m7-assets.md) · [raport](docs/migration/m7-report.md)
+- [M8 — assety](docs/migration/m8-assets.md) · [raport](docs/migration/m8-report.md)
+- [M9 — UI](docs/migration/m9-ui.md) · [raport](docs/migration/m9-report.md)
+- [M10 — integracja lokalna](docs/migration/m10-local-integration.md) · [raport](docs/migration/m10-report.md)
+- [M11 — porównanie](docs/migration/m11-comparison.md) · [raport](docs/migration/m11-report.md)
+
+### Kampania i mapy
+
+- [Migracja map kampanii do JSON](docs/campaign/map-json-migration-plan.md)
+- [Prompt implementacji map JSON](docs/campaign/map-json-implementation-prompt.md)
+- [Rozdział 1 — README map](docs/campaign/maps/chapter1/README.md)
+- [Rozdział 1 — porównanie map](docs/campaign/maps/chapter1/COMPARISON.md)
+
+### Edytor map
+
+- [Projekt edytora](docs/map-editor/design.md)
+- [Ryzyka](docs/map-editor/risks.md)
+- [Migracja edytora webowego](docs/map-editor/web-migration-plan.md)
+- [Prompt implementacji edytora webowego](docs/map-editor/web-implementation-prompt.md)
+- [README modułu webowego](docs/map-editor/web/README.md)
+
+### Systemy gry
+
+- [Projekt systemu amunicji](docs/systems/ammunition-design.md)
+- [Projekt systemu walki](docs/systems/combat-design.md)
+- [System kampanii](docs/systems/campaign-system.md)
+- [Plan kamieni milowych kampanii](docs/systems/campaign-milestones-plan.md)
+- [Prompt kamieni milowych kampanii](docs/systems/campaign-milestones-implementation-prompt.md)
+- [System postępu gracza](docs/systems/player-progression-system.md)
+- [Prompt postępu gracza](docs/systems/player-progression-system-implementation-prompt.md)
+- [System loadoutu](docs/systems/loadout-system.md)
+- [Prompt loadoutu](docs/systems/loadout-system-implementation-prompt.md)
+- [System reliktów](docs/systems/relic-system.md)
+- [System czarów](docs/systems/spell-system.md)
+- [Prompt systemu czarów](docs/systems/spell-system-implementation-prompt.md)
+- [Prezentacja Fire Rain](docs/systems/fire-rain-presentation.md)
+- [Prompt prezentacji Fire Rain](docs/systems/fire-rain-presentation-implementation-prompt.md)
+- [Prompty animacji Fire Rain](docs/systems/fire-rain-animgen-prompts.md)
+- [Plan redesignu HUD-u meczu](docs/systems/match-hud-redesign-implementation-plan.md)
+- [Plan popupu wyniku meczu](docs/systems/match-result-popup-implementation-plan.md)
+- [Prompt popupu wyniku meczu](docs/systems/match-result-popup-implementation-prompt.md)
+- [Pomysły na jednostki](docs/systems/units/ideas.md)
+- [Interakcje jednostek](docs/systems/units/interactions.md)
+
+### UI i prompty
+
+- [Analiza brakujących mechanik UI](docs/ui/mechanics-gap-analysis.md)
+- [Prompt systemu definicji poziomów](docs/prompts/IMPLEMENT_LEVEL_DEFINITION_SYSTEM.md)
+- [Prompt systemu reliktów](docs/prompts/IMPLEMENT_RELIC_SYSTEM.md)
+
 ## Project scope
 
 Urkaaaz is a mobile Android game. The active repository is:
@@ -125,7 +211,7 @@ git diff --check
 git status --short
 ```
 
-Also review changed code against `architecture.md`, especially:
+Also review changed code against `docs/architecture/architecture.md`, especially:
 
 - single responsibility;
 - dependency direction;
@@ -142,6 +228,14 @@ Also review changed code against `architecture.md`, especially:
 4. Update directly related documentation.
 5. Run the validation gate.
 6. Only commit or push when the user explicitly asks, or says `wypchnij`.
+
+## Zapisywanie pomysłów
+
+Gdy użytkownik prosi o zapisanie pomysłu, dopisz go do
+[`docs/project/idea-inbox.md`](docs/project/idea-inbox.md), krótko i bez
+zmieniania jego statusu ani wdrażania. Podczas `/push` przenieś zapis do
+odpowiedniej dokumentacji tematycznej; pomysły przekrojowe lub jeszcze
+nieprzypisane trafiają do [`docs/project/ideas.md`](docs/project/ideas.md).
 
 For prompts that request a new game or a substantial gameplay change, check
 whether the core player loop, success and failure conditions, difficulty

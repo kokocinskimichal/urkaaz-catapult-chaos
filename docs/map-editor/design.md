@@ -1,17 +1,11 @@
-# Projekt aplikacji do tworzenia map
+# Edytor map Urkaaaz
 
 ## Cel
 
-> **Web migration:** The primary new authoring workflow is now the local
-> `map-editor-web` React/Vite application. The desktop/Swing tile workflow is
-> retained for compatibility and fallback; the web UI edits a terrain profile
-> and only carries legacy tile placements through JSON.
-
-Osobna aplikacja desktopowa służąca do ręcznego tworzenia map Urkaaaz.
-Autor składa teren z kafelków konkretnego biomu, ustala fundamenty fortec,
-zatwierdza geometrię, a następnie rozmieszcza assety tego samego biomu.
-Wynikiem jest wersjonowany JSON, który docelowo zastąpi ręczne definicje map
-w Kotlinie.
+Edytor map Urkaaaz jest lokalną aplikacją webową `map-editor-web` opartą na
+React i Vite. Autor edytuje profil terenu, fundamenty i dekoracje oraz importuje
+i eksportuje wersjonowany JSON zgodny z kontraktem map gry. Edytor desktopowy
+Swing został usunięty.
 
 Edytor nie jest drugim silnikiem gry. Ma korzystać ze wspólnych kontraktów,
 assetów i walidacji, a logikę gameplayu pozostawić modułom gry.
@@ -21,7 +15,7 @@ assetów i walidacji, a logikę gameplayu pozostawić modułom gry.
 - JSON jest jedynym źródłem prawdy dla definicji map.
 - Każda mapa jest na stałe związana z jednym biomem.
 - Wszystkie mapy mają obecny, kanoniczny wymiar świata.
-- Edytor jest osobną aplikacją desktopową.
+- Edytor działa lokalnie w przeglądarce.
 - Teren jest składany z kafelków, ale każdy kafelek ma również dane geometrii.
 - Obowiązuje jedna kanoniczna siatka i stała skala kafelków.
 - Kafelki mają jawne profile krawędzi i można łączyć tylko kompatybilne
@@ -40,22 +34,13 @@ assetów i walidacji, a logikę gameplayu pozostawić modułom gry.
 - Nazwy assetów są traktowane jako stabilne.
 - Edytor nie waliduje korytarzy ostrzału ani widoczności między fortecami.
 
-## Proponowany stos technologiczny
+## Stos technologiczny
 
-- Kotlin/JVM;
-- Compose Multiplatform Desktop;
-- Compose `Canvas` i Skia do renderowania mapy;
-- `kotlinx.serialization` do JSON;
-- `StateFlow` oraz niemutowalny stan edytora;
-- komendy domenowe do undo/redo;
-- `java.nio.file` do plików i autosave;
-- JUnit/Kotlin test zgodny z istniejącym repozytorium;
-- Compose Desktop native distributions do tworzenia `.dmg`, `.msi` i `.deb`.
-
-Compose Desktop pozwala współdzielić język, Gradle i modele z projektem gry,
-zapewnia wygodny drag-and-drop, zoom, panele właściwości i lokalny filesystem.
-Web/Tauri pozostaje możliwą alternatywą, ale na tym etapie dodałby drugi
-ekosystem i osobny frontend.
+- React i TypeScript;
+- Vite;
+- Canvas 2D do renderowania mapy;
+- lokalny import, eksport i autosave w przeglądarce;
+- testy Vitest.
 
 ## Moduły
 
@@ -76,19 +61,11 @@ map-editor-format
     JSON, schemaVersion, migracje, import i eksport.
 
 map-editor-rendering
-    Renderowanie kafelków, terenu, dekoracji, siatki i debug overlay.
-
-map-editor-assets
-    Adapter między wspólnym game-assets a widokiem desktopowym.
-
-map-editor-desktop
-    Compose Desktop, okno aplikacji, menu, panele i obsługa myszy.
+    Współdzielone renderowanie modelu mapy.
 ```
 
-`map-editor-assets` nie przechowuje własnej kopii PNG-ów. Wszystkie aplikacje
-czytają assety z `game-assets`. Jeśli Android wymaga plików w
-`res/drawable-nodpi`, Gradle może wygenerować lub skopiować je podczas buildu,
-ale ręcznie utrzymywane źródło pozostaje jedno.
+Webowy edytor wykorzystuje wspólne źródło assetów `game-assets`, udostępniane
+przeglądarce przez skrypt synchronizacji zasobów.
 
 ## Źródło assetów
 
@@ -364,13 +341,12 @@ Migracje muszą mieć testy dla każdej obsługiwanej wersji.
 - przejście `TERRAIN_EDITING` → `TERRAIN_LOCKED`;
 - walidacja dekoracji.
 
-### Etap 3: podstawowy interfejs desktopowy
+### Etap 3: interfejs webowy
 
-- okno Compose Desktop;
+- aplikacja React/Vite;
 - viewport mapy;
 - zoom i pan;
-- wybór kafelka;
-- układanie kafelków;
+- edycja profilu terenu;
 - zapis i odczyt wersji roboczej.
 
 ### Etap 4: geometria i wygładzanie
@@ -410,31 +386,8 @@ Migracje muszą mieć testy dla każdej obsługiwanej wersji.
 
 ## Stan implementacji
 
-Repozytorium zawiera teraz wspólny moduł `game-assets` z katalogiem nazw
-`terrain_<biome>_<category>_<variant>.png` oraz moduły `map-editor-domain`,
-`map-editor-format`, `map-editor-rendering`, `map-editor-assets` i
-`map-editor-desktop`. Domena korzysta bezpośrednio z `MapDefinition`,
-`MapDefinitionValidator` i kontraktów geometrii kafelków. Format JSON jest
-wersjonowany (schema 1), deterministycznie formatowany i zapisywany atomowo;
-szkic ma osobny plik `.draft.json`.
-
-Pierwszy desktopowy vertical slice uruchamia się przez
-`./gradlew :map-editor-desktop:run`: tworzy/otwiera mapę, układa kafelki
-kliknięciem, wygładza teren, blokuje teren, dodaje dekoracje, waliduje,
-zapisuje szkic i eksportuje finalny JSON. Renderowanie jest niezależne od
-Androida i używa modelu viewportu oraz warstw mapy. Docelowa migracja pełnego
-katalogu PNG do wspólnego modułu oraz natywne Compose Desktop pozostają
-następnymi krokami; obecny interfejs desktopowy używa standardowego Swing,
-aby zachować kompilowalność obecnego repozytorium bez zmiany wersji Kotlin.
-
-Kafelki terenu są dostępne z katalogu `TerrainTileCatalog`, a nie generowane
-wyłącznie jako płaski kafelek przy kliknięciu mapy. Katalog zawiera bazowe
-profile `Flat`, `Slope up`, `Slope down`, `Ridge` i `Valley`; wariant można
-wybrać albo przeciągnąć bezpośrednio na viewport. Wybrany profil zapisuje się
-w `TerrainTileGeometry`.
-
-Viewport desktopowy używa kanonicznego świata `WorldDimensions` (7200 x
-4800), automatycznie dopasowuje zoom do dostępnego obszaru i po utworzeniu
-mapy pokazuje pozycje obu fortec. Po `Lock terrain` włącza podgląd tła,
-warstwy soil i terrain cap wybranego biomu, aby edycja przypominała wygląd
-rzeczywistej mapy w grze.
+Webowy edytor znajduje się w `map-editor-web`; instrukcje uruchomienia i opis
+funkcji są w `docs/map-editor/web/README.md`. Edytor korzysta z
+wersjonowanego kontraktu JSON mapy, zapisuje szkice w `localStorage`, oferuje
+edycję profilu terenu i dekoracji oraz udostępnia walidację przed eksportem.
+Nie ma osobnego desktopowego interfejsu ani modułu asset-adaptera Kotlin.
