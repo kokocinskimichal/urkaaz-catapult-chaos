@@ -28,15 +28,7 @@ class BattlefieldRenderer(
 ) {
     private val backgroundPaint = Paint(Paint.ANTI_ALIAS_FLAG)
     private val spritePaint = Paint(Paint.ANTI_ALIAS_FLAG or Paint.FILTER_BITMAP_FLAG)
-    private val fortressShieldFillPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-        color = Color.argb(38, 75, 183, 255)
-        style = Paint.Style.FILL
-    }
-    private val fortressShieldStrokePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-        color = Color.argb(220, 130, 225, 255)
-        style = Paint.Style.STROKE
-        strokeWidth = 5f
-    }
+    private val fortressShieldPaint = Paint(Paint.ANTI_ALIAS_FLAG or Paint.FILTER_BITMAP_FLAG)
 
     fun render(
         canvas: Canvas,
@@ -46,6 +38,7 @@ class BattlefieldRenderer(
         animationFrame: Int,
         deathAnimationClock: UnitDeathAnimationClock,
         impactFrame: Int,
+        fortressShieldHitAnimation: FortressShieldHitAnimationFrame?,
         fireRainPresentation: FireRainPresentationFrame,
         plagueCauldronPresentation: PlagueCauldronPresentationFrame,
         isAiming: Boolean,
@@ -65,6 +58,9 @@ class BattlefieldRenderer(
         val theme = assets.themeFor(state.terrainBiome)
         drawBackground(canvas, theme, viewportWidth, viewportHeight)
         val groundTop = viewportHeight * 0.76f
+        val soilTextureTop = state.terrainHeightSamples.minOrNull()?.let {
+            worldToViewY(it, viewportHeight) - 16f
+        } ?: groundTop
         drawTerrainSurface(
             canvas = canvas,
             bitmap = theme.soil,
@@ -73,9 +69,7 @@ class BattlefieldRenderer(
             viewportWidth = viewportWidth,
             viewportHeight = viewportHeight,
             fallbackColor = theme.fallbackColor,
-            textureTop = state.terrainHeightSamples.minOrNull()?.let {
-                worldToViewY(it, viewportHeight) - 16f
-            } ?: groundTop,
+            textureTop = soilTextureTop,
             textureBottom = viewportHeight,
         )
         drawMapDecorations(
@@ -139,22 +133,54 @@ class BattlefieldRenderer(
             fortressRenderWidth,
             fortressRenderHeight,
         )
-        drawFortressShield(
+        val blueShieldBounds = drawFortressShield(
             canvas = canvas,
             health = state.blueFortressShieldHealth,
+            animationFrame = animationFrame,
+            teamLabel = "BLUE",
+            hitAnimation = fortressShieldHitAnimation,
             centerX = blueFortressCenterX,
             centerY = blueFortressCenterY,
             width = fortressRenderWidth,
             height = fortressRenderHeight,
         )
-        drawFortressShield(
+        val redShieldBounds = drawFortressShield(
             canvas = canvas,
             health = state.redFortressShieldHealth,
+            animationFrame = animationFrame,
+            teamLabel = "RED",
+            hitAnimation = fortressShieldHitAnimation,
             centerX = redFortressCenterX,
             centerY = redFortressCenterY,
             width = fortressRenderWidth,
             height = fortressRenderHeight,
         )
+        blueShieldBounds?.let { bounds ->
+            drawSoilOverShield(
+                canvas = canvas,
+                shieldBounds = bounds,
+                bitmap = theme.soil,
+                samples = state.terrainHeightSamples,
+                sampleSpacing = state.terrainSampleSpacing,
+                viewportWidth = viewportWidth,
+                viewportHeight = viewportHeight,
+                fallbackColor = theme.fallbackColor,
+                textureTop = soilTextureTop,
+            )
+        }
+        redShieldBounds?.let { bounds ->
+            drawSoilOverShield(
+                canvas = canvas,
+                shieldBounds = bounds,
+                bitmap = theme.soil,
+                samples = state.terrainHeightSamples,
+                sampleSpacing = state.terrainSampleSpacing,
+                viewportWidth = viewportWidth,
+                viewportHeight = viewportHeight,
+                fallbackColor = theme.fallbackColor,
+                textureTop = soilTextureTop,
+            )
+        }
 
         drawDeformedCap(
             canvas = canvas,
@@ -331,24 +357,75 @@ class BattlefieldRenderer(
     private fun drawFortressShield(
         canvas: Canvas,
         health: Int?,
+        animationFrame: Int,
+        teamLabel: String,
+        hitAnimation: FortressShieldHitAnimationFrame?,
         centerX: Float,
         centerY: Float,
         width: Float,
         height: Float,
-    ) {
-        if (health == null || health <= 0) return
+    ): RectF? {
+        val activeHit = hitAnimation?.takeIf { it.teamLabel == teamLabel }
+        if (!FortressShieldPresentation.shouldRenderShield(health, activeHit != null)) return null
         val horizontalRadius =
             FortressShieldGeometry.horizontalRadius(width)
         val verticalRadius =
             FortressShieldGeometry.verticalRadius(height)
-        val bounds = RectF(
-            centerX - horizontalRadius,
-            centerY - verticalRadius,
-            centerX + horizontalRadius,
-            centerY + verticalRadius,
+        val frame = activeHit?.let {
+            assets.fortressShieldHitFrames[it.frameIndex]
+        } ?: assets.fortressShieldDomeFrames[
+            FortressShieldPresentation.frameIndex(animationFrame),
+        ]
+        val sprite = FortressShieldPresentation.spriteBounds(
+            ellipseLeft = centerX - horizontalRadius,
+            ellipseTop = centerY - verticalRadius,
+            ellipseWidth = horizontalRadius * 2f,
+            ellipseHeight = verticalRadius * 2f,
         )
-        canvas.drawOval(bounds, fortressShieldFillPaint)
-        canvas.drawOval(bounds, fortressShieldStrokePaint)
+        fortressShieldPaint.alpha = FortressShieldPresentation.ACTIVE_DOME_ALPHA
+        val spriteBounds = RectF(sprite.left, sprite.top, sprite.right, sprite.bottom)
+        val saveCount = canvas.save()
+        if (activeHit != null && FortressShieldPresentation.shouldMirrorHitHorizontally(teamLabel)) {
+            canvas.scale(-1f, 1f, centerX, centerY)
+        }
+        canvas.drawBitmap(
+            frame,
+            null,
+            spriteBounds,
+            fortressShieldPaint,
+        )
+        canvas.restoreToCount(saveCount)
+        return spriteBounds
+    }
+
+    private fun drawSoilOverShield(
+        canvas: Canvas,
+        shieldBounds: RectF,
+        bitmap: Bitmap?,
+        samples: List<Float>,
+        sampleSpacing: Float,
+        viewportWidth: Float,
+        viewportHeight: Float,
+        fallbackColor: Int,
+        textureTop: Float,
+    ) {
+        val saveCount = canvas.save()
+        canvas.clipRect(shieldBounds)
+        if (samples.isEmpty()) {
+            canvas.clipRect(0f, viewportHeight * 0.76f, viewportWidth, viewportHeight)
+        }
+        drawTerrainSurface(
+            canvas = canvas,
+            bitmap = bitmap,
+            samples = samples,
+            sampleSpacing = sampleSpacing,
+            viewportWidth = viewportWidth,
+            viewportHeight = viewportHeight,
+            fallbackColor = fallbackColor,
+            textureTop = textureTop,
+            textureBottom = viewportHeight,
+        )
+        canvas.restoreToCount(saveCount)
     }
 
     private fun drawFireRainFields(

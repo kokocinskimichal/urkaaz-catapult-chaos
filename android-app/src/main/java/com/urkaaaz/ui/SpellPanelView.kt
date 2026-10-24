@@ -108,6 +108,17 @@ class SpellPanelView(
                 slot.manaCost,
                 status,
             )
+            val shieldCoveredFraction = if (slot.type == "FORTRESS_SHIELD" && active) {
+                FortressShieldPresentation.shieldIconCoveredFraction(
+                    health = state.blueFortressShieldHealth,
+                    maxHealth = state.blueFortressShieldMaxHealth,
+                )
+            } else {
+                0f
+            }
+            slot.shieldShade.coveredFraction = shieldCoveredFraction
+            slot.shieldShade.visibility =
+                if (shieldCoveredFraction > 0f) View.VISIBLE else View.GONE
         }
     }
 
@@ -125,6 +136,7 @@ class SpellPanelView(
             clipToOutline = true
             setOnClickListener { onSpellCast?.invoke(type) }
         }
+        val shieldShade = VerticalProgressShade(context, dp(9).toFloat())
         val name = TextView(context).apply {
             text = context.getString(shortNameResource)
             contentDescription = context.getString(nameResource)
@@ -161,6 +173,7 @@ class SpellPanelView(
                     clipChildren = true
                     clipToPadding = true
                     addView(button, FrameLayout.LayoutParams(-1, -1))
+                    addView(shieldShade, FrameLayout.LayoutParams(-1, -1))
                     addView(
                         costBadge,
                         FrameLayout.LayoutParams(
@@ -183,6 +196,7 @@ class SpellPanelView(
             implemented = spell.implemented,
             nameResource = nameResource,
             button = button,
+            shieldShade = shieldShade,
             root = root,
             active = false,
             ready = false,
@@ -230,6 +244,7 @@ class SpellPanelView(
         val implemented: Boolean,
         val nameResource: Int,
         val button: ImageButton,
+        val shieldShade: VerticalProgressShade,
         val root: LinearLayout,
         var active: Boolean,
         var ready: Boolean,

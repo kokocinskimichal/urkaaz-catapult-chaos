@@ -9,6 +9,9 @@ screen. Android pokazuje manę, pozwala aktywować wyposażoną tarczę, prezent
 odrzucenia i rysuje jej stan z snapshotu. Pozostałe dziesięć efektów oraz
 trwałe rozliczanie stocku nadal są niezaimplementowane; opis poniżej rozróżnia
 obecny zakres od celu migracji.
+Podczas działania tarczy ikona zaklęcia jest przykrywana od góry tym samym
+ciemnym cieniem co ikona amunicji podczas przeładowania; zakryta część
+odpowiada utraconemu HP i znika po wygaśnięciu tarczy.
 
 SpellSystem ma obsługiwać deterministyczne efekty wszystkich 11 zaklęć
 legacy, od walidacji aktywacji po eventy i snapshoty. Powinien zapewniać jeden
@@ -84,7 +87,7 @@ jawnym `MatchError`. Koszt pobierany jest dopiero przy powodzeniu. Replay
 zachowuje zaakceptowane i odrzucone próby aktywacji.
 
 Mana startuje i ma limit 100, regeneruje 10 co 8 sekund symulacji, a jej stan
-jest publikowany w snapshotach. `FORTRESS_SHIELD` kosztuje 80 many, ma 80 HP,
+jest publikowany w snapshotach. `FORTRESS_SHIELD` kosztuje 80 many, ma 150 HP,
 przechwytuje wyłącznie pociski drużyny przeciwnej i nie przepuszcza reszty
 obrażeń na fortecę. Kolizja i renderowanie korzystają ze wspólnej,
 fortress-centered geometrii eliptycznej `FortressShieldGeometry` w
@@ -94,6 +97,33 @@ efekty katalogu mają wartości balansu i kategorię celu, ale brak im runtime
 effect definition. `EffectSnapshot` nadal opisuje aktywne efekty amunicji.
 Walidacja scenariusza sprawdza identyfikatory dostępności, a zgodność
 dostępności z loadoutem jest egzekwowana przy aktywacji.
+
+Copy-ready prompt dla źródłowej pierwszej klatki spokojnej animacji aktywnej
+kopuły znajduje się w
+[`fortress-shield-active-dome-first-frame.agp`](fortress-shield-active-dome-first-frame.agp).
+Grafika ma być osobnym, przezroczystym sprite'em bez fortecy. Krycie kopuły
+pozostaje stałe niezależnie od HP; stan wytrzymałości pokazuje ikona zaklęcia.
+
+Zaimportowana animacja spokojnej kopuły (AnimGen, Seedance 2.0 fast, 24 klatki
+RGBA 640×480, pętla z tą samą pierwszą i ostatnią klatką) jest zapisana jako
+`fortress_shield_dome_00.png`–`23.png` w `drawable-nodpi`; oryginały, podgląd
+MP4 i klatka źródłowa są w `assets_src/spells/fortress-shield/dome-idle/`.
+`BattlefieldRenderer` rozciąga widoczną kopułę na elipsę
+`FortressShieldGeometry`, rysuje ją ze stałym alpha i ponownie nakłada teksturę
+soil w obrębie sprite'a, aby grunt zasłaniał kopułę poniżej powierzchni.
+Reguły prezentacji są w `FortressShieldPresentation`. Użytkownik zaakceptował animację mimo znanych
+wad: nierówne wycinanie półprzezroczystych komórek (`alpha_key`), ciemne
+obwódki na jasnym tle i ~18 px drgania dolnej krawędzi w klatkach 3–5.
+Sekwencja błysku po trafieniu ma 24 klatki RGBA 640×480 w
+`fortress_shield_hit_00.png`–`23.png`; oryginał ZIP i podgląd MP4 są w
+`assets_src/spells/fortress-shield/hit-flash/`. Animacja jest odtwarzana
+jednorazowo po `ShieldDamaged`, zaczynając od klatki 04, aby rozbłysk był
+widoczny od razu; klatki 00–03 są pomijane. Po sekwencji wraca animacja
+spokojna; także trafienie wyczerpujące ostatnie HP tarczy pokazuje błysk.
+Ponieważ pocisk przeciwnika trafia prawą stronę lewej fortecy, renderer
+lustrzanie odbija tylko błysk niebieskiej (lewej) fortecy; czerwona (prawa)
+używa oryginalnej orientacji. Podgląd zaakceptowano mimo kolorowej poświaty
+poza konturem i niewielkiej zmiany obrysu/położenia w środkowych klatkach.
 
 Istniejące podobne rozwiązanie do naśladowania to `AmmunitionCatalog`:
 jednoznaczna definicja balansu w domenie, niezależna od Androida i używana
@@ -307,7 +337,7 @@ Czas/parametry mają pochodzić z legacy, nie z nowej propozycji balansu.
 | `RUNIC_BASTION` — Runiczny Bastion | `OWN_GATE` | 1 200 | 70 | 360 HP; ustawiany względem własnej bramy; blokuje marsz i jest atakowalny; ponowna aktywacja odnawia HP |
 | `HASTE` | `ALLIED_FORCE` | 900 | 50 | 5 s; prędkość sojuszników ×2 |
 | `HEAL` | `ALLIED_FORCE` | 900 | 50 | leczy ranne żywe jednostki o 35% maksymalnego HP, w tym jednostki w garnizonie |
-| `FORTRESS_SHIELD` — Tarcza fortecy | `OWN_FORTRESS` | 0 | 80 | osłona fortecy o 80 HP; nie można aktywować, gdy osłona jest już aktywna |
+| `FORTRESS_SHIELD` — Tarcza fortecy | `OWN_FORTRESS` | 0 | 80 | osłona fortecy o 150 HP; nie można aktywować, gdy osłona jest już aktywna |
 | `CATAPULT_LOCK` — Blokada katapulty | `ENEMY_SIEGE_ENGINE` | 1 000 | 60 | blokuje katapultę przeciwnika przez 5 s |
 | `SLOWING_FIELD` — Pole spowolnienia | `ENEMY_FORCE` | 1 000 | 50 | spowalnia wrogie jednostki do 50% przez 7 s |
 | `VAMPIRIC_BANNER` — Wampiryczny sztandar | `ALLIED_FORCE` | 1 100 | 60 | działa 8 s; co 1 s leczy sojusznicze ranne jednostki o 2% maksymalnego HP |

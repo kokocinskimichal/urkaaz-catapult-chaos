@@ -91,6 +91,12 @@ class BattlefieldAssetCatalog(private val context: Context) {
         ),
     )
 
+    val fortressShieldDomeFrames: List<Bitmap> = loadRequiredFortressShieldDomeFrames()
+    val fortressShieldHitFrames: List<Bitmap> = loadRequiredFortressShieldFrames(
+        prefix = FORTRESS_SHIELD_HIT_PREFIX,
+        phase = "hit flash",
+    )
+
     private val animations = mapOf(
         "ROCK" to ProjectileAnimation(
             flightFrames = rockFlightFrames,
@@ -373,6 +379,40 @@ class BattlefieldAssetCatalog(private val context: Context) {
         return frames
     }
 
+    private fun loadRequiredFortressShieldDomeFrames(): List<Bitmap> =
+        loadRequiredFortressShieldFrames(
+            prefix = FORTRESS_SHIELD_DOME_PREFIX,
+            phase = "dome",
+        )
+
+    private fun loadRequiredFortressShieldFrames(prefix: String, phase: String): List<Bitmap> {
+        val frames = (0 until FortressShieldPresentation.FRAME_COUNT).map { index ->
+            val resourceName = "$prefix%02d".format(index)
+            val resourceId = resources.getIdentifier(
+                resourceName,
+                "drawable",
+                context.packageName,
+            )
+            check(resourceId != 0) {
+                "Fortress Shield $phase is missing frame $index ('$resourceName')"
+            }
+            val bitmap = BitmapFactory.decodeResource(resources, resourceId)
+                ?: error("Fortress Shield $phase frame $index ('$resourceName') could not be decoded")
+            check(
+                bitmap.width == FortressShieldPresentation.FRAME_WIDTH &&
+                    bitmap.height == FortressShieldPresentation.FRAME_HEIGHT,
+            ) {
+                "Fortress Shield $phase frame $index ('$resourceName') has invalid size " +
+                    "${bitmap.width}x${bitmap.height}"
+            }
+            check(bitmap.hasAlpha()) {
+                "Fortress Shield $phase frame $index ('$resourceName') has no alpha channel"
+            }
+            bitmap
+        }
+        return frames
+    }
+
     private fun loadThreeDigitAnimationFrames(prefix: String): List<Bitmap> =
         (0..99).mapNotNull { index ->
             val resourceId = resources.getIdentifier(
@@ -391,6 +431,8 @@ class BattlefieldAssetCatalog(private val context: Context) {
         const val FIRE_RAIN_SPLIT_FLASH_FRAME_COUNT = 12
         const val FIRE_RAIN_FRAGMENT_FLIGHT_FRAME_COUNT = 24
         const val FIRE_RAIN_FIELD_FRAME_COUNT = 24
+        const val FORTRESS_SHIELD_DOME_PREFIX = "fortress_shield_dome_"
+        const val FORTRESS_SHIELD_HIT_PREFIX = "fortress_shield_hit_"
         val RELIC_ASSET_RESOURCES = buildMap {
             val biomeResources = mapOf(
                 "green_frontier" to listOf(

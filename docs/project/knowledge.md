@@ -140,13 +140,15 @@ at levels 6 and 8. Campaign rewards are projected into Loadout progression,
 and preferred spells affect only newly generated defaults. Tutorials remain
 deferred to the future game-wide TutorialSystem. The SpellSystem has one
 implemented runtime effect: `FORTRESS_SHIELD`; the other ten spell effects and
-AI spell casting remain unimplemented. The shield costs 80 mana, has 80 HP, and
+AI spell casting remain unimplemented. The shield costs 80 mana, has 150 HP, and
 intercepts projectiles within the same fortress-centered ellipse used by its
-world-space rendering. `FortressShieldGeometry` in `game-contracts` is the
-shared shape definition. Mana starts at 100, regenerates 1 every 0.8 seconds
-of simulation time, and is exposed through match snapshots. Spell-card artwork
-is available, but artwork for the remaining world effects still needs to be
-mapped as those effects are implemented.
+world-space rendering. Its hit animation starts at frame 04 and remains
+visible when the hit depletes the shield. `FortressShieldGeometry` in
+`game-contracts` is the shared shape definition. Mana starts at 100,
+regenerates 1 every 0.8 seconds of simulation time, and is exposed through
+match snapshots. Spell-card artwork is available, but artwork for the
+remaining world effects still needs to be mapped as those effects are
+implemented.
 
 Future idea, not implemented: progression could grant an otherwise limited
 ammunition type a temporary effective unlimited entitlement after a qualifying
@@ -198,6 +200,9 @@ preserves the authored 2870/3390 foundation heights and has three relics moved
 to validated, non-overlapping soil placements. This is a transition mapping,
 not the final one-map-per-level arrangement. The former Kotlin campaign map
 definitions and map authoring builder have been removed.
+Chapter II levels 11–20 currently keep the `demo-map` geometry but override
+its biome to Frostbound for visual theme only; no additional gameplay
+modifiers are applied.
 
 Catapult positions are derived from fortress positions by
 `CatapultPresentationContract`, and simulation dimensions always come from
@@ -569,6 +574,7 @@ must go through commands and domain/application boundaries.
 
 | File | Purpose |
 |---|---|
+| `AGENTS.md` and `docs/agent-context-index.md` | Repository instructions and curated Markdown context loaded by `/loadContext` |
 | `docs/architecture/architecture.md` | Clean Architecture rules and migration decisions |
 | `android-app/.../MainActivity.kt` | Thin Android entry point |
 | `android-app/.../navigation/AppScreen.kt` | Screen identity contract |
@@ -841,6 +847,30 @@ them; Relics remain constrained to the soil. Editor feedback does not replace
 this runtime gate.
 
 ## Map editor vertical slice
+
+- Fortress Shield dome art (77 credits, AnimGen Seedance 2.0 fast, first and
+  last frame both the user's dome PNG, `alpha_key`): 24 RGBA 640×480 frames
+  imported as `fortress_shield_dome_00`–`23` and loaded strictly by
+  `BattlefieldAssetCatalog.fortressShieldDomeFrames`. The renderer stretches the
+  visible dome bounds (`FortressShieldPresentation`) over the
+  `FortressShieldGeometry` ellipse, loops one frame per 6 render ticks and
+  keeps a fixed paint alpha independent of shield HP. Soil is redrawn over the
+  shield sprite within its bounds, clipped to the terrain surface. The user
+  accepted known `alpha_key` artifacts. `SpellPanelView` shares the ammunition
+  reload shade to cover the shield icon from top down in proportion to lost HP;
+  it clears when the shield is inactive. The approved Fortress Shield hit
+  flash is a second 24-frame RGBA 640×480 sequence in
+  `fortress_shield_hit_00`–`23`; it plays once on `ShieldDamaged` and returns
+  to idle. `RenderStateMapper` routes the hit by fortress team, and the
+  renderer mirrors only the blue/left fortress hit sequence because incoming
+  enemy projectiles strike its right side. The preview has a colored halo
+  outside the dome and some silhouette/position drift in middle frames; the
+  user approved it. The first hit-flash generation (also 77 credits) was
+  rejected for opaque/clipped frames; the approved retry cost 77 credits.
+  Both originals are in `assets_src/spells/fortress-shield/` by animation.
+  The AnimGen MCP could not be authorized (the server rejected the Copilot
+  app's OAuth client metadata URL), so the REST API with the private key file
+  was used.
 
 Map authoring uses the shared `MapDefinition` contract and
 `MapDefinitionValidator`, and stores schema-1 JSON. Drafts are written as

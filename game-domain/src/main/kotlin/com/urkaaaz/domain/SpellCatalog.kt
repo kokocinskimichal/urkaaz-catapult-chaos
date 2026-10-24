@@ -84,7 +84,7 @@ object SpellCatalog {
             targetCategory = SpellTargetCategory.OWN_FORTRESS,
             special = false,
             manaCost = 80,
-            effect = SpellEffectDefinition.FortressShield(hitPoints = 80),
+            effect = SpellEffectDefinition.FortressShield(hitPoints = 150),
         ),
         SpellDefinition(
             type = SpellType.CATAPULT_LOCK,

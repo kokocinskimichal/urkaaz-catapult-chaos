@@ -245,6 +245,9 @@ a visual-only Terrain Theme: rust-red trunks, copper foliage, warm light,
 brown soil, dry leaves, roots, stones, and distant rust-colored hills. It adds
 no hazard, collision rule, movement modifier, damage rule, or projectile rule.
 
+**Frostbound** is assigned to Chapter II (levels 11–20) and uses the visual
+Frostbound terrain theme without adding gameplay hazards or modifiers.
+
 **Sunken Marshes** is assigned to Chapter V (levels 41–50). Its first
 implemented layer is a visual-only background of dark turquoise-green wetlands,
 crooked cypresses, reeds, rotten piers, fallen logs and purple mist. It adds no

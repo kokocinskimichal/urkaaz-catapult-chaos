@@ -49,8 +49,8 @@ class MatchSessionTest {
         assertEquals(EntityId("blue-fortress"), castEvent.targetId)
         assertEquals(20, session.snapshot().resourcesByTeam[Team.BLUE]?.mana)
         val blueFortress = session.snapshot().fortresses.single { it.team == Team.BLUE }
-        assertEquals(80, blueFortress.shieldHealth)
-        assertEquals(80, blueFortress.shieldMaxHealth)
+        assertEquals(150, blueFortress.shieldHealth)
+        assertEquals(150, blueFortress.shieldMaxHealth)
 
         val repeatedCast = session.dispatchResult(
             MatchCommand.CastSpell(

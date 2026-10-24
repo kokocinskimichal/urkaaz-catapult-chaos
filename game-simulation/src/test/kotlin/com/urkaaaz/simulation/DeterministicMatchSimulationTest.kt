@@ -118,7 +118,7 @@ class DeterministicMatchSimulationTest {
             id = EntityId("red-fortress"),
             team = Team.RED,
             center = WorldPosition(400f, 0f),
-        ).withShield(80)
+        ).withShield(150)
         val simulation = DeterministicMatchSimulation(
             matchId = MatchId("shield-impact"),
             config = SimulationConfig(
@@ -147,9 +147,49 @@ class DeterministicMatchSimulationTest {
         assertTrue(events.any { it is MatchEvent.ShieldDamaged })
         assertEquals(500, simulation.snapshot().fortresses.single { it.team == Team.RED }.health)
         assertEquals(
-            80 - AmmunitionCatalog.definition(AmmunitionType.ROCK).damage.fortressDamage,
+            150 - AmmunitionCatalog.definition(AmmunitionType.ROCK).damage.fortressDamage,
             simulation.snapshot().fortresses.single { it.team == Team.RED }.shieldHealth,
         )
+        assertTrue(simulation.snapshot().projectiles.isEmpty())
+    }
+
+    @Test
+    fun fortressShieldBreaksWithoutSpillingDamageToFortress() {
+        val simulation = DeterministicMatchSimulation(
+            matchId = MatchId("shield-break"),
+            config = SimulationConfig(
+                bounds = WorldBounds(width = 1_000f, height = 600f),
+                gravityAccelerationY = 0f,
+            ),
+            blueCatapult = Catapult(
+                id = EntityId("blue-catapult"),
+                team = Team.BLUE,
+                position = WorldPosition(50f, 0f),
+                anchorPosition = WorldPosition(100f, 0f),
+                aim = Aim(directionDegrees = 0f, power = 100f),
+            ),
+            blueFortress = Fortress(
+                id = EntityId("blue-fortress"),
+                team = Team.BLUE,
+                center = WorldPosition(50f, 0f),
+            ),
+            redFortress = Fortress(
+                id = EntityId("red-fortress"),
+                team = Team.RED,
+                center = WorldPosition(400f, 0f),
+            ).withShield(1),
+        )
+        simulation.start()
+        simulation.fire(EntityId("blue-catapult"), AmmunitionType.ROCK)
+
+        val shieldDamage = simulation.advance(100)
+            .filterIsInstance<MatchEvent.ShieldDamaged>()
+            .single()
+
+        val redFortress = simulation.snapshot().fortresses.single { it.team == Team.RED }
+        assertEquals(0, shieldDamage.remainingHealth)
+        assertEquals(null, redFortress.shieldHealth)
+        assertEquals(500, redFortress.health)
         assertTrue(simulation.snapshot().projectiles.isEmpty())
     }
 

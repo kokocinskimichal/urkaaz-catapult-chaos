@@ -97,7 +97,7 @@ class SpellCatalogTest {
         val shield = SpellCatalog.definition(SpellType.FORTRESS_SHIELD)
         assertEquals(80, shield.manaCost)
         assertEquals(SpellTargetCategory.OWN_FORTRESS, shield.targetCategory)
-        assertEquals(SpellEffectDefinition.FortressShield(80), shield.effect)
+        assertEquals(SpellEffectDefinition.FortressShield(150), shield.effect)
         assertFalse(SpellCatalog.definition(SpellType.ICE_TRAP).isImplemented)
     }
 }

@@ -86,6 +86,9 @@ class BattlefieldView(context: Context) : View(context) {
         UnitDeathAnimationRetention(deathAnimationClock)
     private var activeImpact: ImpactRenderState? = null
     private var lastImpactEventId: String? = null
+    private var activeFortressShieldHit: FortressShieldHitRenderState? = null
+    private var fortressShieldHitElapsedRenderFrames = 0
+    private var lastFortressShieldHitEventId: String? = null
     private var debugCursorPosition: DebugCursorPosition? = null
     private val projectileTrails = mutableMapOf<String, MutableList<Pair<Float, Float>>>()
     private val aimController = AimGestureController()
@@ -158,11 +161,28 @@ class BattlefieldView(context: Context) : View(context) {
             activeImpact = null
             impactFrame = 0
             lastImpactEventId = null
+            activeFortressShieldHit = null
+            fortressShieldHitElapsedRenderFrames = 0
+            lastFortressShieldHitEventId = null
         }
         state = newState.copy(
             units = unitDeathAnimationRetention.update(newState.units),
         )
         animationFrame = (animationFrame + 1) % 1024
+        val shieldHit = newState.fortressShieldHits.lastOrNull()
+        if (shieldHit != null && shieldHit.eventId != lastFortressShieldHitEventId) {
+            activeFortressShieldHit = shieldHit
+            lastFortressShieldHitEventId = shieldHit.eventId
+            fortressShieldHitElapsedRenderFrames = 0
+        } else if (activeFortressShieldHit != null) {
+            fortressShieldHitElapsedRenderFrames += 1
+            if (
+                fortressShieldHitElapsedRenderFrames >=
+                FortressShieldPresentation.hitAnimationDurationRenderFrames()
+            ) {
+                activeFortressShieldHit = null
+            }
+        }
         if (newState.impact != null && newState.impact.eventId != lastImpactEventId) {
             activeImpact = newState.impact
             lastImpactEventId = newState.impact.eventId
@@ -238,6 +258,14 @@ class BattlefieldView(context: Context) : View(context) {
             animationFrame = animationFrame,
             deathAnimationClock = deathAnimationClock,
             impactFrame = impactFrame,
+            fortressShieldHitAnimation = activeFortressShieldHit?.let {
+                FortressShieldHitAnimationFrame(
+                    teamLabel = it.teamLabel,
+                    frameIndex = FortressShieldPresentation.hitFrameIndex(
+                        fortressShieldHitElapsedRenderFrames,
+                    ),
+                )
+            },
             fireRainPresentation = fireRainPresentationFrame,
             plagueCauldronPresentation = plagueCauldronPresentationFrame,
             isAiming = aimController.isDragging,

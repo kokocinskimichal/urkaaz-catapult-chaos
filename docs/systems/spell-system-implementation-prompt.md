@@ -165,7 +165,7 @@ Przenieś baseline z `docs/systems/spell-system.md` dokładnie:
 - **Haste:** 900 złota, 50 many, 5 s; ×2 prędkości tylko własnych jednostek.
 - **Heal:** 900 złota, 50 many; żywe, ranne własne jednostki leczy o 35%
   maksymalnego HP, również w garnizonie.
-- **Tarcza fortecy:** 0 złota, 80 many, 80 HP; osłania własną fortecę;
+- **Tarcza fortecy:** 0 złota, 80 many, 150 HP; osłania własną fortecę;
   nieaktywna do ponownego użycia, dopóki obecna osłona działa.
 - **Blokada katapulty:** 1 000 złota, 60 many, 5 s; blokuje wrogą katapultę.
 - **Pole spowolnienia:** 1 000 złota, 50 many, 7 s; spowalnia wrogie

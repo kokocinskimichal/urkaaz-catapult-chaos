@@ -88,6 +88,19 @@ class CampaignLevelDefinitionTest {
     }
 
     @Test
+    fun allChapterTwoLevelsUseTheFrostboundBiome() {
+        (11..20).forEach { levelNumber ->
+            assertEquals(
+                "frostbound",
+                CampaignLevelDefinition.forLevel(levelNumber).mapDefinition.biome,
+                "level $levelNumber should use Frostbound",
+            )
+        }
+        assertEquals("green_frontier", CampaignLevelDefinition.forLevel(10).mapDefinition.biome)
+        assertEquals("green_frontier", CampaignLevelDefinition.forLevel(21).mapDefinition.biome)
+    }
+
+    @Test
     fun milestoneUnlocksRemainDeterministicWhileMapAssignmentIsTemporary() {
         val level = CampaignLevelDefinition.forLevel(41)
 

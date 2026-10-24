@@ -91,13 +91,13 @@ class MatchViewModelCombatTest {
         val active = viewModel.dispatch(MatchUiAction.CastSpell("FORTRESS_SHIELD"))
 
         assertEquals(20, active.playerMana)
-        assertEquals(80, active.blueFortressShieldHealth)
+        assertEquals(150, active.blueFortressShieldHealth)
         assertEquals("SPELL CAST", active.spellFeedbackLabel)
 
         val rejected = viewModel.dispatch(MatchUiAction.CastSpell("FORTRESS_SHIELD"))
 
         assertEquals(20, rejected.playerMana)
-        assertEquals(80, rejected.blueFortressShieldHealth)
+        assertEquals(150, rejected.blueFortressShieldHealth)
         assertEquals("SPELL ALREADY ACTIVE", rejected.spellFeedbackLabel)
     }
 

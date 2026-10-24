@@ -72,6 +72,12 @@ data class RenderState(
     val selectedAmmunitionType: String = "ROCK",
     val activeSpellTypes: Set<String> = emptySet(),
     val spellFeedbackLabel: String? = null,
+    val fortressShieldHits: List<FortressShieldHitRenderState> = emptyList(),
+)
+
+data class FortressShieldHitRenderState(
+    val eventId: String,
+    val teamLabel: String,
 )
 
 data class MapObjectRenderState(
@@ -301,6 +307,16 @@ object RenderStateMapper {
                 add("FORTRESS_SHIELD")
             }
         },
+        fortressShieldHits = events.filterIsInstance<MatchEvent.ShieldDamaged>()
+            .filter { snapshot.matchId == null || it.matchId == snapshot.matchId }
+            .mapNotNull { event ->
+                snapshot.fortresses.firstOrNull { it.entityId == event.fortressId }?.let { fortress ->
+                    FortressShieldHitRenderState(
+                        eventId = event.eventId.value,
+                        teamLabel = fortress.team.name,
+                    )
+                }
+            },
         playerSupply = snapshot.resourcesByTeam[
             com.urkaaaz.contracts.Team.BLUE
         ]?.supply ?: snapshot.resources.supply,

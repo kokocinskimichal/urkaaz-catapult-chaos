@@ -7,6 +7,9 @@ sesji. Poniższy indeks obejmuje dokumentację projektu poza instrukcjami skilli
 w `.github/skills/`. Do zadania czytaj dokumenty z odpowiednich sekcji zamiast
 wczytywać cały zbiór.
 
+Komenda `/loadContext` wczytuje bazowy kontekst projektu i dobiera dokumenty
+do bieżącego zadania według [indeksu dokumentów kontekstu](docs/agent-context-index.md).
+
 ### Architektura i kontrakty
 
 - [Architektura](docs/architecture/architecture.md)

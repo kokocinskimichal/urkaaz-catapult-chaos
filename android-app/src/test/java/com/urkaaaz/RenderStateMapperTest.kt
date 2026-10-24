@@ -77,7 +77,7 @@ class RenderStateMapperTest {
                         health = 500,
                         maxHealth = 500,
                         shieldHealth = 65,
-                        shieldMaxHealth = 80,
+                        shieldMaxHealth = 150,
                     ),
                 ),
                 resourcesByTeam = mapOf(Team.BLUE to ResourceSnapshot(mana = 20)),
@@ -86,8 +86,53 @@ class RenderStateMapperTest {
 
         assertEquals(20, state.playerMana)
         assertEquals(65, state.blueFortressShieldHealth)
-        assertEquals(80, state.blueFortressShieldMaxHealth)
+        assertEquals(150, state.blueFortressShieldMaxHealth)
         assertEquals(null, state.redFortressShieldHealth)
+    }
+
+    @Test
+    fun mapperRoutesShieldHitToFortressTeam() {
+        val state = RenderStateMapper.map(
+            MatchSnapshot(
+                matchId = MatchId("match-1"),
+                fortresses = listOf(
+                    FortressSnapshot(
+                        entityId = EntityId("blue-fortress"),
+                        team = Team.BLUE,
+                        health = 500,
+                        maxHealth = 500,
+                        shieldHealth = 150,
+                        shieldMaxHealth = 150,
+                    ),
+                    FortressSnapshot(
+                        entityId = EntityId("red-fortress"),
+                        team = Team.RED,
+                        health = 500,
+                        maxHealth = 500,
+                        shieldHealth = 70,
+                        shieldMaxHealth = 150,
+                    ),
+                ),
+            ),
+            events = listOf(
+                MatchEvent.ShieldDamaged(
+                    eventId = EventId("shield-hit-1"),
+                    matchId = MatchId("match-1"),
+                    simulationTimeMilliseconds = 100L,
+                    fortressId = EntityId("red-fortress"),
+                    projectileId = EntityId("projectile-1"),
+                    amount = 10,
+                    remainingHealth = 70,
+                    x = 6000f,
+                    y = 2000f,
+                ),
+            ),
+        )
+
+        assertEquals(
+            listOf("shield-hit-1" to "RED"),
+            state.fortressShieldHits.map { it.eventId to it.teamLabel },
+        )
     }
 
     @Test

@@ -2,7 +2,6 @@ package com.urkaaaz.ui
 
 import android.content.Context
 import android.graphics.Color
-import android.graphics.Rect
 import android.graphics.drawable.GradientDrawable
 import android.view.Gravity
 import android.view.View
@@ -17,7 +16,6 @@ import com.urkaaaz.screens.loadout.LoadoutAssetCatalog
 import com.urkaaaz.screens.loadout.LoadoutAssetLookup
 import com.urkaaaz.screens.loadout.LoadoutItemReference
 import java.util.Locale
-import kotlin.math.roundToInt
 
 class AmmunitionPanelView(
     context: Context,
@@ -135,7 +133,7 @@ class AmmunitionPanelView(
             clipToOutline = true
             setOnClickListener { onAmmoSelected?.invoke(type) }
         }
-        val reloadShade = AmmoReloadShade(context, dp(9).toFloat())
+        val reloadShade = VerticalProgressShade(context, dp(9).toFloat())
         val nameText = slotText().apply {
             text = context.getString(ammunitionShortNameResource(type) ?: nameResource)
         }
@@ -276,7 +274,7 @@ class AmmunitionPanelView(
         val stockBadge: FrameLayout,
         val stockCountText: TextView,
         val unlimitedStockIcon: ImageView,
-        val reloadShade: AmmoReloadShade,
+        val reloadShade: VerticalProgressShade,
         val reloadText: TextView,
         val root: LinearLayout,
         var selected: Boolean = false,
@@ -294,34 +292,4 @@ internal fun ammunitionReloadProgress(
     1f
 } else {
     (1f - remainingSeconds / reloadDurationSeconds).coerceIn(0f, 1f)
-}
-
-private class AmmoReloadShade(
-    context: Context,
-    cornerRadius: Float,
-) : View(context) {
-    var coveredFraction: Float = 0f
-        set(value) {
-            field = value.coerceIn(0f, 1f)
-            updateClipBounds()
-        }
-
-    init {
-        background = GradientDrawable().apply {
-            setColor(Color.argb(176, 0, 0, 0))
-            this.cornerRadius = cornerRadius
-        }
-        importantForAccessibility = View.IMPORTANT_FOR_ACCESSIBILITY_NO
-        isClickable = false
-        isFocusable = false
-    }
-
-    override fun onSizeChanged(width: Int, height: Int, oldWidth: Int, oldHeight: Int) {
-        super.onSizeChanged(width, height, oldWidth, oldHeight)
-        updateClipBounds()
-    }
-
-    private fun updateClipBounds() {
-        clipBounds = Rect(0, 0, width, (height * coveredFraction).roundToInt())
-    }
 }

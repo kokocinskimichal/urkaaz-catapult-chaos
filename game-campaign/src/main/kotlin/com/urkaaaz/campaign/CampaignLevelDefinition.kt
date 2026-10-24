@@ -10,6 +10,7 @@ import com.urkaaaz.contracts.PlayerId
 import com.urkaaaz.contracts.PlayerLoadoutConfig
 import com.urkaaaz.contracts.ResourceSnapshot
 import com.urkaaaz.contracts.Team
+import com.urkaaaz.contracts.TerrainBiome
 import com.urkaaaz.contracts.VictoryRulesConfig
 import com.urkaaaz.contracts.WindSnapshot
 import com.urkaaaz.contracts.WorldDimensions
@@ -85,6 +86,17 @@ data class CampaignLevelDefinition(
             mapRepository: MapDefinitionRepository = MapDefinitionRepository.bundled,
         ): CampaignLevelDefinition {
             val safeLevel = level.coerceIn(1, MAX_LEVELS)
+            val mapId = when (safeLevel) {
+                CHAPTER_ONE_LEVEL_THREE -> CHAPTER_ONE_LEVEL_THREE_MAP_ID
+                CHAPTER_ONE_LEVEL_FOUR -> CHAPTER_ONE_LEVEL_FOUR_MAP_ID
+                else -> "demo-map"
+            }
+            val baseMapDefinition = mapRepository.require(mapId)
+            val mapDefinition = if (safeLevel in CHAPTER_TWO_FIRST_LEVEL..CHAPTER_TWO_LAST_LEVEL) {
+                baseMapDefinition.copy(biome = TerrainBiome.FROSTBOUND.mapId)
+            } else {
+                baseMapDefinition
+            }
             return CampaignLevelDefinition(
                 level = safeLevel,
                 enemy = EnemyConfiguration(aiProfile = aiProfileFor(safeLevel)),
@@ -123,13 +135,7 @@ data class CampaignLevelDefinition(
                         emptyList()
                     },
                 ),
-                mapDefinition = mapRepository.require(
-                    when (safeLevel) {
-                        CHAPTER_ONE_LEVEL_THREE -> CHAPTER_ONE_LEVEL_THREE_MAP_ID
-                        CHAPTER_ONE_LEVEL_FOUR -> CHAPTER_ONE_LEVEL_FOUR_MAP_ID
-                        else -> "demo-map"
-                    },
-                ),
+                mapDefinition = mapDefinition,
             )
         }
 
@@ -154,5 +160,7 @@ data class CampaignLevelDefinition(
         private const val CHAPTER_ONE_LEVEL_THREE_MAP_ID = "chapter1-level3"
         private const val CHAPTER_ONE_LEVEL_FOUR = 4
         private const val CHAPTER_ONE_LEVEL_FOUR_MAP_ID = "chapter1-level4"
+        private const val CHAPTER_TWO_FIRST_LEVEL = 11
+        private const val CHAPTER_TWO_LAST_LEVEL = 20
     }
 }

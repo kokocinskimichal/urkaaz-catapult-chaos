@@ -1,0 +1,74 @@
+FORTRESS SHIELD — ACTIVE DOME
+Still source image for frame 1 of idle animation 1
+
+REFERENCE IMAGE INPUT
+
+Attach `assets_src/loadout/spell-cards/loadout_spell_fortress_shield_card.png`
+as the visual reference. Treat it as the source of truth for the shield's
+blue-cyan and restrained gold energy palette, luminous reflections, and
+painterly fantasy-game finish. Do not copy its fortress, landscape, sky,
+trees, composition, or card-art framing. Generate one isolated battlefield
+effect sprite.
+
+PROMPT
+
+Create exactly one still 2D game sprite: the pristine, fully active Fortress
+Shield energy dome, intended to be the first frame of a subtle idle animation.
+Show one complete, closed, translucent oval barrier in a fixed orthographic
+side view matching a 2D siege battlefield. Its centered oval silhouette must
+read as a protective dome wrapped around an invisible fortress footprint,
+not as a flat ring, a half-arch, or a top-only canopy. Keep its overall shape
+symmetrical and close to a 4:3 width-to-height ratio, matching the game's
+fortress-centered shield geometry.
+
+Render only the magical barrier. The fortress, catapult, ground, projectiles,
+and battlefield are absent; the asset will be composited over the live
+fortress in-game. Keep the oval's interior transparent so the fortress
+remains clearly visible underneath. Give the barrier a very light,
+translucent blue-cyan membrane with a crisp but delicate luminous edge,
+subtle painterly refraction, a few soft flowing magical reflections, and
+sparse tiny glints along the shell. Add restrained warm-gold highlights as
+reflections within the blue-cyan energy, not as a second outline. Keep the
+effect elegant and readable at small battlefield scale; avoid a busy pattern
+or a solid opaque fill.
+
+This is a quiet, undamaged full-health idle state. The energy is already
+active and gently shimmering, but caught at one calm instant: no impact
+flash, expanding pulse, cracks, holes, fading, or damage marks. Do not bake
+health-dependent fading into the image; the game will make the dome more
+transparent as the shield loses health. Keep the effect neutral and
+team-agnostic, with no faction emblems or directional asymmetry.
+
+TECHNICAL REQUIREMENTS
+
+- Output exactly one PNG at 1024 x 768 pixels, RGBA with genuine alpha
+  transparency.
+- Use a transparent background, not a checkerboard or a dark/colored matte.
+- Center the complete dome precisely on the canvas and keep its silhouette
+  and glow fully inside the image with a modest transparent safety margin.
+- Preserve clean, soft alpha edges without a black, white, or colored fringe.
+- Keep the oval shell proportion consistent with a 4:3 fortress footprint.
+- No animation, sprite sheet, alternate takes, contact sheet, or variations.
+
+NEGATIVE PROMPT
+
+Fortress, castle, catapult, character, projectile, battlefield, terrain,
+ground, sky, scenery, landscape, opaque background, checkerboard, flat
+background color, solid opaque dome, filled center, clipped glow, cropped
+shell, perspective camera, tilted ellipse, half-dome, flat ring, top-only
+canopy, impact flash, explosion, hit pulse, crack, hole, damage, fading,
+depleted shield, team color marking, faction emblem, text, letters, numbers,
+logo, UI, HUD, border, frame, watermark, signature, photorealism, sci-fi
+force field, excessive runes, dense particles, noisy pattern, harsh bloom,
+hard opaque halo, unrelated franchise, copied commercial artwork
+
+ACCEPTANCE CHECK
+
+- One complete, centered, 4:3-ish translucent oval dome is immediately
+  recognizable as an active magical shield.
+- The interior and exterior canvas are genuinely transparent; only the shell,
+  its restrained reflections, and a few glints are visible.
+- The sprite is pristine and undamaged, suitable as the idle animation's
+  opening frame and as an overlay that leaves the in-game fortress readable.
+- Blue-cyan energy and subtle gold reflections follow the attached reference
+  without reproducing its card composition or scenery.

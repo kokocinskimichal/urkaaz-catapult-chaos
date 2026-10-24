@@ -1,5 +1,20 @@
 # Changelog
 
+## 2026-10-25
+
+### Added
+
+- Added `/loadContext` and a curated Markdown index for loading the core
+  project context and task-specific documentation in one command.
+- Added animated Fortress Shield dome and hit-flash presentation. The flash
+  starts at its first clearly visible frame and remains visible when a hit
+  depletes the shield.
+- Assigned the visual Frostbound biome to Chapter II campaign levels 11–20.
+
+### Changed
+
+- Increased Fortress Shield durability from 80 to 150 HP.
+
 ## 2026-10-23
 
 ### Added
