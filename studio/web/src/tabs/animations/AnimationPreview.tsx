@@ -6,7 +6,8 @@ type Background = "dark" | "light" | "grid";
 
 interface LoadedFrames {
   sequenceId: string;
-  images: HTMLImageElement[];
+  team: string;
+  images: HTMLCanvasElement[];
 }
 
 function loadImage(url: string): Promise<HTMLImageElement> {
@@ -18,7 +19,15 @@ function loadImage(url: string): Promise<HTMLImageElement> {
   });
 }
 
-export function AnimationPreview({ sequence }: { sequence: AnimationSequence }) {
+export function AnimationPreview({
+  sequence,
+  team = sequence.variant ?? "blue",
+  showMask = false,
+}: {
+  sequence: AnimationSequence;
+  team?: string;
+  showMask?: boolean;
+}) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [loaded, setLoaded] = useState<LoadedFrames | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -31,9 +40,22 @@ export function AnimationPreview({ sequence }: { sequence: AnimationSequence }) 
     let cancelled = false;
     setError(null);
     setFrame(0);
-    Promise.all(sequence.frameIndices.map(index => loadImage(frameUrl(sequence.id, index))))
-      .then(images => {
-        if (!cancelled) setLoaded({ sequenceId: sequence.id, images });
+    const isDefender = sequence.category === "character" && sequence.target === "defender";
+    const texturePromise = isDefender
+      ? loadImage(`/api/animations/defender-textures/${team}`)
+      : Promise.resolve(null);
+    Promise.all([
+      Promise.all(sequence.frameIndices.map(index => loadImage(frameUrl(sequence.id, index)))),
+      isDefender
+        ? Promise.all(sequence.frameIndices.map(index => loadImage(`/api/animations/${sequence.id}/masks/${index}`)))
+        : Promise.resolve([] as HTMLImageElement[]),
+      texturePromise,
+    ])
+      .then(([frames, masks, texture]) => {
+        const images = frames.map((frame, index) =>
+          composeAnimationFrame(frame, masks[index], texture, showMask, team === "red" && isDefender),
+        );
+        if (!cancelled) setLoaded({ sequenceId: sequence.id, team, images });
       })
       .catch((cause: Error) => {
         if (!cancelled) setError(cause.message);
@@ -41,9 +63,9 @@ export function AnimationPreview({ sequence }: { sequence: AnimationSequence }) 
     return () => {
       cancelled = true;
     };
-  }, [sequence.id, sequence.frameIndices]);
+  }, [sequence.id, sequence.frameIndices, sequence.variant, team, showMask]);
 
-  const images = loaded?.sequenceId === sequence.id ? loaded.images : null;
+  const images = loaded?.sequenceId === sequence.id && loaded.team === team ? loaded.images : null;
   const frameCount = images?.length ?? 0;
 
   useEffect(() => {
@@ -66,8 +88,8 @@ export function AnimationPreview({ sequence }: { sequence: AnimationSequence }) 
     const canvas = canvasRef.current;
     const image = images?.[frame];
     if (!canvas || !images || !image) return;
-    const width = Math.max(...images.map(item => item.naturalWidth));
-    const height = Math.max(...images.map(item => item.naturalHeight));
+    const width = Math.max(...images.map(item => item.width));
+    const height = Math.max(...images.map(item => item.height));
     if (canvas.width !== width || canvas.height !== height) {
       canvas.width = width;
       canvas.height = height;
@@ -75,10 +97,10 @@ export function AnimationPreview({ sequence }: { sequence: AnimationSequence }) 
     const context = canvas.getContext("2d");
     if (!context) return;
     context.clearRect(0, 0, width, height);
-    context.drawImage(image, (width - image.naturalWidth) / 2, (height - image.naturalHeight) / 2);
+    context.drawImage(image, (width - image.width) / 2, (height - image.height) / 2);
   }, [images, frame]);
 
-  const size = images?.[0] ? `${images[0].naturalWidth} × ${images[0].naturalHeight}` : "…";
+  const size = images?.[0] ? `${images[0].width} × ${images[0].height}` : "…";
   const shownIndex = sequence.frameIndices[frame] ?? 0;
 
   return (
@@ -119,4 +141,76 @@ export function AnimationPreview({ sequence }: { sequence: AnimationSequence }) 
       ))}
     </div>
   );
+}
+
+function composeAnimationFrame(
+  source: HTMLImageElement,
+  mask: HTMLImageElement | undefined,
+  texture: HTMLImageElement | null,
+  showMask: boolean,
+  mirror: boolean,
+): HTMLCanvasElement {
+  const canvas = document.createElement("canvas");
+  canvas.width = source.naturalWidth;
+  canvas.height = source.naturalHeight;
+  const context = canvas.getContext("2d");
+  if (!context) throw new Error("Canvas 2D context is unavailable");
+  if (mirror) {
+    context.save();
+    context.translate(canvas.width, 0);
+    context.scale(-1, 1);
+  }
+  context.drawImage(source, 0, 0);
+  if (mirror) context.restore();
+  if (!mask || !texture) return canvas;
+
+  const sourcePixels = context.getImageData(0, 0, canvas.width, canvas.height);
+  const maskCanvas = document.createElement("canvas");
+  maskCanvas.width = canvas.width;
+  maskCanvas.height = canvas.height;
+  const maskContext = maskCanvas.getContext("2d");
+  if (!maskContext) throw new Error("Canvas 2D context is unavailable");
+  if (mirror) {
+    maskContext.save();
+    maskContext.translate(maskCanvas.width, 0);
+    maskContext.scale(-1, 1);
+  }
+  maskContext.drawImage(mask, 0, 0);
+  if (mirror) maskContext.restore();
+  const maskPixels = maskContext.getImageData(0, 0, canvas.width, canvas.height);
+  const textureCanvas = document.createElement("canvas");
+  textureCanvas.width = texture.naturalWidth;
+  textureCanvas.height = texture.naturalHeight;
+  const textureContext = textureCanvas.getContext("2d");
+  if (!textureContext) throw new Error("Canvas 2D context is unavailable");
+  textureContext.drawImage(texture, 0, 0);
+  const texturePixels = textureContext.getImageData(0, 0, textureCanvas.width, textureCanvas.height);
+
+  for (let y = 0; y < canvas.height; y++) {
+    for (let x = 0; x < canvas.width; x++) {
+      const index = (y * canvas.width + x) * 4;
+      const alpha = sourcePixels.data[index + 3];
+      const coverage = (maskPixels.data[index + 3] * alpha) / (255 * 255);
+      if (coverage === 0) continue;
+      const luminance = showMask
+        ? 1
+        : (sourcePixels.data[index] * 299 +
+          sourcePixels.data[index + 1] * 587 +
+          sourcePixels.data[index + 2] * 114) /
+        1000 /
+        255;
+      const lighting = Math.max(0.45, Math.min(1.2, 0.5 + luminance));
+      const textureIndex =
+        ((y % textureCanvas.height) * textureCanvas.width + (x % textureCanvas.width)) * 4;
+      for (let channel = 0; channel < 3; channel++) {
+        const textured = showMask
+          ? [255, 30, 70][channel]
+          : texturePixels.data[textureIndex + channel] * lighting;
+        sourcePixels.data[index + channel] =
+          sourcePixels.data[index + channel] * (1 - coverage) + textured * coverage;
+      }
+    }
+  }
+  context.putImageData(sourcePixels, 0, 0);
+  return canvas;
 }

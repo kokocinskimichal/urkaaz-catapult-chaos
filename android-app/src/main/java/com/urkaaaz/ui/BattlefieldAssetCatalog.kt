@@ -4,7 +4,10 @@ import android.content.Context
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.graphics.Color
+import android.graphics.Matrix
+import android.util.LruCache
 import com.urkaaaz.android.R
+import org.json.JSONObject
 
 data class BattlefieldTheme(
     val background: Bitmap?,
@@ -57,6 +60,14 @@ class BattlefieldAssetCatalog(private val context: Context) {
     private val resources = context.resources
     private val unitBitmapCache = mutableMapOf<String, Bitmap?>()
     private val unitAnimationCache = mutableMapOf<String, List<Bitmap>>()
+    private val defenderTextureBitmapCache = TeamTextureBitmapCache()
+    private val defenderTextureByTeam by lazy { loadDefenderTextureConfiguration() }
+    private val defenderTextureCache = mutableMapOf<String, Bitmap>()
+    private val defenderNeutralFrameCache = mutableMapOf<String, List<Bitmap>>()
+    private val defenderMaskCache = object : LruCache<String, Bitmap>(4 * 1024) {
+        override fun sizeOf(key: String, value: Bitmap): Int =
+            (value.allocationByteCount / 1024).coerceAtLeast(1)
+    }
     private val terrainSoil = BitmapFactory.decodeResource(
         resources,
         R.drawable.terrain_soil_fill_00,
@@ -250,13 +261,12 @@ class BattlefieldAssetCatalog(private val context: Context) {
                 }
                 when {
                     prefix.isEmpty() -> emptyList()
+                    unitType == "DEFENDER" -> loadDefenderAnimationFrames("attack", team, side)
                     else -> loadThreeDigitAnimationFrames(prefix)
                 }
             } else if (!moving) {
                 when (unitType) {
-                    "DEFENDER" -> loadThreeDigitAnimationFrames(
-                        "anim_character_defender_idle_${team}",
-                    )
+                    "DEFENDER" -> loadDefenderAnimationFrames("idle", team, side)
                     "DEMOLISHER" -> loadThreeDigitAnimationFrames(
                         "anim_character_demolisher_idle_${team}",
                     )
@@ -274,7 +284,11 @@ class BattlefieldAssetCatalog(private val context: Context) {
                     "SLINGMASTER" -> "anim_character_slingmaster_move"
                     else -> return@getOrPut emptyList()
                 }
-                loadThreeDigitAnimationFrames(prefix)
+                if (unitType == "DEFENDER") {
+                    loadDefenderAnimationFrames("move", team, side)
+                } else {
+                    loadThreeDigitAnimationFrames(prefix)
+                }
             }
         }
 
@@ -286,9 +300,7 @@ class BattlefieldAssetCatalog(private val context: Context) {
         val cacheKey = "death:$unitType:$side"
         return unitAnimationCache.getOrPut(cacheKey) {
             when (unitType) {
-                "DEFENDER" -> loadThreeDigitAnimationFrames(
-                    "anim_character_defender_death_${team}",
-                )
+                "DEFENDER" -> loadDefenderAnimationFrames("death", team, side)
                 "RAGING_BOAR" -> loadAnimationFrames(
                     "anim_character_raging_boar_death_${team}",
                 )
@@ -299,6 +311,82 @@ class BattlefieldAssetCatalog(private val context: Context) {
             }
         }
     }
+
+    private fun loadDefenderAnimationFrames(
+        animation: String,
+        team: String,
+        side: String,
+    ): List<Bitmap> {
+        val neutralFrames = defenderNeutralFrameCache.getOrPut(animation) {
+            loadThreeDigitAnimationFrames("anim_character_defender_$animation")
+        }
+        val masks = object : AbstractList<Bitmap>() {
+            override val size: Int = neutralFrames.size
+
+            override fun get(index: Int): Bitmap {
+                require(index in indices) { "Defender animation mask $index is out of range" }
+                val key = "$animation:$side:${index.toString().padStart(3, '0')}"
+                return defenderMaskCache.get(key) ?: context.assets.open(
+                    "animations/defender/masks/$animation/${index.toString().padStart(3, '0')}.png",
+                ).use { input ->
+                    BitmapFactory.decodeStream(input)
+                        ?: error("Could not decode Defender $animation mask frame $index")
+                }.let { sourceMask ->
+                    require(
+                        sourceMask.width == neutralFrames[index].width &&
+                            sourceMask.height == neutralFrames[index].height,
+                    ) {
+                        "Defender $animation mask frame $index has mismatched dimensions"
+                    }
+                    if (side == "right") mirrorBitmap(sourceMask) else sourceMask
+                }.also { defenderMaskCache.put(key, it) }
+            }
+        }
+
+        val texturePath = defenderTextureByTeam[team.uppercase()]
+            ?: error("No Defender texture is configured for team '$team'")
+        val texture = defenderTextureCache.getOrPut(texturePath) {
+            context.assets.open(texturePath).use { input ->
+                BitmapFactory.decodeStream(input)
+                    ?: error("Could not decode Defender texture '$texturePath'")
+            }
+        }
+        val sources = if (side == "right") neutralFrames.map(::mirrorBitmap) else neutralFrames
+        return object : AbstractList<Bitmap>() {
+            override val size: Int = sources.size
+
+            override fun get(index: Int): Bitmap {
+                require(index in indices) { "Defender animation frame $index is out of range" }
+                return defenderTextureBitmapCache.getOrCreate(
+                    "$animation:$team:$index",
+                    sources[index],
+                    masks[index],
+                    texture,
+                )
+            }
+        }
+    }
+
+    private fun loadDefenderTextureConfiguration(): Map<String, String> {
+        val json = context.assets.open("animations/defender/palettes.json").bufferedReader().use {
+            JSONObject(it.readText())
+        }
+        val teams = json.getJSONObject("teams")
+        return listOf("BLUE", "RED").associateWith { team ->
+            teams.getString(team)
+        }
+    }
+
+    private fun mirrorBitmap(bitmap: Bitmap): Bitmap =
+        Bitmap.createBitmap(
+            bitmap,
+            0,
+            0,
+            bitmap.width,
+            bitmap.height,
+            Matrix().apply { setScale(-1f, 1f) },
+            true,
+        )
 
     fun themeFor(biome: String): BattlefieldTheme =
         themes[biome] ?: error("No battlefield theme is registered for biome '$biome'")

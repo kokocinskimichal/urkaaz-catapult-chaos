@@ -74,6 +74,7 @@ do bieżącego zadania według [indeksu dokumentów kontekstu](docs/agent-contex
 - [Prompt loadoutu](docs/systems/loadout-system-implementation-prompt.md)
 - [System reliktów](docs/systems/relic-system.md)
 - [System czarów](docs/systems/spell-system.md)
+- [Plan dynamicznej podmiany koloru animacji (propozycja)](docs/systems/team-color-animation-plan.md)
 - [Prompt systemu czarów](docs/systems/spell-system-implementation-prompt.md)
 - [Prezentacja Fire Rain](docs/systems/fire-rain-presentation.md)
 - [Prompt prezentacji Fire Rain](docs/systems/fire-rain-presentation-implementation-prompt.md)

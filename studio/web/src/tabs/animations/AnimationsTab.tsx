@@ -17,6 +17,8 @@ export function AnimationsTab() {
   const [error, setError] = useState<string | null>(null);
   const [selection, setSelection] = useState<Selection | null>(null);
   const [variant, setVariant] = useState<string | null>(null);
+  const [team, setTeam] = useState<"blue" | "red">("blue");
+  const [showMask, setShowMask] = useState(false);
 
   useEffect(() => {
     fetchAnimationCatalog()
@@ -31,6 +33,7 @@ export function AnimationsTab() {
   const node = selection ? findTypeNode(tree, selection) : null;
   const sequence = node ? pickSequence(node, variant) : null;
   const variants = node ? variantsOf(node) : [];
+  const isDefender = sequence?.category === "character" && sequence.target === "defender";
 
   if (error) return <p className="error">Could not load animations: {error}</p>;
   if (!catalog) return <p className="hint-text">Loading animation catalog…</p>;
@@ -75,7 +78,18 @@ export function AnimationsTab() {
         )}
       </aside>
       <div className="animation-main">
-        {variants.length > 0 && (
+        {isDefender ? (
+          <div className="variant-switch" aria-label="Defender team texture">
+            {(["blue", "red"] as const).map(name => (
+              <button key={name} className={team === name ? "active" : undefined} onClick={() => setTeam(name)}>
+                {name}
+              </button>
+            ))}
+            <button className={showMask ? "active" : undefined} onClick={() => setShowMask(value => !value)}>
+              {showMask ? "Hide mask" : "Show mask"}
+            </button>
+          </div>
+        ) : variants.length > 0 && (
           <div className="variant-switch">
             {variants.map(name => (
               <button key={name} className={sequence?.variant === name ? "active" : undefined} onClick={() => setVariant(name)}>
@@ -84,7 +98,7 @@ export function AnimationsTab() {
             ))}
           </div>
         )}
-        {sequence ? <AnimationPreview sequence={sequence} /> : <p className="hint-text">No animations found.</p>}
+        {sequence ? <AnimationPreview sequence={sequence} team={team} showMask={isDefender && showMask} /> : <p className="hint-text">No animations found.</p>}
       </div>
     </div>
   );

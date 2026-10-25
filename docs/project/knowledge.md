@@ -494,28 +494,23 @@ not truncated to a subset; unit frame playback advances at approximately
   Demolisher idle/jog. Death retention supports this blue sequence and the
   existing two-team Defender death animations; a red Demolisher death sequence
   has not been generated.
-- Both blue and red Defender idle and jog animations use 60 transparent
-  256x256 frames from their approved AnimGen sequences, sampled at every other
-  source frame to match the renderer's approximately `7.5 FPS` cadence. Their
-  expanded canvases are scaled and bottom-aligned by `BattlefieldRenderer`,
-  with per-idle-sequence offsets and a shared jog offset keeping the feet and
-  health bars stable. Both Defender combat animations use 30 transparent
-  frames for one overhead axe strike; the opponent's red variant attacks with
-  the left hand. Each generated state has its own measured transparent-bottom
-  offset to keep the feet and health bars stable. One accepted blue-idle frame
-  retains the source's top-clipped axe toss (source frames 23-25); the red
-  idle sequence has a consistent 79/512 transparent-bottom ratio, and neither
-  jog sequence has edge clipping.
-- Both blue and red Defender death animations use 60 approved transparent
-  256x256 frames (downscaled from the original 512x512 generation so every
-  Defender sequence shares one resolution; framing is identical, so frame 0
-  matches the idle pose exactly) at the renderer's approximately `10 FPS` death cadence,
-  driven by an independent per-unit clock that starts when each unit enters
-  the dead state. The renderer retains either team's immutable dead-unit
-  snapshot after simulation cleanup long enough to play all 60 frames. Their
-  expanded canvases use measured transparent-bottom offsets (`70/512` blue,
-  `79/512` red) to keep the ground anchor stable; the red animation's final
-  transparent frames let the defeated unit disappear.
+- Defender uses one neutral 256x256 sequence for each state: idle and move have
+  60 frames, attack 30, and death 60. Neutral frames were selected from the
+  former BLUE sequence; RED is rendered by mirroring the shared frames. The
+  RED-specific attack-hand animation is not retained. Team appearance is
+  applied at render time from per-frame alpha masks and repeating fabric
+  textures configured by `android-app/src/main/assets/animations/defender/palettes.json`.
+  The masks also cover the remaining blue-dominant details that showed through
+  in gameplay, while leaving skin and gold equipment unchanged.
+  Current masks are an automatic color-segmentation draft, not art-approved;
+  they now include all blue regions, including the shield field, and may need
+  manual cleanup. `TeamTextureBitmapCache` preserves source luminance and alpha
+  and uses a 6 MiB LRU for generated frames. Studio's Animations tab previews
+  BLUE/RED textures and exposes a red mask overlay. Death playback still uses
+  the independent per-unit clock and retains the defeated unit after simulation
+  cleanup long enough to play all 60 frames. Since the neutral source is BLUE,
+  unmasked equipment details and skin remain unchanged when the RED texture is
+  selected.
 - Unit sprite and animation bitmaps are cached by the asset catalog; rendering
 does not decode the full animation set again for every frame or every unit.
 - Realtime AI uses `AiMatchCoordinator` and deterministic, profile-selected
@@ -870,7 +865,7 @@ from the game modules; the plan lives in
 a dependency-free Node server (`node src/main.ts`, loopback-only, rejects
 non-loopback `Host` headers) exposing `GET /api/health` (version, repo root, git
 branch, working-tree state), and a React/Vite shell with Maps/Animations
-placeholder tabs. API contracts live in `studio/server/src/contracts` and are
+tabs (Maps remains a placeholder). API contracts live in `studio/server/src/contracts` and are
 imported by the web app as types via `@studio/contracts`. Studio only reports
 git state and never commits or switches branches. Run it with
 `cd studio && npm run studio`; it is outside `./gradlew test assembleDebug`,
@@ -885,6 +880,13 @@ become `issues`), and `GET /api/animations/{id}/frames/{n}` streams a PNG with
 path-traversal checks. `studio/config/animations.json` is maintained by hand:
 add new targets there and list sequences without a runtime loader in
 `withoutLoader` (currently `anim_ammunition_fire_rain_impact`).
+
+The Defender team-texture pilot uses one neutral 256x256 sequence per animation
+in `drawable-nodpi`, per-frame alpha masks under
+`android-app/src/main/assets/animations/defender/masks/<type>/`, and team texture
+paths in `palettes.json`. Studio serves the masks and configured textures and
+shows a BLUE/RED composite plus a red mask overlay. Its texture logic is
+presentation-only and does not touch the game simulation.
 
 ## Push workflow
 

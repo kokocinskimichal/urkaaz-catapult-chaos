@@ -1,7 +1,7 @@
 export type AnimationCategory = "character" | "spell" | "ammunition";
 
 export interface AnimationSequence {
-  /** Sequence stem without the frame index, e.g. `anim_character_defender_move_blue`. */
+  /** Sequence stem without the frame index, e.g. `anim_character_defender_move`. */
   id: string;
   category: AnimationCategory;
   target: string;

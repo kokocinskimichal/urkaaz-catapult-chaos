@@ -997,18 +997,12 @@ class BattlefieldRenderer(
                     usesGeneratedDemolisherAnimation ->
                         GENERATED_DEMOLISHER_BOTTOM_PADDING_RATIO
                     !usesGeneratedDefenderAnimation -> 0f
-                    defeated && unit.teamLabel == "BLUE" ->
+                    defeated ->
                         GENERATED_BLUE_DEFENDER_DEATH_BOTTOM_PADDING_RATIO
-                    defeated && unit.teamLabel == "RED" ->
-                        GENERATED_RED_DEFENDER_DEATH_BOTTOM_PADDING_RATIO
                     unit.moving -> GENERATED_DEFENDER_JOG_BOTTOM_PADDING_RATIO
-                    attacking && unit.teamLabel == "BLUE" ->
+                    attacking ->
                         GENERATED_BLUE_DEFENDER_COMBAT_BOTTOM_PADDING_RATIO
-                    attacking && unit.teamLabel == "RED" ->
-                        GENERATED_RED_DEFENDER_COMBAT_BOTTOM_PADDING_RATIO
-                    unit.teamLabel == "BLUE" -> GENERATED_BLUE_DEFENDER_IDLE_BOTTOM_PADDING_RATIO
-                    unit.teamLabel == "RED" -> GENERATED_RED_DEFENDER_IDLE_BOTTOM_PADDING_RATIO
-                    else -> 0f
+                    else -> GENERATED_BLUE_DEFENDER_IDLE_BOTTOM_PADDING_RATIO
                 }
                 val transparentBottomPadding =
                     spriteHeight * generatedAnimationBottomPaddingRatio
@@ -1327,12 +1321,9 @@ class BattlefieldRenderer(
         private const val GENERATED_DEMOLISHER_CANVAS_SCALE = 2f
         private const val GENERATED_DEMOLISHER_BOTTOM_PADDING_RATIO = 75f / 512f
         private const val GENERATED_BLUE_DEFENDER_IDLE_BOTTOM_PADDING_RATIO = 68f / 512f
-        private const val GENERATED_RED_DEFENDER_IDLE_BOTTOM_PADDING_RATIO = 79f / 512f
         private const val GENERATED_DEFENDER_JOG_BOTTOM_PADDING_RATIO = 76f / 512f
         private const val GENERATED_BLUE_DEFENDER_COMBAT_BOTTOM_PADDING_RATIO = 69f / 512f
-        private const val GENERATED_RED_DEFENDER_COMBAT_BOTTOM_PADDING_RATIO = 65f / 512f
         private const val GENERATED_BLUE_DEFENDER_DEATH_BOTTOM_PADDING_RATIO = 70f / 512f
-        private const val GENERATED_RED_DEFENDER_DEATH_BOTTOM_PADDING_RATIO = 79f / 512f
         private const val CATAPULT_RENDER_WIDTH = WorldScale.CATAPULT_RENDER_WIDTH
         private const val PROJECTILE_DEBUG_RADIUS = 30f
         private const val DECORATION_RENDER_SIZE = 94f

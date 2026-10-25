@@ -115,3 +115,34 @@ export function animationFramePath(repoRoot: string, sequenceId: string, index: 
   if (!Number.isInteger(index) || index < 0 || index > 999) return null;
   return join(repoRoot, ...ANIMATION_DIRECTORY, `${sequenceId}_${String(index).padStart(3, "0")}.png`);
 }
+
+export function defenderMaskPath(repoRoot: string, sequenceId: string, index: number): string | null {
+  const match = /^anim_character_defender_(idle|move|attack|death)$/.exec(sequenceId);
+  if (!match || !Number.isInteger(index) || index < 0 || index > 99) return null;
+  return join(repoRoot, "android-app", "src", "main", "assets", "animations", "defender", "masks", match[1], `${String(index).padStart(3, "0")}.png`);
+}
+
+export async function defenderTexturePath(repoRoot: string, team: string): Promise<string | null> {
+  if (team !== "blue" && team !== "red") return null;
+  const configPath = join(
+    repoRoot,
+    "android-app",
+    "src",
+    "main",
+    "assets",
+    "animations",
+    "defender",
+    "palettes.json",
+  );
+  const config = JSON.parse(await readFile(configPath, "utf8")) as {
+    teams?: Record<string, unknown>;
+  };
+  const texture = config.teams?.[team.toUpperCase()];
+  if (
+    typeof texture !== "string" ||
+    !/^animations\/defender\/[a-z0-9_-]+\.png$/.test(texture)
+  ) {
+    return null;
+  }
+  return join(repoRoot, "android-app", "src", "main", "assets", texture);
+}

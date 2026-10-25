@@ -22,11 +22,11 @@ describe("animations API", () => {
     const response = await fetch(`${await baseUrl()}/api/animations`);
     const catalog = (await response.json()) as AnimationCatalogResponse;
     expect(response.status).toBe(200);
-    expect(catalog.sequences.some(sequence => sequence.id === "anim_character_defender_move_blue")).toBe(true);
+    expect(catalog.sequences.some(sequence => sequence.id === "anim_character_defender_move")).toBe(true);
   });
 
   it("serves a frame as PNG", async () => {
-    const response = await fetch(`${await baseUrl()}/api/animations/anim_character_defender_move_blue/frames/0`);
+    const response = await fetch(`${await baseUrl()}/api/animations/anim_character_defender_move/frames/0`);
     expect(response.status).toBe(200);
     expect(response.headers.get("content-type")).toBe("image/png");
     const bytes = new Uint8Array(await response.arrayBuffer());
@@ -35,9 +35,24 @@ describe("animations API", () => {
 
   it("returns 404 for missing frames and unsafe ids", async () => {
     const base = await baseUrl();
-    expect((await fetch(`${base}/api/animations/anim_character_defender_move_blue/frames/999`)).status).toBe(404);
+    expect((await fetch(`${base}/api/animations/anim_character_defender_move/frames/999`)).status).toBe(404);
     expect((await fetch(`${base}/api/animations/anim_unknown_nothing/frames/0`)).status).toBe(404);
     expect((await fetch(`${base}/api/animations/..%2F..%2Fsettings/frames/0`)).status).toBe(404);
+  });
+
+  it("serves Defender masks and team textures", async () => {
+    const base = await baseUrl();
+    for (const path of [
+      "/api/animations/anim_character_defender_idle/masks/0",
+      "/api/animations/defender-textures/blue",
+      "/api/animations/defender-textures/red",
+    ]) {
+      const response = await fetch(`${base}${path}`);
+      expect(response.status).toBe(200);
+      expect(response.headers.get("content-type")).toBe("image/png");
+    }
+    expect((await fetch(`${base}/api/animations/anim_character_defender_idle/masks/999`)).status).toBe(404);
+    expect((await fetch(`${base}/api/animations/defender-textures/green`)).status).toBe(404);
   });
 
   it("rejects non-GET requests", async () => {

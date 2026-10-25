@@ -17,6 +17,14 @@
   a canvas preview with play/pause, frame stepping, FPS and background controls.
   Targets and sequences without a runtime loader come from
   `studio/config/animations.json`.
+- Implemented the Defender team-texture pilot: replaced team-specific animation
+  frames with one neutral sequence per state, added per-frame garment-mask PNGs
+  and configurable BLUE/RED fabric textures, and added a bounded renderer cache.
+  Masks cover blue-dominant garment and shield pixels, including small details
+  that previously showed through in gameplay; texture lighting preserves source
+  shading without suppressing the palette colors. Studio previews both textures
+  and can overlay the generated masks. Masks are an automatic first draft and
+  still require visual review.
 
 - Added `/loadContext` and a curated Markdown index for loading the core
   project context and task-specific documentation in one command.
