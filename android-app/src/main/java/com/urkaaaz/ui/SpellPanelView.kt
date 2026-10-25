@@ -73,10 +73,18 @@ class SpellPanelView(
             val active = slot.type in state.activeSpellTypes
             val enoughMana = state.playerMana >= slot.manaCost
             val ready = slot.implemented &&
-                !active &&
+                (!active || slot.recastableWhileActive) &&
                 enoughMana &&
                 state.statusLabel == "RUNNING"
+            val remainingMilliseconds = state.activeSpellRemainingMilliseconds[slot.type]
+            val remainingSeconds = remainingMilliseconds
+                ?.let { ((it + 999L) / 1_000L).toInt() }
             val status = when {
+                active && slot.recastableWhileActive && remainingSeconds != null ->
+                    context.getString(
+                        R.string.match_hud_spell_active_timer,
+                        remainingSeconds,
+                    )
                 active -> context.getString(R.string.match_hud_active)
                 !slot.implemented -> context.getString(R.string.match_hud_planned)
                 state.statusLabel != "RUNNING" -> context.getString(R.string.match_hud_unavailable)
@@ -116,9 +124,18 @@ class SpellPanelView(
             } else {
                 0f
             }
-            slot.shieldShade.coveredFraction = shieldCoveredFraction
-            slot.shieldShade.visibility =
-                if (shieldCoveredFraction > 0f) View.VISIBLE else View.GONE
+            val durationCoveredFraction = if (active) {
+                SpellIconProgressPresentation.coveredFraction(
+                    remainingMilliseconds = remainingMilliseconds,
+                    durationMilliseconds = slot.activeDurationMilliseconds,
+                )
+            } else {
+                0f
+            }
+            val coveredFraction = maxOf(shieldCoveredFraction, durationCoveredFraction)
+            slot.progressShade.coveredFraction = coveredFraction
+            slot.progressShade.visibility =
+                if (coveredFraction > 0f) View.VISIBLE else View.GONE
         }
     }
 
@@ -129,14 +146,14 @@ class SpellPanelView(
         val iconResource = (artwork as? LoadoutAssetLookup.Found)?.drawableId
             ?: return null
         val button = ImageButton(context).apply {
-            scaleType = ImageView.ScaleType.CENTER_INSIDE
-            setPadding(dp(5), dp(5), dp(5), dp(5))
+            scaleType = ImageView.ScaleType.CENTER_CROP
+            setPadding(0, 0, 0, 0)
             setImageResource(iconResource)
             background = HudPanelStyle.background(context, Color.argb(82, 28, 33, 36))
             clipToOutline = true
             setOnClickListener { onSpellCast?.invoke(type) }
         }
-        val shieldShade = VerticalProgressShade(context, dp(9).toFloat())
+        val progressShade = VerticalProgressShade(context, dp(9).toFloat())
         val name = TextView(context).apply {
             text = context.getString(shortNameResource)
             contentDescription = context.getString(nameResource)
@@ -173,7 +190,7 @@ class SpellPanelView(
                     clipChildren = true
                     clipToPadding = true
                     addView(button, FrameLayout.LayoutParams(-1, -1))
-                    addView(shieldShade, FrameLayout.LayoutParams(-1, -1))
+                    addView(progressShade, FrameLayout.LayoutParams(-1, -1))
                     addView(
                         costBadge,
                         FrameLayout.LayoutParams(
@@ -194,9 +211,11 @@ class SpellPanelView(
             type = type,
             manaCost = spell.manaCost,
             implemented = spell.implemented,
+            recastableWhileActive = spell.recastableWhileActive,
+            activeDurationMilliseconds = spell.activeDurationMilliseconds,
             nameResource = nameResource,
             button = button,
-            shieldShade = shieldShade,
+            progressShade = progressShade,
             root = root,
             active = false,
             ready = false,
@@ -242,9 +261,11 @@ class SpellPanelView(
         val type: String,
         val manaCost: Int,
         val implemented: Boolean,
+        val recastableWhileActive: Boolean,
+        val activeDurationMilliseconds: Long?,
         val nameResource: Int,
         val button: ImageButton,
-        val shieldShade: VerticalProgressShade,
+        val progressShade: VerticalProgressShade,
         val root: LinearLayout,
         var active: Boolean,
         var ready: Boolean,

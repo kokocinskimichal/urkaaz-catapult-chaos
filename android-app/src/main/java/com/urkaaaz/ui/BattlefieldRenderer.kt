@@ -941,6 +941,22 @@ class BattlefieldRenderer(
                 } else {
                     spriteHeightWorld
                 }
+                if (
+                    HasteOrbitingChevronPresentation.shouldRender(
+                        unit.hasted,
+                        unit.moving,
+                        defeated,
+                    )
+                ) {
+                    drawHasteOrbitingChevronEffect(
+                        canvas = canvas,
+                        unit = unit,
+                        animationFrame = animationFrame,
+                        centerX = centerX,
+                        baselineY = baselineY,
+                        unitSpriteWidth = spriteWidth,
+                    )
+                }
                 canvas.drawBitmap(
                     bitmap,
                     null,
@@ -995,6 +1011,32 @@ class BattlefieldRenderer(
                 )
             }
         }
+    }
+
+    private fun drawHasteOrbitingChevronEffect(
+        canvas: Canvas,
+        unit: UnitRenderState,
+        animationFrame: Int,
+        centerX: Float,
+        baselineY: Float,
+        unitSpriteWidth: Float,
+    ) {
+        val frame = assets.hasteOrbitingChevronFrames[
+            HasteOrbitingChevronPresentation.frameIndex(animationFrame)
+        ]
+        val bounds =
+            HasteOrbitingChevronPresentation.spriteBounds(centerX, baselineY, unitSpriteWidth)
+        val saveCount = canvas.save()
+        if (HasteOrbitingChevronPresentation.shouldMirrorHorizontally(unit.facingDirection)) {
+            canvas.scale(-1f, 1f, centerX, baselineY)
+        }
+        canvas.drawBitmap(
+            frame,
+            null,
+            RectF(bounds.left, bounds.top, bounds.right, bounds.bottom),
+            spritePaint,
+        )
+        canvas.restoreToCount(saveCount)
     }
 
     private fun drawCombatFeedback(

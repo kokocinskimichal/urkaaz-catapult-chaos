@@ -28,6 +28,11 @@ blocker wymagający decyzji użytkownika.
   liczbowych bez osobnej zgody.
 - **Haste przyspiesza wyłącznie sojusznicze jednostki.** Starszy opis UI
   mówiący o wszystkich jednostkach jest nieaktualny i ma zostać skorygowany.
+- Dla Haste użytkownik zaakceptował 15 s zamiast legacy 5 s, ×2 prędkości
+  ruchu wysłanych sojuszników, odświeżanie czasu przy ponownym rzuceniu bez
+  kumulowania mnożnika oraz działanie na jednostki wysłane podczas trwania
+  efektu. Garnizon i przeciwnicy nie są objęci; SLOWED mnoży się z HASTE, a
+  STUNNED zatrzymuje ruch.
 - Kategorie targetu są niezależne od kategorii roli (`OFFENSIVE`,
   `DEFENSIVE`, `BATTLEFIELD_CONTROL`, `SUPPORT`, `SIEGE`).
 - SpellSystem nie wybiera, nie waliduje i nie przechowuje loadoutu.
@@ -162,7 +167,8 @@ Przenieś baseline z `docs/systems/spell-system.md` dokładnie:
   zatrzymuje wrogie jednostki; nowa pułapka drużyny zastępuje jej poprzednią.
 - **Runiczny Bastion:** 1 200 złota, 70 many, 360 HP; własna brama; blokuje
   marsz i można go zniszczyć; ponowna aktywacja odnawia HP.
-- **Haste:** 900 złota, 50 many, 5 s; ×2 prędkości tylko własnych jednostek.
+- **Haste:** 900 złota, 50 many, 15 s (zaakceptowany override legacy 5 s);
+  ×2 prędkości ruchu tylko wysłanych sojuszniczych jednostek.
 - **Heal:** 900 złota, 50 many; żywe, ranne własne jednostki leczy o 35%
   maksymalnego HP, również w garnizonie.
 - **Tarcza fortecy:** 0 złota, 80 many, 150 HP; osłania własną fortecę;
@@ -236,6 +242,10 @@ Nie zakładaj automatycznego importu save’ów między oddzielnymi aplikacjami.
   grafik bez osobnej zgody.
 - Popraw opisy Haste tak, by wszystkie locale jednoznacznie wskazywały
   sojusznicze jednostki.
+- Animacja Haste: zatwierdzona pętla 12 klatek ze złoto-turkusowymi
+  orbitującymi szewronami została wygenerowana przez AnimGen, zaakceptowana i
+  zintegrowana. Odtwarzaj ją za poruszającymi się jednostkami HASTED; nie
+  generuj ponownie ani nie zastępuj assetów bez osobnej zgody.
 - Zachowaj world-space i wspólną transformację kamery dla efektów pola;
   kontrolki HUD pozostają screen-space.
 

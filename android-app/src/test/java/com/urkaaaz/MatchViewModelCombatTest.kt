@@ -102,6 +102,31 @@ class MatchViewModelCombatTest {
     }
 
     @Test
+    fun hasteShowsItsTimerAndCanBeRefreshedFromTheSharedSpellAction() {
+        val viewModel = MatchViewModel(
+            campaignLevel = 8,
+            playerLoadout = PlayerLoadoutConfig(
+                playerId = PlayerId("player"),
+                unitTypes = listOf("DEFENDER"),
+                ammunitionSlots = listOf("ROCK", null, null),
+                spellTypes = listOf("HASTE"),
+            ),
+        )
+        viewModel.dispatch(MatchUiAction.StartMatch)
+
+        val active = viewModel.dispatch(MatchUiAction.CastSpell("HASTE"))
+        assertEquals(50, active.playerMana)
+        assertTrue("HASTE" in active.activeSpellTypes)
+        assertEquals(15_000L, active.activeSpellRemainingMilliseconds["HASTE"])
+
+        val refreshed = viewModel.dispatch(MatchUiAction.CastSpell("HASTE"))
+        assertEquals(0, refreshed.playerMana)
+        assertTrue("HASTE" in refreshed.activeSpellTypes)
+        assertEquals(15_000L, refreshed.activeSpellRemainingMilliseconds["HASTE"])
+        assertEquals("SPELL CAST", refreshed.spellFeedbackLabel)
+    }
+
+    @Test
     fun spellActivationWithoutEquippedSpellIsReported() {
         val viewModel = MatchViewModel(campaignLevel = 1)
         viewModel.dispatch(MatchUiAction.StartMatch)

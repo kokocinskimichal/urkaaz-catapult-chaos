@@ -71,6 +71,7 @@ data class RenderState(
     val playerMana: Int = 0,
     val selectedAmmunitionType: String = "ROCK",
     val activeSpellTypes: Set<String> = emptySet(),
+    val activeSpellRemainingMilliseconds: Map<String, Long> = emptyMap(),
     val spellFeedbackLabel: String? = null,
     val fortressShieldHits: List<FortressShieldHitRenderState> = emptyList(),
 )
@@ -149,6 +150,7 @@ data class UnitRenderState(
     val attackProgress: Float,
     val facingDirection: Float,
     val sapperHasBomb: Boolean,
+    val hasted: Boolean = false,
 )
 
 object RenderStateMapper {
@@ -306,7 +308,13 @@ object RenderStateMapper {
             if ((blueFortressSnapshot?.shieldHealth ?: 0) > 0) {
                 add("FORTRESS_SHIELD")
             }
+            snapshot.activeSpells
+                .filter { it.team == com.urkaaaz.contracts.Team.BLUE }
+                .forEach { add(it.spellType) }
         },
+        activeSpellRemainingMilliseconds = snapshot.activeSpells
+            .filter { it.team == com.urkaaaz.contracts.Team.BLUE }
+            .associate { it.spellType to it.remainingMilliseconds },
         fortressShieldHits = events.filterIsInstance<MatchEvent.ShieldDamaged>()
             .filter { snapshot.matchId == null || it.matchId == snapshot.matchId }
             .mapNotNull { event ->
@@ -338,6 +346,7 @@ object RenderStateMapper {
                 attackProgress = it.attackProgress,
                 facingDirection = it.facingDirection,
                 sapperHasBomb = it.sapperHasBomb,
+                hasted = "HASTED" in it.statuses,
             )
         },
         matchTimeRemainingMilliseconds = snapshot.remainingMilliseconds,

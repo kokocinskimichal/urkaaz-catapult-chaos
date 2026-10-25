@@ -120,6 +120,75 @@ class MatchSessionTest {
     }
 
     @Test
+    fun hasteActivationRefreshesItsTimerAndReplaysDeterministically() {
+        val session = MatchSession(
+            scenario = spellScenario(loadoutSpells = listOf("HASTE")),
+            randomSeedProvider = { 79L },
+        )
+        val matchId = MatchId("haste-replay-match")
+        val playerId = PlayerId("spell-player")
+        session.dispatch(MatchCommand.Start(CommandId("haste-replay-start"), matchId, playerId))
+        session.dispatch(
+            MatchCommand.DeployUnit(
+                CommandId("haste-replay-deploy"),
+                matchId,
+                playerId,
+                "DEFENDER",
+            ),
+        )
+        session.dispatch(MatchCommand.SendWave(CommandId("haste-replay-wave"), matchId, playerId))
+
+        val cast = session.dispatchResult(
+            MatchCommand.CastSpell(
+                CommandId("haste-replay-cast"),
+                matchId,
+                playerId,
+                "HASTE",
+            ),
+        )
+        val acceptedCast = assertIs<CommandResult.Accepted>(cast)
+        val castEvent = assertIs<MatchEvent.SpellCast>(acceptedCast.events.single())
+        assertEquals("HASTE", castEvent.spellType)
+        assertEquals(50, castEvent.manaCost)
+        assertEquals(null, castEvent.targetId)
+        assertEquals(50, session.snapshot().resourcesByTeam[Team.BLUE]?.mana)
+
+        session.dispatch(
+            MatchCommand.AdvanceSimulation(
+                CommandId("haste-replay-advance"),
+                matchId,
+                playerId,
+                5_000L,
+            ),
+        )
+        assertEquals(10_000L, session.snapshot().activeSpells.single().remainingMilliseconds)
+        val refresh = session.dispatchResult(
+            MatchCommand.CastSpell(
+                CommandId("haste-replay-refresh"),
+                matchId,
+                playerId,
+                "HASTE",
+            ),
+        )
+        assertIs<CommandResult.Accepted>(refresh)
+        assertEquals(15_000L, session.snapshot().activeSpells.single().remainingMilliseconds)
+
+        session.dispatch(
+            MatchCommand.AdvanceSimulation(
+                CommandId("haste-replay-advance-after-refresh"),
+                matchId,
+                playerId,
+                1_250L,
+            ),
+        )
+        val expectedSnapshot = session.snapshot()
+        val replay = session.replay() ?: error("match replay was not recorded")
+        val replayResult = MatchReplayPlayer.play(replay)
+
+        assertEquals(expectedSnapshot, replayResult.snapshot)
+    }
+
+    @Test
     fun rejectedSpellCommandsRemainDeterministicInReplay() {
         val session = MatchSession(scenario = spellScenario(), randomSeedProvider = { 31L })
         val matchId = MatchId("spell-replay")

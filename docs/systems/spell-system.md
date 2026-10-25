@@ -2,13 +2,14 @@
 
 ## Status i cel
 
-SpellSystem jest częściowo zaimplementowany. Pierwszy pionowy wycinek obejmuje
-domenowy `SpellCatalog`, runtime many, typowany wynik aktywacji oraz
-`FORTRESS_SHIELD` działający przez sesję, symulację, eventy, snapshot i match
-screen. Android pokazuje manę, pozwala aktywować wyposażoną tarczę, prezentuje
-odrzucenia i rysuje jej stan z snapshotu. Pozostałe dziesięć efektów oraz
-trwałe rozliczanie stocku nadal są niezaimplementowane; opis poniżej rozróżnia
-obecny zakres od celu migracji.
+SpellSystem jest częściowo zaimplementowany. Oprócz `FORTRESS_SHIELD` drugi
+pionowy wycinek obejmuje HASTE: aktywację przez sesję, deterministyczny timer i
+mnożnik ruchu w symulacji, event, snapshot aktywnego efektu oraz licznik na
+match HUD. Zaakceptowana przez użytkownika 12-klatkowa animacja world-space
+trzech orbitujących szewronów jest zintegrowana: pojawia się za żywymi,
+poruszającymi się jednostkami HASTED i jest lustrzana zgodnie z kierunkiem
+ruchu. Pozostałe dziewięć efektów oraz trwałe rozliczanie stocku nadal są
+niezaimplementowane.
 Podczas działania tarczy ikona zaklęcia jest przykrywana od góry tym samym
 ciemnym cieniem co ikona amunicji podczas przeładowania; zakryta część
 odpowiada utraconemu HP i znika po wygaśnięciu tarczy.
@@ -63,7 +64,7 @@ W repozytorium istnieją już:
 | Element | Obecna rola | Docelowe użycie |
 |---|---|---|
 | `game-domain/Spells.kt: SpellType` | stabilne identyfikatory zaklęć | zachować identyfikatory; balans i metadane należą do katalogu |
-| `game-domain/SpellCatalog.kt: SpellCatalog` | koszty, kategorie roli/celu i implementowalność; runtime effect ma na razie tylko tarcza | kanoniczne źródło definicji wszystkich 11 zaklęć |
+| `game-domain/SpellCatalog.kt: SpellCatalog` | koszty, kategorie roli/celu i typowane efekty HASTE oraz tarczy | kanoniczne źródło definicji wszystkich 11 zaklęć |
 | `game-domain/Spells.kt: SpellCategory` | `OFFENSIVE`, `DEFENSIVE`, `BATTLEFIELD_CONTROL`, `SUPPORT`, `SIEGE` | zachować jako kategorię roli/efektu; nie używać jako kategorii targetu |
 | `game-application/.../loadout/MatchLoadout` | wspólny wybór jednostek, amunicji i czarów | kanoniczny model LoadoutSystemu |
 | `MatchCommand.CastSpell` | komenda z ID tekstowym i opcjonalnym celem | wejście do walidacji/aktywacji; nie zmienia stanu bezpośrednio |
@@ -78,8 +79,10 @@ W repozytorium istnieją już:
 
 `MatchSession.dispatchResult` i `LocalMatchGateway.dispatchResult` obsługują
 `CastSpell`; Androidowy match screen pokazuje manę, wysyła akcję aktywacji
-wyposażonego `FORTRESS_SHIELD`, wyświetla wynik/odrzucenie i rysuje osłonę z
-niemutowalnego stanu fortecy w world-space. Wynik aktywacji sprawdza status
+wyposażonego `FORTRESS_SHIELD` lub HASTE, wyświetla wynik/odrzucenie i rysuje
+osłonę z niemutowalnego stanu fortecy w world-space. HASTE publikuje pozostały
+czas przez `ActiveSpellSnapshot`; status HASTED pojawia się tylko na
+sojuszniczych jednostkach poza garnizonem. Wynik aktywacji sprawdza status
 meczu, dostępność poziomu, zatwierdzony loadout i poprawny cel. Nieznane,
 niedostępne, niewyposażone i
 niezaimplementowane zaklęcia oraz błędy many/aktywnej tarczy są odrzucane
@@ -92,9 +95,18 @@ przechwytuje wyłącznie pociski drużyny przeciwnej i nie przepuszcza reszty
 obrażeń na fortecę. Kolizja i renderowanie korzystają ze wspólnej,
 fortress-centered geometrii eliptycznej `FortressShieldGeometry` w
 `game-contracts`. Stan tarczy znajduje się w `FortressSnapshot`;
-przechwycenie toru pocisku emituje `ProjectileHitEntity` oraz `ShieldDamaged`. Pozostałe
-efekty katalogu mają wartości balansu i kategorię celu, ale brak im runtime
-effect definition. `EffectSnapshot` nadal opisuje aktywne efekty amunicji.
+przechwycenie toru pocisku emituje `ProjectileHitEntity` oraz `ShieldDamaged`.
+HASTE kosztuje 50 many, trwa 15 sekund i mnoży prędkość ruchu wysłanych
+sojuszniczych jednostek przez 2. Efekt obejmuje też jednostki wysłane podczas
+jego trwania, ale nigdy jednostki w garnizonie ani wrogów. Ponowne rzucenie
+zużywa kolejne 50 many i odświeża czas do 15 sekund bez kumulowania mnożnika.
+SLOWED mnoży się z HASTE (×0,5 daje normalną prędkość), a STUNNED nadal
+zatrzymuje jednostkę. Cena katalogowa 900 złota i dostępność kampanii od
+poziomu 6 pozostają bez zmian; ceny złota nie pobiera runtime meczu.
+`ActiveSpellSnapshot` przekazuje drużynę i pozostały czas, a
+`UnitSnapshot.statuses`/`statusDetails` sygnalizują aktywnych HASTED. Pozostałe
+dziewięć efektów katalogu nadal nie ma runtime definition. `EffectSnapshot`
+nadal opisuje aktywne efekty amunicji.
 Walidacja scenariusza sprawdza identyfikatory dostępności, a zgodność
 dostępności z loadoutem jest egzekwowana przy aktywacji.
 
@@ -335,7 +347,7 @@ Czas/parametry mają pochodzić z legacy, nie z nowej propozycji balansu.
 |---|---|---:|---:|---|
 | `ICE_TRAP` — Lodowa pułapka | `ENEMY_FORCE` | 500 | 50 | rozstawiana na środku pola; promień 180; zatrzymuje wrogą jednostkę; aktywna 6 s; aktywacja zastępuje poprzednią pułapkę tej drużyny |
 | `RUNIC_BASTION` — Runiczny Bastion | `OWN_GATE` | 1 200 | 70 | 360 HP; ustawiany względem własnej bramy; blokuje marsz i jest atakowalny; ponowna aktywacja odnawia HP |
-| `HASTE` | `ALLIED_FORCE` | 900 | 50 | 5 s; prędkość sojuszników ×2 |
+| `HASTE` | `ALLIED_FORCE` | 900 | 50 | 15 s (zaakceptowany override legacy 5 s); prędkość ruchu wysłanych sojuszników ×2 |
 | `HEAL` | `ALLIED_FORCE` | 900 | 50 | leczy ranne żywe jednostki o 35% maksymalnego HP, w tym jednostki w garnizonie |
 | `FORTRESS_SHIELD` — Tarcza fortecy | `OWN_FORTRESS` | 0 | 80 | osłona fortecy o 150 HP; nie można aktywować, gdy osłona jest już aktywna |
 | `CATAPULT_LOCK` — Blokada katapulty | `ENEMY_SIEGE_ENGINE` | 1 000 | 60 | blokuje katapultę przeciwnika przez 5 s |
@@ -374,11 +386,12 @@ poziomu za wybór loadoutu.
   odnawiają swój timer, Vampiric Banner resetuje licznik ticka, pułapka
   zastępuje własną poprzednią pułapkę, Bastion odnawia HP, tarcza odrzuca
   aktywację, gdy nadal działa, a Berserker wybiera tylko nieprzemienionego
-  Obrońcę.
+  Obrońcę. HASTE odświeża 15-sekundowy timer i nie kumuluje prędkości.
 - Konflikty różnych buffów, redukcji obrażeń i efektów prędkości muszą
   odzwierciedlać istniejącą kolejność i matematykę legacy. Nie wprowadzać
   nowego stackowania, mnożników addytywnych ani priorytetów bez osobnej
-  akceptacji.
+  akceptacji. Zatwierdzony HASTE mnoży się z SLOWED; STUNNED ma pierwszeństwo
+  jako zatrzymanie ruchu.
 - AI, jeśli włączone później, czyta snapshot i wysyła ten sam
   `MatchCommand.CastSpell`; nie dostaje osobnej implementacji efektów.
 
@@ -388,8 +401,9 @@ poziomu za wybór loadoutu.
 
 - ekran loadoutu należący do LoadoutSystemu będzie prezentował
   zaklęcia pogrupowane według kategorii celu z metadanych domenowych;
-- match screen wysyła akcję UI i komendę `CastSpell`; obecnie aktywuje
-  `FORTRESS_SHIELD`, wyświetla manę i powód odrzucenia;
+- match screen wysyła akcję UI i komendę `CastSpell`; aktywuje
+  `FORTRESS_SHIELD` i HASTE, wyświetla manę, pozostały czas HASTE i powód
+  odrzucenia;
 - dostępność przycisku/komunikaty wynikają z snapshotu i odrzucenia komendy,
   nie z lokalnej kopii many/stocku;
 - timer, aktywny buff, tarcza, pułapka i bastion są renderowane na podstawie
@@ -397,17 +411,29 @@ poziomu za wybór loadoutu.
 - ikony i polskie/angielskie etykiety są mapowane przez istniejące katalogi
   assetów/lokalizacji; core przechowuje klucze, nie Android resource ID.
 
-Spell-card artwork jest już dostępny. Migracja ma sprawdzać istniejące zasoby
-Urkaaaz przed tworzeniem nowych assetów world-effectów. Opis Haste ma jasno
-wskazywać sojuszniczy cel. UI nie może deklarować, że Haste przyspiesza
-przeciwnika.
+Spell-card artwork jest już dostępny. Aktualną, zaakceptowaną przez użytkownika
+12-klatkową animację HASTE z orbitującymi szewronami zintegrowano jako
+`haste_orbiting_chevron_00.png`–`haste_orbiting_chevron_11.png`. Pojawia się za
+żywymi, poruszającymi się jednostkami HASTED, rozkłada klatki na 16 ticków
+renderera (~22,7 fps) i odbija efekt względem kierunku ruchu. Klatki są
+przezroczystymi PNG RGBA 1024×576; każda ma co najmniej 69 px marginesu
+widocznej zawartości i nie jest ucięta. Źródłowy obraz oraz oryginalne ZIP i
+MP4 są zachowane w `assets_src/spells/haste/orbiting-chevrons-first-frame.png`
+i `assets_src/spells/haste/orbiting-chevrons/`. Brief pierwszej klatki to
+[`haste-orbiting-chevrons-first-frame.agp`](haste-orbiting-chevrons-first-frame.agp).
+Poprzednie animacje quickstep i wind pozostają zarchiwizowane w
+`assets_src/spells/haste/quickstep/` i `assets_src/spells/haste/wind-trail/`;
+ich klatki nie są już aktywnymi runtime sprite'ami. Nie generuj ani nie
+zastępuj animacji ponownie bez osobnej zgody. Opis Haste ma jasno wskazywać
+sojuszniczy cel; UI nie może deklarować, że Haste przyspiesza przeciwnika.
 
 ## Etapowy plan migracji
 
 Stan pionowego wycinka: etapy 2–5 są częściowo wdrożone dla katalogu,
-kontraktów i `FORTRESS_SHIELD`; mana, tarcza i jej prezentacja w match screenie
-działają. Pozostałe efekty, prezentacja kategorii celu, AI oraz trwałe
-rozliczanie stocku są jeszcze poza implementacją.
+kontraktów, HASTE i `FORTRESS_SHIELD`; mana, timer HASTE, ruch, tarcza i jej
+prezentacja w match screenie działają. Battlefield VFX HASTE jest zintegrowany
+z zatwierdzonego assetu AnimGen. Pozostałe efekty, prezentacja kategorii celu, AI
+oraz trwałe rozliczanie stocku są jeszcze poza implementacją.
 
 1. **Baseline i parytet.** Wartości kosztów i targetów są zapisane w
    `SpellCatalog`; pozostałe reguły efektów nadal wymagają porównania z
@@ -480,9 +506,10 @@ Kolejne etapy implementacji powinny dodać:
   brak drugiego SpellSystemu/loadoutu.
 
 Pełna akceptacja SpellSystemu wymaga wszystkich 11 efektów. Obecny wycinek
-zapewnia jawną aktywację i odrzucenia dla tarczy, zachowanie zdefiniowanego
-legacy balansu, testy deterministyczne oraz wykorzystanie wspólnego loadoutu.
-Pozostałe efekty, targetowanie i ich prezentacja w Androidzie są nadal otwarte.
+zapewnia jawną aktywację i odrzucenia HASTE oraz tarczy, testy deterministyczne
+i wykorzystanie wspólnego loadoutu. Pełny runtime HASTE i jego world-space VFX
+są zintegrowane. Pozostałe efekty, targetowanie i ich prezentacja w Androidzie
+są nadal otwarte.
 
 ## Rozważone warianty
 
@@ -498,9 +525,8 @@ LoadoutSystemu.
 
 ## Otwarte decyzje i brakujący zakres
 
-- czy rozszerzyć `EffectSnapshot` i `StatusSnapshot`, czy dodać
-  wyspecjalizowany `SpellSnapshot`, jeśli istniejące pola nie przeniosą
-  właściciela, typu zaklęcia, celu i czasu w sposób jednoznaczny;
+- czy kolejne aktywne czary mają rozszerzyć `ActiveSpellSnapshot`, czy użyć
+  kontraktów wyspecjalizowanych dla własnych efektów;
 - pełna reguła wygaśnięcia efektu na granicy ticka i matematyka nakładających
   się różnych buffów, potwierdzona testami parytetu legacy;
 - rozliczenie trwałego stocku w przypadku przerwanego/zakończonego meczu;
@@ -508,8 +534,8 @@ LoadoutSystemu.
   zasobów; ilustracje kart zaklęć są dostępne, natomiast mapowanie wizualizacji
   world-effectów pozostaje do rozstrzygnięcia dla kolejnych efektów.
 
-Nadal trzeba domknąć read model aktywnych efektów, trwałe rozliczanie stocku,
-pozostałe efekty oraz ich prezentację. Zrealizowana tarcza nie zmienia
+Nadal trzeba domknąć trwałe rozliczanie stocku, pozostałe efekty oraz ich
+prezentację. Zrealizowana tarcza i HASTE nie zmieniają
 przyjętych zasad: Haste działa tylko na sojuszników, LoadoutSystem pozostaje
 właścicielem loadoutu, a SpellSystem nie posiada persystencji.
 

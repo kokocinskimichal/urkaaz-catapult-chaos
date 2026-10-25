@@ -89,10 +89,21 @@ class SpellCatalogTest {
     }
 
     @Test
-    fun onlyFortressShieldHasAnImplementedRuntimeEffect() {
+    fun implementedSpellsHaveTypedRuntimeEffects() {
         assertEquals(
-            setOf(SpellType.FORTRESS_SHIELD),
+            setOf(SpellType.HASTE, SpellType.FORTRESS_SHIELD),
             SpellCatalog.all.filter { it.isImplemented }.map { it.type }.toSet(),
+        )
+        val haste = SpellCatalog.definition(SpellType.HASTE)
+        assertEquals(50, haste.manaCost)
+        assertEquals(900, haste.goldCost)
+        assertEquals(SpellTargetCategory.ALLIED_FORCE, haste.targetCategory)
+        assertEquals(
+            SpellEffectDefinition.Haste(
+                durationMilliseconds = 15_000L,
+                movementSpeedMultiplier = 2f,
+            ),
+            haste.effect,
         )
         val shield = SpellCatalog.definition(SpellType.FORTRESS_SHIELD)
         assertEquals(80, shield.manaCost)

@@ -35,6 +35,14 @@ class LoadoutCatalogTest {
             SpellCatalog.all.map { Triple(it.type.name, it.manaCost, it.isImplemented) },
             LoadoutCatalog.spells.map { Triple(it.id, it.manaCost, it.implemented) },
         )
+        assertEquals(
+            SpellCatalog.definition(SpellType.HASTE).recastableWhileActive,
+            LoadoutCatalog.findSpell(SpellType.HASTE.name)?.recastableWhileActive,
+        )
+        assertEquals(
+            15_000L,
+            LoadoutCatalog.findSpell(SpellType.HASTE.name)?.activeDurationMilliseconds,
+        )
         assertEquals(20, LoadoutCatalog.maximumSupply)
         assertEquals(100, LoadoutCatalog.maximumMana)
     }

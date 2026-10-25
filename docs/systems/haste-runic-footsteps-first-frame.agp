@@ -1,0 +1,90 @@
+HASTE — QUICKSTEP RUNE FOOTFALLS
+Still source image for frame 1 of a dynamic 12-frame loop
+
+STATUS
+
+This brief produced the superseded HASTE quickstep effect, whose originals
+remain archived under `assets_src/spells/haste/quickstep/`. It was replaced by
+the user-approved orbiting-chevron animation. Do not treat this as the active
+HASTE effect.
+
+REFERENCE IMAGE INPUT
+
+No reference image is attached. Do not use the HASTE loadout card as a
+reference: it is an opaque full-scene illustration, not a battlefield effect
+sprite. Create an original, isolated movement effect using the established
+gold-and-turquoise HASTE palette.
+
+PROMPT
+
+Create exactly one still 2D fantasy-game VFX sprite: a vivid, freshly landed
+magical quickstep, composed as the opening frame of a fast, alternating
+footfall loop behind a moving allied unit. Render only the effect. The unit,
+its feet, ground, terrain, projectiles, and battlefield must be absent; the
+game will composite this transparent sprite around a live unit.
+
+Make the motion read instantly at small battlefield scale. Near the lower
+center, show one bright, elongated runic footfall mark made from a few bold,
+broken turquoise arcs edged with warm gold light. Place a smaller, dimmer
+echoing mark behind it, offset toward the left, so the two marks suggest a
+rapid stride rather than a static emblem. Add a compact flash at the fresh
+step and several crisp sparks and short angular streaks swept backward toward
+the left. Keep the energy directional, asymmetric, and lively; favor a sharp
+impact pulse and clear shapes over a soft, slow swirl or long motion blur.
+
+Use abstract runic step marks, not literal shoe, boot, paw, or footprint
+silhouettes, so the effect works for every unit type. Keep the active marks
+low in the frame and mostly outside the central body area. The live unit will
+be drawn over the effect, so leave the upper half and central torso area
+mostly transparent. The source art should read as a fast movement accent,
+not an attack, explosion, or damage effect. Its left-to-right motion vector
+will be mirrored by the game for units facing the other direction.
+
+ANIMATION INTENT FOR A LATER GENERATION
+
+- Animate a quick left/right alternation of the two abstract footfall marks.
+- Let each fresh mark flash brightly, then shrink and fade as it moves behind
+  the unit.
+- Send a few crisp sparks backward on each step; vary their positions so the
+  loop has visible motion rather than repeating one still pose.
+- Complete a seamless 12-frame loop with a brisk, even rhythm and no pause
+  between steps. Keep the camera and gameplay anchor fixed.
+
+TECHNICAL REQUIREMENTS
+
+- Output exactly one PNG at 1024 x 576 pixels, landscape 16:9, RGBA with
+  genuine alpha transparency.
+- Use a fully transparent background, not a checkerboard or a dark/colored
+  matte. Only the runic footfalls, brief flash, and a few sparks may contain
+  visible pixels.
+- Keep all visible art inside the canvas with at least 64 px of transparent
+  safety margin; do not clip sparks or glow.
+- Use bold, clean silhouettes and crisp alpha edges that remain readable when
+  scaled down. Avoid fine lettering-like marks and noisy particle clouds.
+- No animation, sprite sheet, alternate takes, contact sheet, or variations.
+- Save the source as `assets_src/spells/haste/quickstep-first-frame.png`.
+
+NEGATIVE PROMPT
+
+character, unit, person, face, body, feet, clothing, literal boot, shoe,
+footprint, paw print, weapon, armor, fortress, catapult, projectile,
+battlefield, ground, terrain, landscape, sky, scenery, opaque background,
+checkerboard, flat background color, cropped sparks, clipped glow, dense
+particles, large opaque glow, soft static aura, slow spiral, long smeared
+motion blur, attack, impact explosion, fire, ice, lightning, damage, blood,
+team emblem, faction symbol, text, letters, numbers, logo, UI, HUD, border,
+frame, watermark, signature, photorealism, unrelated franchise, copied
+commercial artwork
+
+ACCEPTANCE CHECK
+
+- The first frame clearly depicts a fresh, energetic step with one bright
+  runic mark, one fading echo, and a few backward-swept sparks.
+- The visual reads as speed at small size and remains distinct from an attack
+  or damage effect.
+- Abstract marks are suitable for all unit types; no character or literal
+  foot is present.
+- The upper and central body area stays mostly transparent, and the effect
+  fits the fixed, mirrorable battlefield anchor.
+- The background is genuinely transparent, with clean alpha edges and no
+  matte, checkerboard, scenery, or opaque pixels outside the effect.

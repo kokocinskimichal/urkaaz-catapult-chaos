@@ -6,6 +6,14 @@
 
 - Added `/loadContext` and a curated Markdown index for loading the core
   project context and task-specific documentation in one command.
+- Implemented HASTE for deployed allied units: a 15-second 2× movement-speed
+  buff, refreshable without stacking, with deterministic snapshots and a
+  match-HUD countdown. Integrated the user-approved 12-frame AnimGen
+  orbiting-chevron effect behind moving HASTED units, replacing the earlier
+  wind-trail and quickstep runtime sprites.
+- Added a copy-ready AGP brief and source image for the HASTE orbiting-chevron
+  effect; retained its source image and all AnimGen output sets under
+  `assets_src/spells/haste/`.
 - Added animated Fortress Shield dome and hit-flash presentation. The flash
   starts at its first clearly visible frame and remains visible when a hit
   depletes the shield.

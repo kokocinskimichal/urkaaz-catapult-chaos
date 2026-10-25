@@ -20,6 +20,7 @@ data class MatchSnapshot(
     val activeProjectileTeams: Set<Team> = emptySet(),
     val remainingMilliseconds: Long = 300_000L,
     val mapDefinition: MapDefinition? = null,
+    val activeSpells: List<ActiveSpellSnapshot> = emptyList(),
 ) {
     init {
         require(status != MatchStatus.FINISHED || outcome != null) {
@@ -75,6 +76,19 @@ data class StatusSnapshot(
     val remainingMilliseconds: Long,
     val strength: Float,
 )
+
+data class ActiveSpellSnapshot(
+    val spellType: String,
+    val team: Team,
+    val remainingMilliseconds: Long,
+) {
+    init {
+        require(spellType.isNotBlank()) { "active spell type must not be blank" }
+        require(remainingMilliseconds > 0L) {
+            "active spell remaining duration must be positive"
+        }
+    }
+}
 
 data class ProjectileSnapshot(
     val entityId: EntityId,

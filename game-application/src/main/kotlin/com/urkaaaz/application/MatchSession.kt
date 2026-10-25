@@ -178,6 +178,8 @@ class MatchSession(
         val error = when (spell.type) {
             SpellType.FORTRESS_SHIELD ->
                 runningSimulation.castFortressShield(command.playerId, team, command.target)
+            SpellType.HASTE ->
+                runningSimulation.castHaste(command.playerId, team, command.target)
             else -> MatchError.SPELL_NOT_IMPLEMENTED
         }
         if (error != null) return rejected(error)

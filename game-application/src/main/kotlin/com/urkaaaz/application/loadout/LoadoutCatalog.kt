@@ -5,6 +5,7 @@ import com.urkaaaz.domain.AmmunitionEffect
 import com.urkaaaz.domain.AmmunitionType
 import com.urkaaaz.domain.SpellCategory
 import com.urkaaaz.domain.SpellCatalog
+import com.urkaaaz.domain.SpellEffectDefinition
 import com.urkaaaz.domain.SpellType
 import com.urkaaaz.domain.ManaConfiguration
 import com.urkaaaz.domain.SupplyConfiguration
@@ -52,6 +53,8 @@ data class LoadoutSpellDefinition(
     val category: LoadoutSpellCategory,
     val special: Boolean,
     val implemented: Boolean,
+    val recastableWhileActive: Boolean,
+    val activeDurationMilliseconds: Long?,
 )
 
 /**
@@ -96,6 +99,11 @@ object LoadoutCatalog {
             category = spell.category.toLoadoutCategory(),
             special = spell.special,
             implemented = spell.isImplemented,
+            recastableWhileActive = spell.recastableWhileActive,
+            activeDurationMilliseconds = when (val effect = spell.effect) {
+                is SpellEffectDefinition.Haste -> effect.durationMilliseconds
+                is SpellEffectDefinition.FortressShield, null -> null
+            },
         )
     }
 

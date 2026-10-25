@@ -174,6 +174,7 @@ enum class UnitStatus {
     POISONED,
     SLOWED,
     STUNNED,
+    HASTED,
 }
 
 data class StatusState(

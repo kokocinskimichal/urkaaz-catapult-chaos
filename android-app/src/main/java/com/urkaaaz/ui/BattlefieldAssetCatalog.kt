@@ -96,6 +96,7 @@ class BattlefieldAssetCatalog(private val context: Context) {
         prefix = FORTRESS_SHIELD_HIT_PREFIX,
         phase = "hit flash",
     )
+    val hasteOrbitingChevronFrames: List<Bitmap> = loadRequiredHasteOrbitingChevronFrames()
 
     private val animations = mapOf(
         "ROCK" to ProjectileAnimation(
@@ -413,6 +414,48 @@ class BattlefieldAssetCatalog(private val context: Context) {
         return frames
     }
 
+    private fun loadRequiredHasteOrbitingChevronFrames(): List<Bitmap> {
+        val frames = (0 until HasteOrbitingChevronPresentation.FRAME_COUNT).map { index ->
+            val resourceName = "$HASTE_ORBITING_CHEVRON_PREFIX%02d".format(index)
+            val resourceId = resources.getIdentifier(
+                resourceName,
+                "drawable",
+                context.packageName,
+            )
+            check(resourceId != 0) {
+                "HASTE orbiting chevron effect is missing frame $index ('$resourceName')"
+            }
+            val bitmap = BitmapFactory.decodeResource(resources, resourceId)
+                ?: error("HASTE orbiting chevron frame $index ('$resourceName') could not be decoded")
+            check(
+                bitmap.width == HasteOrbitingChevronPresentation.FRAME_WIDTH &&
+                    bitmap.height == HasteOrbitingChevronPresentation.FRAME_HEIGHT,
+            ) {
+                "HASTE orbiting chevron frame $index ('$resourceName') has invalid size " +
+                    "${bitmap.width}x${bitmap.height}"
+            }
+            check(bitmap.hasAlpha()) {
+                "HASTE orbiting chevron frame $index ('$resourceName') has no alpha channel"
+            }
+            bitmap
+        }
+        val unexpectedResourceName =
+            "$HASTE_ORBITING_CHEVRON_PREFIX%02d".format(
+                HasteOrbitingChevronPresentation.FRAME_COUNT,
+            )
+        check(
+            resources.getIdentifier(
+                unexpectedResourceName,
+                "drawable",
+                context.packageName,
+            ) == 0,
+        ) {
+            "HASTE orbiting chevrons have an unexpected frame at index " +
+                "${HasteOrbitingChevronPresentation.FRAME_COUNT} ('$unexpectedResourceName')"
+        }
+        return frames
+    }
+
     private fun loadThreeDigitAnimationFrames(prefix: String): List<Bitmap> =
         (0..99).mapNotNull { index ->
             val resourceId = resources.getIdentifier(
@@ -433,6 +476,7 @@ class BattlefieldAssetCatalog(private val context: Context) {
         const val FIRE_RAIN_FIELD_FRAME_COUNT = 24
         const val FORTRESS_SHIELD_DOME_PREFIX = "fortress_shield_dome_"
         const val FORTRESS_SHIELD_HIT_PREFIX = "fortress_shield_hit_"
+        const val HASTE_ORBITING_CHEVRON_PREFIX = "haste_orbiting_chevron_"
         val RELIC_ASSET_RESOURCES = buildMap {
             val biomeResources = mapOf(
                 "green_frontier" to listOf(

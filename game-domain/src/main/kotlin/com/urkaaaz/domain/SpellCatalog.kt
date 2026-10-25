@@ -2,6 +2,18 @@ package com.urkaaaz.domain
 
 /** Data-driven behavior currently implemented by the deterministic simulation. */
 sealed interface SpellEffectDefinition {
+    data class Haste(
+        val durationMilliseconds: Long,
+        val movementSpeedMultiplier: Float,
+    ) : SpellEffectDefinition {
+        init {
+            require(durationMilliseconds > 0L) { "haste duration must be positive" }
+            require(movementSpeedMultiplier > 1f) {
+                "haste movement speed multiplier must be greater than one"
+            }
+        }
+    }
+
     data class FortressShield(
         val hitPoints: Int,
     ) : SpellEffectDefinition {
@@ -28,6 +40,7 @@ data class SpellDefinition(
     val special: Boolean,
     val manaCost: Int,
     val effect: SpellEffectDefinition?,
+    val recastableWhileActive: Boolean = false,
 ) {
     init {
         require(goldCost >= 0) { "spell gold cost must not be negative" }
@@ -66,7 +79,11 @@ object SpellCatalog {
             targetCategory = SpellTargetCategory.ALLIED_FORCE,
             special = false,
             manaCost = 50,
-            effect = null,
+            effect = SpellEffectDefinition.Haste(
+                durationMilliseconds = 15_000L,
+                movementSpeedMultiplier = 2f,
+            ),
+            recastableWhileActive = true,
         ),
         SpellDefinition(
             type = SpellType.HEAL,

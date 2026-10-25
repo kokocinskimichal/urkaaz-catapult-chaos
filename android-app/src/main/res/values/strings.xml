@@ -71,6 +71,7 @@
     <string name="match_hud_ammo_fire_rain">FIRE</string>
     <string name="match_hud_ammo_plague">PLAGUE</string>
     <string name="match_hud_active">ACTIVE</string>
+    <string name="match_hud_spell_active_timer">ACTIVE (%1$d s)</string>
     <string name="match_hud_planned">PLANNED</string>
     <string name="match_hud_low_mana">LOW MANA</string>
     <string name="match_hud_spell_accessibility">%1$s, costs %2$d mana, %3$s</string>
@@ -208,7 +209,7 @@
     <string name="loadout_desc_plague_cauldron">Limited ammunition that creates a lingering poison area.</string>
     <string name="loadout_desc_ice_trap">A ground trap that stops an enemy unit.</string>
     <string name="loadout_desc_runic_bastion">A runic barrier placed at your gate that blocks advancing units.</string>
-    <string name="loadout_desc_haste">Increases the movement speed of allied units.</string>
+    <string name="loadout_desc_haste">Deployed allied units move twice as fast for 15 seconds.</string>
     <string name="loadout_desc_heal">Restores health to living, wounded allied units.</string>
     <string name="loadout_desc_fortress_shield">Creates a protective barrier around your fortress.</string>
     <string name="loadout_desc_catapult_lock">Temporarily disables an enemy catapult.</string>

@@ -1,0 +1,96 @@
+HASTE — ORBITING SPEED CHEVRONS
+Still source image for frame 1 of a dynamic 12-frame loop
+
+STATUS
+
+This brief produced the current 12-frame HASTE orbiting-chevron animation.
+The user approved the preview and integration. The generated frames have at
+least 69 px of visible-content margin and no clipped edges.
+
+REFERENCE IMAGE INPUT
+
+No reference image is attached. Use only the established gold-and-turquoise
+HASTE palette. Do not use the previous HASTE wind-trail or quickstep outputs as
+visual references; this concept intentionally avoids long trails and abstract
+swirls.
+
+PROMPT
+
+Create exactly one still 2D fantasy-game VFX sprite: the opening frame of a
+fast loop of three orbiting magical speed chevrons behind a moving allied
+unit. Render only the effect. The unit, its body, clothing, weapons, feet,
+ground, terrain, projectiles, and battlefield must be absent; the game will
+composite this transparent sprite behind a live unit.
+
+Compose the effect around the empty space where the unit's torso would be.
+Keep that central body area almost entirely transparent. For a unit moving
+left to right, place all three glyphs on the rear (left) half of a compact,
+invisible oval orbit: one large, bright glyph low and behind the unit, one
+medium glyph near the middle of the rear arc, and one smaller, dimmer glyph
+near the upper rear arc. Separate them clearly so each reads as its own shape.
+The positions and brightness should suggest that the glyphs are circling the
+unit, not forming a straight trail.
+
+Each glyph is a bold, open, angular V-shaped mark like a simple `>` chevron,
+built from two thick, slightly broken turquoise strokes with a restrained
+warm-gold edge. Point the glyphs generally in the direction of travel. Make
+their edges crisp and their silhouettes unmistakable when scaled down; use a
+small, tight glow only on the brightest glyph. Keep the marks asymmetric and
+magical rather than resembling text, a logo, a UI symbol, or road signage.
+
+The renderer mirrors the effect for units facing the opposite direction, so
+compose the source image with a clear left-to-right direction. Keep the
+chevrons behind the future unit silhouette and mostly outside its central
+torso area. The effect should communicate quick, controlled movement, not an
+attack, impact, or damage state.
+
+ANIMATION INTENT FOR A LATER GENERATION
+
+- Move the three chevrons around a compact oval path on the rear half of the
+  unit, with no camera movement and no movement of the gameplay anchor.
+- Brighten each glyph in turn as it passes the lower-rear position, then let
+  it dim while continuing around the arc.
+- Keep all three glyphs separate and sharply defined; do not stretch them
+  into trails or smear them with motion blur.
+- Complete a seamless 12-frame loop with a brisk, even rhythm and no pause.
+
+TECHNICAL REQUIREMENTS
+
+- Output exactly one PNG at 1024 x 576 pixels, landscape 16:9, RGBA with
+  genuine alpha transparency.
+- Use a fully transparent background, not a checkerboard or a dark/colored
+  matte. Only the three chevrons and their restrained glow may contain visible
+  pixels.
+- Keep at least 64 px of transparent safety margin on every canvas edge; do
+  not clip a glyph or its glow.
+- Keep the central unit silhouette area mostly transparent. Use large, bold
+  shapes and clean alpha edges that remain readable at battlefield scale.
+- No animation, sprite sheet, alternate takes, contact sheet, or variations.
+- Save the source as
+  `assets_src/spells/haste/orbiting-chevrons-first-frame.png`.
+
+NEGATIVE PROMPT
+
+character, unit, person, face, body, clothing, feet, boot, shoe, footprint,
+paw print, weapon, armor, fortress, catapult, projectile, battlefield,
+ground, terrain, landscape, sky, scenery, opaque background, checkerboard,
+flat background color, wind ribbon, wind trail, long streak, motion blur,
+smear, spiral, swirl, ring, continuous circle, smoke, dense particles,
+particle cloud, large bloom, cropped glyph, clipped glow, attack, impact,
+explosion, fire, ice, lightning, damage, blood, team emblem, faction symbol,
+text, letters, numbers, logo, UI, HUD, road sign, arrow icon, border, frame,
+watermark, signature, photorealism, unrelated franchise, copied commercial
+artwork
+
+ACCEPTANCE CHECK
+
+- The frame contains exactly three separate, bold, open chevron glyphs with a
+  clear bright-to-dim sequence along a short rear-side arc.
+- Their placement implies an orbit around an empty central unit area, not a
+  straight trail, continuous ring, or static emblem.
+- The shapes remain legible at small scale and are distinct from an attack or
+  damage effect.
+- The central body area stays mostly transparent, and the effect fits the
+  fixed, mirrorable battlefield anchor.
+- The background is genuinely transparent, with clean alpha edges and at
+  least 64 px of clear margin on every edge.

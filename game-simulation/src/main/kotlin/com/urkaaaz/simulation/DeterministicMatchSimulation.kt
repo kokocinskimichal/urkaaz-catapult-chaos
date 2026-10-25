@@ -2,6 +2,7 @@ package com.urkaaaz.simulation
 
 import com.urkaaaz.contracts.CatapultSnapshot
 import com.urkaaaz.contracts.CatapultPresentationContract
+import com.urkaaaz.contracts.ActiveSpellSnapshot
 import com.urkaaaz.contracts.EntityId
 import com.urkaaaz.contracts.EventId
 import com.urkaaaz.contracts.FortressSnapshot
@@ -101,6 +102,7 @@ class DeterministicMatchSimulation(
     private var units = emptyList<Unit>()
     private var defeatedUnits = emptyList<DefeatedUnit>()
     private val movingTeams = mutableSetOf<Team>()
+    private val hasteRemainingMillisecondsByTeam = mutableMapOf<Team, Long>()
     private val supplyRegenProgressSeconds = mutableMapOf(
         Team.BLUE to 0f,
         Team.RED to 0f,
@@ -457,6 +459,40 @@ class DeterministicMatchSimulation(
         return null
     }
 
+    fun castHaste(
+        playerId: PlayerId,
+        team: Team,
+        targetId: EntityId?,
+    ): MatchError? {
+        when (status) {
+            MatchStatus.RUNNING -> Unit
+            MatchStatus.FINISHED -> return MatchError.ALREADY_FINISHED
+            else -> return MatchError.MATCH_NOT_RUNNING
+        }
+        val definition = SpellCatalog.definition(SpellType.HASTE)
+        val effect = definition.effect as? SpellEffectDefinition.Haste
+            ?: return MatchError.SPELL_NOT_IMPLEMENTED
+        if (targetId != null) return MatchError.INVALID_SPELL_TARGET
+        val wallet = resources.getValue(team)
+        if (!wallet.canSpendMana(definition.manaCost)) {
+            return MatchError.INSUFFICIENT_RESOURCE
+        }
+
+        resources[team] = wallet.spendMana(definition.manaCost)
+        hasteRemainingMillisecondsByTeam[team] = effect.durationMilliseconds
+        emit {
+            MatchEvent.SpellCast(
+                eventId = it,
+                matchId = matchId,
+                simulationTimeMilliseconds = simulationTimeMilliseconds,
+                playerId = playerId,
+                spellType = definition.type.name,
+                manaCost = definition.manaCost,
+            )
+        }
+        return null
+    }
+
     fun advance(deltaMilliseconds: Long): List<MatchEvent> {
         require(deltaMilliseconds >= 0) { "deltaMilliseconds must not be negative" }
         check(status == MatchStatus.RUNNING) { "match is not running" }
@@ -486,7 +522,8 @@ class DeterministicMatchSimulation(
             defeated.copy(remainingSeconds = defeated.remainingSeconds - deltaSeconds)
                 .takeIf { it.remainingSeconds > 0f }
         }
-        advanceUnits(deltaSeconds)
+        advanceUnits(deltaSeconds, deltaMilliseconds)
+        advanceHasteTimers(deltaMilliseconds)
         resolveUnitInteractions(deltaSeconds)
         finishIfFortressDestroyed()
         val resolved = mutableListOf<Projectile>()
@@ -755,6 +792,39 @@ class DeterministicMatchSimulation(
             )
         },
         units = (units + defeatedUnits.map { it.unit }).map {
+            val hasteRemaining = hasteRemainingMillisecondsByTeam[it.team]
+                ?.takeIf { remaining -> remaining > 0L && it.isAlive && !it.inGarrison }
+            val statuses = it.statuses.mapKeys { (status, _) -> status.name }
+                .mapValues { (_, state) -> state.remainingSeconds }
+                .let { unitStatuses ->
+                    if (hasteRemaining != null) {
+                        unitStatuses + (UnitStatus.HASTED.name to hasteRemaining / 1_000f)
+                    } else {
+                        unitStatuses
+                    }
+                }
+            val statusDetails = it.statuses.mapKeys { (status, _) -> status.name }
+                .mapValues { (_, state) ->
+                    com.urkaaaz.contracts.StatusSnapshot(
+                        remainingMilliseconds = (state.remainingSeconds * 1_000f).toLong(),
+                        strength = state.strength,
+                    )
+                }
+                .let { unitStatusDetails ->
+                    if (hasteRemaining != null) {
+                        val effect = SpellCatalog.definition(SpellType.HASTE).effect
+                            as SpellEffectDefinition.Haste
+                        unitStatusDetails + (
+                            UnitStatus.HASTED.name to
+                                com.urkaaaz.contracts.StatusSnapshot(
+                                    remainingMilliseconds = hasteRemaining,
+                                    strength = effect.movementSpeedMultiplier,
+                                )
+                            )
+                    } else {
+                        unitStatusDetails
+                    }
+                }
             com.urkaaaz.contracts.UnitSnapshot(
                 entityId = it.id,
                 team = it.team,
@@ -772,15 +842,8 @@ class DeterministicMatchSimulation(
                 attackProgress = attackProgress(it),
                 facingDirection = if (it.team == Team.BLUE) 1f else -1f,
                 sapperHasBomb = it.sapperHasBomb,
-                statuses = it.statuses.mapKeys { (status, _) -> status.name }
-                    .mapValues { (_, state) -> state.remainingSeconds },
-                statusDetails = it.statuses.mapKeys { (status, _) -> status.name }
-                    .mapValues { (_, state) ->
-                        com.urkaaaz.contracts.StatusSnapshot(
-                            remainingMilliseconds = (state.remainingSeconds * 1_000f).toLong(),
-                            strength = state.strength,
-                        )
-                    },
+                statuses = statuses,
+                statusDetails = statusDetails,
             )
         },
         projectiles = projectiles.map {
@@ -853,6 +916,15 @@ class DeterministicMatchSimulation(
         },
         activeProjectileTeams = projectiles.map { it.firedBy }.toSet(),
         remainingMilliseconds = remainingMatchTimeMilliseconds,
+        activeSpells = Team.entries.mapNotNull { team ->
+            hasteRemainingMillisecondsByTeam[team]?.let { remaining ->
+                ActiveSpellSnapshot(
+                    spellType = SpellType.HASTE.name,
+                    team = team,
+                    remainingMilliseconds = remaining,
+                )
+            }
+        },
     )
 
     private fun attackProgress(unit: Unit): Float {
@@ -934,7 +1006,7 @@ class DeterministicMatchSimulation(
         resolveAmmunitionEffect(projectile)
     }
 
-    private fun advanceUnits(deltaSeconds: Float) {
+    private fun advanceUnits(deltaSeconds: Float, deltaMilliseconds: Long) {
         if (deltaSeconds <= 0f) return
         units = units.map { unit ->
             val statusAdvanced = unit.advanceStatuses(deltaSeconds)
@@ -1093,11 +1165,11 @@ class DeterministicMatchSimulation(
                 direction >= 0f -> minOf(combatStopX, alliedStopX)
                 else -> maxOf(combatStopX, alliedStopX)
             }
-            val slowMultiplier = statusAdvanced.statuses[UnitStatus.SLOWED]
-                ?.strength
-                ?.let { (1f - it).coerceIn(0.05f, 1f) }
-                ?: 1f
-            val step = unit.type.speed * slowMultiplier * if (waveMoving) {
+            val hasteMultiplier = hasteMovementMultiplier(unit, deltaMilliseconds)
+            val step = unit.type.speed * UnitMovementSpeed.statusMultiplier(
+                statuses = statusAdvanced.statuses,
+                hasteMultiplier = hasteMultiplier,
+            ) * if (waveMoving) {
                 UNIT_MOVEMENT_SPEED_SCALE
             } else {
                 GARRISON_MOVEMENT_SPEED_SCALE
@@ -1150,6 +1222,30 @@ class DeterministicMatchSimulation(
                     },
                 ),
             )
+        }
+    }
+
+    private fun hasteMovementMultiplier(unit: Unit, deltaMilliseconds: Long): Float {
+        if (unit.inGarrison || deltaMilliseconds <= 0L) return 1f
+        val remainingMilliseconds = hasteRemainingMillisecondsByTeam[unit.team] ?: return 1f
+        if (remainingMilliseconds <= 0L) return 1f
+        val effect = SpellCatalog.definition(SpellType.HASTE).effect
+            as? SpellEffectDefinition.Haste
+            ?: error("active HASTE is missing its effect definition")
+        val activeFraction = minOf(remainingMilliseconds, deltaMilliseconds).toFloat() /
+            deltaMilliseconds.toFloat()
+        return 1f + (effect.movementSpeedMultiplier - 1f) * activeFraction
+    }
+
+    private fun advanceHasteTimers(deltaMilliseconds: Long) {
+        if (deltaMilliseconds <= 0L) return
+        hasteRemainingMillisecondsByTeam.entries.toList().forEach { (team, remaining) ->
+            val next = (remaining - deltaMilliseconds).coerceAtLeast(0L)
+            if (next == 0L) {
+                hasteRemainingMillisecondsByTeam.remove(team)
+            } else {
+                hasteRemainingMillisecondsByTeam[team] = next
+            }
         }
     }
 

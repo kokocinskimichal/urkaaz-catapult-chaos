@@ -1,0 +1,67 @@
+HASTE — WIND TRAIL EFFECT
+Still source image for frame 1 of the approved 12-frame loop
+
+REFERENCE IMAGE INPUT
+
+No reference image is attached. Do not use the HASTE loadout card as a
+reference: it is an opaque full-scene illustration, not a battlefield effect
+sprite. Create an original, isolated magical movement effect using only the
+approved gold-and-turquoise HASTE direction below.
+
+PROMPT
+
+Create exactly one still 2D fantasy-game VFX sprite: a calm instant of
+gold-and-turquoise wind ribbons that will be the first frame of a subtle,
+looping HASTE animation behind a moving allied unit. Render only the magical
+effect; the unit, its feet, ground, terrain, projectiles, and battlefield are
+absent because the game will composite this transparent sprite around a live
+unit.
+
+Use several slender, graceful, translucent wind trails sweeping horizontally
+from a small, soft glow near the lower-center gameplay anchor. Keep the
+brightest strokes and glow beneath and behind the future unit silhouette; the
+central area where the unit will be drawn stays mostly transparent and
+unobstructed. Let the gold and turquoise ribbons remain distinct at small
+battlefield scale, with restrained painterly light and clean silhouettes.
+The effect should suggest quick, light movement rather than an attack,
+explosion, or impact. Keep the composition simple and balanced so the renderer
+can mirror it for units moving in the opposite direction.
+
+This is one still source frame, not a depiction of the animation's entire
+motion. Make the ribbons feel poised to flow smoothly in a short loop, without
+hard breaks, long motion-blur streaks, or a frozen burst. Keep the visual
+weight low so the unit remains the focal point.
+
+TECHNICAL REQUIREMENTS
+
+- Output exactly one PNG at 1024 x 576 pixels, landscape 16:9, RGBA with
+  genuine alpha transparency.
+- Use a fully transparent background, not a checkerboard or a dark/colored
+  matte. Only the wind ribbons and restrained glow may contain visible pixels.
+- Keep the full effect inside the canvas with a modest transparent safety
+  margin; do not clip soft glow or ribbon tips.
+- Preserve clean, soft alpha edges without a black, white, or colored fringe.
+- No animation, sprite sheet, alternate takes, contact sheet, or variations.
+- Save the source as `assets_src/spells/haste/wind-first-frame.png`.
+
+NEGATIVE PROMPT
+
+character, unit, person, face, body, feet, clothing, weapon, armor, fortress,
+catapult, projectile, battlefield, ground, terrain, landscape, sky, scenery,
+opaque background, checkerboard, flat background color, cropped ribbons,
+clipped glow, dense particles, large opaque glow, harsh bloom, long motion
+blur, attack, impact, explosion, fire, ice, lightning, damage, team emblem,
+faction symbol, text, letters, numbers, logo, UI, HUD, border, frame,
+watermark, signature, photorealism, unrelated franchise, copied commercial
+artwork
+
+ACCEPTANCE CHECK
+
+- The image contains only a readable, restrained gold-and-turquoise wind
+  effect suitable for compositing around a live allied unit.
+- The center remains mostly clear for the unit; the subtle glow sits near the
+  lower-center gameplay anchor.
+- The background is genuinely transparent, with clean alpha edges and no
+  matte, checkerboard, scenery, or opaque pixels outside the effect.
+- The still is visually suitable as the opening frame of the approved
+  12-frame loop, without implying an impact or adding gameplay elements.

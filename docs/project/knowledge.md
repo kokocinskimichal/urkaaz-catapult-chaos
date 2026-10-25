@@ -138,9 +138,28 @@ deferred.
 Haste is awarded for level 5 and Heal for level 7; their availability starts
 at levels 6 and 8. Campaign rewards are projected into Loadout progression,
 and preferred spells affect only newly generated defaults. Tutorials remain
-deferred to the future game-wide TutorialSystem. The SpellSystem has one
-implemented runtime effect: `FORTRESS_SHIELD`; the other ten spell effects and
-AI spell casting remain unimplemented. The shield costs 80 mana, has 150 HP, and
+deferred to the future game-wide TutorialSystem. The SpellSystem has implemented
+runtime effects for `FORTRESS_SHIELD` and HASTE; the other nine spell effects
+and AI spell casting remain unimplemented. HASTE costs 50 mana and catalogues
+at 900 gold, lasts 15 seconds (an approved change from the legacy 5-second
+baseline), doubles movement speed for deployed allies only, includes units
+deployed while active, refreshes on recast without stacking, and
+multiplicatively combines with SLOWED; STUNNED still stops movement. Its timer
+and per-unit HASTED status are exposed in snapshots. Its 15-second countdown
+uses the same top-down icon shade as depleted Fortress Shield HP, with the
+remaining seconds retained in the accessibility description. The user-approved
+12-frame gold/turquoise orbiting-chevron effect is integrated as
+`haste_orbiting_chevron_00.png`–`haste_orbiting_chevron_11.png`; it loops
+behind living, moving HASTED units, distributing the frames across 16 match
+render ticks (about 22.7 fps at the current 33 ms tick), and mirrors with
+facing direction. All frames are unique RGBA 1024×576 PNGs with transparent
+edges and at least 69 px of visible-content margin. The prior wind-trail and
+quickstep generations remain archived under `assets_src/spells/haste/`; the
+current source image and AnimGen ZIP/video are under
+`assets_src/spells/haste/orbiting-chevrons-first-frame.png` and
+`assets_src/spells/haste/orbiting-chevrons/`. Its copy-ready brief is
+[`haste-orbiting-chevrons-first-frame.agp`](../systems/haste-orbiting-chevrons-first-frame.agp).
+The shield costs 80 mana, has 150 HP, and
 intercepts projectiles within the same fortress-centered ellipse used by its
 world-space rendering. Its hit animation starts at frame 04 and remains
 visible when the hit depletes the shield. `FortressShieldGeometry` in
@@ -301,11 +320,12 @@ pressed button artwork without a visible text label. The two button states are
 stored under `assets_src/match/hud/`, imported to Android
 `drawable-nodpi/`, and selected by
 `match_hud_send_wave_button_states.xml`.
-Spell artwork is contained within framed 60 dp slots. Each slot shows only the
-spell name beneath its icon and the Mana cost in an overlaid badge; persistent
-READY, ACTIVE, PLANNED, and LOW MANA labels are omitted. Availability and
-active state remain conveyed through the slot's visual state and accessibility
-description.
+Spell-card artwork is center-cropped to fill each framed 60 dp slot without
+side letterboxing, keeping the central illustration prominent. Each slot shows
+only the spell name beneath its icon and the Mana cost in an overlaid badge;
+persistent READY, ACTIVE, PLANNED, and LOW MANA labels are omitted.
+Availability and active state remain conveyed through the slot's visual state
+and accessibility description.
 The wind indicator is 28 dp and selects a directional icon variant for low,
 medium, or high strength; the textual strength label is reserved for its
 accessibility description.
@@ -766,11 +786,11 @@ must go through commands and domain/application boundaries.
   Campaign progression and Haste/Heal milestone persistence are implemented;
   tutorials remain deferred to TutorialSystem. Runtime ammunition consumption
   is not reconciled with persistent stock.
-- `CastSpell` is implemented for `FORTRESS_SHIELD` only, including mana
-  validation, replay, typed results, shield snapshots and Android match
-  presentation. The other ten spell effects and AI casting are not implemented;
-  spell-card artwork exists, while world-effect visuals remain to be integrated
-  with each effect.
+- `CastSpell` is implemented for `FORTRESS_SHIELD` and HASTE, including mana
+  validation, replay, typed results, active-spell/unit-status snapshots and
+  Android HUD timer. The other nine spell effects and AI casting are not
+  implemented. HASTE's approved AnimGen world-space visual is integrated into
+  Android and rendered behind moving HASTED units.
 - Shop and result screens remain placeholders.
 - `ResultScreen` remains a placeholder; match results are still shown by the
   existing match presentation. Campaign progress is local-only and has no

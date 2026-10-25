@@ -65,11 +65,11 @@ kontrakty są wyraźnie oddzielone.
 | **US** | **Unit System** | Rekrutacja, supply, garnizon, fale, ruch, konfiguracje i interakcje jednostek. | Działa dla obecnych jednostek. |
 | **AIS** | **AI System** | Profile kampanii i registry wymiennych strategii katapulty/amunicji, rekrutacji i fal; decyzje bazują na snapshotach i wspólnych komendach. | Działa dla CADET/VETERAN/ELITE; postęp ELITE jest ograniczony, zaklęcia AI nie są obsługiwane. Właściciel decyzji: `game-ai`; lifecycle: `game-application`. |
 | **CaS** | **Campaign System** | Poziomy, chaptery, odblokowania, cele, modyfikatory i postęp kampanii. | Częściowy; definicje poziomów działają, persystencja progresji jest planowana. Właściciel: `game-campaign`. |
-| **SS** | **Spell System** | Definicje czarów, mana, aktywacja, efekty, cooldowny, dostępność i integracja z walką. | Planowany; `CastSpell` i efekty nie są obsługiwane. |
+| **SS** | **Spell System** | Definicje czarów, mana, aktywacja, efekty, cooldowny, dostępność i integracja z walką. | Częściowy: `CastSpell`, mana, snapshoty, Fortress Shield i HASTE działają; pozostałe dziewięć efektów oraz czary AI są niezaimplementowane. |
 | **TutS** | **Tutorial System** | Kroki tutoriala, hinty, spotlighty, cele, odblokowywanie paneli i ograniczenia AI. | Planowany. |
 | **PSys** | **Persistence System** | Trwały zapis profilu, lives, waluty, loadoutu, odblokowań i postępu. | Częściowy: lokalny profil progresji i zatwierdzony loadout używają DataStore; kampania, nagrody, lives i tutoriale pozostają poza implementacją. |
 | **PPS** | **Player Progression System** | Snapshot lokalnego profilu używany przy walidacji loadoutu. | Częściowy: potwierdzony seed i zapis v1 działają; zakupy, milestone'y autoryzowane przez kampanię i rozliczanie stocku są poza zakresem. |
-| **LoS** | **Loadout System** | Konfiguracja jednostek, amunicji i czarów przed poziomem. | Częściowy: walidacja, normalizacja, zapis DataStore i bezpieczny start działają; interaktywna selekcja i integracja poziomów 6/8 pozostają niedokończone. |
+| **LoS** | **Loadout System** | Konfiguracja jednostek, amunicji i czarów przed poziomem. | Częściowy: walidacja, normalizacja, interaktywna selekcja, zapis DataStore i bezpieczny start działają; kampanijne odblokowania Haste/Heal są zintegrowane dla poziomów 6/8. Trwałe rozliczanie stocku pozostaje poza implementacją. |
 | **RS** | **Reward System** | Wynik meczu, nagrody, OrCoins, lives, event rewards i przejście do kolejnego poziomu. | Planowany; obecny wynik jest uproszczonym overlayem. |
 | **BS** | **Balance System** | Wersjonowane parametry balansu, walidacja konfiguracji i symulacje porównawcze. | Planowany. |
 | **ObjS** | **Objective System** | Cele główne i specjalne, Central Objective oraz reguły poziomów boss/special. | Częściowy; Central Objective i pełne reguły bossów są planowane. |
@@ -104,6 +104,7 @@ kontrakty są wyraźnie oddzielone.
 | Term | Meaning |
 | --- | --- |
 | **Battlefield** | Cały obszar gry zawierający teren, fortece, katapulty, jednostki, pociski i efekty. |
+| **Chevron (Szewron)** | Otwarty, kanciasty glif w kształcie litery V lub grotu; trzy orbitujące szewrony tworzą aktywny world-space VFX HASTE. |
 | **Fortress–Catapult Presentation Contract** | Zamrożona wspólna geometria fortecy i katapulty: fortress `672 × 504`, fortress Y offset `+35`, catapult width `182.4`, pozycja `110` jednostek na zewnątrz i `foundation + 35 - 200` w osi Y. Katapulty są rysowane za fortecami; launch/aim anchor pozostaje fortress-relative (`±40` w X i `-360 * worldHeight / 4800` od prezentowanego fundamentu). Przyszłe przesunięcie lub skalowanie fortecy wymaga analogicznej zmiany powiązanych katapult, FHP i rozmieszczenia maga. |
 | **JS (world unit)** | Stała jednostka projektowa świata. Pozycje obiektów, kolizje i geometria rozgrywki używają JS, a dopiero kamera i zoom przeliczają je na piksele konkretnego urządzenia. |
 | **Fixed Design Coordinate System** | Stały układ współrzędnych, w którym szerokość świata pozostaje taka sama na każdym urządzeniu. Zmiana rozdzielczości wpływa na kadr i zoom, ale nie na pozycje obiektów ani relacje między nimi. |
@@ -129,7 +130,7 @@ kontrakty są wyraźnie oddzielone.
 | **AmmunitionCollisionLayer** | Warstwa celu pocisku: `TERRAIN`, `UNIT`, `FORTRESS` albo `OUT_OF_BOUNDS`. Warstwa jest częścią kontraktu symulacji, a nie heurystyką renderera. |
 | **Subprojectile** | Pełnoprawny pocisk utworzony przez pocisk macierzysty. Ma własne ID, pozycję, prędkość, snapshot i eventy oraz nie może tworzyć kolejnych subprojectiles. |
 | **Lingering Area** | Utrzymujący się w świecie efekt obszarowy z własnym ID, czasem trwania, tickami, statusem i opcjonalnym dryfem przez wiatr. |
-| **Unit Status Effect** | Deterministyczny efekt na jednostce, np. `BURNING`, `POISONED`, `SLOWED` albo `STUNNED`, z czasem trwania, siłą, capem, odpornością i immunitetem. |
+| **Unit Status Effect** | Deterministyczny efekt na jednostce, np. `BURNING`, `POISONED`, `SLOWED`, `STUNNED` albo `HASTED`, z czasem trwania, siłą, capem, odpornością i immunitetem. |
 | **World-Space Projectile Rendering** | Zasada, według której pociski, lot, impacty, eksplozje i lingering areas są rysowane w przestrzeni świata i skalują się dokładnie razem z zoomem kamery. |
 | **Balance Simulation** | Planowany zestaw automatycznych rozgrywek używający wersjonowanej konfiguracji balansu do pomiaru zwycięstw, czasu gry, zużycia zasobów i skuteczności jednostek oraz loadoutów. |
 | **Fortress Health Bars** | Paski HUD-u w lewym i prawym górnym rogu pokazujące zdrowie obu fortec. |
