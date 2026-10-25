@@ -14,6 +14,8 @@ export interface AnimationSequence {
   targetConfigured: boolean;
   /** False for sequences the game does not load (listed in the Studio config). */
   hasRuntimeLoader: boolean;
+  /** True when the sequence is recolored from shared team-texture assets. */
+  supportsTeamTexture: boolean;
   issues: string[];
 }
 

@@ -467,33 +467,34 @@ frame offset so idle and walking animations do not start in sync. The shared
 animation clock uses a long cycle so idle sets with more than 16 frames are
 not truncated to a subset; unit frame playback advances at approximately
 `7.5 FPS` to match the slower legacy feel.
-- The approved blue and red Demolisher idle animations each use 48 transparent
-  512x512 frames named `demolisher_{left,right}_idle_000` through `_047`.
-  Source indices 006-053 are used for both variants; the running poses at
-  indices 000-005 and 054-059 were excluded. The original AnimGen archives are
-  retained under `assets_src/animgen/demolisher/{blue,red}/idle/`. The generated
-  red animation's barrel panels and cloth were locally hue-corrected to match
-  the red source sprite while preserving the orange fuse, green skin, and
-  brown equipment. Both expanded canvases are scaled 2x and bottom-aligned
-  with a `75/512` transparent-bottom offset.
-- The approved blue and red Demolisher jog animations each use 60 transparent
-  512x512 frames named `demolisher_{left,right}_jog_000` through `_059`. The
-  original AnimGen archives are retained under
-  `assets_src/animgen/demolisher/{blue,red}/jog/`; the red jog's barrel panels
-  and cloth were locally hue-corrected while preserving the orange fuse, green
-  skin, and brown equipment. The 3-digit jog sequences are the sole Demolisher
-  movement frames; obsolete 2-digit movement variants were removed. They use
-  the same 2x canvas scale and `75/512` bottom anchor offset as the generated
-  idle.
-- The user-approved blue Demolisher contact/death animation uses 60 generated
-  512x512 frames named `anim_character_demolisher_death_blue_000` through `_059`, styled after
-  the in-game Powder Barrel impact. Its original AnimGen archive is retained
-  under `assets_src/animgen/demolisher/blue/death/`. The accepted sequence has
-  visible effects touching the canvas edge in frames 034-055; it is imported
-  unchanged at the same generated canvas scale and bottom anchor as the blue
-  Demolisher idle/jog. Death retention supports this blue sequence and the
-  existing two-team Defender death animations; a red Demolisher death sequence
-  has not been generated.
+- Demolisher idle now uses one shared 48-frame transparent 256x256 sequence;
+  move uses one shared 60-frame transparent 256x256 sequence. Both use
+  `anim_character_demolisher_{idle,move}_NNN`, per-frame team-colour masks and
+  the configured BLUE/RED textures. RED mirrors the BLUE-derived neutral
+  frames instead of loading separate team-specific animation frames. The
+  masked blue cloth and barrel panels are neutralized in the shared frames;
+  skin, orange fuse and brown equipment remain unchanged. Original source sets
+  are retained under `assets_src/animgen/demolisher/{blue,red}/{idle,jog}/`.
+  Rendering retains the 2x canvas scale and `75/512` bottom anchor offset.
+- Demolisher death uses one shared 32-frame, transparent 768x432 sequence:
+  the first 12 frames preserve the approved run-and-dive motion, followed by a
+  20-frame explosion from the powder barrel on his back. Per-frame masks
+  neutralize the BLUE cloth and barrel panels; RED mirrors the shared frames
+  and applies the existing RED palette. Both teams remain rendered until the
+  sequence completes. Because the death canvas is wider and taller than the
+  256x256 idle/move canvases, its opening frames use a 2.42x renderer scale
+  (versus 2x for idle/move) to keep the visible character size consistent; the
+  same scale carries through the explosion. Original AnimGen outputs are
+  retained under `assets_src/animgen/demolisher/blue/death/{throw,explosion}/`.
+  The user approved the source explosion frames without another generation;
+  smoke reaches the upper canvas edge in frames 013-024, with a visible
+  green/purple matte fringe during the fade. Android presentation estimates
+  contact time from successive unit positions and starts the run-and-dive when
+  predicted contact is within the first 13 frames' playback time. It holds on
+  the final pre-explosion frame until the simulation marks the Demolisher dead,
+  then starts the explosion at frame 13. The prediction is cancelled if
+  contact is no longer closing or the target becomes invalid; it never changes
+  simulation damage or death timing.
 - Defender uses one neutral 256x256 sequence for each state: idle and move have
   60 frames, attack 30, and death 60. Neutral frames were selected from the
   former BLUE sequence; RED is rendered by mirroring the shared frames. The
@@ -881,12 +882,19 @@ path-traversal checks. `studio/config/animations.json` is maintained by hand:
 add new targets there and list sequences without a runtime loader in
 `withoutLoader` (currently `anim_ammunition_fire_rain_impact`).
 
-The Defender team-texture pilot uses one neutral 256x256 sequence per animation
-in `drawable-nodpi`, per-frame alpha masks under
-`android-app/src/main/assets/animations/defender/masks/<type>/`, and team texture
-paths in `palettes.json`. Studio serves the masks and configured textures and
-shows a BLUE/RED composite plus a red mask overlay. Its texture logic is
-presentation-only and does not touch the game simulation.
+The team-texture animation renderer is shared by units: it combines one neutral
+frame sequence per state with per-frame alpha masks and a BLUE/RED texture
+configuration in `android-app/src/main/assets/animations/<unit>/`. RED mirrors
+the shared neutral frames and masks before applying its texture. The Defender
+uses this for idle, move, attack and death; Demolisher currently uses it for
+idle (48 shared 256x256 frames) and move (60 shared 256x256 frames).
+Demolisher's masks cover its blue-dominant cloth and barrel panels; blue sources
+were neutralized in those masked pixels, while skin and equipment remain
+unchanged. Studio's
+`teamTextureTargets` configuration marks shared sequences and previews both
+textures plus a mask overlay. Other Demolisher states and remaining units still
+use their existing team-specific assets until migrated. This is presentation
+only and does not touch simulation state.
 
 ## Push workflow
 

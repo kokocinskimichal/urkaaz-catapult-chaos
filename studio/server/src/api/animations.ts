@@ -2,11 +2,16 @@ import { createReadStream } from "node:fs";
 import { stat } from "node:fs/promises";
 import type { IncomingMessage, ServerResponse } from "node:http";
 import { sendError, sendJson } from "../http.ts";
-import { animationFramePath, defenderMaskPath, defenderTexturePath, readAnimationCatalog } from "../services/animationCatalog.ts";
+import {
+  animationFramePath,
+  readAnimationCatalog,
+  teamAnimationMaskPath,
+  teamTexturePath,
+} from "../services/animationCatalog.ts";
 
 const FRAME_ROUTE = /^\/api\/animations\/([a-z0-9_]+)\/frames\/(\d+)$/;
-const MASK_ROUTE = /^\/api\/animations\/(anim_character_defender_(?:idle|move|attack|death))\/masks\/(\d+)$/;
-const TEXTURE_ROUTE = /^\/api\/animations\/defender-textures\/(blue|red)$/;
+const MASK_ROUTE = /^\/api\/animations\/(anim_character_[a-z0-9_]+_(?:idle|move|attack|death))\/masks\/(\d+)$/;
+const TEXTURE_ROUTE = /^\/api\/animations\/team-textures\/([a-z0-9_]+)\/(blue|red)$/;
 
 /** Returns true when the request path belongs to the animations resource. */
 export async function handleAnimationRoute(
@@ -31,9 +36,9 @@ export async function handleAnimationRoute(
   const path = frame
     ? animationFramePath(repoRoot, frame[1], Number(frame[2]))
     : mask
-      ? defenderMaskPath(repoRoot, mask[1], Number(mask[2]))
+      ? teamAnimationMaskPath(repoRoot, mask[1], Number(mask[2]))
       : texture
-        ? await defenderTexturePath(repoRoot, texture[1])
+        ? await teamTexturePath(repoRoot, texture[1], texture[2])
         : null;
   const file = path ? await stat(path).catch(() => null) : null;
   if (!path || !file?.isFile()) {

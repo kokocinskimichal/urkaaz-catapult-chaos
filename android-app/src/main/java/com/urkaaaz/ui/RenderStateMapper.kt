@@ -165,6 +165,7 @@ data class UnitRenderState(
     val facingDirection: Float,
     val sapperHasBomb: Boolean,
     val hasted: Boolean = false,
+    val deathAnimationPrestarted: Boolean = false,
 )
 
 object RenderStateMapper {

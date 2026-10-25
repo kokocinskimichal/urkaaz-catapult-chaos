@@ -3,7 +3,7 @@ import { describe, expect, it } from "vitest";
 import { advancePlayback, buildTree, findTypeNode, firstSelection, frameUrl, pickSequence, stepFrame, variantsOf } from "./model";
 
 function sequence(id: string, category: AnimationSequence["category"], target: string, type: string, variant: string | null): AnimationSequence {
-  return { id, category, target, type, variant, frameIndices: [0, 1], targetConfigured: true, hasRuntimeLoader: true, issues: [] };
+  return { id, category, target, type, variant, frameIndices: [0, 1], targetConfigured: true, hasRuntimeLoader: true, supportsTeamTexture: false, issues: [] };
 }
 
 const sequences = [

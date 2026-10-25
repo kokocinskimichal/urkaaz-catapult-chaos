@@ -4,16 +4,19 @@ import {
   buildAnimationCatalog,
   parseAnimationConfig,
   readAnimationCatalog,
+  teamAnimationMaskPath,
+  teamTexturePath,
   type AnimationConfig,
 } from "./animationCatalog.ts";
 import { resolveRepoRoot } from "./repoRoot.ts";
 
 const config: AnimationConfig = parseAnimationConfig({
   targets: {
-    character: ["defender", "raging_boar", "slingmaster"],
+    character: ["defender", "demolisher", "raging_boar", "slingmaster"],
     spell: ["fortress_shield", "haste"],
     ammunition: ["fire_rain", "rock"],
   },
+  teamTextureTargets: ["defender", "demolisher"],
   withoutLoader: ["anim_ammunition_fire_rain_impact"],
 });
 
@@ -43,6 +46,18 @@ describe("buildAnimationCatalog", () => {
 
   it("treats sequences without a team token as neutral", () => {
     expect(sequenceOf("anim_character_slingmaster_move")).toMatchObject({ target: "slingmaster", type: "move", variant: null });
+  });
+
+  it("marks configured neutral character sequences for team-texture preview", () => {
+    expect(sequenceOf("anim_character_demolisher_idle", 48)).toMatchObject({
+      target: "demolisher",
+      type: "idle",
+      variant: null,
+      supportsTeamTexture: true,
+    });
+    expect(sequenceOf("anim_character_slingmaster_move")).toMatchObject({
+      supportsTeamTexture: false,
+    });
   });
 
   it("keeps compound types for spells and ammunition", () => {
@@ -103,6 +118,31 @@ describe("animationFramePath", () => {
     expect(animationFramePath("/repo", "anim_spell_haste", 1000)).toBeNull();
     expect(animationFramePath("/repo", "anim_spell_haste", 1.5)).toBeNull();
   });
+
+  it("builds team mask paths only for supported animation types", () => {
+    expect(teamAnimationMaskPath("/repo", "anim_character_demolisher_idle", 7)).toBe(
+      "/repo/android-app/src/main/assets/animations/demolisher/masks/idle/007.png",
+    );
+    expect(teamAnimationMaskPath("/repo", "anim_character_demolisher_move", 7)).toBe(
+      "/repo/android-app/src/main/assets/animations/demolisher/masks/move/007.png",
+    );
+    expect(teamAnimationMaskPath("/repo", "anim_character_../../secret_idle", 0)).toBeNull();
+    expect(teamAnimationMaskPath("/repo", "anim_character_demolisher_idle", 1000)).toBeNull();
+  });
+});
+
+describe("teamTexturePath", () => {
+  it("loads configured textures for each team and rejects invalid inputs", async () => {
+    const root = await resolveRepoRoot();
+    expect(await teamTexturePath(root, "defender", "blue")).toContain(
+      "/android-app/src/main/assets/animations/defender/",
+    );
+    expect(await teamTexturePath(root, "demolisher", "red")).toContain(
+      "/android-app/src/main/assets/animations/defender/",
+    );
+    expect(await teamTexturePath(root, "../secret", "blue")).toBeNull();
+    expect(await teamTexturePath(root, "demolisher", "green")).toBeNull();
+  });
 });
 
 describe("repository animation catalog", () => {
@@ -112,5 +152,10 @@ describe("repository animation catalog", () => {
     expect(catalog.invalidFiles).toEqual([]);
     expect(catalog.sequences.filter(sequence => sequence.issues.length > 0).map(sequence => sequence.id)).toEqual([]);
     expect(catalog.sequences.filter(sequence => !sequence.targetConfigured).map(sequence => sequence.id)).toEqual([]);
+    expect(catalog.sequences.find(sequence => sequence.id === "anim_character_demolisher_idle")).toMatchObject({
+      supportsTeamTexture: true,
+      variant: null,
+      frameIndices: Array.from({ length: 48 }, (_, index) => index),
+    });
   });
 });

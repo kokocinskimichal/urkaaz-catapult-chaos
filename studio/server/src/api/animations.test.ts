@@ -23,6 +23,8 @@ describe("animations API", () => {
     const catalog = (await response.json()) as AnimationCatalogResponse;
     expect(response.status).toBe(200);
     expect(catalog.sequences.some(sequence => sequence.id === "anim_character_defender_move")).toBe(true);
+    expect(catalog.sequences.find(sequence => sequence.id === "anim_character_demolisher_idle")?.supportsTeamTexture).toBe(true);
+    expect(catalog.sequences.find(sequence => sequence.id === "anim_character_demolisher_death")?.supportsTeamTexture).toBe(true);
   });
 
   it("serves a frame as PNG", async () => {
@@ -40,19 +42,25 @@ describe("animations API", () => {
     expect((await fetch(`${base}/api/animations/..%2F..%2Fsettings/frames/0`)).status).toBe(404);
   });
 
-  it("serves Defender masks and team textures", async () => {
+  it("serves masks and team textures for each configured team-texture unit", async () => {
     const base = await baseUrl();
     for (const path of [
       "/api/animations/anim_character_defender_idle/masks/0",
-      "/api/animations/defender-textures/blue",
-      "/api/animations/defender-textures/red",
+      "/api/animations/anim_character_demolisher_idle/masks/0",
+      "/api/animations/anim_character_demolisher_move/masks/0",
+      "/api/animations/anim_character_demolisher_death/masks/0",
+      "/api/animations/team-textures/defender/blue",
+      "/api/animations/team-textures/defender/red",
+      "/api/animations/team-textures/demolisher/blue",
+      "/api/animations/team-textures/demolisher/red",
     ]) {
       const response = await fetch(`${base}${path}`);
       expect(response.status).toBe(200);
       expect(response.headers.get("content-type")).toBe("image/png");
     }
     expect((await fetch(`${base}/api/animations/anim_character_defender_idle/masks/999`)).status).toBe(404);
-    expect((await fetch(`${base}/api/animations/defender-textures/green`)).status).toBe(404);
+    expect((await fetch(`${base}/api/animations/team-textures/demolisher/green`)).status).toBe(404);
+    expect((await fetch(`${base}/api/animations/anim_character_demolisher_idle/../../settings/masks/0`)).status).toBe(404);
   });
 
   it("rejects non-GET requests", async () => {

@@ -9,47 +9,147 @@ import org.junit.Test
 
 class DemolisherAnimationAssetsTest {
     @Test
-    fun approvedBlueAndRedIdleFramesAreContiguousTransparentPngs() {
-        val directory = resourceDirectory()
-
-        listOf("blue" to "Blue", "red" to "Red").forEach { (teamKey, team) ->
-            assertContiguousFrames(
-                directory = directory,
-                prefix = "anim_character_demolisher_idle_$teamKey",
-                digits = 3,
-                frameCount = 48,
-                team = team,
-                requireRedPalette = teamKey == "red",
-            )
-        }
+    fun sharedIdleFramesHaveMatchingMasksAndTeamTextures() {
+        assertSharedAnimationFrames("idle", 48)
     }
 
     @Test
-    fun approvedBlueAndRedJogFramesAreContiguousTransparentPngs() {
-        val directory = resourceDirectory()
-
-        listOf("blue" to "Blue", "red" to "Red").forEach { (teamKey, team) ->
-            assertContiguousFrames(
-                directory = directory,
-                prefix = "anim_character_demolisher_move_$teamKey",
-                digits = 3,
-                frameCount = 60,
-                team = team,
-                requireRedPalette = teamKey == "red",
-            )
-        }
+    fun sharedMoveFramesHaveMatchingMasksAndTeamTextures() {
+        assertSharedAnimationFrames("move", 60)
     }
 
     @Test
-    fun acceptedBlueContactExplosionFramesAreContiguousTransparentPngs() {
-        assertContiguousFrames(
-            directory = resourceDirectory(),
-            prefix = "anim_character_demolisher_death_blue",
-            digits = 3,
-            frameCount = 60,
-            team = "Blue",
-            requireTransparentCorner = false,
+    fun sharedDeathFramesHaveMatchingMasksAndTeamTextures() {
+        assertSharedAnimationFrames("death", 32, width = 768, height = 432)
+    }
+
+    @Test
+    fun deathOpeningFrameMatchesTheVisibleScaleOfIdleAndMove() {
+        val directory = resourceDirectory()
+        val referenceScale = listOf("idle", "move").map { animation ->
+            val frame = readFrame(directory, animation, 0)
+            visibleHeight(frame) * BattlefieldRenderer.GENERATED_DEMOLISHER_CANVAS_SCALE /
+                frame.height
+        }.average().toFloat()
+        val deathFrame = readFrame(directory, "death", 0)
+        val deathScale =
+            visibleHeight(deathFrame) *
+                BattlefieldRenderer.GENERATED_DEMOLISHER_DEATH_CANVAS_SCALE /
+                deathFrame.height
+
+        assertEquals(referenceScale, deathScale, 0.01f)
+    }
+
+    private fun assertSharedAnimationFrames(
+        animation: String,
+        frameCount: Int,
+        width: Int = 256,
+        height: Int = 256,
+    ) {
+        val directory = resourceDirectory()
+        val assets = assetDirectory()
+        val maskDirectory = File(assets, "masks/$animation")
+        val frameFiles = (0 until frameCount).map { index ->
+            File(directory, "anim_character_demolisher_${animation}_%03d.png".format(index))
+        }
+        val maskFiles = (0 until frameCount).map { index ->
+            File(maskDirectory, "%03d.png".format(index))
+        }
+        assertTrue("Demolisher shared $animation frames should exist", frameFiles.all(File::isFile))
+        assertTrue("Demolisher $animation masks should exist", maskFiles.all(File::isFile))
+        assertEquals(
+            frameCount,
+            directory.listFiles { file ->
+                file.name.matches(Regex("anim_character_demolisher_${animation}_\\d{3}\\.png"))
+            }.orEmpty().size,
         )
+        assertTrue(
+            "Team-specific Demolisher $animation frames should be replaced by shared frames",
+            directory.listFiles()?.none {
+                it.name.matches(
+                    Regex("anim_character_demolisher_${animation}_(blue|red)_\\d{3}\\.png"),
+                )
+            } == true,
+        )
+
+        val paletteConfig = File(assets, "palettes.json").readText()
+        listOf("BLUE", "RED").forEach { team ->
+            val texturePath = Regex("\"$team\"\\s*:\\s*\"([^\"]+)\"")
+                .find(paletteConfig)
+                ?.groupValues
+                ?.get(1)
+            assertNotNull("$team must have a configured fabric texture", texturePath)
+            assertTrue(
+                "$team fabric texture must exist",
+                File(assets.parentFile.parentFile, requireNotNull(texturePath)).isFile,
+            )
+        }
+
+        frameFiles.zip(maskFiles).forEachIndexed { index, (frameFile, maskFile) ->
+            val frame = ImageIO.read(frameFile)
+            val mask = ImageIO.read(maskFile)
+            assertNotNull("Invalid shared $animation frame $index", frame)
+            assertNotNull("Invalid $animation mask $index", mask)
+            assertEquals(width, frame.width)
+            assertEquals(height, frame.height)
+            assertEquals(frame.width, mask.width)
+            assertEquals(frame.height, mask.height)
+            assertTrue(frame.colorModel.hasAlpha())
+            assertTrue(mask.colorModel.hasAlpha())
+            assertEquals(0, frame.getRGB(0, 0) ushr 24)
+            assertEquals(0, mask.getRGB(0, 0) ushr 24)
+            for (y in 0 until mask.height) {
+                for (x in 0 until mask.width) {
+                    val maskAlpha = mask.getRGB(x, y) ushr 24 and 0xff
+                    val pixel = frame.getRGB(x, y)
+                    if (maskAlpha > 0) {
+                        assertEquals(pixel ushr 16 and 0xff, pixel ushr 8 and 0xff)
+                        assertEquals(pixel ushr 8 and 0xff, pixel and 0xff)
+                    }
+                    val sourceAlpha = pixel ushr 24 and 0xff
+                    val red = pixel ushr 16 and 0xff
+                    val green = pixel ushr 8 and 0xff
+                    val blue = pixel and 0xff
+                    if (sourceAlpha > 0 && blue > 90 && blue > red * 1.12 && blue > green * 1.05) {
+                        assertTrue(
+                            "$animation mask should cover blue-dominant pixel at ($x, $y) in frame $index",
+                            maskAlpha > 0,
+                        )
+                    }
+                }
+            }
+        }
+    }
+
+    private fun readFrame(directory: File, animation: String, index: Int) =
+        requireNotNull(
+            ImageIO.read(
+                File(directory, "anim_character_demolisher_${animation}_%03d.png".format(index)),
+            ),
+        )
+
+    private fun visibleHeight(image: java.awt.image.BufferedImage): Int {
+        var top = image.height
+        var bottom = -1
+        for (y in 0 until image.height) {
+            for (x in 0 until image.width) {
+                if (image.getRGB(x, y) ushr 24 > 0) {
+                    top = minOf(top, y)
+                    bottom = maxOf(bottom, y)
+                }
+            }
+        }
+        assertTrue("Animation frame must contain visible pixels", bottom >= top)
+        return bottom - top + 1
+    }
+
+    private fun assetDirectory(): File {
+        val assetDirectory = listOf(
+            File("src/main/assets/animations/demolisher"),
+            File("android-app/src/main/assets/animations/demolisher"),
+        ).firstOrNull { it.isDirectory }
+        assertNotNull("Demolisher team-texture assets were not found", assetDirectory)
+        return requireNotNull(assetDirectory)
     }
 
     private fun resourceDirectory(): File {
@@ -61,61 +161,4 @@ class DemolisherAnimationAssetsTest {
         return requireNotNull(directory)
     }
 
-    private fun assertContiguousFrames(
-        directory: File,
-        prefix: String,
-        digits: Int,
-        frameCount: Int,
-        team: String,
-        requireRedPalette: Boolean = false,
-        requireTransparentCorner: Boolean = true,
-    ) {
-        val frameFiles = directory.listFiles { file ->
-            file.name.matches(Regex("${Regex.escape(prefix)}_\\d{$digits}\\.png"))
-        }.orEmpty()
-        assertEquals("$team Demolisher should have $frameCount approved frames", frameCount, frameFiles.size)
-        (0 until frameCount).forEach { index ->
-            val imageFile = File(directory, "${prefix}_${"%0${digits}d".format(index)}.png")
-            assertTrue("Missing $team Demolisher frame $index", imageFile.isFile)
-            val image = ImageIO.read(imageFile)
-            assertNotNull("Invalid $team Demolisher PNG frame $index", image)
-            val decodedImage = requireNotNull(image)
-            assertEquals(512, decodedImage.width)
-            assertEquals(512, decodedImage.height)
-            assertTrue(
-                "$team Demolisher frame $index must preserve alpha",
-                decodedImage.colorModel.hasAlpha(),
-            )
-            if (requireTransparentCorner) {
-                assertEquals(
-                    "$team Demolisher frame $index must retain a transparent canvas corner",
-                    0,
-                    decodedImage.getRGB(0, 0) ushr 24,
-                )
-            }
-            if (requireRedPalette) {
-                assertTrue(
-                    "$team Demolisher frame $index must retain its red team palette",
-                    countRedPixels(decodedImage) > 3_000,
-                )
-            }
-        }
-    }
-
-    private fun countRedPixels(image: java.awt.image.BufferedImage): Int {
-        var count = 0
-        for (y in 0 until image.height) {
-            for (x in 0 until image.width) {
-                val pixel = image.getRGB(x, y)
-                val alpha = pixel ushr 24 and 0xff
-                val red = pixel ushr 16 and 0xff
-                val green = pixel ushr 8 and 0xff
-                val blue = pixel and 0xff
-                if (alpha > 80 && red > 100 && red > green * 1.35 && red > blue * 1.2) {
-                    count++
-                }
-            }
-        }
-        return count
-    }
 }

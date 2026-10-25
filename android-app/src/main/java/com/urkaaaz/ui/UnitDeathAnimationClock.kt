@@ -2,22 +2,40 @@ package com.urkaaaz.ui
 
 class UnitDeathAnimationClock {
     private val elapsedRenderTicksByUnit = mutableMapOf<String, Int>()
+    private val prestartedDemolisherIds = mutableSetOf<String>()
 
     fun advance(units: List<UnitRenderState>) {
-        val defeatedUnitIds = units.asSequence()
-            .filter { it.actionState == "DEAD" }
+        val animatedUnitIds = units.asSequence()
+            .filter { it.actionState == "DEAD" || it.deathAnimationPrestarted }
             .map { it.entityId }
             .toSet()
 
-        elapsedRenderTicksByUnit.keys.retainAll(defeatedUnitIds)
-        defeatedUnitIds.forEach { entityId ->
-            val elapsedTicks = elapsedRenderTicksByUnit[entityId]
-            elapsedRenderTicksByUnit[entityId] = if (elapsedTicks == null) {
-                0
-            } else {
-                (elapsedTicks + 1).coerceAtMost(MAX_ELAPSED_RENDER_TICKS)
+        elapsedRenderTicksByUnit.keys.retainAll(animatedUnitIds)
+        prestartedDemolisherIds.retainAll(animatedUnitIds)
+        units.asSequence()
+            .filter { it.entityId in animatedUnitIds }
+            .forEach { unit ->
+                val entityId = unit.entityId
+                val elapsedTicks = elapsedRenderTicksByUnit[entityId]
+                elapsedRenderTicksByUnit[entityId] = if (unit.actionState == "DEAD") {
+                    val nextTicks = elapsedTicks?.plus(1) ?: 0
+                    val firstExplosionTick = if (entityId in prestartedDemolisherIds) {
+                        DEMOLISHER_EXPLOSION_FRAME_INDEX * RENDER_TICKS_PER_FRAME
+                    } else {
+                        0
+                    }
+                    prestartedDemolisherIds.remove(entityId)
+                    maxOf(nextTicks, firstExplosionTick)
+                        .coerceAtMost(MAX_ELAPSED_RENDER_TICKS)
+                } else {
+                    if (unit.unitType == "DEMOLISHER") {
+                        prestartedDemolisherIds += entityId
+                    }
+                    (elapsedTicks ?: -1)
+                        .plus(1)
+                        .coerceAtMost(PRE_IMPACT_HOLD_RENDER_TICK)
+                }
             }
-        }
     }
 
     fun frameIndex(entityId: String, frameCount: Int): Int? {
@@ -31,8 +49,21 @@ class UnitDeathAnimationClock {
             ?.let { it >= frameCount * RENDER_TICKS_PER_FRAME }
             ?: false
 
+    internal fun resetUnit(entityId: String) {
+        elapsedRenderTicksByUnit.remove(entityId)
+        prestartedDemolisherIds.remove(entityId)
+    }
+
+    fun reset() {
+        elapsedRenderTicksByUnit.clear()
+        prestartedDemolisherIds.clear()
+    }
+
     private companion object {
         const val RENDER_TICKS_PER_FRAME = 3
+        const val DEMOLISHER_EXPLOSION_FRAME_INDEX = 13
+        const val PRE_IMPACT_HOLD_RENDER_TICK =
+            DEMOLISHER_EXPLOSION_FRAME_INDEX * RENDER_TICKS_PER_FRAME - 1
         const val MAX_ELAPSED_RENDER_TICKS = Int.MAX_VALUE - RENDER_TICKS_PER_FRAME
     }
 }
@@ -41,10 +72,39 @@ internal class UnitDeathAnimationRetention(
     private val animationClock: UnitDeathAnimationClock,
 ) {
     private val retainedUnits = linkedMapOf<String, UnitRenderState>()
+    private val deathAnimationPredictor = DemolisherDeathAnimationPredictor()
+    private var anticipatedTargetsByDemolisher = emptyMap<String, String>()
 
-    fun update(units: List<UnitRenderState>): List<UnitRenderState> {
+    fun update(
+        units: List<UnitRenderState>,
+        nowMilliseconds: Long = 0L,
+        allowAnticipation: Boolean = true,
+    ): List<UnitRenderState> {
         val currentUnitsById = units.associateBy(UnitRenderState::entityId)
-        units.asSequence()
+        val anticipatedTargets = deathAnimationPredictor.update(
+            units = units,
+            nowMilliseconds = nowMilliseconds,
+            allowPrediction = allowAnticipation,
+        )
+        anticipatedTargetsByDemolisher.forEach { (entityId, previousTargetId) ->
+            if (
+                anticipatedTargets[entityId] != null &&
+                anticipatedTargets[entityId] != previousTargetId &&
+                currentUnitsById[entityId]?.actionState != "DEAD"
+            ) {
+                animationClock.resetUnit(entityId)
+            }
+        }
+        anticipatedTargetsByDemolisher = anticipatedTargets
+
+        val presentationUnits = units.map { unit ->
+            unit.copy(
+                deathAnimationPrestarted =
+                    unit.actionState != "DEAD" &&
+                        anticipatedTargets.containsKey(unit.entityId),
+            )
+        }
+        presentationUnits.asSequence()
             .filter { it.actionState == "DEAD" && deathFrameCount(it) != null }
             .forEach { retainedUnits[it.entityId] = it }
 
@@ -52,7 +112,7 @@ internal class UnitDeathAnimationRetention(
             currentUnitsById[entityId]?.actionState?.let { it != "DEAD" } == true
         }
 
-        val unitsToRender = units + retainedUnits.values.filterNot {
+        val unitsToRender = presentationUnits + retainedUnits.values.filterNot {
             it.entityId in currentUnitsById
         }
         animationClock.advance(unitsToRender)
@@ -63,6 +123,13 @@ internal class UnitDeathAnimationRetention(
         return unitsToRender
     }
 
+    fun reset() {
+        retainedUnits.clear()
+        anticipatedTargetsByDemolisher = emptyMap()
+        deathAnimationPredictor.reset()
+        animationClock.reset()
+    }
+
     private fun deathFrameCount(unit: UnitRenderState): Int? =
         when (unit.unitType) {
             "DEFENDER" ->
@@ -70,12 +137,14 @@ internal class UnitDeathAnimationRetention(
                     unit.teamLabel == "BLUE" || unit.teamLabel == "RED"
                 }
             "DEMOLISHER" ->
-                DEMOLISHER_DEATH_FRAME_COUNT.takeIf { unit.teamLabel == "BLUE" }
+                DEMOLISHER_DEATH_FRAME_COUNT.takeIf {
+                    unit.teamLabel == "BLUE" || unit.teamLabel == "RED"
+                }
             else -> null
         }
 
     private companion object {
         const val DEFENDER_DEATH_FRAME_COUNT = 60
-        const val DEMOLISHER_DEATH_FRAME_COUNT = 60
+        const val DEMOLISHER_DEATH_FRAME_COUNT = 32
     }
 }

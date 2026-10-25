@@ -18,7 +18,7 @@ internal class TeamTextureBitmapCache(maxKilobytes: Int = DEFAULT_CACHE_KILOBYTE
 
     private fun recolor(source: Bitmap, mask: Bitmap, texture: Bitmap): Bitmap {
         require(source.width == mask.width && source.height == mask.height) {
-            "Defender animation mask must match the source frame dimensions"
+            "Team animation mask must match the source frame dimensions"
         }
         require(texture.width > 0 && texture.height > 0) { "Team texture must not be empty" }
 

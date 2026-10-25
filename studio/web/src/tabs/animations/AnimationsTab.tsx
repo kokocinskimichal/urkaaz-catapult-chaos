@@ -33,7 +33,7 @@ export function AnimationsTab() {
   const node = selection ? findTypeNode(tree, selection) : null;
   const sequence = node ? pickSequence(node, variant) : null;
   const variants = node ? variantsOf(node) : [];
-  const isDefender = sequence?.category === "character" && sequence.target === "defender";
+  const usesTeamTexture = sequence?.supportsTeamTexture === true;
 
   if (error) return <p className="error">Could not load animations: {error}</p>;
   if (!catalog) return <p className="hint-text">Loading animation catalog…</p>;
@@ -78,8 +78,8 @@ export function AnimationsTab() {
         )}
       </aside>
       <div className="animation-main">
-        {isDefender ? (
-          <div className="variant-switch" aria-label="Defender team texture">
+        {usesTeamTexture ? (
+          <div className="variant-switch" aria-label="Team texture">
             {(["blue", "red"] as const).map(name => (
               <button key={name} className={team === name ? "active" : undefined} onClick={() => setTeam(name)}>
                 {name}
@@ -98,7 +98,7 @@ export function AnimationsTab() {
             ))}
           </div>
         )}
-        {sequence ? <AnimationPreview sequence={sequence} team={team} showMask={isDefender && showMask} /> : <p className="hint-text">No animations found.</p>}
+        {sequence ? <AnimationPreview sequence={sequence} team={team} showMask={usesTeamTexture && showMask} /> : <p className="hint-text">No animations found.</p>}
       </div>
     </div>
   );

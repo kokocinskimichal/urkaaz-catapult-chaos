@@ -164,6 +164,7 @@ class BattlefieldView(context: Context) : View(context) {
             newState.matchId != state.matchId ||
             newState.matchGeneration != state.matchGeneration
         ) {
+            unitDeathAnimationRetention.reset()
             activeImpact = null
             impactFrame = 0
             lastImpactEventId = null
@@ -172,7 +173,11 @@ class BattlefieldView(context: Context) : View(context) {
             lastFortressShieldHitEventId = null
         }
         state = newState.copy(
-            units = unitDeathAnimationRetention.update(newState.units),
+            units = unitDeathAnimationRetention.update(
+                units = newState.units,
+                nowMilliseconds = nowMilliseconds,
+                allowAnticipation = !presentationState.isPaused,
+            ),
         )
         animationFrame = (animationFrame + 1) % 1024
         val shieldHit = newState.fortressShieldHits.lastOrNull()

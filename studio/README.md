@@ -4,13 +4,14 @@ Lokalne narzędzie deweloperskie (nie część gry). Architektura i decyzje:
 [`docs/architecture/studio-architecture.md`](../docs/architecture/studio-architecture.md).
 
 Stan: **krok 2 — wizualizator animacji (tylko odczyt)**. Zakładka Animations
-wyświetla drzewo kategoria → cel → typ, odtwarza klatki i dla Defendera
-przełącza teksturę BLUE/RED oraz nakładkę masek. Zakładka Maps to nadal
+wyświetla drzewo kategoria → cel → typ, odtwarza klatki i dla sekwencji
+oznaczonych w `teamTextureTargets` przełącza teksturę BLUE/RED oraz nakładkę
+masek (obecnie Defender oraz idle/move Demolishera). Zakładka Maps to nadal
 placeholder. Serwer: `GET /api/health`, `GET /api/animations`,
-`GET /api/animations/{id}/frames/{n}`, Defender masks i team textures. Znane
+`GET /api/animations/{id}/frames/{n}`, team masks i team textures. Znane
 cele i sekwencje bez loadera w grze opisuje ręcznie utrzymywany
-`config/animations.json`; tekstury Defendera wskazuje
-`android-app/src/main/assets/animations/defender/palettes.json`. Maski są
+`config/animations.json`; palety wskazują
+`android-app/src/main/assets/animations/<unit>/palettes.json`. Maski są
 automatycznym draftem i wymagają przeglądu artystycznego.
 
 ```sh

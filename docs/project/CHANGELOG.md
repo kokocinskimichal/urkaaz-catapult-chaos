@@ -25,6 +25,21 @@
   shading without suppressing the palette colors. Studio previews both textures
   and can overlay the generated masks. Masks are an automatic first draft and
   still require visual review.
+- Generalized team-texture rendering and Studio previews to support shared
+  neutral character sequences. Migrated Demolisher idle (48 frames) and move
+  (60 frames) to shared 256x256 frames with per-frame masks; the opponent now
+  uses mirrored shared frames recolored through the RED palette instead of
+  separate red sequences.
+- Replaced Demolisher death with a shared 32-frame, 768x432 transparent
+  sequence: the existing forward dive is followed by a back-mounted powder
+  barrel explosion. Added per-frame cloth masks so BLUE and mirrored RED use
+  the existing team-texture renderer; both teams retain the unit through the
+  full death animation. The renderer uses a death-specific canvas scale so the
+  character matches the visible size of its 256x256 idle/move animations.
+- Demolisher death presentation predicts imminent unit contact and starts its
+  run-and-dive early, holds before the explosion until simulation-confirmed
+  death, and cancels the pre-roll when the predicted contact is no longer
+  plausible.
 
 - Added `/loadContext` and a curated Markdown index for loading the core
   project context and task-specific documentation in one command.

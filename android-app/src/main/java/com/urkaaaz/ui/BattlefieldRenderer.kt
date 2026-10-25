@@ -932,6 +932,7 @@ class BattlefieldRenderer(
             val baselineY =
                 worldToViewY(unit.y, viewportHeight) + 4f * worldToViewportScale
             val defeated = unit.actionState == "DEAD"
+            val deathAnimationPlaying = defeated || unit.deathAnimationPrestarted
             val attacking = unit.actionState == "WINDING_UP" ||
                 unit.actionState == "ATTACKING" ||
                 unit.actionState == "RECOVERING" ||
@@ -941,7 +942,7 @@ class BattlefieldRenderer(
                         !unit.moving &&
                         (unit.attackCycleId > 0 || unit.attackGroupId != null)
                     )
-            val frames = if (defeated) {
+            val frames = if (deathAnimationPlaying) {
                 assets.unitDeathAnimationFrames(unit.unitType, unit.teamLabel)
             } else {
                 assets.unitAnimationFrames(
@@ -953,7 +954,7 @@ class BattlefieldRenderer(
             }
             val frame = if (frames.isEmpty()) {
                 null
-            } else if (defeated) {
+            } else if (deathAnimationPlaying) {
                 deathAnimationClock.frameIndex(unit.entityId, frames.size)
                     ?.let(frames::get)
             } else if (attacking) {
@@ -985,6 +986,8 @@ class BattlefieldRenderer(
                         (unit.teamLabel == "BLUE" || unit.teamLabel == "RED")
                 val generatedAnimationCanvasScale = when {
                     usesGeneratedDefenderAnimation -> GENERATED_DEFENDER_CANVAS_SCALE
+                    usesGeneratedDemolisherAnimation && deathAnimationPlaying ->
+                        GENERATED_DEMOLISHER_DEATH_CANVAS_SCALE
                     usesGeneratedDemolisherAnimation ->
                         GENERATED_DEMOLISHER_CANVAS_SCALE
                     else -> 1f
@@ -1017,7 +1020,7 @@ class BattlefieldRenderer(
                     HasteOrbitingChevronPresentation.shouldRender(
                         unit.hasted,
                         unit.moving,
-                        defeated,
+                        deathAnimationPlaying,
                     )
                 ) {
                     drawHasteOrbitingChevronEffect(
@@ -1318,7 +1321,8 @@ class BattlefieldRenderer(
         private const val UNIT_HEALTH_BAR_WIDTH_WORLD = 46.2f
         private const val BOAR_SOURCE_CROP_HEIGHT_RATIO = 301f / 512f
         private const val GENERATED_DEFENDER_CANVAS_SCALE = 2f
-        private const val GENERATED_DEMOLISHER_CANVAS_SCALE = 2f
+        internal const val GENERATED_DEMOLISHER_CANVAS_SCALE = 2f
+        internal const val GENERATED_DEMOLISHER_DEATH_CANVAS_SCALE = 2.42f
         private const val GENERATED_DEMOLISHER_BOTTOM_PADDING_RATIO = 75f / 512f
         private const val GENERATED_BLUE_DEFENDER_IDLE_BOTTOM_PADDING_RATIO = 68f / 512f
         private const val GENERATED_DEFENDER_JOG_BOTTOM_PADDING_RATIO = 76f / 512f

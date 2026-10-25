@@ -60,11 +60,11 @@ class BattlefieldAssetCatalog(private val context: Context) {
     private val resources = context.resources
     private val unitBitmapCache = mutableMapOf<String, Bitmap?>()
     private val unitAnimationCache = mutableMapOf<String, List<Bitmap>>()
-    private val defenderTextureBitmapCache = TeamTextureBitmapCache()
-    private val defenderTextureByTeam by lazy { loadDefenderTextureConfiguration() }
-    private val defenderTextureCache = mutableMapOf<String, Bitmap>()
-    private val defenderNeutralFrameCache = mutableMapOf<String, List<Bitmap>>()
-    private val defenderMaskCache = object : LruCache<String, Bitmap>(4 * 1024) {
+    private val teamTextureBitmapCache = TeamTextureBitmapCache()
+    private val teamTextureConfigurationCache = mutableMapOf<String, Map<String, String>>()
+    private val teamTextureCache = mutableMapOf<String, Bitmap>()
+    private val teamNeutralFrameCache = mutableMapOf<String, List<Bitmap>>()
+    private val teamMaskCache = object : LruCache<String, Bitmap>(4 * 1024) {
         override fun sizeOf(key: String, value: Bitmap): Int =
             (value.allocationByteCount / 1024).coerceAtLeast(1)
     }
@@ -261,14 +261,27 @@ class BattlefieldAssetCatalog(private val context: Context) {
                 }
                 when {
                     prefix.isEmpty() -> emptyList()
-                    unitType == "DEFENDER" -> loadDefenderAnimationFrames("attack", team, side)
+                    unitType == "DEFENDER" -> loadTeamTextureAnimationFrames(
+                        "defender",
+                        "attack",
+                        team,
+                        side,
+                    )
                     else -> loadThreeDigitAnimationFrames(prefix)
                 }
             } else if (!moving) {
                 when (unitType) {
-                    "DEFENDER" -> loadDefenderAnimationFrames("idle", team, side)
-                    "DEMOLISHER" -> loadThreeDigitAnimationFrames(
-                        "anim_character_demolisher_idle_${team}",
+                    "DEFENDER" -> loadTeamTextureAnimationFrames(
+                        "defender",
+                        "idle",
+                        team,
+                        side,
+                    )
+                    "DEMOLISHER" -> loadTeamTextureAnimationFrames(
+                        "demolisher",
+                        "idle",
+                        team,
+                        side,
                     )
                     "RAGING_BOAR" -> loadAnimationFrames(
                         "anim_character_raging_boar_idle_${team}",
@@ -285,7 +298,9 @@ class BattlefieldAssetCatalog(private val context: Context) {
                     else -> return@getOrPut emptyList()
                 }
                 if (unitType == "DEFENDER") {
-                    loadDefenderAnimationFrames("move", team, side)
+                    loadTeamTextureAnimationFrames("defender", "move", team, side)
+                } else if (unitType == "DEMOLISHER") {
+                    loadTeamTextureAnimationFrames("demolisher", "move", team, side)
                 } else {
                     loadThreeDigitAnimationFrames(prefix)
                 }
@@ -300,55 +315,70 @@ class BattlefieldAssetCatalog(private val context: Context) {
         val cacheKey = "death:$unitType:$side"
         return unitAnimationCache.getOrPut(cacheKey) {
             when (unitType) {
-                "DEFENDER" -> loadDefenderAnimationFrames("death", team, side)
+                "DEFENDER" -> loadTeamTextureAnimationFrames(
+                    "defender",
+                    "death",
+                    team,
+                    side,
+                )
                 "RAGING_BOAR" -> loadAnimationFrames(
                     "anim_character_raging_boar_death_${team}",
                 )
-                "DEMOLISHER" -> loadThreeDigitAnimationFrames(
-                    "anim_character_demolisher_death_${team}",
+                "DEMOLISHER" -> loadTeamTextureAnimationFrames(
+                    "demolisher",
+                    "death",
+                    team,
+                    side,
                 )
                 else -> emptyList()
             }
         }
     }
 
-    private fun loadDefenderAnimationFrames(
+    private fun loadTeamTextureAnimationFrames(
+        target: String,
         animation: String,
         team: String,
         side: String,
     ): List<Bitmap> {
-        val neutralFrames = defenderNeutralFrameCache.getOrPut(animation) {
-            loadThreeDigitAnimationFrames("anim_character_defender_$animation")
+        val neutralFrames = teamNeutralFrameCache.getOrPut("$target:$animation") {
+            loadThreeDigitAnimationFrames("anim_character_${target}_$animation")
         }
         val masks = object : AbstractList<Bitmap>() {
             override val size: Int = neutralFrames.size
 
             override fun get(index: Int): Bitmap {
-                require(index in indices) { "Defender animation mask $index is out of range" }
-                val key = "$animation:$side:${index.toString().padStart(3, '0')}"
-                return defenderMaskCache.get(key) ?: context.assets.open(
-                    "animations/defender/masks/$animation/${index.toString().padStart(3, '0')}.png",
+                require(index in indices) {
+                    "$target $animation mask $index is out of range"
+                }
+                val frameName = index.toString().padStart(3, '0')
+                val key = "$target:$animation:$side:$frameName"
+                return teamMaskCache.get(key) ?: context.assets.open(
+                    "animations/$target/masks/$animation/$frameName.png",
                 ).use { input ->
                     BitmapFactory.decodeStream(input)
-                        ?: error("Could not decode Defender $animation mask frame $index")
+                        ?: error("Could not decode $target $animation mask frame $index")
                 }.let { sourceMask ->
                     require(
                         sourceMask.width == neutralFrames[index].width &&
                             sourceMask.height == neutralFrames[index].height,
                     ) {
-                        "Defender $animation mask frame $index has mismatched dimensions"
+                        "$target $animation mask frame $index has mismatched dimensions"
                     }
                     if (side == "right") mirrorBitmap(sourceMask) else sourceMask
-                }.also { defenderMaskCache.put(key, it) }
+                }.also { teamMaskCache.put(key, it) }
             }
         }
 
-        val texturePath = defenderTextureByTeam[team.uppercase()]
-            ?: error("No Defender texture is configured for team '$team'")
-        val texture = defenderTextureCache.getOrPut(texturePath) {
+        val textures = teamTextureConfigurationCache.getOrPut(target) {
+            loadTeamTextureConfiguration(target)
+        }
+        val texturePath = textures[team.uppercase()]
+            ?: error("No $target texture is configured for team '$team'")
+        val texture = teamTextureCache.getOrPut(texturePath) {
             context.assets.open(texturePath).use { input ->
                 BitmapFactory.decodeStream(input)
-                    ?: error("Could not decode Defender texture '$texturePath'")
+                    ?: error("Could not decode $target texture '$texturePath'")
             }
         }
         val sources = if (side == "right") neutralFrames.map(::mirrorBitmap) else neutralFrames
@@ -356,9 +386,11 @@ class BattlefieldAssetCatalog(private val context: Context) {
             override val size: Int = sources.size
 
             override fun get(index: Int): Bitmap {
-                require(index in indices) { "Defender animation frame $index is out of range" }
-                return defenderTextureBitmapCache.getOrCreate(
-                    "$animation:$team:$index",
+                require(index in indices) {
+                    "$target $animation frame $index is out of range"
+                }
+                return teamTextureBitmapCache.getOrCreate(
+                    "$target:$animation:$team:$index",
                     sources[index],
                     masks[index],
                     texture,
@@ -367,8 +399,8 @@ class BattlefieldAssetCatalog(private val context: Context) {
         }
     }
 
-    private fun loadDefenderTextureConfiguration(): Map<String, String> {
-        val json = context.assets.open("animations/defender/palettes.json").bufferedReader().use {
+    private fun loadTeamTextureConfiguration(target: String): Map<String, String> {
+        val json = context.assets.open("animations/$target/palettes.json").bufferedReader().use {
             JSONObject(it.readText())
         }
         val teams = json.getJSONObject("teams")

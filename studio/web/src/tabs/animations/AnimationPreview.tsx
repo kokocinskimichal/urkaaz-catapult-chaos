@@ -40,20 +40,20 @@ export function AnimationPreview({
     let cancelled = false;
     setError(null);
     setFrame(0);
-    const isDefender = sequence.category === "character" && sequence.target === "defender";
-    const texturePromise = isDefender
-      ? loadImage(`/api/animations/defender-textures/${team}`)
+    const usesTeamTexture = sequence.supportsTeamTexture;
+    const texturePromise = usesTeamTexture
+      ? loadImage(`/api/animations/team-textures/${sequence.target}/${team}`)
       : Promise.resolve(null);
     Promise.all([
       Promise.all(sequence.frameIndices.map(index => loadImage(frameUrl(sequence.id, index)))),
-      isDefender
+      usesTeamTexture
         ? Promise.all(sequence.frameIndices.map(index => loadImage(`/api/animations/${sequence.id}/masks/${index}`)))
         : Promise.resolve([] as HTMLImageElement[]),
       texturePromise,
     ])
       .then(([frames, masks, texture]) => {
         const images = frames.map((frame, index) =>
-          composeAnimationFrame(frame, masks[index], texture, showMask, team === "red" && isDefender),
+          composeAnimationFrame(frame, masks[index], texture, showMask, team === "red" && usesTeamTexture),
         );
         if (!cancelled) setLoaded({ sequenceId: sequence.id, team, images });
       })
@@ -63,7 +63,7 @@ export function AnimationPreview({
     return () => {
       cancelled = true;
     };
-  }, [sequence.id, sequence.frameIndices, sequence.variant, team, showMask]);
+  }, [sequence.id, sequence.frameIndices, sequence.supportsTeamTexture, sequence.variant, team, showMask]);
 
   const images = loaded?.sequenceId === sequence.id && loaded.team === team ? loaded.images : null;
   const frameCount = images?.length ?? 0;

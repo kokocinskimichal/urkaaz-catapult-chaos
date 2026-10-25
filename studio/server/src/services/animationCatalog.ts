@@ -1,4 +1,4 @@
-import { readdir, readFile } from "node:fs/promises";
+import { readdir, readFile, stat } from "node:fs/promises";
 import { join } from "node:path";
 import type { AnimationCatalogResponse, AnimationCategory, AnimationSequence } from "../contracts/animations.ts";
 
@@ -10,11 +10,13 @@ const TEAM_VARIANTS = new Set(["blue", "red"]);
 
 export interface AnimationConfig {
   targets: Record<AnimationCategory, string[]>;
+  teamTextureTargets: string[];
   withoutLoader: string[];
 }
 
 export const EMPTY_ANIMATION_CONFIG: AnimationConfig = {
   targets: { character: [], spell: [], ammunition: [] },
+  teamTextureTargets: [],
   withoutLoader: [],
 };
 
@@ -61,6 +63,10 @@ function toSequence(
     frameIndices,
     targetConfigured: configured,
     hasRuntimeLoader: !withoutLoader.has(stem),
+    supportsTeamTexture:
+      category === "character" &&
+      variant === null &&
+      config.teamTextureTargets.includes(target),
     issues: contiguous ? [] : ["Frame indices are not contiguous from 000"],
   };
 }
@@ -94,6 +100,7 @@ export function parseAnimationConfig(value: unknown): AnimationConfig {
       spell: stringArray(targets.spell),
       ammunition: stringArray(targets.ammunition),
     },
+    teamTextureTargets: stringArray(source.teamTextureTargets),
     withoutLoader: stringArray(source.withoutLoader),
   };
 }
@@ -116,14 +123,29 @@ export function animationFramePath(repoRoot: string, sequenceId: string, index: 
   return join(repoRoot, ...ANIMATION_DIRECTORY, `${sequenceId}_${String(index).padStart(3, "0")}.png`);
 }
 
-export function defenderMaskPath(repoRoot: string, sequenceId: string, index: number): string | null {
-  const match = /^anim_character_defender_(idle|move|attack|death)$/.exec(sequenceId);
-  if (!match || !Number.isInteger(index) || index < 0 || index > 99) return null;
-  return join(repoRoot, "android-app", "src", "main", "assets", "animations", "defender", "masks", match[1], `${String(index).padStart(3, "0")}.png`);
+export function teamAnimationMaskPath(repoRoot: string, sequenceId: string, index: number): string | null {
+  const match = /^anim_character_([a-z0-9_]+)_(idle|move|attack|death)$/.exec(sequenceId);
+  if (!match || !Number.isInteger(index) || index < 0 || index > 999) return null;
+  return join(
+    repoRoot,
+    "android-app",
+    "src",
+    "main",
+    "assets",
+    "animations",
+    match[1],
+    "masks",
+    match[2],
+    `${String(index).padStart(3, "0")}.png`,
+  );
 }
 
-export async function defenderTexturePath(repoRoot: string, team: string): Promise<string | null> {
-  if (team !== "blue" && team !== "red") return null;
+export async function teamTexturePath(
+  repoRoot: string,
+  target: string,
+  team: string,
+): Promise<string | null> {
+  if (!/^[a-z0-9_]+$/.test(target) || (team !== "blue" && team !== "red")) return null;
   const configPath = join(
     repoRoot,
     "android-app",
@@ -131,16 +153,17 @@ export async function defenderTexturePath(repoRoot: string, team: string): Promi
     "main",
     "assets",
     "animations",
-    "defender",
+    target,
     "palettes.json",
   );
+  if (!(await stat(configPath).catch(() => null))?.isFile()) return null;
   const config = JSON.parse(await readFile(configPath, "utf8")) as {
     teams?: Record<string, unknown>;
   };
   const texture = config.teams?.[team.toUpperCase()];
   if (
     typeof texture !== "string" ||
-    !/^animations\/defender\/[a-z0-9_-]+\.png$/.test(texture)
+    !/^animations\/[a-z0-9_-]+\/[a-z0-9_-]+\.png$/.test(texture)
   ) {
     return null;
   }

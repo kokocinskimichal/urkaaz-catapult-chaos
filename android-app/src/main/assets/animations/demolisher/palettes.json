@@ -1,0 +1,6 @@
+{
+  "teams": {
+    "BLUE": "animations/defender/defender_blue_fabric.png",
+    "RED": "animations/defender/defender_red_fabric.png"
+  }
+}
