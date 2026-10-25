@@ -37,6 +37,9 @@
 
 ### Changed
 
+- Unified the Defender death animation resolution: both teams' 120 frames were
+  downscaled from 512×512 to 256×256 like every other Defender sequence, with
+  identical framing and no renderer change.
 - Increased Fortress Shield durability from 80 to 150 HP.
 - Runic Bastion cannot be recast while its previous structure remains; its HUD
   icon stays dimmed until destruction, and attackers wait through the

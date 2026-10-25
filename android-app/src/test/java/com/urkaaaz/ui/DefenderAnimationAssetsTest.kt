@@ -45,9 +45,8 @@ class DefenderAnimationAssetsTest {
                 assertTrue("Missing $team $animation frame $index", imageFile.isFile)
                 val image = ImageIO.read(imageFile)
                 assertNotNull("Invalid $team $animation PNG frame $index", image)
-                val expectedDimension = if (animation == "death") 512 else 256
-                assertEquals(expectedDimension, image.width)
-                assertEquals(expectedDimension, image.height)
+                assertEquals(256, image.width)
+                assertEquals(256, image.height)
                 assertTrue(
                     "$team $animation frame $index must preserve alpha",
                     image.colorModel.hasAlpha(),

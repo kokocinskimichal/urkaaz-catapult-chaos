@@ -507,7 +507,9 @@ not truncated to a subset; unit frame playback advances at approximately
   idle sequence has a consistent 79/512 transparent-bottom ratio, and neither
   jog sequence has edge clipping.
 - Both blue and red Defender death animations use 60 approved transparent
-  512x512 frames at the renderer's approximately `10 FPS` death cadence,
+  256x256 frames (downscaled from the original 512x512 generation so every
+  Defender sequence shares one resolution; framing is identical, so frame 0
+  matches the idle pose exactly) at the renderer's approximately `10 FPS` death cadence,
   driven by an independent per-unit clock that starts when each unit enters
   the dead state. The renderer retains either team's immutable dead-unit
   snapshot after simulation cleanup long enough to play all 60 frames. Their
