@@ -7,6 +7,9 @@ import com.urkaaaz.contracts.EntityId
 import com.urkaaaz.contracts.EventId
 import com.urkaaaz.contracts.FortressSnapshot
 import com.urkaaaz.contracts.FortressShieldGeometry
+import com.urkaaaz.contracts.RunicBastionGeometry
+import com.urkaaaz.contracts.RunicBastionAnimationTiming
+import com.urkaaaz.contracts.RunicBastionSnapshot
 import com.urkaaaz.contracts.MatchEvent
 import com.urkaaaz.contracts.MatchError
 import com.urkaaaz.contracts.MatchId
@@ -28,6 +31,7 @@ import com.urkaaaz.domain.AmmunitionCatalog
 import com.urkaaaz.domain.AmmunitionImpactBehavior
 import com.urkaaaz.domain.Catapult
 import com.urkaaaz.domain.Fortress
+import com.urkaaaz.domain.RunicBastion
 import com.urkaaaz.domain.Projectile
 import com.urkaaaz.domain.Velocity
 import com.urkaaaz.domain.WorldBounds
@@ -49,6 +53,12 @@ import com.urkaaaz.domain.FriendlyFirePolicy
 import kotlin.math.min
 import kotlin.math.sqrt
 import kotlin.random.Random
+
+private data class RunicBastionDestructionBlocker(
+    val bastion: RunicBastion,
+    val remainingMilliseconds: Long,
+    val heldUnitPositions: Map<EntityId, Float>,
+)
 
 /**
  * Deterministic projectile-and-impact simulation.
@@ -95,6 +105,10 @@ class DeterministicMatchSimulation(
     private var projectiles = emptyList<Projectile>()
     private var currentBlueFortress = blueFortress
     private var currentRedFortress = redFortress
+    private var currentBlueRunicBastion: RunicBastion? = null
+    private var currentRedRunicBastion: RunicBastion? = null
+    private val runicBastionDestructionBlockers =
+        linkedMapOf<EntityId, RunicBastionDestructionBlocker>()
     private var currentBlueCatapult = blueCatapult
         ?: defaultCatapult(Team.BLUE, config.bounds, config, terrain)
     private var currentRedCatapult = redCatapult
@@ -459,6 +473,53 @@ class DeterministicMatchSimulation(
         return null
     }
 
+    fun castRunicBastion(
+        playerId: PlayerId,
+        team: Team,
+        targetId: EntityId?,
+    ): MatchError? {
+        when (status) {
+            MatchStatus.RUNNING -> Unit
+            MatchStatus.FINISHED -> return MatchError.ALREADY_FINISHED
+            else -> return MatchError.MATCH_NOT_RUNNING
+        }
+        val definition = SpellCatalog.definition(SpellType.RUNIC_BASTION)
+        val effect = definition.effect as? SpellEffectDefinition.RunicBastion
+            ?: return MatchError.SPELL_NOT_IMPLEMENTED
+        if (targetId != null) return MatchError.INVALID_SPELL_TARGET
+        if (bastion(team) != null) return MatchError.SPELL_ALREADY_ACTIVE
+        val wallet = resources.getValue(team)
+        if (!wallet.canSpendMana(definition.manaCost)) {
+            return MatchError.INSUFFICIENT_RESOURCE
+        }
+
+        val frontDirection = if (team == Team.BLUE) 1f else -1f
+        val x = fortressAttackX(team) +
+            frontDirection * RunicBastionGeometry.FRONT_OFFSET_FROM_GATE
+        val foundationY = terrain.heightAt(x)
+        val deployed = RunicBastion(
+            id = EntityId("${team.name.lowercase()}-runic-bastion-${sequence + 1}"),
+            team = team,
+            center = WorldPosition(x, RunicBastionGeometry.centerY(foundationY)),
+            foundationY = foundationY,
+            maxHealth = effect.hitPoints,
+        )
+        resources[team] = wallet.spendMana(definition.manaCost)
+        setBastion(deployed)
+        emit {
+            MatchEvent.SpellCast(
+                eventId = it,
+                matchId = matchId,
+                simulationTimeMilliseconds = simulationTimeMilliseconds,
+                playerId = playerId,
+                spellType = definition.type.name,
+                targetId = deployed.id,
+                manaCost = definition.manaCost,
+            )
+        }
+        return null
+    }
+
     fun castHaste(
         playerId: PlayerId,
         team: Team,
@@ -523,6 +584,9 @@ class DeterministicMatchSimulation(
                 .takeIf { it.remainingSeconds > 0f }
         }
         advanceUnits(deltaSeconds, deltaMilliseconds)
+        // Keep each blocker active for the whole movement step; deaths in the
+        // interaction and projectile phases below start with the full duration.
+        advanceRunicBastionDestructionBlockers(deltaMilliseconds)
         advanceHasteTimers(deltaMilliseconds)
         resolveUnitInteractions(deltaSeconds)
         finishIfFortressDestroyed()
@@ -791,6 +855,19 @@ class DeterministicMatchSimulation(
                 shieldMaxHealth = it.shield?.health?.maximum,
             )
         },
+        runicBastions = listOfNotNull(
+            currentBlueRunicBastion,
+            currentRedRunicBastion,
+        ).filter { it.isAlive }.map {
+            RunicBastionSnapshot(
+                entityId = it.id,
+                team = it.team,
+                centerX = it.center.x,
+                foundationY = it.foundationY,
+                health = it.health.current,
+                maxHealth = it.maxHealth,
+            )
+        },
         units = (units + defeatedUnits.map { it.unit }).map {
             val hasteRemaining = hasteRemainingMillisecondsByTeam[it.team]
                 ?.takeIf { remaining -> remaining > 0L && it.isAlive && !it.inGarrison }
@@ -1008,8 +1085,26 @@ class DeterministicMatchSimulation(
 
     private fun advanceUnits(deltaSeconds: Float, deltaMilliseconds: Long) {
         if (deltaSeconds <= 0f) return
+        val heldUnitPositions = runicBastionDestructionBlockers.values
+            .flatMap { it.heldUnitPositions.entries }
+            .associate { it.key to it.value }
+        val obstacleCentersByTeam = Team.entries.associateWith { team ->
+            buildList {
+                bastion(team)?.let { add(it.center.x) }
+                runicBastionDestructionBlockers.values
+                    .filter { it.bastion.team == team }
+                    .forEach { add(it.bastion.center.x) }
+            }
+        }
         units = units.map { unit ->
             val statusAdvanced = unit.advanceStatuses(deltaSeconds)
+            val heldX = heldUnitPositions[unit.id]
+            if (heldX != null) {
+                return@map statusAdvanced.copy(
+                    position = WorldPosition(heldX, terrain.heightAt(heldX)),
+                    moving = false,
+                )
+            }
             if (statusAdvanced.statuses.containsKey(UnitStatus.STUNNED)) {
                 return@map statusAdvanced.copy(
                     position = statusAdvanced.position.copy(
@@ -1038,7 +1133,30 @@ class DeterministicMatchSimulation(
                     ),
                 )
             }
-            val direction = kotlin.math.sign(targetX - unit.position.x)
+            val direction = kotlin.math.sign(targetX - unit.position.x).let {
+                if (it == 0f) {
+                    if (unit.team == Team.BLUE) 1f else -1f
+                } else {
+                    it
+                }
+            }
+            val obstacle = if (waveMoving && !unit.returningToGarrison) {
+                obstacleCentersByTeam.getValue(opposingTeam(unit.team))
+                    .filter {
+                        (it - unit.position.x) * direction >=
+                            -RunicBastionGeometry.WIDTH / 2f
+                    }
+                    .minByOrNull { kotlin.math.abs(it - unit.position.x) }
+            } else {
+                null
+            }
+            val bastionStopX = obstacle?.let {
+                it -
+                    direction * (
+                        RunicBastionGeometry.WIDTH / 2f +
+                            config.unitCollisionRadius
+                        )
+            }
             val combatTarget = if (waveMoving) {
                 val locked = unit.combatState.targetId?.let { id ->
                     units.firstOrNull { it.id == id && it.isAlive && it.team != unit.team }
@@ -1159,11 +1277,16 @@ class DeterministicMatchSimulation(
             } else {
                 null
             }
-            val movementTargetX = when {
-                combatStopX == null -> alliedStopX ?: targetX
-                alliedStopX == null -> combatStopX
-                direction >= 0f -> minOf(combatStopX, alliedStopX)
-                else -> maxOf(combatStopX, alliedStopX)
+            val movementTargets = listOfNotNull(
+                targetX,
+                combatStopX,
+                alliedStopX,
+                bastionStopX,
+            )
+            val movementTargetX = if (direction >= 0f) {
+                movementTargets.minOrNull() ?: targetX
+            } else {
+                movementTargets.maxOrNull() ?: targetX
             }
             val hasteMultiplier = hasteMovementMultiplier(unit, deltaMilliseconds)
             val step = unit.type.speed * UnitMovementSpeed.statusMultiplier(
@@ -1249,6 +1372,21 @@ class DeterministicMatchSimulation(
         }
     }
 
+    private fun advanceRunicBastionDestructionBlockers(deltaMilliseconds: Long) {
+        if (deltaMilliseconds <= 0L) return
+        val remainingBlockers = runicBastionDestructionBlockers.mapNotNull {
+                (entityId, blocker) ->
+            val remaining = blocker.remainingMilliseconds - deltaMilliseconds
+            if (remaining > 0L) {
+                entityId to blocker.copy(remainingMilliseconds = remaining)
+            } else {
+                null
+            }
+        }.toMap()
+        runicBastionDestructionBlockers.clear()
+        runicBastionDestructionBlockers.putAll(remainingBlockers)
+    }
+
     private fun resolveUnitInteractions(deltaSeconds: Float) {
         if (units.isEmpty()) return
         val current = units.map {
@@ -1298,6 +1436,12 @@ class DeterministicMatchSimulation(
                         targetId == currentRedFortress.id
                     ) {
                         AttackType.SIEGE_MISSION
+                    } else if (bastionById(targetId) != null) {
+                        if (attacker.type.detonatesOnContact) {
+                            AttackType.CONTACT_EXPLOSIVE
+                        } else {
+                            AttackType.SIEGE_MISSION
+                        }
                     } else {
                         attacker.type.attackType
                     },
@@ -1337,7 +1481,27 @@ class DeterministicMatchSimulation(
                 }
                 return@forEach
             }
-            val target = lockedOrAcquireTarget(attacker, current)
+            val attackerDirection = if (attacker.team == Team.BLUE) 1f else -1f
+            val enemyBastion = bastion(opposingTeam(attacker.team))
+            val bastionAhead = enemyBastion?.takeIf {
+                !attacker.returningToGarrison &&
+                    (it.center.x - attacker.position.x) * attackerDirection >=
+                    -RunicBastionGeometry.WIDTH / 2f
+            }
+            val unitCandidates = if (bastionAhead == null) {
+                current
+            } else {
+                current.filter { candidate ->
+                    candidate.team != attacker.team &&
+                        (candidate.position.x - attacker.position.x) * attackerDirection >= 0f &&
+                        (candidate.position.x - attacker.position.x) * attackerDirection <=
+                            (
+                                (bastionAhead.center.x - attacker.position.x) * attackerDirection -
+                                    RunicBastionGeometry.WIDTH / 2f
+                                )
+                }
+            }
+            val target = lockedOrAcquireTarget(attacker, unitCandidates)
             val attackIntent: AttackIntent?
             if (target != null) {
                 if (attacker.combatState.targetId != target.id) {
@@ -1378,6 +1542,33 @@ class DeterministicMatchSimulation(
                     !attacker.type.attacksFromRange && canMeleeAttack(attacker, target, current) ->
                         AttackIntent(attacker.id, target.id, AttackType.MELEE)
                     else -> null
+                }
+            } else if (bastionAhead != null) {
+                if (attacker.combatState.targetId != bastionAhead.id) {
+                    emit {
+                        MatchEvent.TargetAcquired(
+                            it,
+                            matchId,
+                            simulationTimeMilliseconds,
+                            attacker.id,
+                            bastionAhead.id,
+                        )
+                    }
+                }
+                current[index] = attacker.copy(
+                    combatState = attacker.combatState.copy(
+                        action = UnitActionState.SEEKING_TARGET,
+                        targetId = bastionAhead.id,
+                        attackGroupId = null,
+                    ),
+                )
+                attackIntent = when {
+                    !canAttackBastion(attacker, bastionAhead, current) -> null
+                    attacker.type.detonatesOnContact &&
+                        contactedBastion(attacker, bastionAhead) ->
+                        AttackIntent(attacker.id, bastionAhead.id, AttackType.CONTACT_EXPLOSIVE)
+                    else ->
+                        AttackIntent(attacker.id, bastionAhead.id, AttackType.SIEGE_MISSION)
                 }
             } else {
                 val enemyFortress = fortress(opposingTeam(attacker.team))
@@ -1476,7 +1667,25 @@ class DeterministicMatchSimulation(
             val attacker = current[attackerIndex]
             if (!attacker.isAlive) return@forEach
             if (intent.type == AttackType.SIEGE_MISSION) {
-                attackMission(current, attackerIndex, attacker)
+                attackMission(current, attackerIndex, attacker, intent.targetId)
+                return@forEach
+            }
+            val bastionTarget = bastionById(intent.targetId)
+            if (intent.type == AttackType.CONTACT_EXPLOSIVE && bastionTarget != null) {
+                if (bastionTarget.isAlive &&
+                    bastionTarget.team != attacker.team &&
+                    contactedBastion(attacker, bastionTarget)
+                ) {
+                    detonateDemolisher(current, attackerIndex, attacker)
+                } else {
+                    current[attackerIndex] = attacker.copy(
+                        combatState = attacker.combatState.copy(
+                            action = UnitActionState.SEEKING_TARGET,
+                            targetId = null,
+                            attackProgress = 0f,
+                        ),
+                    )
+                }
                 return@forEach
             }
             val target = attackSnapshot.firstOrNull { it.id == intent.targetId }
@@ -1654,28 +1863,87 @@ class DeterministicMatchSimulation(
         return kotlin.math.abs(target.center.x - attacker.position.x) <= formationReach
     }
 
+    private fun canAttackBastion(
+        attacker: Unit,
+        target: RunicBastion,
+        current: List<Unit>,
+    ): Boolean {
+        val direction = if (attacker.team == Team.BLUE) 1f else -1f
+        val centerDistance = (target.center.x - attacker.position.x) * direction
+        if (centerDistance < -RunicBastionGeometry.WIDTH / 2f) return false
+        val formationRank = current
+            .filter {
+                it.team == attacker.team &&
+                    it.isAlive &&
+                    !it.inGarrison &&
+                    !it.returningToGarrison &&
+                    it.type !is SapperUnit &&
+                    (it.id == attacker.id || it.combatState.targetId == target.id)
+            }
+            .sortedBy { it.id.value }
+            .indexOfFirst { it.id == attacker.id }
+            .coerceAtLeast(0)
+        val formationReach = FORTRESS_ATTACK_RANGE + formationRank * ATTACK_FORMATION_SPACING
+        val distanceToFace = (
+            kotlin.math.abs(target.center.x - attacker.position.x) -
+                RunicBastionGeometry.WIDTH / 2f
+            ).coerceAtLeast(0f)
+        return distanceToFace <= formationReach
+    }
+
+    private fun contactedBastion(attacker: Unit, target: RunicBastion): Boolean =
+        (
+            kotlin.math.abs(target.center.x - attacker.position.x) -
+                RunicBastionGeometry.WIDTH / 2f
+            ).coerceAtLeast(0f) <= config.unitCollisionRadius
+
     private fun Unit.isAttacking(): Boolean =
         combatState.action == UnitActionState.WINDING_UP ||
             combatState.action == UnitActionState.ATTACKING ||
             combatState.action == UnitActionState.RECOVERING
 
-    private fun attackMission(current: MutableList<Unit>, index: Int, attacker: Unit) {
+    private fun attackMission(
+        current: MutableList<Unit>,
+        index: Int,
+        attacker: Unit,
+        targetId: EntityId,
+    ) {
         val behavior = attacker.type
         if (behavior !is SapperUnit) {
-            damageFortress(
-                fortress(opposingTeam(attacker.team)),
-                rollUnitDamage(attacker, behavior.fortressDamage),
-            )
+            val damage = rollUnitDamage(attacker, behavior.fortressDamage)
+            val targetBastion = bastionById(targetId)
+            if (targetBastion != null) {
+                if (targetBastion.isAlive && targetBastion.team != attacker.team) {
+                    damageBastion(
+                        targetBastion,
+                        damage,
+                        attackingUnits = current,
+                        sourceUnitId = attacker.id,
+                    )
+                }
+            } else {
+                damageFortress(fortress(opposingTeam(attacker.team)), damage)
+            }
             return
         }
         if (!attacker.sapperHasBomb) {
             current[index] = attacker.copy(returningToGarrison = true, inGarrison = false)
             return
         }
-        damageFortress(
-            fortress(opposingTeam(attacker.team)),
-            rollUnitDamage(attacker, behavior.fortressDamage),
-        )
+        val damage = rollUnitDamage(attacker, behavior.fortressDamage)
+        val targetBastion = bastionById(targetId)
+        if (targetBastion != null) {
+            if (targetBastion.isAlive && targetBastion.team != attacker.team) {
+                damageBastion(
+                    targetBastion,
+                    damage,
+                    attackingUnits = current,
+                    sourceUnitId = attacker.id,
+                )
+            }
+        } else {
+            damageFortress(fortress(opposingTeam(attacker.team)), damage)
+        }
         current[index] = attacker.copy(
             sapperHasBomb = false,
             returningToGarrison = true,
@@ -1732,6 +2000,19 @@ class DeterministicMatchSimulation(
             }
         }
         val enemyFortress = fortress(opposingTeam(attacker.team))
+        val enemyBastion = bastion(opposingTeam(attacker.team))
+        if (enemyBastion != null &&
+            enemyBastion.intersects(attacker.position, DEMOLISHER_BLAST_RADIUS)
+        ) {
+            val distance = attacker.position.distanceTo(enemyBastion.center)
+            val falloff = (1f - distance / DEMOLISHER_BLAST_RADIUS).coerceAtLeast(0f)
+            damageBastion(
+                enemyBastion,
+                (explosionDamage * falloff).toInt().coerceAtLeast(1),
+                attackingUnits = current,
+                sourceUnitId = attacker.id,
+            )
+        }
         if (enemyFortress.intersects(attacker.position, DEMOLISHER_BLAST_RADIUS)) {
             val distance = attacker.position.distanceTo(enemyFortress.center)
             val falloff = (1f - distance / DEMOLISHER_BLAST_RADIUS).coerceAtLeast(0f)
@@ -1795,6 +2076,63 @@ class DeterministicMatchSimulation(
 
     private fun fortress(team: Team): Fortress =
         if (team == Team.BLUE) currentBlueFortress else currentRedFortress
+
+    private fun bastion(team: Team): RunicBastion? =
+        (if (team == Team.BLUE) currentBlueRunicBastion else currentRedRunicBastion)
+            ?.takeIf { it.isAlive }
+
+    private fun bastionById(id: EntityId): RunicBastion? =
+        listOfNotNull(currentBlueRunicBastion, currentRedRunicBastion)
+            .firstOrNull { it.id == id }
+
+    private fun setBastion(bastion: RunicBastion) {
+        if (bastion.team == Team.BLUE) {
+            currentBlueRunicBastion = bastion
+        } else {
+            currentRedRunicBastion = bastion
+        }
+    }
+
+    private fun damageBastion(
+        target: RunicBastion,
+        damage: Int,
+        position: WorldPosition = target.center,
+        sourceProjectileId: EntityId? = null,
+        attackingUnits: List<Unit> = units,
+        sourceUnitId: EntityId? = null,
+    ) {
+        if (!target.isAlive || damage <= 0) return
+        val updated = target.withDamage(damage)
+        setBastion(updated)
+        if (!updated.isAlive) {
+            val heldUnitPositions = attackingUnits
+                .filter {
+                    it.isAlive &&
+                        it.team != target.team &&
+                        it.team in movingTeams &&
+                        !it.inGarrison &&
+                        !it.returningToGarrison &&
+                        (
+                            it.combatState.targetId == target.id ||
+                                it.id == sourceUnitId
+                            )
+                }
+                .associate { it.id to it.position.x }
+            runicBastionDestructionBlockers[target.id] =
+                RunicBastionDestructionBlocker(
+                    bastion = updated,
+                    remainingMilliseconds =
+                        RunicBastionAnimationTiming.DESTRUCTION_DURATION_MILLISECONDS,
+                    heldUnitPositions = heldUnitPositions,
+                )
+        }
+        emitDamage(
+            targetId = target.id,
+            amount = damage,
+            position = position,
+            sourceProjectileId = sourceProjectileId,
+        )
+    }
 
     private fun setFortress(fortress: Fortress) {
         if (fortress.team == Team.BLUE) {
@@ -2013,6 +2351,19 @@ class DeterministicMatchSimulation(
                 targetLayer = com.urkaaaz.domain.AmmunitionHitLayer.FORTRESS,
             )
         }
+        listOfNotNull(bastion(Team.BLUE), bastion(Team.RED)).forEach { target ->
+            if (damage > 0 &&
+                target.intersects(position, radius) &&
+                canHitFortress(sourceTeam, target.team, friendlyFire)
+            ) {
+                damageBastion(
+                    target = target,
+                    damage = damage,
+                    position = position,
+                    sourceProjectileId = sourceProjectileId,
+                )
+            }
+        }
         if (unitDamage > 0) {
             units = units.map { unit ->
                 val distance = kotlin.math.hypot(
@@ -2206,12 +2557,40 @@ class DeterministicMatchSimulation(
         if (com.urkaaaz.domain.AmmunitionHitLayer.FORTRESS !in definition.collision.hitLayers) {
             return null
         }
+        val bastionTarget = listOfNotNull(bastion(Team.BLUE), bastion(Team.RED))
+            .filter { target ->
+                canHitFortress(
+                    sourceTeam = projectile.firedBy,
+                    targetTeam = target.team,
+                    friendlyFire = definition.collision.friendlyFire,
+                ) && target.intersects(
+                    projectile.position,
+                    maxOf(config.fortressCollisionRadius, definition.collision.hitRadius),
+                )
+            }
+            .minByOrNull { target ->
+                projectile.position.distanceTo(target.center)
+            }
+        if (bastionTarget != null) {
+            return EntityTarget(
+                bastionTarget.id,
+                com.urkaaaz.domain.AmmunitionHitLayer.FORTRESS,
+                stopsProjectile = true,
+            )
+        }
         val fortressCandidates = listOf(currentBlueFortress, currentRedFortress)
             .filter { fortress ->
                 canHitFortress(
                     sourceTeam = projectile.firedBy,
                     targetTeam = fortress.team,
                     friendlyFire = definition.collision.friendlyFire,
+                ) && !runicBastionBlocksProjectile(
+                    projectile = projectile,
+                    targetTeam = fortress.team,
+                    collisionRadius = maxOf(
+                        config.fortressCollisionRadius,
+                        definition.collision.hitRadius,
+                    ),
                 )
             }
         val target = fortressCandidates.firstOrNull { fortress ->
@@ -2227,6 +2606,30 @@ class DeterministicMatchSimulation(
                 stopsProjectile = true,
             )
         }
+    }
+
+    private fun runicBastionBlocksProjectile(
+        projectile: Projectile,
+        targetTeam: Team,
+        collisionRadius: Float,
+    ): Boolean {
+        val targetBastion = bastion(targetTeam) ?: return false
+        val direction = if (targetTeam == Team.RED) 1f else -1f
+        val forwardDistance = (targetBastion.center.x - projectile.position.x) * direction
+        if (forwardDistance <= -RunicBastionGeometry.WIDTH / 2f) return false
+        val velocityTowardBastion = projectile.velocity.x * direction
+        if (velocityTowardBastion <= 0f) return false
+        val timeToBastion = forwardDistance.coerceAtLeast(0f) / velocityTowardBastion
+        val predicted = projectile.advance(
+            deltaSeconds = timeToBastion,
+            windAccelerationX = wind.accelerationX(),
+            gravityAccelerationY = config.gravityAccelerationY * worldPhysicsScale,
+            windResponse = projectile.windResponse,
+            gravityResponse = projectile.gravityResponse,
+            drag = projectile.drag,
+        )
+        return kotlin.math.abs(predicted.position.y - targetBastion.center.y) <=
+            RunicBastionGeometry.HEIGHT / 2f + collisionRadius
     }
 
     private fun catapult(id: EntityId): Catapult =

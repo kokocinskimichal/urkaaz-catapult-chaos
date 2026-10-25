@@ -75,22 +75,16 @@ Before using it:
 
 - Read the current official API reference; do not rely on remembered model IDs,
   prices, model limits, or endpoint behavior.
-- Require `ANIMGEN_API_KEY` from a private environment or secret manager. On
-  macOS, if the environment variable is unavailable, read the key from the
-  user's login Keychain generic password item with service name
-  `AnimGen API Key` (for example, `security find-generic-password -s
-  "AnimGen API Key" -w`). Keep the value in process memory or pipe it directly
-  to the API client; never print it, include it in command arguments, or commit
-  it. Do not write it to a file unless the user explicitly chooses the
-  documented plaintext-file fallback below. The key must have
-  `animations:read` and `animations:write` scopes. Never ask the user to paste
-  the key into chat.
-- If the user explicitly chooses a local plaintext secret file instead, allow
-  `~/.config/animgen/api-key` as a fallback. Require that it be outside the
-  repository, excluded from cloud-synced folders, and readable only by the
-  current user (`0600` file permissions and a private parent directory).
-  Read it without printing or copying its contents elsewhere; remind the user
-  that this is plaintext storage and can be revoked after the task.
+- The user has explicitly selected `~/.config/animgen/api-key` as the canonical
+  key source on this machine. Read it directly; do not probe the environment
+  or Keychain on each run. Require the file to be outside the repository,
+  excluded from cloud-synced folders, and readable only by the current user
+  (`0600` file permissions and a private parent directory). If the file is
+  unavailable or fails these checks, stop and ask rather than searching
+  another credential source. Keep the value in process memory or pipe it
+  directly to the API client; never print it, include it in command arguments,
+  or commit it. The key must have `animations:read` and `animations:write`
+  scopes. Never ask the user to paste the key into chat.
 - Use only the selected character image and animation prompt as API input. Do
   not send repository source code, unrelated assets, or secrets.
 - Check account eligibility and available credits. Do not purchase credits or

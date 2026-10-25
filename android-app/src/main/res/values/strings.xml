@@ -208,7 +208,7 @@
     <string name="loadout_desc_fire_rain">Limited incendiary ammunition that leaves a burning area.</string>
     <string name="loadout_desc_plague_cauldron">Limited ammunition that creates a lingering poison area.</string>
     <string name="loadout_desc_ice_trap">A ground trap that stops an enemy unit.</string>
-    <string name="loadout_desc_runic_bastion">A runic barrier placed at your gate that blocks advancing units.</string>
+    <string name="loadout_desc_runic_bastion">A 360 HP runic barrier at your gate that blocks advancing units. It cannot be recast until destroyed.</string>
     <string name="loadout_desc_haste">Deployed allied units move twice as fast for 15 seconds.</string>
     <string name="loadout_desc_heal">Restores health to living, wounded allied units.</string>
     <string name="loadout_desc_fortress_shield">Creates a protective barrier around your fortress.</string>

@@ -11,6 +11,7 @@ import android.graphics.Shader
 import android.graphics.Typeface
 import com.urkaaaz.contracts.FortressHitboxProfile
 import com.urkaaaz.contracts.FortressShieldGeometry
+import com.urkaaaz.contracts.RunicBastionGeometry
 import com.urkaaaz.contracts.WorldDimensions
 import com.urkaaaz.contracts.WorldScale
 
@@ -39,6 +40,7 @@ class BattlefieldRenderer(
         deathAnimationClock: UnitDeathAnimationClock,
         impactFrame: Int,
         fortressShieldHitAnimation: FortressShieldHitAnimationFrame?,
+        runicBastionPresentation: RunicBastionPresentationFrame,
         fireRainPresentation: FireRainPresentationFrame,
         plagueCauldronPresentation: PlagueCauldronPresentationFrame,
         isAiming: Boolean,
@@ -182,6 +184,13 @@ class BattlefieldRenderer(
             )
         }
 
+        drawRunicBastions(
+            canvas = canvas,
+            bastions = state.runicBastions,
+            presentation = runicBastionPresentation,
+            viewportWidth = viewportWidth,
+            viewportHeight = viewportHeight,
+        )
         drawDeformedCap(
             canvas = canvas,
             bitmap = theme.cap,
@@ -451,6 +460,75 @@ class BattlefieldRenderer(
                 height,
             )
         }
+    }
+
+    private fun drawRunicBastions(
+        canvas: Canvas,
+        bastions: List<RunicBastionRenderState>,
+        presentation: RunicBastionPresentationFrame,
+        viewportWidth: Float,
+        viewportHeight: Float,
+    ) {
+        bastions.forEach { bastion ->
+            val idleFrameIndex = presentation.idleFrameIndices[bastion.entityId]
+            val frame = idleFrameIndex?.let {
+                assets.runicBastionIdleFrames.getOrNull(it)
+                    ?: error("Runic Bastion idle frame $it is unavailable")
+            } ?: run {
+                val creationFrameIndex = presentation.creationFrameIndices[bastion.entityId]
+                    ?: RunicBastionPresentation.FRAME_COUNT - 1
+                assets.runicBastionCreationFrames.getOrNull(creationFrameIndex)
+                    ?: error("Runic Bastion creation frame $creationFrameIndex is unavailable")
+            }
+            drawRunicBastionFrame(
+                canvas = canvas,
+                bastion = bastion,
+                frame = frame,
+                viewportWidth = viewportWidth,
+                viewportHeight = viewportHeight,
+            )
+        }
+        presentation.destructionAnimations.forEach { animation ->
+            val frame = assets.runicBastionDestructionFrames.getOrNull(animation.frameIndex)
+                ?: error(
+                    "Runic Bastion destruction frame ${animation.frameIndex} is unavailable",
+                )
+            drawRunicBastionFrame(
+                canvas = canvas,
+                bastion = animation.bastion,
+                frame = frame,
+                viewportWidth = viewportWidth,
+                viewportHeight = viewportHeight,
+                visibleArtBounds = RunicBastionPresentation.DESTRUCTION_VISIBLE_ART_BOUNDS,
+            )
+        }
+    }
+
+    private fun drawRunicBastionFrame(
+        canvas: Canvas,
+        bastion: RunicBastionRenderState,
+        frame: Bitmap,
+        viewportWidth: Float,
+        viewportHeight: Float,
+        visibleArtBounds: RunicBastionVisibleArtBounds =
+            RunicBastionPresentation.DEFAULT_VISIBLE_ART_BOUNDS,
+    ) {
+        val bounds = RunicBastionPresentation.spriteBounds(
+            centerX = worldToViewX(bastion.centerX, viewportWidth),
+            foundationY = worldToViewY(
+                RunicBastionGeometry.raisedFoundationY(bastion.foundationY),
+                viewportHeight,
+            ),
+            visibleWidth = worldToViewWidth(RunicBastionGeometry.WIDTH, viewportWidth),
+            visibleHeight = worldToViewHeight(RunicBastionGeometry.HEIGHT, viewportHeight),
+            visibleArtBounds = visibleArtBounds,
+        )
+        canvas.drawBitmap(
+            frame,
+            null,
+            RectF(bounds.left, bounds.top, bounds.right, bounds.bottom),
+            spritePaint,
+        )
     }
 
     private fun drawPlagueCauldronClouds(

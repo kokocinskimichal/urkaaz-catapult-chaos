@@ -165,8 +165,12 @@ Przenieś baseline z `docs/systems/spell-system.md` dokładnie:
 
 - **Lodowa pułapka:** 500 złota, 50 many; środek pola, promień 180, 6 s;
   zatrzymuje wrogie jednostki; nowa pułapka drużyny zastępuje jej poprzednią.
-- **Runiczny Bastion:** 1 200 złota, 70 many, 360 HP; własna brama; blokuje
-  marsz i można go zniszczyć; ponowna aktywacja odnawia HP.
+- **Runiczny Bastion:** 1 200 złota, 70 many, 360 HP; geometria
+  `288 × 216` jednostek świata; przed własną bramą, przesunięty o 436 jednostek
+  ku środkowi pola i podniesiony o 12 jednostek z nakładką capa terenu; blokuje
+  marsz i można go zniszczyć. Jedna
+  aktywna bariera na drużynę; ponowny rzut jest odrzucany bez kosztu do jej
+  zniszczenia.
 - **Haste:** 900 złota, 50 many, 15 s (zaakceptowany override legacy 5 s);
   ×2 prędkości ruchu tylko wysłanych sojuszniczych jednostek.
 - **Heal:** 900 złota, 50 many; żywe, ranne własne jednostki leczy o 35%
@@ -189,8 +193,8 @@ Przenieś baseline z `docs/systems/spell-system.md` dokładnie:
 
 Wspólna pula many z legacy: maksimum 100, start 100, regeneracja 10 co 8 s.
 Zachowaj też szczegóły legacy widoczne w kodzie źródłowym: odnawianie timerów
-czasowych czarów, reset ticka Vampiric Banner, wymianę własnej pułapki,
-odnowienie HP Bastionu i odrzucenie ponownego użycia aktywnej tarczy.
+czasowych czarów, reset ticka Vampiric Banner, wymianę własnej pułapki oraz
+odrzucenie ponownego użycia aktywnego Bastionu lub tarczy.
 Wartości czasów, kosztów i obrażeń nie mogą zależeć od Android resource
 values.
 

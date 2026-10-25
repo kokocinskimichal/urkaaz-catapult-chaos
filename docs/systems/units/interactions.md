@@ -13,8 +13,8 @@ of which team owns the row or column unit.
   backward while crossing contact range. This gives defenders a short
   interception window without making the Sapper unable to reach the fortress.
   It can also take damage from catapult projectiles, spells and area effects.
-- The Sapper travels to an enemy fortress, Runic Bastion or future obstacle,
-  throws a held bomb from the appropriate stand-off distance, then returns to
+- The Sapper travels to an enemy fortress or active Runic Bastion, attacks from
+  the appropriate stand-off distance, consumes its held bomb, then returns to
   its own fortress using normal movement in the opposite direction. After
   returning, it can begin another bomb run.
 - The Sapper's bomb deals medium damage to the primary target and half that
@@ -37,8 +37,9 @@ of which team owns the row or column unit.
   bomb after throwing and while returning; the gameplay state is implemented,
   but the bomb-less artwork is not yet available.
 
-These rules are implemented for the current unit roster. Exact future obstacle
-interactions and the bomb-less artwork remain separate follow-up work.
+These rules are implemented for the current unit roster, including Runic
+Bastion targeting. Interactions with future obstacle types and the bomb-less
+artwork remain separate follow-up work.
 
 ## Attack types
 

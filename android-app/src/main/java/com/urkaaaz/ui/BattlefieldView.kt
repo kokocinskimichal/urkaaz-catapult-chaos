@@ -81,6 +81,8 @@ class BattlefieldView(context: Context) : View(context) {
     private var fireRainPresentationFrame = FireRainPresentationFrame()
     private val plagueCauldronPresentationClock = PlagueCauldronPresentationClock()
     private var plagueCauldronPresentationFrame = PlagueCauldronPresentationFrame()
+    private val runicBastionPresentationClock = RunicBastionPresentationClock()
+    private var runicBastionPresentationFrame = RunicBastionPresentationFrame()
     private val deathAnimationClock = UnitDeathAnimationClock()
     private val unitDeathAnimationRetention =
         UnitDeathAnimationRetention(deathAnimationClock)
@@ -154,6 +156,10 @@ class BattlefieldView(context: Context) : View(context) {
             presentationState,
             nowMilliseconds,
         )
+        runicBastionPresentationFrame = runicBastionPresentationClock.update(
+            presentationState,
+            nowMilliseconds,
+        )
         if (
             newState.matchId != state.matchId ||
             newState.matchGeneration != state.matchGeneration
@@ -219,6 +225,12 @@ class BattlefieldView(context: Context) : View(context) {
             ),
             SystemClock.uptimeMillis(),
         )
+        runicBastionPresentationFrame = runicBastionPresentationClock.update(
+            state.copy(
+                isPaused = state.isPaused || lifecyclePaused || !isAttachedToWindow,
+            ),
+            SystemClock.uptimeMillis(),
+        )
         invalidate()
     }
 
@@ -232,6 +244,10 @@ class BattlefieldView(context: Context) : View(context) {
             state.copy(isPaused = state.isPaused || lifecyclePaused),
             SystemClock.uptimeMillis(),
         )
+        runicBastionPresentationFrame = runicBastionPresentationClock.update(
+            state.copy(isPaused = state.isPaused || lifecyclePaused),
+            SystemClock.uptimeMillis(),
+        )
         invalidate()
     }
 
@@ -241,6 +257,10 @@ class BattlefieldView(context: Context) : View(context) {
             SystemClock.uptimeMillis(),
         )
         plagueCauldronPresentationFrame = plagueCauldronPresentationClock.update(
+            state.copy(isPaused = true),
+            SystemClock.uptimeMillis(),
+        )
+        runicBastionPresentationFrame = runicBastionPresentationClock.update(
             state.copy(isPaused = true),
             SystemClock.uptimeMillis(),
         )
@@ -266,6 +286,7 @@ class BattlefieldView(context: Context) : View(context) {
                     ),
                 )
             },
+            runicBastionPresentation = runicBastionPresentationFrame,
             fireRainPresentation = fireRainPresentationFrame,
             plagueCauldronPresentation = plagueCauldronPresentationFrame,
             isAiming = aimController.isDragging,

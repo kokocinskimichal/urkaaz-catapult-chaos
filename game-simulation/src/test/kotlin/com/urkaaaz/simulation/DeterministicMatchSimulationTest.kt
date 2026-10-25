@@ -8,9 +8,12 @@ import com.urkaaaz.contracts.MatchId
 import com.urkaaaz.contracts.MatchPhase
 import com.urkaaaz.contracts.MatchSnapshot
 import com.urkaaaz.contracts.MatchStatus
+import com.urkaaaz.contracts.RunicBastionAnimationTiming
+import com.urkaaaz.contracts.RunicBastionGeometry
 import com.urkaaaz.contracts.Team
 import com.urkaaaz.contracts.PlayerId
 import com.urkaaaz.contracts.WorldDimensions
+import com.urkaaaz.contracts.WorldScale
 import com.urkaaaz.domain.AmmunitionType
 import com.urkaaaz.domain.AmmunitionCatalog
 import com.urkaaaz.domain.Aim
@@ -191,6 +194,232 @@ class DeterministicMatchSimulationTest {
         assertEquals(null, redFortress.shieldHealth)
         assertEquals(500, redFortress.health)
         assertTrue(simulation.snapshot().projectiles.isEmpty())
+    }
+
+    @Test
+    fun runicBastionAttackersWaitForDestructionAnimationBeforeMovingAndCanRecast() {
+        val simulation = DeterministicMatchSimulation(
+            MatchId("runic-bastion-wave"),
+            SimulationConfig(
+                bounds = WorldBounds(width = 2_000f, height = 600f),
+                startingMana = 100,
+                maximumMana = 100,
+                manaRegenerationAmount = 70,
+                manaRegenerationIntervalMilliseconds = 1_000L,
+                combatRandomSeed = 41L,
+            ),
+        )
+        simulation.start()
+        assertEquals(null, simulation.castRunicBastion(PlayerId("red-player"), Team.RED, null))
+
+        val firstBastion = simulation.snapshot().runicBastions.single()
+        assertEquals(360, firstBastion.health)
+        assertEquals(
+            MatchError.SPELL_ALREADY_ACTIVE,
+            simulation.castRunicBastion(PlayerId("red-player"), Team.RED, null),
+        )
+        assertEquals(30, simulation.snapshot().resourcesByTeam[Team.RED]?.mana)
+
+        val deployed = simulation.deployUnit(UnitFactory.defender(), Team.BLUE)
+        simulation.sendWave(Team.BLUE)
+        val events = mutableListOf<MatchEvent>()
+        var elapsedSteps = 0
+        while (
+            simulation.snapshot().runicBastions.any { it.entityId == firstBastion.entityId } &&
+            elapsedSteps < 240
+        ) {
+            events += simulation.advance(100L)
+            elapsedSteps += 1
+        }
+
+        assertTrue(
+            events.filterIsInstance<MatchEvent.AttackStarted>()
+                .any { it.targetId == firstBastion.entityId },
+        )
+        assertTrue(
+            simulation.snapshot().runicBastions.none {
+                it.entityId == firstBastion.entityId
+            },
+        )
+        val attackerXAtDestruction = simulation.snapshot().units
+            .single { it.entityId == deployed.unitId }
+            .x
+
+        repeat(40) { simulation.advance(100L) }
+        simulation.advance(7L)
+        assertEquals(
+            attackerXAtDestruction,
+            simulation.snapshot().units.single { it.entityId == deployed.unitId }.x,
+            0.001f,
+        )
+        simulation.advance(1L)
+        assertEquals(
+            attackerXAtDestruction,
+            simulation.snapshot().units.single { it.entityId == deployed.unitId }.x,
+            0.001f,
+        )
+        simulation.advance(100L)
+        assertTrue(
+            simulation.snapshot().units.single { it.entityId == deployed.unitId }.x >
+                attackerXAtDestruction,
+        )
+
+        assertEquals(null, simulation.castRunicBastion(PlayerId("red-player"), Team.RED, null))
+        assertNotEquals(
+            firstBastion.entityId,
+            simulation.snapshot().runicBastions.single().entityId,
+        )
+        assertEquals(360, simulation.snapshot().runicBastions.single().health)
+    }
+
+    @Test
+    fun runicBastionUsesReducedSizeAndSitsFartherAheadOfEachGate() {
+        val blueFortress = Fortress(
+            id = EntityId("blue-fortress"),
+            team = Team.BLUE,
+            center = WorldPosition(300f, 300f),
+        )
+        val redFortress = Fortress(
+            id = EntityId("red-fortress"),
+            team = Team.RED,
+            center = WorldPosition(1_700f, 300f),
+        )
+        val simulation = DeterministicMatchSimulation(
+            matchId = MatchId("runic-bastion-size-and-position"),
+            config = SimulationConfig(
+                bounds = WorldBounds(width = 2_000f, height = 600f),
+                startingMana = 100,
+            ),
+            blueFortress = blueFortress,
+            redFortress = redFortress,
+        )
+        simulation.start()
+
+        assertEquals(null, simulation.castRunicBastion(PlayerId("blue-player"), Team.BLUE, null))
+        assertEquals(null, simulation.castRunicBastion(PlayerId("red-player"), Team.RED, null))
+
+        val bastions = simulation.snapshot().runicBastions.associateBy { it.team }
+        val frontOffset = RunicBastionGeometry.FRONT_OFFSET_FROM_GATE
+
+        assertEquals(288f, RunicBastionGeometry.WIDTH)
+        assertEquals(216f, RunicBastionGeometry.HEIGHT)
+        assertEquals(WorldScale.FORTRESS_WIDTH / 2f + 100f, frontOffset)
+        assertEquals(
+            blueFortress.center.x + 60f + frontOffset,
+            bastions.getValue(Team.BLUE).centerX,
+            0.001f,
+        )
+        assertEquals(
+            redFortress.center.x - 60f - frontOffset,
+            bastions.getValue(Team.RED).centerX,
+            0.001f,
+        )
+    }
+
+    @Test
+    fun enemyProjectileStopsAtAndDamagesRunicBastion() {
+        val simulation = DeterministicMatchSimulation(
+            matchId = MatchId("runic-bastion-projectile"),
+            config = SimulationConfig(
+                bounds = WorldBounds(width = 2_000f, height = 600f),
+                gravityAccelerationY = 0f,
+                windAccelerationX = 0f,
+            ),
+            blueCatapult = Catapult(
+                id = EntityId("blue-catapult"),
+                team = Team.BLUE,
+                position = WorldPosition(100f, 400f),
+                anchorPosition = WorldPosition(100f, 400f),
+                aim = Aim(directionDegrees = 0f, power = 100f),
+            ),
+            redFortress = Fortress(
+                id = EntityId("red-fortress"),
+                team = Team.RED,
+                center = WorldPosition(700f, 400f),
+            ),
+        )
+        simulation.start()
+        simulation.castRunicBastion(PlayerId("red-player"), Team.RED, null)
+        val bastionId = simulation.snapshot().runicBastions.single().entityId
+        simulation.fire(EntityId("blue-catapult"), AmmunitionType.ROCK)
+
+        val events = buildList {
+            repeat(50) { addAll(simulation.advance(100L)) }
+        }
+
+        assertTrue(
+            events.filterIsInstance<MatchEvent.ProjectileHitEntity>()
+                .any { it.targetId == bastionId },
+        )
+        assertTrue(simulation.snapshot().projectiles.isEmpty())
+        assertTrue(simulation.snapshot().runicBastions.single().health < 360)
+    }
+
+    @Test
+    fun sapperSpendsItsBombOnRunicBastionAndReturns() {
+        val simulation = DeterministicMatchSimulation(
+            MatchId("sapper-runic-bastion"),
+            SimulationConfig(
+                bounds = WorldBounds(width = 2_000f, height = 600f),
+                combatRandomSeed = 12L,
+            ),
+        )
+        simulation.start()
+        simulation.castRunicBastion(PlayerId("red-player"), Team.RED, null)
+        val bastionId = simulation.snapshot().runicBastions.single().entityId
+        val deployed = simulation.deployUnit(UnitFactory.sapper(), Team.BLUE)
+        simulation.sendWave(Team.BLUE)
+
+        val events = mutableListOf<MatchEvent>()
+        for (step in 0 until 160) {
+            events += simulation.advance(100L)
+            if (events.any {
+                    it is MatchEvent.DamageApplied && it.targetId == bastionId
+                }
+            ) {
+                break
+            }
+        }
+
+        assertTrue(
+            events.filterIsInstance<MatchEvent.AttackStarted>()
+                .any { it.targetId == bastionId },
+        )
+        assertTrue(simulation.snapshot().runicBastions.single().health < 360)
+        val sapper = simulation.snapshot().units.firstOrNull {
+            it.entityId == deployed.unitId
+        }
+        assertEquals(false, sapper?.sapperHasBomb)
+    }
+
+    @Test
+    fun demolisherDetonatesOnRunicBastionContact() {
+        val simulation = DeterministicMatchSimulation(
+            MatchId("demolisher-runic-bastion"),
+            SimulationConfig(
+                bounds = WorldBounds(width = 2_000f, height = 600f),
+                combatRandomSeed = 23L,
+            ),
+        )
+        simulation.start()
+        simulation.castRunicBastion(PlayerId("red-player"), Team.RED, null)
+        val bastionId = simulation.snapshot().runicBastions.single().entityId
+        val deployed = simulation.deployUnit(UnitFactory.demolisher(), Team.BLUE)
+        simulation.sendWave(Team.BLUE)
+
+        val events = buildList {
+            repeat(180) { addAll(simulation.advance(100L)) }
+        }
+
+        assertTrue(
+            events.filterIsInstance<MatchEvent.AttackStarted>()
+                .any { it.targetId == bastionId && it.attackType == "CONTACT_EXPLOSIVE" },
+        )
+        assertTrue(
+            events.filterIsInstance<MatchEvent.ExplosionTriggered>()
+                .any { it.sourceId == deployed.unitId },
+        )
+        assertTrue(simulation.snapshot().runicBastions.single().health < 360)
     }
 
     @Test

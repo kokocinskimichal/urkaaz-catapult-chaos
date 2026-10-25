@@ -27,6 +27,53 @@ import com.urkaaaz.application.loadout.LoadoutError
 
 class MatchSessionTest {
     @Test
+    fun runicBastionCastBlocksAnotherCastUntilTheStructureIsDestroyed() {
+        val session = MatchSession(
+            scenario = spellScenario(loadoutSpells = listOf("RUNIC_BASTION")),
+        )
+        val matchId = MatchId("bastion-match")
+        val playerId = PlayerId("spell-player")
+        session.dispatch(MatchCommand.Start(CommandId("bastion-start"), matchId, playerId))
+
+        val result = session.dispatchResult(
+            MatchCommand.CastSpell(
+                commandId = CommandId("bastion-cast"),
+                matchId = matchId,
+                playerId = playerId,
+                spellType = "RUNIC_BASTION",
+            ),
+        )
+
+        val accepted = assertIs<CommandResult.Accepted>(result)
+        val castEvent = assertIs<MatchEvent.SpellCast>(accepted.events.single())
+        val bastion = session.snapshot().runicBastions.single()
+        assertEquals("RUNIC_BASTION", castEvent.spellType)
+        assertEquals(70, castEvent.manaCost)
+        assertEquals(bastion.entityId, castEvent.targetId)
+        assertEquals(360, bastion.health)
+        assertEquals(30, session.snapshot().resourcesByTeam[Team.BLUE]?.mana)
+
+        val repeatedCast = session.dispatchResult(
+            MatchCommand.CastSpell(
+                CommandId("bastion-repeat"),
+                matchId,
+                playerId,
+                "RUNIC_BASTION",
+            ),
+        )
+
+        assertEquals(
+            CommandResult.Rejected(
+                CommandId("bastion-repeat"),
+                MatchError.SPELL_ALREADY_ACTIVE,
+            ),
+            repeatedCast,
+        )
+        assertEquals(30, session.snapshot().resourcesByTeam[Team.BLUE]?.mana)
+        assertEquals(1, session.snapshot().runicBastions.size)
+    }
+
+    @Test
     fun fortressShieldCastSpendsManaAndReturnsTypedEvents() {
         val session = MatchSession(scenario = spellScenario())
         val matchId = MatchId("spell-match")
@@ -232,7 +279,7 @@ class MatchSessionTest {
         ),
         availableUnits = listOf("DEFENDER"),
         availableAmmunition = listOf("ROCK"),
-        availableSpells = listOf("FORTRESS_SHIELD", "HASTE"),
+        availableSpells = listOf("FORTRESS_SHIELD", "HASTE", "RUNIC_BASTION"),
         playerLoadout = PlayerLoadoutConfig(
             playerId = PlayerId("spell-player"),
             unitTypes = listOf("DEFENDER"),

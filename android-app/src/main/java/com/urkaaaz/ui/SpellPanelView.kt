@@ -76,6 +76,15 @@ class SpellPanelView(
                 (!active || slot.recastableWhileActive) &&
                 enoughMana &&
                 state.statusLabel == "RUNNING"
+            val visuallyActive = SpellIconAvailabilityPresentation.isVisuallyActive(
+                spellType = slot.type,
+                active = active,
+            )
+            val highlighted = SpellIconAvailabilityPresentation.isHighlighted(
+                spellType = slot.type,
+                active = active,
+                ready = ready,
+            )
             val remainingMilliseconds = state.activeSpellRemainingMilliseconds[slot.type]
             val remainingSeconds = remainingMilliseconds
                 ?.let { ((it + 999L) / 1_000L).toInt() }
@@ -92,22 +101,18 @@ class SpellPanelView(
                 else -> context.getString(R.string.match_hud_ready)
             }
             slot.button.isEnabled = ready
-            slot.button.alpha = when {
-                active -> 1f
-                ready -> 1f
-                else -> 0.4f
-            }
-            if (active != slot.active || ready != slot.ready) {
+            slot.button.alpha = if (highlighted) 1f else 0.4f
+            if (visuallyActive != slot.visuallyActive || ready != slot.ready) {
                 slot.button.background = HudPanelStyle.background(
                     context,
-                    if (active) {
+                    if (visuallyActive) {
                         Color.argb(190, 44, 87, 119)
                     } else {
                         Color.argb(82, 28, 33, 36)
                     },
-                    selected = active || ready,
+                    selected = highlighted,
                 )
-                slot.active = active
+                slot.visuallyActive = visuallyActive
                 slot.ready = ready
             }
             slot.button.contentDescription = context.getString(
@@ -124,6 +129,14 @@ class SpellPanelView(
             } else {
                 0f
             }
+            val bastionCoveredFraction = if (slot.type == "RUNIC_BASTION" && active) {
+                FortressShieldPresentation.shieldIconCoveredFraction(
+                    health = state.blueRunicBastionHealth,
+                    maxHealth = state.blueRunicBastionMaxHealth,
+                )
+            } else {
+                0f
+            }
             val durationCoveredFraction = if (active) {
                 SpellIconProgressPresentation.coveredFraction(
                     remainingMilliseconds = remainingMilliseconds,
@@ -132,7 +145,11 @@ class SpellPanelView(
             } else {
                 0f
             }
-            val coveredFraction = maxOf(shieldCoveredFraction, durationCoveredFraction)
+            val coveredFraction = maxOf(
+                shieldCoveredFraction,
+                bastionCoveredFraction,
+                durationCoveredFraction,
+            )
             slot.progressShade.coveredFraction = coveredFraction
             slot.progressShade.visibility =
                 if (coveredFraction > 0f) View.VISIBLE else View.GONE
@@ -217,7 +234,7 @@ class SpellPanelView(
             button = button,
             progressShade = progressShade,
             root = root,
-            active = false,
+            visuallyActive = false,
             ready = false,
         )
     }
@@ -267,7 +284,7 @@ class SpellPanelView(
         val button: ImageButton,
         val progressShade: VerticalProgressShade,
         val root: LinearLayout,
-        var active: Boolean,
+        var visuallyActive: Boolean,
         var ready: Boolean,
     )
 

@@ -1,0 +1,99 @@
+RUNIC BASTION — GATEWARD RUNE BARRICADE
+Still source image for the first frame of an active-bastion animation
+
+STATUS
+
+This is a copy-ready prompt for one source still. It does not request
+animation generation, asset import, or gameplay implementation.
+
+REFERENCE IMAGE INPUT
+
+Attach `assets_src/loadout/spell-cards/loadout_spell_runic_bastion_card.png`.
+Use it as the visual source of truth for the dark gray stone blocks, warm
+brass-gold reinforcement, luminous blue-cyan runes, and painterly fantasy
+siege-game finish. Do not copy its fortress, gate architecture, landscape,
+sky, trees, card framing, or full-scene composition. Create one isolated
+barricade sprite.
+
+PROMPT
+
+Create exactly one still 2D fantasy-game battlefield sprite: the fully raised,
+active Runic Bastion, a large fortified barrier positioned in front of an
+allied gate. Compose it for a fixed side-view, orthographic 2D siege battlefield.
+Show one contiguous, solid stone barricade with a broad readable front face,
+a slightly crenellated top, two sturdy end-piers, and a central runic slab.
+Its imposing silhouette should read as a physical obstruction that blocks
+advancing ground units, not as an entire castle wall or fortress.
+
+Build the barrier from chunky charcoal-gray stone blocks with restrained
+warm-gold or brass edge bands and a few strong structural braces. Set one
+large, unmistakable geometric rune into the central slab, with two or three
+smaller matching marks on the end-piers. Illuminate the runes with clean
+blue-cyan light matching the attached reference. Keep the energy contained to
+the carved marks and their immediate seams; the masonry remains solid and
+opaque enough to read as a destructible structure.
+
+Show the barrier fully raised and intact, caught at a calm instant just after
+activation. A few short, sharp cyan energy wisps may cling to the rune seams
+to suggest that the magic has settled into the stone. Keep the overall shape
+stable and legible at small battlefield scale. The bottom of the barricade
+must sit on a consistent horizontal gameplay baseline near the lower part of
+the canvas, with the complete top and both ends visible. Leave safe transparent
+space around the silhouette.
+
+Render only the Runic Bastion sprite. The fortress, gate, ground, terrain,
+units, projectiles, and battlefield are absent; the game will composite the
+sprite into the live battlefield. Keep the surrounding canvas genuinely
+transparent. Do not add a dome, bubble, free-floating force field, floor,
+landscape, or background glow that would obscure nearby gameplay. Use a
+team-neutral blue-cyan rune glow; do not add faction emblems or text. No
+health bar or HUD is part of the image.
+
+For a later animation, the carved runes may pulse gently and a thin glint may
+travel briefly along the seams, while the stone silhouette, scale, camera,
+and bottom gameplay anchor remain fixed. This source still must show only one
+instant, with no motion blur, impact, damage, cracks, collapse, or changing
+construction state.
+
+TECHNICAL REQUIREMENTS
+
+- Output exactly one PNG at 1024 x 576 pixels, landscape 16:9, RGBA with
+  genuine alpha transparency.
+- Use a transparent background, not a checkerboard, matte, or flat color.
+- Keep the complete barricade and all glow at least 64 px inside every canvas
+  edge. Do not crop a pier, rune, spark, or highlight.
+- Keep the front face and rune geometry crisp and recognizable when scaled
+  down to battlefield size.
+- Keep the barrier centered horizontally and use a stable, level bottom
+  baseline suitable for world-space compositing.
+- Do not include animation, a sprite sheet, alternate takes, a contact sheet,
+  labels, or variations.
+
+NEGATIVE PROMPT
+
+fortress, castle, complete gatehouse, tower, rampart landscape, scenery,
+mountains, sky, clouds, trees, ground, terrain, battlefield, character, unit,
+person, weapon, catapult, projectile, enemy, shield dome, oval bubble, force
+field, transparent wall membrane, floating gate, detached stones, multiple
+barriers, wall extending beyond the canvas, cropped masonry, clipped rune,
+checkerboard, opaque background, flat background color, broad background
+glow, large bloom, dense particles, motion blur, impact flash, explosion,
+crack, damaged wall, rubble, collapse, fire, ice, wind trails, lightning
+bolts, faction emblem, team flag, lettering, readable text, numbers, logo,
+UI, HUD, health bar, border, frame, watermark, signature, photorealism,
+unrelated franchise, copied commercial artwork
+
+ACCEPTANCE CHECK
+
+- The image shows exactly one complete, compact, solid runic barricade that
+  reads as an active defensive obstacle at a gate.
+- Its dark masonry, restrained gold/brass reinforcement, and blue-cyan runes
+  follow the attached card's visual finish without reproducing its scenery or
+  composition.
+- The barrier is immediately distinct from the Fortress Shield dome: it is a
+  physical stone structure, not a membrane or bubble.
+- The complete silhouette is visible, level on a stable lower baseline, and
+  surrounded by genuine transparent pixels with at least 64 px of safety
+  margin.
+- The image contains no environment, characters, gameplay UI, health state,
+  or additional spell effects.

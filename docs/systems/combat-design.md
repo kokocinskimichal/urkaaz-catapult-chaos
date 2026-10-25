@@ -473,7 +473,8 @@ Rules:
 - does not attack ordinary units;
 - returns with full HP and a refilled bomb.
 
-Future special targets such as Bastions require explicit target policies.
+The Runic Bastion is a destructible structural target with an explicit target
+policy; other future special targets still require their own policies.
 
 ## 11. Domain events
 

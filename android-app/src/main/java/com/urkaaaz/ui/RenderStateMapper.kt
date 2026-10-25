@@ -4,6 +4,7 @@ import com.urkaaaz.contracts.MatchEvent
 import com.urkaaaz.contracts.MatchSnapshot
 import com.urkaaaz.contracts.CatapultPresentationContract
 import com.urkaaaz.contracts.InitialCameraAnchor
+import com.urkaaaz.contracts.RunicBastionGeometry
 import com.urkaaaz.contracts.Team
 import com.urkaaaz.contracts.WorldDimensions
 
@@ -41,6 +42,8 @@ data class RenderState(
     val blueFortressMaxHealth: Int,
     val blueFortressShieldHealth: Int? = null,
     val blueFortressShieldMaxHealth: Int? = null,
+    val blueRunicBastionHealth: Int? = null,
+    val blueRunicBastionMaxHealth: Int? = null,
     val redFortressHealth: Int,
     val redFortressMaxHealth: Int,
     val redFortressShieldHealth: Int? = null,
@@ -57,6 +60,7 @@ data class RenderState(
     val playerGold: Int,
     val playerSupply: Int,
     val units: List<UnitRenderState>,
+    val runicBastions: List<RunicBastionRenderState> = emptyList(),
     val matchTimeRemainingMilliseconds: Long,
     val windDirection: Float,
     val combatFeedback: List<CombatFeedbackRenderState>,
@@ -74,6 +78,16 @@ data class RenderState(
     val activeSpellRemainingMilliseconds: Map<String, Long> = emptyMap(),
     val spellFeedbackLabel: String? = null,
     val fortressShieldHits: List<FortressShieldHitRenderState> = emptyList(),
+)
+
+data class RunicBastionRenderState(
+    val entityId: String,
+    val teamLabel: String,
+    val centerX: Float,
+    val centerY: Float,
+    val foundationY: Float,
+    val health: Int,
+    val maxHealth: Int,
 )
 
 data class FortressShieldHitRenderState(
@@ -157,6 +171,7 @@ object RenderStateMapper {
     fun map(snapshot: MatchSnapshot, events: List<MatchEvent> = emptyList()): RenderState {
         val blueFortressSnapshot = snapshot.fortresses.firstOrNull { it.team == Team.BLUE }
         val redFortressSnapshot = snapshot.fortresses.firstOrNull { it.team == Team.RED }
+        val blueRunicBastion = snapshot.runicBastions.firstOrNull { it.team == Team.BLUE }
         val blueFortress = snapshot.mapDefinition?.fortresses?.firstOrNull {
             it.owner == Team.BLUE
         }
@@ -191,6 +206,17 @@ object RenderStateMapper {
         initialCameraZoom = snapshot.mapDefinition?.initialCameraZoom ?: 1f,
         craters = snapshot.terrain.craters.map {
             CraterRenderState(it.centerX, it.centerY, it.radius, it.depth)
+        },
+        runicBastions = snapshot.runicBastions.map {
+            RunicBastionRenderState(
+                entityId = it.entityId.value,
+                teamLabel = it.team.name,
+                centerX = it.centerX,
+                centerY = RunicBastionGeometry.centerY(it.foundationY),
+                foundationY = it.foundationY,
+                health = it.health,
+                maxHealth = it.maxHealth,
+            )
         },
         terrainWorldWidth = snapshot.terrain.worldWidth,
         terrainSampleSpacing = snapshot.terrain.sampleSpacing,
@@ -228,6 +254,8 @@ object RenderStateMapper {
         blueFortressMaxHealth = snapshot.fortresses.firstOrNull { it.team.name == "BLUE" }?.maxHealth ?: 0,
         blueFortressShieldHealth = blueFortressSnapshot?.shieldHealth,
         blueFortressShieldMaxHealth = blueFortressSnapshot?.shieldMaxHealth,
+        blueRunicBastionHealth = blueRunicBastion?.health,
+        blueRunicBastionMaxHealth = blueRunicBastion?.maxHealth,
         redFortressHealth = snapshot.fortresses.firstOrNull { it.team.name == "RED" }?.health ?: 0,
         redFortressMaxHealth = snapshot.fortresses.firstOrNull { it.team.name == "RED" }?.maxHealth ?: 0,
         redFortressShieldHealth = redFortressSnapshot?.shieldHealth,
@@ -308,6 +336,9 @@ object RenderStateMapper {
             if ((blueFortressSnapshot?.shieldHealth ?: 0) > 0) {
                 add("FORTRESS_SHIELD")
             }
+            if (blueRunicBastion != null) {
+                add("RUNIC_BASTION")
+            }
             snapshot.activeSpells
                 .filter { it.team == com.urkaaaz.contracts.Team.BLUE }
                 .forEach { add(it.spellType) }
@@ -355,11 +386,17 @@ object RenderStateMapper {
             when (event) {
                 is MatchEvent.AttackHit -> {
                     val target = snapshot.units.firstOrNull { it.entityId == event.targetId }
+                    val bastion = snapshot.runicBastions.firstOrNull {
+                        it.entityId == event.targetId
+                    }
                     CombatFeedbackRenderState(
                         eventId = event.eventId.value,
                         kind = CombatFeedbackRenderState.Kind.DAMAGE,
-                        x = target?.x ?: fortressX(event.targetId.value, blueFortressX, redFortressX),
-                        y = target?.y ?: 470f,
+                        x = target?.x ?: bastion?.centerX
+                            ?: fortressX(event.targetId.value, blueFortressX, redFortressX),
+                        y = target?.y ?: bastion?.let {
+                            RunicBastionGeometry.centerY(it.foundationY)
+                        } ?: 470f,
                         amount = event.finalDamage,
                         label = if (event.synergyCount > 1) {
                             "x${"%.2f".format(event.synergyMultiplier)}"
@@ -379,11 +416,20 @@ object RenderStateMapper {
                     val target = snapshot.units.firstOrNull {
                         it.entityId == event.targetId
                     }
+                    val bastion = snapshot.runicBastions.firstOrNull {
+                        it.entityId == event.targetId
+                    }
                     CombatFeedbackRenderState(
                         eventId = event.eventId.value,
                         kind = CombatFeedbackRenderState.Kind.DAMAGE,
-                        x = target?.x ?: fortressX(event.targetId.value, blueFortressX, redFortressX),
-                        y = target?.y ?: 470f,
+                        x = target?.x ?: bastion?.centerX
+                            ?: event.x.takeIf { it != 0f }
+                            ?: fortressX(event.targetId.value, blueFortressX, redFortressX),
+                        y = target?.y ?: bastion?.let {
+                                RunicBastionGeometry.centerY(it.foundationY)
+                            }
+                            ?: event.y.takeIf { it != 0f }
+                            ?: 470f,
                         amount = event.amount,
                     )
                 }

@@ -139,9 +139,9 @@ Haste is awarded for level 5 and Heal for level 7; their availability starts
 at levels 6 and 8. Campaign rewards are projected into Loadout progression,
 and preferred spells affect only newly generated defaults. Tutorials remain
 deferred to the future game-wide TutorialSystem. The SpellSystem has implemented
-runtime effects for `FORTRESS_SHIELD` and HASTE; the other nine spell effects
-and AI spell casting remain unimplemented. HASTE costs 50 mana and catalogues
-at 900 gold, lasts 15 seconds (an approved change from the legacy 5-second
+runtime effects for `FORTRESS_SHIELD`, HASTE and `RUNIC_BASTION`; the other
+eight spell effects and AI spell casting remain unimplemented. HASTE costs 50
+mana and catalogues at 900 gold, lasts 15 seconds (an approved change from the legacy 5-second
 baseline), doubles movement speed for deployed allies only, includes units
 deployed while active, refreshes on recast without stacking, and
 multiplicatively combines with SLOWED; STUNNED still stops movement. Its timer
@@ -159,6 +159,37 @@ current source image and AnimGen ZIP/video are under
 `assets_src/spells/haste/orbiting-chevrons-first-frame.png` and
 `assets_src/spells/haste/orbiting-chevrons/`. Its copy-ready brief is
 [`haste-orbiting-chevrons-first-frame.agp`](../systems/haste-orbiting-chevrons-first-frame.agp).
+Runic Bastion uses shared `288 × 216` world-space geometry, is lifted 12 world
+units above its terrain foundation, and has 360 HP. Its center is offset 436
+world units toward the battlefield center from the team's gate attack point.
+Its approved creation sequence is 20 RGBA 640×360 frames,
+`runic_bastion_creation_00.png`–`runic_bastion_creation_19.png`, loaded strictly
+by `BattlefieldAssetCatalog.runicBastionCreationFrames`. It plays once at 120 ms
+per frame (2.4 s total) when a new Bastion appears, freezes while paused, then
+holds the final frame. `RunicBastionPresentation` maps the visible artwork
+bounds to the shared geometry, with the terrain cap rendered over its lower
+edge. The approved trimmed ZIP and original 24-frame creation generation,
+together with the shared source/reference images, are preserved in
+`assets_src/spells/runic-bastion/creation/`; the untrimmed generation's clipped
+flash frame is not imported. After creation, an approved
+24-frame RGBA
+640×360 idle loop (`runic_bastion_idle_00.png`–`runic_bastion_idle_23.png`)
+plays at 167 ms per frame; the central rune has a small user-approved
+shape/size variation during its glow pulse. Its source ZIP/video and review
+previews are in `assets_src/spells/runic-bastion/idle-runes/`. The approved 24-frame destruction
+revision uses an expanded transparent input canvas (`source_scale = 0.5`); all
+RGBA 640×360 frames stay inside the canvas without touching its edges. It plays
+once at 167 ms per frame after the Bastion disappears. Since the wall occupies
+a smaller area of that source canvas, the renderer maps the destruction
+sequence's first-frame visible bounds separately so the wall retains the same
+world-space size and ground anchor as creation and idle. The new and previous
+source ZIPs, videos, and review previews are preserved in
+`assets_src/spells/runic-bastion/destruction/`. Attacking units hold their
+positions until the destruction animation ends; other advancing enemies cannot
+cross the Bastion footprint during that interval. The 4,008 ms duration is
+shared between simulation and presentation by `RunicBastionAnimationTiming`.
+The HUD keeps the Runic Bastion spell icon dimmed while the player's Bastion
+exists and restores its normal availability styling after destruction.
 The shield costs 80 mana, has 150 HP, and
 intercepts projectiles within the same fortress-centered ellipse used by its
 world-space rendering. Its hit animation starts at frame 04 and remains
@@ -786,11 +817,11 @@ must go through commands and domain/application boundaries.
   Campaign progression and Haste/Heal milestone persistence are implemented;
   tutorials remain deferred to TutorialSystem. Runtime ammunition consumption
   is not reconciled with persistent stock.
-- `CastSpell` is implemented for `FORTRESS_SHIELD` and HASTE, including mana
-  validation, replay, typed results, active-spell/unit-status snapshots and
-  Android HUD timer. The other nine spell effects and AI casting are not
-  implemented. HASTE's approved AnimGen world-space visual is integrated into
-  Android and rendered behind moving HASTED units.
+- `CastSpell` is implemented for `FORTRESS_SHIELD`, HASTE and `RUNIC_BASTION`,
+  including mana validation, replay, typed results and Android presentation.
+  The other eight spell effects and AI casting are not implemented. HASTE's
+  approved AnimGen world-space visual is integrated into Android and rendered
+  behind moving HASTED units.
 - Shop and result screens remain placeholders.
 - `ResultScreen` remains a placeholder; match results are still shown by the
   existing match presentation. Campaign progress is local-only and has no

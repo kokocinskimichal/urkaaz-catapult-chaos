@@ -2,14 +2,20 @@
 
 ## Status i cel
 
-SpellSystem jest częściowo zaimplementowany. Oprócz `FORTRESS_SHIELD` drugi
-pionowy wycinek obejmuje HASTE: aktywację przez sesję, deterministyczny timer i
-mnożnik ruchu w symulacji, event, snapshot aktywnego efektu oraz licznik na
-match HUD. Zaakceptowana przez użytkownika 12-klatkowa animacja world-space
-trzech orbitujących szewronów jest zintegrowana: pojawia się za żywymi,
+SpellSystem jest częściowo zaimplementowany. Oprócz `FORTRESS_SHIELD` i HASTE
+trzeci pionowy wycinek obejmuje `RUNIC_BASTION`: aktywację przez sesję,
+deterministyczny stan 360 HP, powiększoną geometrię przed bramą, blokowanie
+i ataki jednostek, kolizje pocisków, snapshot oraz prezentację zdrowia na
+ikonie zaklęcia. Jedna
+bariera na drużynę blokuje kolejne rzucenie bez pobrania many aż do zniszczenia.
+Pozostałe osiem efektów oraz trwałe rozliczanie stocku nadal są
+niezaimplementowane. Zatwierdzona 20-klatkowa animacja wyrastania Bastionu
+z ziemi przechodzi po 2,4 s w zatwierdzoną 24-klatkową pętlę pulsowania run;
+24-klatkowa animacja zniszczenia jest odtwarzana po jego zniknięciu.
+Zaakceptowana przez użytkownika 12-klatkowa animacja world-space HASTE z
+trzema orbitującymi szewronami jest zintegrowana: pojawia się za żywymi,
 poruszającymi się jednostkami HASTED i jest lustrzana zgodnie z kierunkiem
-ruchu. Pozostałe dziewięć efektów oraz trwałe rozliczanie stocku nadal są
-niezaimplementowane.
+ruchu.
 Podczas działania tarczy ikona zaklęcia jest przykrywana od góry tym samym
 ciemnym cieniem co ikona amunicji podczas przeładowania; zakryta część
 odpowiada utraconemu HP i znika po wygaśnięciu tarczy.
@@ -64,7 +70,7 @@ W repozytorium istnieją już:
 | Element | Obecna rola | Docelowe użycie |
 |---|---|---|
 | `game-domain/Spells.kt: SpellType` | stabilne identyfikatory zaklęć | zachować identyfikatory; balans i metadane należą do katalogu |
-| `game-domain/SpellCatalog.kt: SpellCatalog` | koszty, kategorie roli/celu i typowane efekty HASTE oraz tarczy | kanoniczne źródło definicji wszystkich 11 zaklęć |
+| `game-domain/SpellCatalog.kt: SpellCatalog` | koszty, kategorie roli/celu i typowane efekty HASTE, tarczy oraz Bastionu | kanoniczne źródło definicji wszystkich 11 zaklęć |
 | `game-domain/Spells.kt: SpellCategory` | `OFFENSIVE`, `DEFENSIVE`, `BATTLEFIELD_CONTROL`, `SUPPORT`, `SIEGE` | zachować jako kategorię roli/efektu; nie używać jako kategorii targetu |
 | `game-application/.../loadout/MatchLoadout` | wspólny wybór jednostek, amunicji i czarów | kanoniczny model LoadoutSystemu |
 | `MatchCommand.CastSpell` | komenda z ID tekstowym i opcjonalnym celem | wejście do walidacji/aktywacji; nie zmienia stanu bezpośrednio |
@@ -79,8 +85,10 @@ W repozytorium istnieją już:
 
 `MatchSession.dispatchResult` i `LocalMatchGateway.dispatchResult` obsługują
 `CastSpell`; Androidowy match screen pokazuje manę, wysyła akcję aktywacji
-wyposażonego `FORTRESS_SHIELD` lub HASTE, wyświetla wynik/odrzucenie i rysuje
-osłonę z niemutowalnego stanu fortecy w world-space. HASTE publikuje pozostały
+wyposażonego `FORTRESS_SHIELD`, HASTE lub `RUNIC_BASTION`, wyświetla
+wynik/odrzucenie i rysuje osłonę z niemutowalnego stanu fortecy w world-space.
+Snapshot i render state przekazują geometrię oraz HP aktywnych Bastionów; ikona
+zaklęcia pokazuje utracone HP. HASTE publikuje pozostały
 czas przez `ActiveSpellSnapshot`; status HASTED pojawia się tylko na
 sojuszniczych jednostkach poza garnizonem. Wynik aktywacji sprawdza status
 meczu, dostępność poziomu, zatwierdzony loadout i poprawny cel. Nieznane,
@@ -104,8 +112,17 @@ SLOWED mnoży się z HASTE (×0,5 daje normalną prędkość), a STUNNED nadal
 zatrzymuje jednostkę. Cena katalogowa 900 złota i dostępność kampanii od
 poziomu 6 pozostają bez zmian; ceny złota nie pobiera runtime meczu.
 `ActiveSpellSnapshot` przekazuje drużynę i pozostały czas, a
-`UnitSnapshot.statuses`/`statusDetails` sygnalizują aktywnych HASTED. Pozostałe
-dziewięć efektów katalogu nadal nie ma runtime definition. `EffectSnapshot`
+`UnitSnapshot.statuses`/`statusDetails` sygnalizują aktywnych HASTED.
+`RUNIC_BASTION` ma wspólną geometrię `288 × 216` jednostek świata i 360 HP.
+Jego środek leży 436 jednostek przed dotychczasowym punktem ataku bramy,
+w stronę środka pola. Geometria jest
+podniesiona o 12 jednostek świata; cap terenu rysowany nad nią zasłania jej
+dolną krawędź, a jednostki nadal zderzają się z podniesioną geometrią.
+Wszystkie typy atakują Bastion przed fortecą, Demolisher detonuje przy
+kontakcie, a Sapper zużywa bombę i wraca. Wrogie pociski z warstwą trafień
+fortecy zatrzymują się na Bastionie i wykonują zwykły efekt amunicji.
+Zniszczenie nie kończy meczu; udostępnia ponowne rzucenie. Pozostałe osiem
+efektów katalogu nadal nie ma runtime definition. `EffectSnapshot`
 nadal opisuje aktywne efekty amunicji.
 Walidacja scenariusza sprawdza identyfikatory dostępności, a zgodność
 dostępności z loadoutem jest egzekwowana przy aktywacji.
@@ -115,6 +132,34 @@ kopuły znajduje się w
 [`fortress-shield-active-dome-first-frame.agp`](fortress-shield-active-dome-first-frame.agp).
 Grafika ma być osobnym, przezroczystym sprite'em bez fortecy. Krycie kopuły
 pozostaje stałe niezależnie od HP; stan wytrzymałości pokazuje ikona zaklęcia.
+Brief pierwszej klatki aktywnego Runicznego Bastionu znajduje się w
+[`runic-bastion-first-frame.agp`](runic-bastion-first-frame.agp). Jako
+referencję stylu wykorzystuje kartę zaklęcia, a docelowa grafika przedstawia
+wyłącznie osobny fragment kamiennej bariery bez bramy i otoczenia. Zatwierdzone
+klatki animacji wyrastania i pulsowania są przechowywane w
+`assets_src/spells/runic-bastion/creation/` i
+`assets_src/spells/runic-bastion/idle-runes/`. Zasoby
+`runic_bastion_creation_00`–`runic_bastion_creation_19` oraz
+`runic_bastion_idle_00`–`runic_bastion_idle_23` są odtwarzane w world-space
+względem geometrii `RunicBastionGeometry`; sekwencja wyrastania trwa 2,4 s,
+po czym przechodzi w pętlę idle. Obie fazy są wstrzymywane razem z meczem.
+Po zniknięciu Bastionu renderer odtwarza jednorazowo
+`runic_bastion_destruction_00`–`runic_bastion_destruction_23` przez 24 klatki
+po 167 ms. Zatwierdzony eksport po poprawce kadru używa rozszerzonego
+przezroczystego canvasu (`source_scale = 0.5`); wszystkie 24 klatki RGBA
+640×360 mieszczą się w kadrze, bez dotykania jego krawędzi. Nowy ZIP, wideo
+źródłowe i podglądy oraz poprzedni eksport są zachowane w
+`assets_src/spells/runic-bastion/destruction/`.
+Ponieważ mur w tej sekwencji zajmuje mniejszy obszar źródłowego canvasu,
+renderer używa osobnych widocznych granic pierwszej klatki zniszczenia, aby
+zachować rozmiar world-space i kotwicę zgodne z fazami creation oraz idle.
+Jednostki atakujące Bastion zachowują pozycję do końca jego animacji zniszczenia;
+pozostali maszerujący przeciwnicy nie mogą przejść przez jego obszar. Czas
+4 008 ms jest współdzielony przez symulację i prezentację w
+`RunicBastionAnimationTiming`.
+Ikona Bastionu w HUD-ie pozostaje przygaszona i nieaktywna, dopóki snapshot
+meczu zawiera istniejącą konstrukcję; po jej zniszczeniu ponownie odzwierciedla
+gotowość zaklęcia.
 
 Zaimportowana animacja spokojnej kopuły (AnimGen, Seedance 2.0 fast, 24 klatki
 RGBA 640×480, pętla z tą samą pierwszą i ostatnią klatką) jest zapisana jako
@@ -198,7 +243,8 @@ albo wskazywać całą armię.
 
 `SpellCatalog` jest kanonicznym źródłem stabilnych typów, kategorii roli i
 celu oraz kosztów złota i many dla wszystkich 11 zaklęć. Runtime effect
-definition istnieje na razie wyłącznie dla tarczy fortecy. Katalog docelowo
+definition istnieje dla HASTE, tarczy fortecy i Runicznego Bastionu; pozostałe
+osiem efektów nie jest zaimplementowanych. Katalog docelowo
 pozostaje jedynym źródłem:
 
 - stabilnego `SpellType`/ID;
@@ -346,7 +392,7 @@ Czas/parametry mają pochodzić z legacy, nie z nowej propozycji balansu.
 | Typ legacy | Cel | Złoto | Mana | Efekt / parametry bazowe |
 |---|---|---:|---:|---|
 | `ICE_TRAP` — Lodowa pułapka | `ENEMY_FORCE` | 500 | 50 | rozstawiana na środku pola; promień 180; zatrzymuje wrogą jednostkę; aktywna 6 s; aktywacja zastępuje poprzednią pułapkę tej drużyny |
-| `RUNIC_BASTION` — Runiczny Bastion | `OWN_GATE` | 1 200 | 70 | 360 HP; ustawiany względem własnej bramy; blokuje marsz i jest atakowalny; ponowna aktywacja odnawia HP |
+| `RUNIC_BASTION` — Runiczny Bastion | `OWN_GATE` | 1 200 | 70 | 360 HP; geometria `288 × 216` jednostek świata; stoi przed własną bramą, przesunięty o 436 jednostek ku środkowi pola; blokuje marsz i jest atakowalny; jeden aktywny na drużynę, ponowne rzucenie odrzucone bez kosztu aż do zniszczenia |
 | `HASTE` | `ALLIED_FORCE` | 900 | 50 | 15 s (zaakceptowany override legacy 5 s); prędkość ruchu wysłanych sojuszników ×2 |
 | `HEAL` | `ALLIED_FORCE` | 900 | 50 | leczy ranne żywe jednostki o 35% maksymalnego HP, w tym jednostki w garnizonie |
 | `FORTRESS_SHIELD` — Tarcza fortecy | `OWN_FORTRESS` | 0 | 80 | osłona fortecy o 150 HP; nie można aktywować, gdy osłona jest już aktywna |
@@ -384,8 +430,8 @@ poziomu za wybór loadoutu.
 - Aktywacja nie może zmieniać many lub zdrowia przez Android UI.
 - Ponowne aktywacje zachowują konkretne reguły legacy: czasowe efekty
   odnawiają swój timer, Vampiric Banner resetuje licznik ticka, pułapka
-  zastępuje własną poprzednią pułapkę, Bastion odnawia HP, tarcza odrzuca
-  aktywację, gdy nadal działa, a Berserker wybiera tylko nieprzemienionego
+  zastępuje własną poprzednią pułapkę, aktywny Bastion i tarcza odrzucają
+  aktywację, a Berserker wybiera tylko nieprzemienionego
   Obrońcę. HASTE odświeża 15-sekundowy timer i nie kumuluje prędkości.
 - Konflikty różnych buffów, redukcji obrażeń i efektów prędkości muszą
   odzwierciedlać istniejącą kolejność i matematykę legacy. Nie wprowadzać
@@ -402,8 +448,8 @@ poziomu za wybór loadoutu.
 - ekran loadoutu należący do LoadoutSystemu będzie prezentował
   zaklęcia pogrupowane według kategorii celu z metadanych domenowych;
 - match screen wysyła akcję UI i komendę `CastSpell`; aktywuje
-  `FORTRESS_SHIELD` i HASTE, wyświetla manę, pozostały czas HASTE i powód
-  odrzucenia;
+  `FORTRESS_SHIELD`, HASTE i `RUNIC_BASTION`, wyświetla manę, pozostały czas
+  HASTE, zdrowie aktywnego Bastionu oraz powód odrzucenia;
 - dostępność przycisku/komunikaty wynikają z snapshotu i odrzucenia komendy,
   nie z lokalnej kopii many/stocku;
 - timer, aktywny buff, tarcza, pułapka i bastion są renderowane na podstawie
@@ -445,9 +491,9 @@ oraz trwałe rozliczanie stocku są jeszcze poza implementacją.
 2. **Kontrakty domenowe — częściowo wdrożone.** Katalog obejmuje wszystkie
    stabilne typy, koszty i kategorie roli/celu; runtime effect definition i
    testy balansu uzupełniać wraz z implementacją kolejnych czarów.
-3. **Kontrakty meczu — wdrożone dla tarczy.** `CastSpell` zwraca
-   `CommandResult`, event aktywacji niesie cel i koszt, a snapshot fortecy
-   publikuje stan tarczy. Nie wprowadzać zależności
+3. **Kontrakty meczu — wdrożone dla tarczy, HASTE i Bastionu.** `CastSpell`
+   zwraca `CommandResult`, event aktywacji niesie cel i koszt, a snapshot
+   publikuje stan tarczy, czas HASTE oraz geometrię i zdrowie Bastionu. Nie wprowadzać zależności
    `game-contracts -> game-domain`.
 4. **Granica loadoutu — wdrożona dla aktywacji.** Użyć istniejącego
    LoadoutSystemu i jego zatwierdzonego `PlayerLoadoutConfig`; odrzucać
@@ -455,9 +501,9 @@ oraz trwałe rozliczanie stocku są jeszcze poza implementacją.
    spell-only loadoutu ani nie traktować `availableSpells` jako wyboru gracza.
    Nie duplikować walidacji loadoutu ani jego persystencji.
 5. **Deterministyczny runtime — częściowo wdrożony.** Mana, jej regeneracja,
-   aktywacja tarczy i przechwytywanie pocisków działają w istniejącej
-   symulacji. Migrować dalej czasowe buffy, leczenie i targetowanie jednostek,
-   pułapki/katapultę/bastion oraz pozostałe reguły.
+   tarcza, HASTE, Bastion, interakcje jednostek z Bastionem i przechwytywanie
+   pocisków działają w istniejącej symulacji. Migrować dalej leczenie,
+   pułapki/katapultę i pozostałe reguły.
    Zachować jednego właściciela runtime state i ustaloną kolejność faz.
 6. **Granica progresji.** Nie przenosić zakupów, trwałego złota, odblokowań
    ani zapisu profilu do domeny lub symulacji. Match launch otrzymuje
@@ -465,8 +511,9 @@ oraz trwałe rozliczanie stocku są jeszcze poza implementacją.
    raportuje zużycie do aplikacyjnej granicy progresji. Szczegóły trwałego
    rozliczenia pozostają zakresem PlayerProgressionSystemu.
 7. **Android — częściowo wdrożony.** Match screen jest podłączony do komendy,
-   wyniku komendy i render state dla tarczy, many i odrzuceń. Dodać pozostałe
-   efekty, aktywne czasy i targetowanie; edytory Loadoutu pozostają własnością
+   wyniku komendy i render state dla tarczy, many, HASTE oraz Bastionu, w tym
+   jego zdrowia, animacji world-space i dostępności ikony. Dodać pozostałe
+   efekty i targetowanie; edytory Loadoutu pozostają własnością
    LoadoutSystemu. Spell-card artwork jest dostępny; integrować world-effect
    wizualizacje wraz z odpowiednimi efektami.
 8. **Parytet i domknięcie.** Uruchomić testy domeny, kontraktów, symulacji,

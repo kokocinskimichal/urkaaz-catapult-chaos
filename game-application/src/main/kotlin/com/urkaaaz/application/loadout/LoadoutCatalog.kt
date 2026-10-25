@@ -102,7 +102,9 @@ object LoadoutCatalog {
             recastableWhileActive = spell.recastableWhileActive,
             activeDurationMilliseconds = when (val effect = spell.effect) {
                 is SpellEffectDefinition.Haste -> effect.durationMilliseconds
-                is SpellEffectDefinition.FortressShield, null -> null
+                is SpellEffectDefinition.FortressShield,
+                is SpellEffectDefinition.RunicBastion,
+                null -> null
             },
         )
     }

@@ -18,10 +18,20 @@
   starts at its first clearly visible frame and remains visible when a hit
   depletes the shield.
 - Assigned the visual Frostbound biome to Chapter II campaign levels 11–20.
+- Added Runic Bastion as a destructible 360 HP gate defense with creation,
+  idle-rune and destruction animations; units and projectiles can attack it.
 
 ### Changed
 
 - Increased Fortress Shield durability from 80 to 150 HP.
+- Runic Bastion cannot be recast while its previous structure remains; its HUD
+  icon stays dimmed until destruction, and attackers wait through the
+  destruction animation.
+
+### Fixed
+
+- Matched the Runic Bastion destruction animation's rendered size and ground
+  anchor to its creation and idle animations.
 
 ## 2026-10-23
 

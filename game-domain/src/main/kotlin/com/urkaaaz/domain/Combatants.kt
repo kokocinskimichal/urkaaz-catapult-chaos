@@ -2,6 +2,7 @@ package com.urkaaaz.domain
 
 import com.urkaaaz.contracts.EntityId
 import com.urkaaaz.contracts.FortressHitboxProfile
+import com.urkaaaz.contracts.RunicBastionGeometry
 import com.urkaaaz.contracts.Team
 import com.urkaaaz.contracts.CatapultPresentationContract
 
@@ -71,6 +72,36 @@ data class Fortress(
         FortressHitboxProfile.rectangles.any {
             it.distanceTo(position.x - center.x, position.y - center.y) <= radius
         }
+}
+
+/** A destructible gate barricade created by the Runic Bastion spell. */
+data class RunicBastion(
+    val id: EntityId,
+    val team: Team,
+    val center: WorldPosition,
+    val foundationY: Float,
+    val maxHealth: Int,
+    val health: Health = Health(maximum = maxHealth),
+) {
+    init {
+        require(maxHealth > 0) { "bastion max health must be positive" }
+        require(health.maximum == maxHealth) { "bastion health maximum must match maxHealth" }
+    }
+
+    val isAlive: Boolean
+        get() = health.isAlive
+
+    fun withDamage(amount: Int): RunicBastion =
+        copy(health = health.damage(amount))
+
+    fun intersects(position: WorldPosition, radius: Float): Boolean =
+        RunicBastionGeometry.intersects(
+            centerX = center.x,
+            centerY = center.y,
+            x = position.x,
+            y = position.y,
+            radius = radius,
+        )
 }
 
 /**

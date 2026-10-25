@@ -16,6 +16,9 @@ kampanię, AI oraz działający match screen. Gałąź robocza: `develop`.
   simulation → MatchSnapshot`.
 - Deterministyczna symulacja pocisków, terenu, kolizji, obrażeń, eventów,
   restartu i replay regression.
+- SpellSystem ma działające runtime effects dla `FORTRESS_SHIELD`, HASTE i
+  `RUNIC_BASTION`; Bastion jest jedną na drużynę, ma 360 HP, blokuje jednostki
+  i pociski oraz odtwarza animacje creation, idle i destruction.
 - Celowanie slingshot, ręczny FIRE, pan mapy i pinch-zoom.
 - Timer meczu, wskaźnik kierunku/siły wiatru, pauza/wznowienie i restart.
 - Dynamiczny wiatr z początkowym opóźnieniem, przejściem i kolejnymi zmianami.
@@ -30,8 +33,8 @@ kampanię, AI oraz działający match screen. Gałąź robocza: `develop`.
   separacji i kolizji jednostek pozostaje stabilna.
 - Ruch jednostek w marszu i podczas przegrupowania garnizonu używa globalnego
   mnożnika `2.0`.
-- Interakcje jednostek: melee, ataki dystansowe, detonacja Demolishera i atak
-  Sapera na fortecę.
+- Interakcje jednostek: melee, ataki dystansowe, detonacja Demolishera oraz
+  ataki Sapera i pozostałych jednostek na fortecę lub aktywny Bastion.
 - AI używa typowanych profili `CADET`, `VETERAN` i `ELITE` z kampanii.
   Strategie katapulty/amunicji, rekrutacji i fal są składane przez
   `AiStrategyRegistry`; ELITE leaduje ruchome cele i kontruje zagrożenia.
@@ -95,8 +98,9 @@ snapshotów i eventów zamiast mutować bezpośrednio stan innych podsystemów.
 - Lokalny profil i zatwierdzony loadout są zapisywane przez DataStore, ale
   brakuje interaktywnych edytorów loadoutu, zakupów i rozliczania stocku po
   meczu.
-- Brak pełnego systemu many, zaklęć, tutoriala, bossów, centralnego celu i
-  wszystkich legacy widgetów HUD.
+- SpellSystem nie obejmuje jeszcze pozostałych ośmiu efektów katalogu ani
+  castowania zaklęć przez AI; brakuje też tutoriala, bossów, centralnego celu
+  i wszystkich legacy widgetów HUD.
 - Brak pełnej zgodności legacy dla wszystkich mechanik, garrisonu i fal,
   choć podstawowe jednostki i fale są już zaimplementowane.
 - Brak pełnego legacy renderingu, części wizualizacji fortec/katapult,

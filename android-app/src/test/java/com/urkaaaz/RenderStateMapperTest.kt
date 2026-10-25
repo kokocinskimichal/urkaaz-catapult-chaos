@@ -20,6 +20,7 @@ import com.urkaaaz.contracts.TerrainSample
 import com.urkaaaz.contracts.ProjectileSnapshot
 import com.urkaaaz.contracts.RelicSize
 import com.urkaaaz.contracts.ResourceSnapshot
+import com.urkaaaz.contracts.RunicBastionSnapshot
 import com.urkaaaz.contracts.Team
 import com.urkaaaz.contracts.WindSnapshot
 import com.urkaaaz.ui.RenderStateMapper
@@ -88,6 +89,30 @@ class RenderStateMapperTest {
         assertEquals(65, state.blueFortressShieldHealth)
         assertEquals(150, state.blueFortressShieldMaxHealth)
         assertEquals(null, state.redFortressShieldHealth)
+    }
+
+    @Test
+    fun mapperExposesRunicBastionHealthAndWorldGeometry() {
+        val state = RenderStateMapper.map(
+            MatchSnapshot(
+                runicBastions = listOf(
+                    RunicBastionSnapshot(
+                        entityId = EntityId("blue-runic-bastion-1"),
+                        team = Team.BLUE,
+                        centerX = 550f,
+                        foundationY = 500f,
+                        health = 180,
+                        maxHealth = 360,
+                    ),
+                ),
+            ),
+        )
+
+        assertEquals(setOf("RUNIC_BASTION"), state.activeSpellTypes)
+        assertEquals(180, state.blueRunicBastionHealth)
+        assertEquals(360, state.blueRunicBastionMaxHealth)
+        assertEquals(1, state.runicBastions.size)
+        assertEquals(380f, state.runicBastions.single().centerY)
     }
 
     @Test

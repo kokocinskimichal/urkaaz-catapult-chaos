@@ -21,6 +21,7 @@ data class MatchSnapshot(
     val remainingMilliseconds: Long = 300_000L,
     val mapDefinition: MapDefinition? = null,
     val activeSpells: List<ActiveSpellSnapshot> = emptyList(),
+    val runicBastions: List<RunicBastionSnapshot> = emptyList(),
 ) {
     init {
         require(status != MatchStatus.FINISHED || outcome != null) {
@@ -49,6 +50,15 @@ data class FortressSnapshot(
     val foundationY: Float? = null,
     val shieldHealth: Int? = null,
     val shieldMaxHealth: Int? = null,
+)
+
+data class RunicBastionSnapshot(
+    val entityId: EntityId,
+    val team: Team,
+    val centerX: Float,
+    val foundationY: Float,
+    val health: Int,
+    val maxHealth: Int,
 )
 
 data class UnitSnapshot(

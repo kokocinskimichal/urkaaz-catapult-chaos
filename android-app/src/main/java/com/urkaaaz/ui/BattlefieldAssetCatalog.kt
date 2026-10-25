@@ -97,6 +97,24 @@ class BattlefieldAssetCatalog(private val context: Context) {
         phase = "hit flash",
     )
     val hasteOrbitingChevronFrames: List<Bitmap> = loadRequiredHasteOrbitingChevronFrames()
+    val runicBastionCreationFrames: List<Bitmap> =
+        loadRequiredRunicBastionFrames(
+            prefix = RUNIC_BASTION_CREATION_PREFIX,
+            phase = "creation",
+            frameCount = RunicBastionPresentation.FRAME_COUNT,
+        )
+    val runicBastionIdleFrames: List<Bitmap> =
+        loadRequiredRunicBastionFrames(
+            prefix = RUNIC_BASTION_IDLE_PREFIX,
+            phase = "idle",
+            frameCount = RunicBastionPresentation.IDLE_FRAME_COUNT,
+        )
+    val runicBastionDestructionFrames: List<Bitmap> =
+        loadRequiredRunicBastionFrames(
+            prefix = RUNIC_BASTION_DESTRUCTION_PREFIX,
+            phase = "destruction",
+            frameCount = RunicBastionPresentation.DESTRUCTION_FRAME_COUNT,
+        )
 
     private val animations = mapOf(
         "ROCK" to ProjectileAnimation(
@@ -456,6 +474,49 @@ class BattlefieldAssetCatalog(private val context: Context) {
         return frames
     }
 
+    private fun loadRequiredRunicBastionFrames(
+        prefix: String,
+        phase: String,
+        frameCount: Int,
+    ): List<Bitmap> {
+        val frames = (0 until frameCount).map { index ->
+            val resourceName = "$prefix%02d".format(index)
+            val resourceId = resources.getIdentifier(
+                resourceName,
+                "drawable",
+                context.packageName,
+            )
+            check(resourceId != 0) {
+                "Runic Bastion $phase animation is missing frame $index ('$resourceName')"
+            }
+            val bitmap = BitmapFactory.decodeResource(resources, resourceId)
+                ?: error("Runic Bastion $phase frame $index ('$resourceName') could not be decoded")
+            check(
+                bitmap.width == RunicBastionPresentation.FRAME_WIDTH &&
+                    bitmap.height == RunicBastionPresentation.FRAME_HEIGHT,
+            ) {
+                "Runic Bastion $phase frame $index ('$resourceName') has invalid size " +
+                    "${bitmap.width}x${bitmap.height}"
+            }
+            check(bitmap.hasAlpha()) {
+                "Runic Bastion $phase frame $index ('$resourceName') has no alpha channel"
+            }
+            bitmap
+        }
+        val unexpectedResourceName = "$prefix%02d".format(frameCount)
+        check(
+            resources.getIdentifier(
+                unexpectedResourceName,
+                "drawable",
+                context.packageName,
+            ) == 0,
+        ) {
+            "Runic Bastion $phase animation has an unexpected frame at index " +
+                "$frameCount ('$unexpectedResourceName')"
+        }
+        return frames
+    }
+
     private fun loadThreeDigitAnimationFrames(prefix: String): List<Bitmap> =
         (0..99).mapNotNull { index ->
             val resourceId = resources.getIdentifier(
@@ -477,6 +538,9 @@ class BattlefieldAssetCatalog(private val context: Context) {
         const val FORTRESS_SHIELD_DOME_PREFIX = "fortress_shield_dome_"
         const val FORTRESS_SHIELD_HIT_PREFIX = "fortress_shield_hit_"
         const val HASTE_ORBITING_CHEVRON_PREFIX = "haste_orbiting_chevron_"
+        const val RUNIC_BASTION_CREATION_PREFIX = "runic_bastion_creation_"
+        const val RUNIC_BASTION_IDLE_PREFIX = "runic_bastion_idle_"
+        const val RUNIC_BASTION_DESTRUCTION_PREFIX = "runic_bastion_destruction_"
         val RELIC_ASSET_RESOURCES = buildMap {
             val biomeResources = mapOf(
                 "green_frontier" to listOf(

@@ -21,6 +21,14 @@ sealed interface SpellEffectDefinition {
             require(hitPoints > 0) { "shield hit points must be positive" }
         }
     }
+
+    data class RunicBastion(
+        val hitPoints: Int,
+    ) : SpellEffectDefinition {
+        init {
+            require(hitPoints > 0) { "bastion hit points must be positive" }
+        }
+    }
 }
 
 enum class SpellTargetCategory {
@@ -70,7 +78,7 @@ object SpellCatalog {
             targetCategory = SpellTargetCategory.OWN_GATE,
             special = false,
             manaCost = 70,
-            effect = null,
+            effect = SpellEffectDefinition.RunicBastion(hitPoints = 360),
         ),
         SpellDefinition(
             type = SpellType.HASTE,

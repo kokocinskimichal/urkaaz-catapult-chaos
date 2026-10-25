@@ -91,7 +91,11 @@ class SpellCatalogTest {
     @Test
     fun implementedSpellsHaveTypedRuntimeEffects() {
         assertEquals(
-            setOf(SpellType.HASTE, SpellType.FORTRESS_SHIELD),
+            setOf(
+                SpellType.RUNIC_BASTION,
+                SpellType.HASTE,
+                SpellType.FORTRESS_SHIELD,
+            ),
             SpellCatalog.all.filter { it.isImplemented }.map { it.type }.toSet(),
         )
         val haste = SpellCatalog.definition(SpellType.HASTE)
@@ -109,6 +113,11 @@ class SpellCatalogTest {
         assertEquals(80, shield.manaCost)
         assertEquals(SpellTargetCategory.OWN_FORTRESS, shield.targetCategory)
         assertEquals(SpellEffectDefinition.FortressShield(150), shield.effect)
+        val bastion = SpellCatalog.definition(SpellType.RUNIC_BASTION)
+        assertEquals(70, bastion.manaCost)
+        assertEquals(SpellTargetCategory.OWN_GATE, bastion.targetCategory)
+        assertEquals(SpellEffectDefinition.RunicBastion(360), bastion.effect)
+        assertFalse(bastion.recastableWhileActive)
         assertFalse(SpellCatalog.definition(SpellType.ICE_TRAP).isImplemented)
     }
 }
