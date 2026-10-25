@@ -1,5 +1,7 @@
 import { createServer, type IncomingMessage, type Server, type ServerResponse } from "node:http";
-import type { ApiErrorBody, HealthResponse } from "./contracts/api.ts";
+import { handleAnimationRoute } from "./api/animations.ts";
+import type { HealthResponse } from "./contracts/api.ts";
+import { sendError, sendJson } from "./http.ts";
 import { readGitState, type GitStateReader } from "./services/gitState.ts";
 
 export const STUDIO_VERSION = "0.1.0";
@@ -15,7 +17,8 @@ export function createStudioServer(options: StudioAppOptions): Server {
   const gitReader = options.readGitState ?? readGitState;
   return createServer((request, response) => {
     handle(request, response, options.repoRoot, gitReader).catch(() => {
-      sendError(response, 500, "internal_error", "Unexpected server error");
+      if (response.headersSent) response.destroy();
+      else sendError(response, 500, "internal_error", "Unexpected server error");
     });
   });
 }
@@ -48,6 +51,7 @@ async function handle(
     sendJson(response, 200, body);
     return;
   }
+  if (await handleAnimationRoute(request, response, url.pathname, repoRoot)) return;
   sendError(response, 404, "not_found", `No route for ${url.pathname}`);
 }
 
@@ -55,14 +59,4 @@ function isLoopbackHost(hostHeader: string | undefined): boolean {
   if (!hostHeader) return false;
   const host = hostHeader.startsWith("[") ? hostHeader.slice(0, hostHeader.indexOf("]") + 1) : hostHeader.split(":")[0];
   return LOOPBACK_HOSTS.has(host);
-}
-
-function sendJson(response: ServerResponse, status: number, body: unknown): void {
-  response.writeHead(status, { "content-type": "application/json; charset=utf-8", "cache-control": "no-store" });
-  response.end(JSON.stringify(body));
-}
-
-function sendError(response: ServerResponse, status: number, code: string, message: string, details: string[] = []): void {
-  const body: ApiErrorBody = { code, message, details };
-  sendJson(response, status, body);
 }

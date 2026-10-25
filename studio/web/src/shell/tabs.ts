@@ -1,5 +1,5 @@
 import type { ComponentType } from "react";
-import { AnimationsTab } from "../tabs/AnimationsTab";
+import { AnimationsTab } from "../tabs/animations/AnimationsTab";
 import { MapsTab } from "../tabs/MapsTab";
 
 export interface StudioTab {

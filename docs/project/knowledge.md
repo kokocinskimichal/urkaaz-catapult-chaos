@@ -874,6 +874,16 @@ git state and never commits or switches branches. Run it with
 `cd studio && npm run studio`; it is outside `./gradlew test assembleDebug`,
 so validate it with `npm test && npm run lint` in `studio/`.
 
+Step 2 (animation visualizer, read-only) is implemented: `GET /api/animations`
+parses `anim_<category>_<target>_<type>[_<variant>]_<frame:3>.png` files in
+`android-app/src/main/res/drawable-nodpi` (variant = trailing `blue`/`red`;
+target = longest prefix listed in `studio/config/animations.json`, otherwise the
+last token is the type and `targetConfigured=false`; non-contiguous frames
+become `issues`), and `GET /api/animations/{id}/frames/{n}` streams a PNG with
+path-traversal checks. `studio/config/animations.json` is maintained by hand:
+add new targets there and list sequences without a runtime loader in
+`withoutLoader` (currently `anim_ammunition_fire_rain_impact`).
+
 ## Push workflow
 
 The project slash command `/push` is defined in

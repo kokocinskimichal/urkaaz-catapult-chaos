@@ -1,3 +1,4 @@
+import type { AnimationCatalogResponse } from "@studio/contracts/animations";
 import type { ApiErrorBody, HealthResponse } from "@studio/contracts/api";
 
 export class ApiError extends Error {
@@ -25,6 +26,7 @@ export async function requestJson<T>(path: string, fetcher: Fetcher = fetch, ini
 }
 
 export const fetchHealth = (fetcher?: Fetcher) => requestJson<HealthResponse>("/api/health", fetcher);
+export const fetchAnimationCatalog = (fetcher?: Fetcher) => requestJson<AnimationCatalogResponse>("/api/animations", fetcher);
 
 function isApiErrorBody(value: unknown): value is ApiErrorBody {
   if (typeof value !== "object" || value === null) return false;

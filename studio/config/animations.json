@@ -1,0 +1,8 @@
+{
+  "targets": {
+    "character": ["defender", "demolisher", "raging_boar", "sapper", "slingmaster"],
+    "spell": ["fortress_shield", "haste", "runic_bastion"],
+    "ammunition": ["fire_rain", "plague_cauldron", "powder_barrel", "rock", "siege_bomb"]
+  },
+  "withoutLoader": ["anim_ammunition_fire_rain_impact"]
+}

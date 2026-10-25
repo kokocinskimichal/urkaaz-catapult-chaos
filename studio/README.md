@@ -3,8 +3,13 @@
 Lokalne narzędzie deweloperskie (nie część gry). Architektura i decyzje:
 [`docs/architecture/studio-architecture.md`](../docs/architecture/studio-architecture.md).
 
-Stan: **krok 1 — szkielet**. Działa serwer z `GET /api/health` oraz powłoka z
-zakładkami Maps i Animations (placeholdery). Reszta jest w planie wdrożenia.
+Stan: **krok 2 — wizualizator animacji (tylko odczyt)**. Zakładka Animations
+wyświetla drzewo kategoria → cel → typ, przełącznik wariantu blue/red i podgląd
+klatek (play/pause, krok ±1, FPS, tło). Zakładka Maps to nadal placeholder.
+Serwer: `GET /api/health`, `GET /api/animations`,
+`GET /api/animations/{id}/frames/{n}`. Znane cele i sekwencje bez loadera
+w grze opisuje ręcznie utrzymywany `config/animations.json`. Reszta jest
+w planie wdrożenia.
 
 ```sh
 cd studio

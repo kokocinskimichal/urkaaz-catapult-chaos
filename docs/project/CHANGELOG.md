@@ -11,6 +11,12 @@
 - Implemented Studio step 1 (`studio/`): loopback-only Node server with
   `GET /api/health` and a React/Vite tabbed shell (Maps, Animations
   placeholders), with Vitest coverage for the server and web client.
+- Implemented Studio step 2: read-only animation visualizer. The server
+  exposes `GET /api/animations` and `GET /api/animations/{id}/frames/{n}`; the
+  Animations tab shows a category/target/type tree, blue/red variant switch and
+  a canvas preview with play/pause, frame stepping, FPS and background controls.
+  Targets and sequences without a runtime loader come from
+  `studio/config/animations.json`.
 
 - Added `/loadContext` and a curated Markdown index for loading the core
   project context and task-specific documentation in one command.

@@ -288,6 +288,8 @@ zaimplementowana dopiero po scaleniu (lub na tej gałęzi).
 1. **Szkielet**: `studio/` (shell, router zakładek, `studio-server` z
    `/api/health`), bez zmiany `map-editor-web`.
 2. **Animacje** (tylko odczyt): `AnimationCatalogService` + zakładka.
+   **Wdrożone**: `studio/config/animations.json` (znane cele, sekwencje bez
+   loadera), nieznany cel → typ to ostatni token i flaga `targetConfigured=false`.
 3. **Indeks assetów**: `AssetIndexService`, serwowanie plików ze źródeł.
 4. **Mapy**: przeniesienie `map-editor-web`, wymiana warstwy IO, zapis obu
    kopii map z hashem i walidacją TypeScript.

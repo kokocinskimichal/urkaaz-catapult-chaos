@@ -6,7 +6,35 @@ header{height:52px;display:flex;align-items:center;gap:16px;padding:8px 14px;bac
 header nav{display:flex;gap:6px}
 header a{padding:7px 12px;border:1px solid #486078;border-radius:4px;background:#26384c;color:inherit;text-decoration:none}
 header a:hover,header a.active{background:#3775a7}
-.tab-content{flex:1;min-height:0;padding:20px;overflow:auto}
+.tab-content{flex:1;min-height:0;padding:0;overflow:auto}
+.placeholder{padding:20px}
 .placeholder{max-width:640px;color:#b8c9d8;line-height:1.5}
 footer{height:28px;padding:6px 14px;background:#1b2939;color:#9ab1c5;font-size:12px;border-top:1px solid #314358}
 footer.error{color:#ff8992}
+button,select,input{background:#26384c;color:inherit;border:1px solid #486078;border-radius:4px;padding:6px 10px;font:inherit}
+button:hover:not(:disabled),button.active{background:#3775a7;cursor:pointer}
+button:disabled{opacity:.5}
+.hint-text{padding:20px;color:#9ab1c5}
+.error{color:#ff8992}
+.warning{color:#f2ca72}
+.animations-layout{display:grid;grid-template-columns:260px minmax(0,1fr);height:100%}
+.animations-layout aside{padding:14px;background:#182433;border-right:1px solid #314358;overflow:auto}
+.animation-category{margin:0 0 18px}
+.animation-category h4{margin:0 0 8px;color:#c5d6e5;font-size:12px;letter-spacing:.08em;text-transform:uppercase}
+.animation-target{margin:0 0 12px}
+.animation-target strong{display:block;margin:0 0 4px;font-size:13px}
+.animation-target button{margin:2px 4px 2px 0;font-size:12px}
+.animation-category ul{margin:0;padding-left:16px;font-size:12px}
+.badge{margin-left:6px;padding:0 5px;border-radius:8px;background:#f2ca72;color:#101722;font-size:11px;font-weight:700}
+.animation-main{display:flex;flex-direction:column;gap:12px;padding:14px;min-width:0;min-height:0}
+.variant-switch{display:flex;gap:6px}
+.preview{display:flex;flex-direction:column;gap:10px;min-height:0;flex:1}
+.preview-stage{display:flex;align-items:center;justify-content:center;flex:1;min-height:240px;border:1px solid #314358;border-radius:4px;overflow:hidden}
+.preview-stage canvas{max-width:100%;max-height:100%}
+.bg-dark{background:#0c131d}
+.bg-light{background:#e9eef3}
+.bg-grid{background-color:#1a2533;background-image:linear-gradient(45deg,#223144 25%,transparent 25%,transparent 75%,#223144 75%),linear-gradient(45deg,#223144 25%,transparent 25%,transparent 75%,#223144 75%);background-size:24px 24px;background-position:0 0,12px 12px}
+.preview-controls{display:flex;flex-wrap:wrap;align-items:center;gap:10px}
+.preview-controls label{display:flex;align-items:center;gap:6px;font-size:12px;color:#b8c9d8}
+.preview-info{margin:0;font-size:12px;color:#b8c9d8}
+.preview p{margin:0;font-size:12px}
