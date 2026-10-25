@@ -139,12 +139,12 @@ wyłącznie osobny fragment kamiennej bariery bez bramy i otoczenia. Zatwierdzon
 klatki animacji wyrastania i pulsowania są przechowywane w
 `assets_src/spells/runic-bastion/creation/` i
 `assets_src/spells/runic-bastion/idle-runes/`. Zasoby
-`runic_bastion_creation_00`–`runic_bastion_creation_19` oraz
-`runic_bastion_idle_00`–`runic_bastion_idle_23` są odtwarzane w world-space
+`anim_spell_runic_bastion_creation_000`–`anim_spell_runic_bastion_creation_019` oraz
+`anim_spell_runic_bastion_idle_000`–`anim_spell_runic_bastion_idle_023` są odtwarzane w world-space
 względem geometrii `RunicBastionGeometry`; sekwencja wyrastania trwa 2,4 s,
 po czym przechodzi w pętlę idle. Obie fazy są wstrzymywane razem z meczem.
 Po zniknięciu Bastionu renderer odtwarza jednorazowo
-`runic_bastion_destruction_00`–`runic_bastion_destruction_23` przez 24 klatki
+`anim_spell_runic_bastion_destruction_000`–`anim_spell_runic_bastion_destruction_023` przez 24 klatki
 po 167 ms. Zatwierdzony eksport po poprawce kadru używa rozszerzonego
 przezroczystego canvasu (`source_scale = 0.5`); wszystkie 24 klatki RGBA
 640×360 mieszczą się w kadrze, bez dotykania jego krawędzi. Nowy ZIP, wideo
@@ -163,7 +163,7 @@ gotowość zaklęcia.
 
 Zaimportowana animacja spokojnej kopuły (AnimGen, Seedance 2.0 fast, 24 klatki
 RGBA 640×480, pętla z tą samą pierwszą i ostatnią klatką) jest zapisana jako
-`fortress_shield_dome_00.png`–`23.png` w `drawable-nodpi`; oryginały, podgląd
+`anim_spell_fortress_shield_dome_000.png`–`23.png` w `drawable-nodpi`; oryginały, podgląd
 MP4 i klatka źródłowa są w `assets_src/spells/fortress-shield/dome-idle/`.
 `BattlefieldRenderer` rozciąga widoczną kopułę na elipsę
 `FortressShieldGeometry`, rysuje ją ze stałym alpha i ponownie nakłada teksturę
@@ -172,7 +172,7 @@ Reguły prezentacji są w `FortressShieldPresentation`. Użytkownik zaakceptowa�
 wad: nierówne wycinanie półprzezroczystych komórek (`alpha_key`), ciemne
 obwódki na jasnym tle i ~18 px drgania dolnej krawędzi w klatkach 3–5.
 Sekwencja błysku po trafieniu ma 24 klatki RGBA 640×480 w
-`fortress_shield_hit_00.png`–`23.png`; oryginał ZIP i podgląd MP4 są w
+`anim_spell_fortress_shield_hit_000.png`–`23.png`; oryginał ZIP i podgląd MP4 są w
 `assets_src/spells/fortress-shield/hit-flash/`. Animacja jest odtwarzana
 jednorazowo po `ShieldDamaged`, zaczynając od klatki 04, aby rozbłysk był
 widoczny od razu; klatki 00–03 są pomijane. Po sekwencji wraca animacja
@@ -459,7 +459,7 @@ poziomu za wybór loadoutu.
 
 Spell-card artwork jest już dostępny. Aktualną, zaakceptowaną przez użytkownika
 12-klatkową animację HASTE z orbitującymi szewronami zintegrowano jako
-`haste_orbiting_chevron_00.png`–`haste_orbiting_chevron_11.png`. Pojawia się za
+`anim_spell_haste_orbiting_chevron_000.png`–`anim_spell_haste_orbiting_chevron_011.png`. Pojawia się za
 żywymi, poruszającymi się jednostkami HASTED, rozkłada klatki na 16 ticków
 renderera (~22,7 fps) i odbija efekt względem kierunku ruchu. Klatki są
 przezroczystymi PNG RGBA 1024×576; każda ma co najmniej 69 px marginesu

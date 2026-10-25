@@ -12,12 +12,12 @@ class FortressShieldPresentationTest {
     fun shieldSequencesAreCompleteTransparentAndInsideTheirCanvases() {
         val directory = File("src/main/res/drawable-nodpi")
         val files = requireNotNull(directory.listFiles()) { "Missing ${directory.path}" }
-        listOf("fortress_shield_dome_", "fortress_shield_hit_").forEach { prefix ->
+        listOf("anim_spell_fortress_shield_dome_", "anim_spell_fortress_shield_hit_").forEach { prefix ->
             val sequence = files.filter { it.name.startsWith(prefix) && it.extension == "png" }
                 .sortedBy(File::getName)
             assertEquals("$prefix frame count", FortressShieldPresentation.FRAME_COUNT, sequence.size)
             sequence.forEachIndexed { index, file ->
-                assertEquals("$prefix%02d.png".format(index), file.name)
+                assertEquals("$prefix%03d.png".format(index), file.name)
                 val image = requireNotNull(ImageIO.read(file)) { "${file.name} is not a PNG" }
                 assertEquals(FortressShieldPresentation.FRAME_WIDTH, image.width)
                 assertEquals(FortressShieldPresentation.FRAME_HEIGHT, image.height)

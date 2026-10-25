@@ -52,7 +52,7 @@ internal object LoadoutAssetCatalog {
                 else -> LoadoutAssetLookup.Missing
             }
             is LoadoutItemReference.Ammunition -> when (item.identifier) {
-                "ROCK" -> LoadoutAssetLookup.Found(R.drawable.rock_flight_00)
+                "ROCK" -> LoadoutAssetLookup.Found(R.drawable.anim_ammunition_rock_flight_000)
                 "SIEGE_BOMB" -> LoadoutAssetLookup.Found(R.drawable.ammo_icon_siege_bomb)
                 "POWDER_BARREL" -> LoadoutAssetLookup.Found(R.drawable.ammo_icon_powder_barrel)
                 "FIRE_RAIN" -> LoadoutAssetLookup.Found(R.drawable.fire_rain_icon)

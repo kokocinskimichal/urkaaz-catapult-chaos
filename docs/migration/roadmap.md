@@ -860,8 +860,8 @@ terrain_copperwood_*.png
 fortress_left_*.png
 fortress_right_*.png
 unit_sapper_*.png
-projectile_rock_flight_*.png
-projectile_rock_impact_*.png
+projectile_anim_ammunition_rock_flight_*.png
+projectile_anim_ammunition_rock_impact_*.png
 spell_ice_trap_*.png
 ui_ammo_rock_*.png
 ```
@@ -898,18 +898,18 @@ Dla sprite sheetów i animacji należy zachować:
 Dla pocisków osobno zweryfikować:
 
 ```text
-rock_flight
-rock_impact
-siege_bomb_flight
-siege_bomb_impact
-powder_barrel_flight
-powder_barrel_impact
+anim_ammunition_rock_flight
+anim_ammunition_rock_impact
+anim_ammunition_siege_bomb_flight
+anim_ammunition_siege_bomb_impact
+anim_ammunition_powder_barrel_flight
+anim_ammunition_powder_barrel_impact
 void_orb_flight
 void_orb_impact
 cluster_bomb_flight
 cluster_bomb_impact
-fire_rain_flight
-fire_rain_impact
+anim_ammunition_fire_rain_flight
+anim_ammunition_fire_rain_impact
 ```
 
 Nie przenosić animacji tylko dlatego, że istnieje plik. Najpierw potwierdzić,

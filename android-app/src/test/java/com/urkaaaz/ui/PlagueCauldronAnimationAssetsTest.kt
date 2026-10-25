@@ -14,13 +14,13 @@ class PlagueCauldronAnimationAssetsTest {
         val files = requireNotNull(drawableDirectory.listFiles()) {
             "Could not list ${drawableDirectory.path}"
         }.filter {
-            it.name.startsWith("plague_cauldron_impact_") && it.extension == "png"
+            it.name.startsWith("anim_ammunition_plague_cauldron_impact_") && it.extension == "png"
         }.sortedBy(File::getName)
 
         assertEquals(24, files.size)
         files.forEachIndexed { index, file ->
             assertEquals(
-                "plague_cauldron_impact_%02d.png".format(index),
+                "anim_ammunition_plague_cauldron_impact_%03d.png".format(index),
                 file.name,
             )
             val image = requireNotNull(ImageIO.read(file)) {

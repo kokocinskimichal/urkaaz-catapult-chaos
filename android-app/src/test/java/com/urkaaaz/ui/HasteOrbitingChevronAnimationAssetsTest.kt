@@ -15,7 +15,7 @@ class HasteOrbitingChevronAnimationAssetsTest {
         assertTrue("Drawable directory is missing", drawableDirectory.isDirectory)
         val files = requireNotNull(drawableDirectory.listFiles()) {
             "Could not list ${drawableDirectory.path}"
-        }.filter { it.name.startsWith("haste_orbiting_chevron_") && it.extension == "png" }
+        }.filter { it.name.startsWith("anim_spell_haste_orbiting_chevron_") && it.extension == "png" }
             .sortedBy(File::getName)
 
         assertEquals(HasteOrbitingChevronPresentation.FRAME_COUNT, files.size)
@@ -24,7 +24,7 @@ class HasteOrbitingChevronAnimationAssetsTest {
         }
         assertEquals(HasteOrbitingChevronPresentation.FRAME_COUNT, frameHashes.distinct().size)
         files.forEachIndexed { index, file ->
-            assertEquals("haste_orbiting_chevron_%02d.png".format(index), file.name)
+            assertEquals("anim_spell_haste_orbiting_chevron_%03d.png".format(index), file.name)
             val image = requireNotNull(ImageIO.read(file)) { "${file.name} is not a PNG" }
             assertEquals(HasteOrbitingChevronPresentation.FRAME_WIDTH, image.width)
             assertEquals(HasteOrbitingChevronPresentation.FRAME_HEIGHT, image.height)

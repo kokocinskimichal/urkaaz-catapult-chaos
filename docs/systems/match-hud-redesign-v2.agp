@@ -33,7 +33,7 @@ Attach these images to the generation prompt:
      `sapper_icon.png`, `demolisher_icon.png`,
      `goblin_raging_boar_icon.png`, and `goblin_slingmaster_icon.png`.
    - Send Wave: `android-app/src/main/res/drawable-nodpi/send_wave_icon.png`.
-   - Ammunition: `rock_flight_00.png`, `ammo_icon_siege_bomb.png`,
+   - Ammunition: `anim_ammunition_rock_flight_000.png`, `ammo_icon_siege_bomb.png`,
      `ammo_icon_powder_barrel.png`, `fire_rain_icon.png`, and
      `plague_cauldron_icon.png` from the same `drawable-nodpi` directory.
    - Spells: the available `loadout_spell_*_card.png` illustrations from that

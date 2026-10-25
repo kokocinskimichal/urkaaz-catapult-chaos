@@ -27,11 +27,15 @@
 - Runic Bastion cannot be recast while its previous structure remains; its HUD
   icon stays dimmed until destruction, and attackers wait through the
   destruction animation.
+- Standardized the filenames of 1,394 Android animation frames across 43
+  sequences and updated their runtime lookups, tests and asset manifests.
 
 ### Fixed
 
 - Matched the Runic Bastion destruction animation's rendered size and ground
   anchor to its creation and idle animations.
+- Corrected the renamed projectile-animation prefixes for Siege Bomb, Powder
+  Barrel and Plague Cauldron so their flight and impact frames load.
 
 ## 2026-10-23
 

@@ -12,15 +12,14 @@ class DemolisherAnimationAssetsTest {
     fun approvedBlueAndRedIdleFramesAreContiguousTransparentPngs() {
         val directory = resourceDirectory()
 
-        listOf("left", "right").forEach { side ->
-            val team = if (side == "left") "Blue" else "Red"
+        listOf("blue" to "Blue", "red" to "Red").forEach { (teamKey, team) ->
             assertContiguousFrames(
                 directory = directory,
-                prefix = "demolisher_${side}_idle",
+                prefix = "anim_character_demolisher_idle_$teamKey",
                 digits = 3,
                 frameCount = 48,
                 team = team,
-                requireRedPalette = side == "right",
+                requireRedPalette = teamKey == "red",
             )
         }
     }
@@ -29,15 +28,14 @@ class DemolisherAnimationAssetsTest {
     fun approvedBlueAndRedJogFramesAreContiguousTransparentPngs() {
         val directory = resourceDirectory()
 
-        listOf("left", "right").forEach { side ->
-            val team = if (side == "left") "Blue" else "Red"
+        listOf("blue" to "Blue", "red" to "Red").forEach { (teamKey, team) ->
             assertContiguousFrames(
                 directory = directory,
-                prefix = "demolisher_${side}_jog",
+                prefix = "anim_character_demolisher_move_$teamKey",
                 digits = 3,
                 frameCount = 60,
                 team = team,
-                requireRedPalette = side == "right",
+                requireRedPalette = teamKey == "red",
             )
         }
     }
@@ -46,7 +44,7 @@ class DemolisherAnimationAssetsTest {
     fun acceptedBlueContactExplosionFramesAreContiguousTransparentPngs() {
         assertContiguousFrames(
             directory = resourceDirectory(),
-            prefix = "demolisher_left_death",
+            prefix = "anim_character_demolisher_death_blue",
             digits = 3,
             frameCount = 60,
             team = "Blue",

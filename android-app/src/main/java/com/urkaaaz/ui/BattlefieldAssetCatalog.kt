@@ -66,27 +66,27 @@ class BattlefieldAssetCatalog(private val context: Context) {
         R.drawable.terrain_grass_cap,
     )
 
-    private val rockFlightFrames = loadAnimationFrames("rock_flight")
-    private val rockImpactFrames = loadAnimationFrames("rock_impact")
+    private val rockFlightFrames = loadAnimationFrames("anim_ammunition_rock_flight")
+    private val rockImpactFrames = loadAnimationFrames("anim_ammunition_rock_impact")
     val fireRainAnimations = FireRainAnimationSet(
         containerFlightFrames = loadRequiredFireRainFrames(
             phase = "container flight",
-            prefix = "fire_rain_flight",
+            prefix = "anim_ammunition_fire_rain_flight",
             frameCount = FIRE_RAIN_CONTAINER_FLIGHT_FRAME_COUNT,
         ),
         splitFlashFrames = loadRequiredFireRainFrames(
             phase = "split flash",
-            prefix = "fire_rain_split_flash",
+            prefix = "anim_ammunition_fire_rain_split_flash",
             frameCount = FIRE_RAIN_SPLIT_FLASH_FRAME_COUNT,
         ),
         fragmentFlightFrames = loadRequiredFireRainFrames(
             phase = "fragment flight",
-            prefix = "fire_rain_fragment_flight",
+            prefix = "anim_ammunition_fire_rain_fragment_flight",
             frameCount = FIRE_RAIN_FRAGMENT_FLIGHT_FRAME_COUNT,
         ),
         fireFieldFrames = loadRequiredFireRainFrames(
             phase = "fire field",
-            prefix = "fire_rain_field",
+            prefix = "anim_ammunition_fire_rain_field",
             frameCount = FIRE_RAIN_FIELD_FRAME_COUNT,
         ),
     )
@@ -125,16 +125,16 @@ class BattlefieldAssetCatalog(private val context: Context) {
             impactFullRenderSizeStartFrame = ROCK_IMPACT_BREAKUP_FRAME,
         ),
         "SIEGE_BOMB" to animation(
-            prefix = "siege_bomb",
+            prefix = "anim_ammunition_siege_bomb",
             flightRenderSize = 18f,
             impactRenderSize = 54f,
         ),
-        "POWDER_BARREL" to animation("powder_barrel"),
+        "POWDER_BARREL" to animation("anim_ammunition_powder_barrel"),
         "FIRE_RAIN" to ProjectileAnimation(
             flightFrames = fireRainAnimations.containerFlightFrames,
             impactFrames = emptyList(),
         ),
-        "PLAGUE_CAULDRON" to animation("plague_cauldron"),
+        "PLAGUE_CAULDRON" to animation("anim_ammunition_plague_cauldron"),
     )
 
     private val themes = mapOf(
@@ -216,12 +216,13 @@ class BattlefieldAssetCatalog(private val context: Context) {
 
     fun unitBitmap(unitType: String, teamLabel: String): Bitmap? {
         val side = if (teamLabel == "BLUE") "left" else "right"
+        val team = if (teamLabel == "BLUE") "blue" else "red"
         val resourceName = when (unitType) {
             "SAPPER" -> "sapper_$side"
             "DEFENDER" -> "defender_$side"
             "DEMOLISHER" -> "demolisher_$side"
-            "RAGING_BOAR" -> "goblin_raging_boar_idle${if (side == "right") "_right" else ""}_00"
-            "SLINGMASTER" -> "goblin_slingmaster_run_00"
+            "RAGING_BOAR" -> "anim_character_raging_boar_idle_${team}_000"
+            "SLINGMASTER" -> "anim_character_slingmaster_move_000"
             else -> return null
         }
 
@@ -238,44 +239,42 @@ class BattlefieldAssetCatalog(private val context: Context) {
         attacking: Boolean = false,
     ): List<Bitmap> {
         val side = if (teamLabel == "BLUE") "left" else "right"
+        val team = if (teamLabel == "BLUE") "blue" else "red"
         val cacheKey = "$unitType:$side:$moving:$attacking"
         return unitAnimationCache.getOrPut(cacheKey) {
             if (attacking) {
                 val prefix = when (unitType) {
-                    "DEFENDER" -> "defender_${side}_fight"
-                    "RAGING_BOAR" -> "goblin_raging_boar_attack${if (side == "right") "_right" else ""}"
+                    "DEFENDER" -> "anim_character_defender_attack_${team}"
+                    "RAGING_BOAR" -> "anim_character_raging_boar_attack_${team}"
                     else -> ""
                 }
                 when {
                     prefix.isEmpty() -> emptyList()
-                    unitType == "DEFENDER" -> loadThreeDigitAnimationFrames(prefix)
-                    else -> loadAnimationFrames(prefix)
+                    else -> loadThreeDigitAnimationFrames(prefix)
                 }
             } else if (!moving) {
                 when (unitType) {
-                    "DEFENDER" -> loadThreeDigitAnimationFrames("defender_${side}_idle")
-                    "DEMOLISHER" -> loadThreeDigitAnimationFrames("demolisher_${side}_idle")
+                    "DEFENDER" -> loadThreeDigitAnimationFrames(
+                        "anim_character_defender_idle_${team}",
+                    )
+                    "DEMOLISHER" -> loadThreeDigitAnimationFrames(
+                        "anim_character_demolisher_idle_${team}",
+                    )
                     "RAGING_BOAR" -> loadAnimationFrames(
-                        "goblin_raging_boar_idle${if (side == "right") "_right" else ""}",
+                        "anim_character_raging_boar_idle_${team}",
                     )
                     else -> emptyList()
                 }
             } else {
                 val prefix = when (unitType) {
-                    "SAPPER" -> "sapper_${side}_anim"
-                    "DEFENDER" -> "defender_${side}_jog"
-                    "DEMOLISHER" -> "demolisher_${side}_jog"
-                    "RAGING_BOAR" -> "goblin_raging_boar_run${if (side == "right") "_right" else ""}"
-                    "SLINGMASTER" -> "goblin_slingmaster_run"
+                    "SAPPER" -> "anim_character_sapper_move_${team}"
+                    "DEFENDER" -> "anim_character_defender_move_${team}"
+                    "DEMOLISHER" -> "anim_character_demolisher_move_${team}"
+                    "RAGING_BOAR" -> "anim_character_raging_boar_move_${team}"
+                    "SLINGMASTER" -> "anim_character_slingmaster_move"
                     else -> return@getOrPut emptyList()
                 }
-                if (unitType == "DEMOLISHER") {
-                    loadThreeDigitAnimationFrames(prefix)
-                } else if (unitType == "DEFENDER") {
-                    loadThreeDigitAnimationFrames(prefix)
-                } else {
-                    loadAnimationFrames(prefix)
-                }
+                loadThreeDigitAnimationFrames(prefix)
             }
         }
 
@@ -283,16 +282,19 @@ class BattlefieldAssetCatalog(private val context: Context) {
 
     fun unitDeathAnimationFrames(unitType: String, teamLabel: String): List<Bitmap> {
         val side = if (teamLabel == "BLUE") "left" else "right"
+        val team = if (teamLabel == "BLUE") "blue" else "red"
         val cacheKey = "death:$unitType:$side"
         return unitAnimationCache.getOrPut(cacheKey) {
             when (unitType) {
-                "DEFENDER" -> {
-                    loadThreeDigitAnimationFrames("defender_${side}_death_anim")
-                }
-                "RAGING_BOAR" -> loadAnimationFrames(
-                    "goblin_raging_boar_death${if (side == "right") "_right" else ""}",
+                "DEFENDER" -> loadThreeDigitAnimationFrames(
+                    "anim_character_defender_death_${team}",
                 )
-                "DEMOLISHER" -> loadThreeDigitAnimationFrames("demolisher_${side}_death")
+                "RAGING_BOAR" -> loadAnimationFrames(
+                    "anim_character_raging_boar_death_${team}",
+                )
+                "DEMOLISHER" -> loadThreeDigitAnimationFrames(
+                    "anim_character_demolisher_death_${team}",
+                )
                 else -> emptyList()
             }
         }
@@ -348,7 +350,7 @@ class BattlefieldAssetCatalog(private val context: Context) {
     private fun loadAnimationFrames(prefix: String): List<Bitmap> =
         (0..31).mapNotNull { index ->
             val resourceId = resources.getIdentifier(
-                "${prefix}_%02d".format(index),
+                "${prefix}_%03d".format(index),
                 "drawable",
                 context.packageName,
             )
@@ -361,7 +363,7 @@ class BattlefieldAssetCatalog(private val context: Context) {
         frameCount: Int,
     ): List<Bitmap> {
         val frames = (0 until frameCount).map { index ->
-            val resourceName = "${prefix}_%02d".format(index)
+            val resourceName = "${prefix}_%03d".format(index)
             val resourceId = resources.getIdentifier(
                 resourceName,
                 "drawable",
@@ -384,7 +386,7 @@ class BattlefieldAssetCatalog(private val context: Context) {
             }
             bitmap
         }
-        val unexpectedResourceName = "${prefix}_%02d".format(frameCount)
+        val unexpectedResourceName = "${prefix}_%03d".format(frameCount)
         check(
             resources.getIdentifier(
                 unexpectedResourceName,
@@ -406,7 +408,7 @@ class BattlefieldAssetCatalog(private val context: Context) {
 
     private fun loadRequiredFortressShieldFrames(prefix: String, phase: String): List<Bitmap> {
         val frames = (0 until FortressShieldPresentation.FRAME_COUNT).map { index ->
-            val resourceName = "$prefix%02d".format(index)
+            val resourceName = "$prefix%03d".format(index)
             val resourceId = resources.getIdentifier(
                 resourceName,
                 "drawable",
@@ -434,7 +436,7 @@ class BattlefieldAssetCatalog(private val context: Context) {
 
     private fun loadRequiredHasteOrbitingChevronFrames(): List<Bitmap> {
         val frames = (0 until HasteOrbitingChevronPresentation.FRAME_COUNT).map { index ->
-            val resourceName = "$HASTE_ORBITING_CHEVRON_PREFIX%02d".format(index)
+            val resourceName = "$HASTE_ORBITING_CHEVRON_PREFIX%03d".format(index)
             val resourceId = resources.getIdentifier(
                 resourceName,
                 "drawable",
@@ -458,7 +460,7 @@ class BattlefieldAssetCatalog(private val context: Context) {
             bitmap
         }
         val unexpectedResourceName =
-            "$HASTE_ORBITING_CHEVRON_PREFIX%02d".format(
+            "$HASTE_ORBITING_CHEVRON_PREFIX%03d".format(
                 HasteOrbitingChevronPresentation.FRAME_COUNT,
             )
         check(
@@ -480,7 +482,7 @@ class BattlefieldAssetCatalog(private val context: Context) {
         frameCount: Int,
     ): List<Bitmap> {
         val frames = (0 until frameCount).map { index ->
-            val resourceName = "$prefix%02d".format(index)
+            val resourceName = "$prefix%03d".format(index)
             val resourceId = resources.getIdentifier(
                 resourceName,
                 "drawable",
@@ -503,7 +505,7 @@ class BattlefieldAssetCatalog(private val context: Context) {
             }
             bitmap
         }
-        val unexpectedResourceName = "$prefix%02d".format(frameCount)
+        val unexpectedResourceName = "$prefix%03d".format(frameCount)
         check(
             resources.getIdentifier(
                 unexpectedResourceName,
@@ -535,12 +537,12 @@ class BattlefieldAssetCatalog(private val context: Context) {
         const val FIRE_RAIN_SPLIT_FLASH_FRAME_COUNT = 12
         const val FIRE_RAIN_FRAGMENT_FLIGHT_FRAME_COUNT = 24
         const val FIRE_RAIN_FIELD_FRAME_COUNT = 24
-        const val FORTRESS_SHIELD_DOME_PREFIX = "fortress_shield_dome_"
-        const val FORTRESS_SHIELD_HIT_PREFIX = "fortress_shield_hit_"
-        const val HASTE_ORBITING_CHEVRON_PREFIX = "haste_orbiting_chevron_"
-        const val RUNIC_BASTION_CREATION_PREFIX = "runic_bastion_creation_"
-        const val RUNIC_BASTION_IDLE_PREFIX = "runic_bastion_idle_"
-        const val RUNIC_BASTION_DESTRUCTION_PREFIX = "runic_bastion_destruction_"
+        const val FORTRESS_SHIELD_DOME_PREFIX = "anim_spell_fortress_shield_dome_"
+        const val FORTRESS_SHIELD_HIT_PREFIX = "anim_spell_fortress_shield_hit_"
+        const val HASTE_ORBITING_CHEVRON_PREFIX = "anim_spell_haste_orbiting_chevron_"
+        const val RUNIC_BASTION_CREATION_PREFIX = "anim_spell_runic_bastion_creation_"
+        const val RUNIC_BASTION_IDLE_PREFIX = "anim_spell_runic_bastion_idle_"
+        const val RUNIC_BASTION_DESTRUCTION_PREFIX = "anim_spell_runic_bastion_destruction_"
         val RELIC_ASSET_RESOURCES = buildMap {
             val biomeResources = mapOf(
                 "green_frontier" to listOf(

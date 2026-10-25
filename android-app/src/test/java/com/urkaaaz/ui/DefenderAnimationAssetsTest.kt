@@ -18,20 +18,21 @@ class DefenderAnimationAssetsTest {
         val directory = requireNotNull(resourceDirectory)
 
         listOf(
-            Triple("left", "idle", 60),
-            Triple("right", "idle", 60),
-            Triple("left", "jog", 60),
-            Triple("right", "jog", 60),
-            Triple("left", "fight", 30),
-            Triple("right", "fight", 30),
-            Triple("left", "death_anim", 60),
-            Triple("right", "death_anim", 60),
-        ).forEach { (side, animation, expectedFrameCount) ->
+            Triple("blue", "idle", 60),
+            Triple("red", "idle", 60),
+            Triple("blue", "move", 60),
+            Triple("red", "move", 60),
+            Triple("blue", "attack", 30),
+            Triple("red", "attack", 30),
+            Triple("blue", "death", 60),
+            Triple("red", "death", 60),
+        ).forEach { (team, animation, expectedFrameCount) ->
+            val prefix = "anim_character_defender_${animation}_${team}"
             val frameFiles = directory.listFiles { file ->
-                file.name.matches(Regex("defender_${side}_${animation}_\\d{3}\\.png"))
+                file.name.matches(Regex("${prefix}_\\d{3}\\.png"))
             }.orEmpty()
             assertEquals(
-                "$side Defender should have $expectedFrameCount $animation frames",
+                "$team Defender should have $expectedFrameCount $animation frames",
                 expectedFrameCount,
                 frameFiles.size,
             )
@@ -39,20 +40,20 @@ class DefenderAnimationAssetsTest {
             (0 until expectedFrameCount).forEach { index ->
                 val imageFile = File(
                     directory,
-                    "defender_${side}_${animation}_%03d.png".format(index),
+                    "${prefix}_%03d.png".format(index),
                 )
-                assertTrue("Missing $side $animation frame $index", imageFile.isFile)
+                assertTrue("Missing $team $animation frame $index", imageFile.isFile)
                 val image = ImageIO.read(imageFile)
-                assertNotNull("Invalid $side $animation PNG frame $index", image)
-                val expectedDimension = if (animation == "death_anim") 512 else 256
+                assertNotNull("Invalid $team $animation PNG frame $index", image)
+                val expectedDimension = if (animation == "death") 512 else 256
                 assertEquals(expectedDimension, image.width)
                 assertEquals(expectedDimension, image.height)
                 assertTrue(
-                    "$side $animation frame $index must preserve alpha",
+                    "$team $animation frame $index must preserve alpha",
                     image.colorModel.hasAlpha(),
                 )
                 assertEquals(
-                    "$side $animation frame $index must retain a transparent canvas corner",
+                    "$team $animation frame $index must retain a transparent canvas corner",
                     0,
                     image.getRGB(0, 0) ushr 24,
                 )

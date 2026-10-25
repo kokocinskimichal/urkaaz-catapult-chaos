@@ -5,8 +5,8 @@
 Do nowego projektu skopiowano pierwszą kompletną grupę assetów pocisku:
 
 ```text
-rock_flight_00.png ... rock_flight_31.png
-rock_impact_00.png ... rock_impact_31.png
+anim_ammunition_rock_flight_000.png ... anim_ammunition_rock_flight_031.png
+anim_ammunition_rock_impact_000.png ... anim_ammunition_rock_impact_031.png
 ```
 
 Lokalizacja docelowa:

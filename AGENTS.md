@@ -204,6 +204,22 @@ trajectory preview, aiming circle and simulation must use the same anchor.
   controls remain screen-space.
 - Ammunition logging is host-independent and must never change gameplay state.
 
+## Animation asset naming
+
+- Name every animation-frame PNG as
+  `anim_<category>_<target>_<type>[_<variant>]_<frame:3>.png`.
+- Use `character`, `spell` or `ammunition` as the category; use lowercase
+  snake_case for the target and type, and omit the variant for neutral assets.
+- Use `blue`/`red` for team variants, normalize character locomotion to
+  `move`, combat to `attack`, and death to `death`.
+- Start every sequence at `000`, use three digits for every frame, and keep
+  indices contiguous. Examples:
+  `anim_character_defender_move_blue_000.png`,
+  `anim_spell_runic_bastion_creation_000.png`,
+  `anim_ammunition_fire_rain_fragment_flight_000.png`.
+- Keep animation target/action metadata inferable from this stable naming
+  structure so Studio can group sequences without special-case legacy aliases.
+
 ## Validation gate
 
 Before every commit, run:

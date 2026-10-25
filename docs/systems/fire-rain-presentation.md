@@ -143,10 +143,10 @@ przygotowywać lub przerabiać obraz wejściowy.
 Gotowe, fazowe prompty AnimGen są zapisane w
 `docs/systems/fire-rain-animgen-prompts.md`. Lot pojemnika jest
 wygenerowany, zaakceptowany i zaimportowany jako 24 klatki PNG 512×512 RGBA
-`fire_rain_flight_00`–`23`; oryginalny ZIP i MP4 są zachowane w
+`anim_ammunition_fire_rain_flight_000`–`23`; oryginalny ZIP i MP4 są zachowane w
 `assets_src/ammunition/fire-rain/container-flight/`. Błysk rozpadu jest
 wygenerowany, zaakceptowany i zaimportowany jako 12 klatek PNG 512×512 RGBA
-`fire_rain_split_flash_00`–`11`; jego ZIP i MP4 są zachowane w
+`anim_ammunition_fire_rain_split_flash_000`–`11`; jego ZIP i MP4 są zachowane w
 `assets_src/ammunition/fire-rain/split-flash/`. Użytkownik zaakceptował dla
 docelowego małego rozmiaru renderowania fakt, że klatki lotu dotykają
 krawędzi, a błysk zaczyna się pełną ikoną i rozszerza do krawędzi bez
@@ -159,7 +159,7 @@ bez pełnej ikony amunicji. Zatwierdzone zadanie za 45 kredytów zakończyło si
 sukcesem i dostarczyło 24 sekwencyjne klatki RGBA 512×512. ZIP jest poprawny;
 żadna klatka nie dotyka krawędzi, a minimalny margines przezroczystości wynosi
 162 px. Użytkownik zaakceptował podgląd; klatki są zaimportowane jako
-`fire_rain_fragment_flight_00.png`–`23.png`. Oryginalny ZIP i MP4 są zachowane
+`anim_ammunition_fire_rain_fragment_flight_000.png`–`23.png`. Oryginalny ZIP i MP4 są zachowane
 w `assets_src/ammunition/fire-rain/fragment-flight/`; tylko PNG są przeznaczone
 do runtime. Klatki lotu pojemnika, błysku rozpadu i lotu fragmentu są ładowane i rysowane
 przez wspólny renderer. Użytkownik dostarczył i wybrał osobny przezroczysty
@@ -169,7 +169,7 @@ obniżyć płomień do zwartego pola. Zatwierdzona generacja za 45 kredytów
 zakończyła się sukcesem. Użytkownik odrzucił pierwszy podgląd, bo klatki 01 i
 02 dotykały górnej krawędzi; nie zostały zaimportowane. Poprawiona generacja,
 z przezroczystym marginesem wokół pierwszej klatki i
-`powder_barrel_impact_09` jako dodatkową referencją, kosztowała kolejne 45
+`anim_ammunition_powder_barrel_impact_009` jako dodatkową referencją, kosztowała kolejne 45
 kredytów. Podgląd przechodzi od wybuchu do niskiego pola ognia i wygaszenia,
 ale klatki 03 i 04 nadal dotykają krawędzi płótna; użytkownik odrzucił ten
 podgląd i klatki nie zostały zaimportowane. Następnie polecił nie używać
@@ -179,7 +179,7 @@ początkowej Fire Rain i kosztowała 45 kredytów. Wszystkie pliki są
 sekwencyjnymi PNG RGBA 512×512; minimalny przezroczysty margines wynosi
 138 pikseli, a ostatnia klatka jest całkowicie przezroczysta. Użytkownik
 zaakceptował podgląd; klatki są zaimportowane jako
-`fire_rain_field_00.png`–`23.png`, a oryginalny ZIP i MP4 są zachowane w
+`anim_ammunition_fire_rain_field_000.png`–`23.png`, a oryginalny ZIP i MP4 są zachowane w
 `assets_src/ammunition/fire-rain/fire-field/`. Wszystkie sekwencje są
 podłączone do renderera; ścisła walidacja katalogu wymaga dokładnej liczby
 klatek 512×512 z alpha i nie stosuje fallbacku do ROCK ani starych klatek

@@ -5,7 +5,7 @@ The user generated and supplied the single-shard source image in a separate
 image tool, using the Fire Rain icon only as a visual reference. Do not create
 or edit that image here. The composite icon was not sent to AnimGen for
 fragment flight; use the supplied isolated shard image as its first frame. Do
-not use existing `fire_rain_flight_*` or `fire_rain_impact_*` frames. The
+not use existing `anim_ammunition_fire_rain_flight_*` or `anim_ammunition_fire_rain_impact_*` frames. The
 fire-field phase also needs a separate still source image from the user's
 external image tool; its prompt is included below.
 
@@ -109,7 +109,7 @@ uploaded as AnimGen's first frame; the animation prompt asks the tall flare to
 settle quickly into a compact ground fire. Do not substitute an existing impact
 frame. The first 24-frame generation was rejected because frames 01 and 02
 touch the top canvas edge. A revised generation used a transparently padded
-first frame and `powder_barrel_impact_09` as an additional visual reference.
+first frame and `anim_ammunition_powder_barrel_impact_009` as an additional visual reference.
 It produced a brief explosion followed by the low fire patch and fade, but
 frames 03 and 04 still touch the canvas edge. The user rejected this preview;
 it was not imported. The user requested that no Powder Barrel frame be used
@@ -117,7 +117,7 @@ in the next attempt. The following 24-frame no-reference generation used only
 the padded Fire Rain first frame and succeeded for 45 credits. All frames are
 512x512 RGBA, sequential, and remain within the canvas with at least 138 px of
 transparent margin; the final frame is fully transparent. The preview is
-user-approved and imported as `fire_rain_field_00.png`–`23.png`; the original
+user-approved and imported as `anim_ammunition_fire_rain_field_000.png`–`23.png`; the original
 ZIP and MP4 are preserved under `assets_src/ammunition/fire-rain/fire-field/`.
 These are runtime resources and are loaded by `BattlefieldAssetCatalog` for
 the integrated Android battlefield renderer.

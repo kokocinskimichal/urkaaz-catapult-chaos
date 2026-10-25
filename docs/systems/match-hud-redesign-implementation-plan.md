@@ -159,7 +159,7 @@ Nie generować ponownie ikon już obecnych w
 
 - jednostki: `defender_icon.png`, `sapper_icon.png`, `demolisher_icon.png`,
   `goblin_raging_boar_icon.png`, `goblin_slingmaster_icon.png`;
-- amunicja: `rock_flight_00.png`, `ammo_icon_siege_bomb.png`,
+- amunicja: `anim_ammunition_rock_flight_000.png`, `ammo_icon_siege_bomb.png`,
   `ammo_icon_powder_barrel.png`, `fire_rain_icon.png`,
   `plague_cauldron_icon.png`;
 - rozkazy i wiatr: `send_wave_icon.png` oraz istniejące ikony

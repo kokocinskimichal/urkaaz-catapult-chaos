@@ -10,10 +10,10 @@
 - `BattlefieldView` rysujący wyłącznie model prezentacji;
 - nowy ekran Androida z akcją rozpoczęcia meczu;
 - test mapowania snapshotu do stanu UI;
-- podłączenie `rock_flight_00` do `BattlefieldView` jako jawnego podglądu
+- podłączenie `anim_ammunition_rock_flight_000` do `BattlefieldView` jako jawnego podglądu
   assetu;
 - podłączenie tekstur terenu, fortec i katapult do `BattlefieldView`;
-- zachowanie skopiowanych assetów `rock_flight` i `rock_impact` bez
+- zachowanie skopiowanych assetów `anim_ammunition_rock_flight` i `anim_ammunition_rock_impact` bez
   bezpośredniego uzależniania domeny od zasobów.
 
 ## Nie skopiowano

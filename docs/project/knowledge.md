@@ -149,7 +149,7 @@ and per-unit HASTED status are exposed in snapshots. Its 15-second countdown
 uses the same top-down icon shade as depleted Fortress Shield HP, with the
 remaining seconds retained in the accessibility description. The user-approved
 12-frame gold/turquoise orbiting-chevron effect is integrated as
-`haste_orbiting_chevron_00.png`–`haste_orbiting_chevron_11.png`; it loops
+`anim_spell_haste_orbiting_chevron_000.png`–`anim_spell_haste_orbiting_chevron_011.png`; it loops
 behind living, moving HASTED units, distributing the frames across 16 match
 render ticks (about 22.7 fps at the current 33 ms tick), and mirrors with
 facing direction. All frames are unique RGBA 1024×576 PNGs with transparent
@@ -163,7 +163,7 @@ Runic Bastion uses shared `288 × 216` world-space geometry, is lifted 12 world
 units above its terrain foundation, and has 360 HP. Its center is offset 436
 world units toward the battlefield center from the team's gate attack point.
 Its approved creation sequence is 20 RGBA 640×360 frames,
-`runic_bastion_creation_00.png`–`runic_bastion_creation_19.png`, loaded strictly
+`anim_spell_runic_bastion_creation_000.png`–`anim_spell_runic_bastion_creation_019.png`, loaded strictly
 by `BattlefieldAssetCatalog.runicBastionCreationFrames`. It plays once at 120 ms
 per frame (2.4 s total) when a new Bastion appears, freezes while paused, then
 holds the final frame. `RunicBastionPresentation` maps the visible artwork
@@ -173,7 +173,7 @@ together with the shared source/reference images, are preserved in
 `assets_src/spells/runic-bastion/creation/`; the untrimmed generation's clipped
 flash frame is not imported. After creation, an approved
 24-frame RGBA
-640×360 idle loop (`runic_bastion_idle_00.png`–`runic_bastion_idle_23.png`)
+640×360 idle loop (`anim_spell_runic_bastion_idle_000.png`–`anim_spell_runic_bastion_idle_023.png`)
 plays at 167 ms per frame; the central rune has a small user-approved
 shape/size variation during its glow pulse. Its source ZIP/video and review
 previews are in `assets_src/spells/runic-bastion/idle-runes/`. The approved 24-frame destruction
@@ -287,6 +287,24 @@ prevent moving authored coordinates or Relic footprints out of the map.
 Selected map decorations and Relics display corner handles: radial dragging
 scales around the visual center while angular dragging rotates; the selected
 object panel remains available for precise numeric transforms.
+
+Animation frame PNGs use the shared convention
+`anim_<category>_<target>_<type>[_<variant>]_<frame:3>.png`, with categories
+`character`, `spell` and `ammunition`. Names are lowercase snake_case, team
+variants are `blue`/`red`, and neutral sequences omit the variant. Every
+sequence starts at `000`, uses three-digit indices and has no gaps. Character
+locomotion aliases (`jog`, `run`, and generic `anim`) normalize to `move`;
+`fight` normalizes to `attack`, and `death_anim` to `death`. Examples:
+`anim_character_defender_move_blue_000.png`,
+`anim_spell_runic_bastion_creation_000.png`, and
+`anim_ammunition_fire_rain_fragment_flight_000.png`. Android's battlefield
+asset loader and animation-asset tests use this naming. The 1,394 imported
+frames currently form 24 character, 6 spell and 13 ammunition sequences.
+Demolisher has no red death sequence; the existing Fire Rain `impact` sequence
+is retained as an asset but is not currently loaded by the runtime catalog.
+Projectile catalog entries that use the shared animation helper provide the
+`anim_ammunition_<target>` prefix; the helper appends `_flight` and `_impact`
+to resolve the matching frame sequences.
 
 The current match HUD uses a three-zone top rail (BLUE fortress health,
 Retreat/timer/wind/pause, RED fortress health) and a three-group bottom dock
@@ -468,7 +486,7 @@ not truncated to a subset; unit frame playback advances at approximately
   the same 2x canvas scale and `75/512` bottom anchor offset as the generated
   idle.
 - The user-approved blue Demolisher contact/death animation uses 60 generated
-  512x512 frames named `demolisher_left_death_000` through `_059`, styled after
+  512x512 frames named `anim_character_demolisher_death_blue_000` through `_059`, styled after
   the in-game Powder Barrel impact. Its original AnimGen archive is retained
   under `assets_src/animgen/demolisher/blue/death/`. The accepted sequence has
   visible effects touching the canvas edge in frames 034-055; it is imported
@@ -740,10 +758,10 @@ must go through commands and domain/application boundaries.
   defined in the ammunition flight catalog and published as a
   `ProjectileSplit` event.
 - FIRE_RAIN uses one neutral AnimGen presentation set shared by both teams:
-  24 container-flight frames (`fire_rain_flight_00`–`23`), 12 split-flash
-  frames (`fire_rain_split_flash_00`–`11`), 24 fragment-flight frames
-  (`fire_rain_fragment_flight_00`–`23`), and 24 fire-field frames
-  (`fire_rain_field_00`–`23`). All are transparent 512×512 PNGs under
+  24 container-flight frames (`anim_ammunition_fire_rain_flight_000`–`23`), 12 split-flash
+  frames (`anim_ammunition_fire_rain_split_flash_000`–`11`), 24 fragment-flight frames
+  (`anim_ammunition_fire_rain_fragment_flight_000`–`23`), and 24 fire-field frames
+  (`anim_ammunition_fire_rain_field_000`–`23`). All are transparent 512×512 PNGs under
   `android-app/src/main/res/drawable-nodpi/`; each original ZIP and MP4 is
   preserved in its corresponding `assets_src/ammunition/fire-rain/` phase
   directory. The accepted no-reference fire-field generation used no Powder
@@ -761,7 +779,7 @@ must go through commands and domain/application boundaries.
   in a separate tool. It was uploaded as the fragment-flight first frame; the
   composite ammunition icon was not sent to AnimGen for this phase. The
   approved 45-credit generation and preview succeeded; 24 sequential 512×512
-  RGBA PNG frames are imported as `fire_rain_fragment_flight_00.png` through
+  RGBA PNG frames are imported as `anim_ammunition_fire_rain_fragment_flight_000.png` through
   `_23.png`. ZIP integrity passed; no frame touches a canvas edge and the
   minimum alpha-bound margin is 162 pixels. The original ZIP and MP4 are
   preserved under `assets_src/ammunition/fire-rain/fragment-flight/`. The
@@ -901,7 +919,7 @@ this runtime gate.
 
 - Fortress Shield dome art (77 credits, AnimGen Seedance 2.0 fast, first and
   last frame both the user's dome PNG, `alpha_key`): 24 RGBA 640×480 frames
-  imported as `fortress_shield_dome_00`–`23` and loaded strictly by
+  imported as `anim_spell_fortress_shield_dome_000`–`23` and loaded strictly by
   `BattlefieldAssetCatalog.fortressShieldDomeFrames`. The renderer stretches the
   visible dome bounds (`FortressShieldPresentation`) over the
   `FortressShieldGeometry` ellipse, loops one frame per 6 render ticks and
@@ -911,7 +929,7 @@ this runtime gate.
   reload shade to cover the shield icon from top down in proportion to lost HP;
   it clears when the shield is inactive. The approved Fortress Shield hit
   flash is a second 24-frame RGBA 640×480 sequence in
-  `fortress_shield_hit_00`–`23`; it plays once on `ShieldDamaged` and returns
+  `anim_spell_fortress_shield_hit_000`–`23`; it plays once on `ShieldDamaged` and returns
   to idle. `RenderStateMapper` routes the hit by fortress team, and the
   renderer mirrors only the blue/left fortress hit sequence because incoming
   enemy projectiles strike its right side. The preview has a colored halo

@@ -5,8 +5,8 @@
 ## Zaimplementowano
 
 - utworzono docelowy katalog `android-app/src/main/res/drawable-nodpi`;
-- skopiowano 32 klatki `rock_flight`;
-- skopiowano 32 klatki `rock_impact`;
+- skopiowano 32 klatki `anim_ammunition_rock_flight`;
+- skopiowano 32 klatki `anim_ammunition_rock_impact`;
 - zachowano nazwy, format PNG, kanał alfa i `nodpi`;
 - dodano manifest źródło → cel z właścicielem assetów;
 - nie skopiowano assetów bez właściciela w nowej architekturze.
@@ -16,8 +16,8 @@
 Uruchom:
 
 ```bash
-test "$(find android-app/src/main/res/drawable-nodpi -name 'rock_flight_*.png' | wc -l)" -eq 32
-test "$(find android-app/src/main/res/drawable-nodpi -name 'rock_impact_*.png' | wc -l)" -eq 32
+test "$(find android-app/src/main/res/drawable-nodpi -name 'anim_ammunition_rock_flight_*.png' | wc -l)" -eq 32
+test "$(find android-app/src/main/res/drawable-nodpi -name 'anim_ammunition_rock_impact_*.png' | wc -l)" -eq 32
 ./gradlew :android-app:testDebugUnitTest :android-app:assembleDebug --no-build-cache -Dkotlin.incremental=false
 ```
 

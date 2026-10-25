@@ -171,3 +171,13 @@ resolved from the same pre-hit state.
 | **Demolisher** | Contact triggers an explosion damaging Defender and destroying Demolisher. | Contact triggers an explosion killing Sapper within the blast radius. | Contact triggers an explosion affecting both Demolishers and nearby units. | Contact triggers an explosion damaging Boar and destroying Demolisher. | Slingmaster can attack from range; contact with Slingmaster alone does not trigger the explosion. |
 | **Goblin Raging Boar** | Standard contact combat. | Attacks Sapper on contact; Sapper is slowed and takes reduced damage. | Contact triggers Demolisher explosion; Boar is damaged or killed. | Standard contact combat. | Boar advances; Slingmaster attacks from range when visible and in range. |
 | **Goblin Slingmaster** | Attacks from range when Defender is visible and in range; does not need contact. | Attacks Sapper from range with line of sight. | Attacks Demolisher from range; does not trigger it by contact alone. | Attacks Boar from range when visible and in range. | Both use ranged attacks against visible targets. |
+
+## Future proposal: terrain-aware unit attacks
+
+**Status:** proposal, not approved.
+
+**Naturalniejsze ataki jednostek na stromych stokach** — uwzględniać różnicę
+wysokości przeciwników przy określaniu zasięgu i rozpoczęcia ataku, a gdy
+jest zbyt duża, pozwolić jednostce podejść po terenie do czytelniejszej
+pozycji starcia. Zachować zakotwiczenie stóp do terenu; rozważyć efekty
+trafienia przy celu i osobne animacje ataku pod górę/w dół.

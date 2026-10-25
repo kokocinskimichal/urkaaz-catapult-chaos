@@ -13,10 +13,10 @@ class FireRainAnimationAssetsTest {
         val drawableDirectory = File("src/main/res/drawable-nodpi")
         assertTrue("Drawable directory is missing", drawableDirectory.isDirectory)
         val phases = listOf(
-            "fire_rain_flight" to 24,
-            "fire_rain_split_flash" to 12,
-            "fire_rain_fragment_flight" to 24,
-            "fire_rain_field" to 24,
+            "anim_ammunition_fire_rain_flight" to 24,
+            "anim_ammunition_fire_rain_split_flash" to 12,
+            "anim_ammunition_fire_rain_fragment_flight" to 24,
+            "anim_ammunition_fire_rain_field" to 24,
         )
 
         phases.forEach { (prefix, frameCount) ->
@@ -27,7 +27,7 @@ class FireRainAnimationAssetsTest {
 
             assertEquals("$prefix frame count", frameCount, files.size)
             files.forEachIndexed { index, file ->
-                assertEquals("$prefix frame index", "${prefix}_%02d.png".format(index), file.name)
+                assertEquals("$prefix frame index", "${prefix}_%03d.png".format(index), file.name)
                 val image = requireNotNull(ImageIO.read(file)) {
                     "$prefix frame $index is not a PNG"
                 }
@@ -41,7 +41,7 @@ class FireRainAnimationAssetsTest {
     @Test
     fun fireFieldSequenceEndsWithACompletelyTransparentFrame() {
         val lastFrame = File(
-            "src/main/res/drawable-nodpi/fire_rain_field_23.png",
+            "src/main/res/drawable-nodpi/anim_ammunition_fire_rain_field_023.png",
         )
         val image = requireNotNull(ImageIO.read(lastFrame)) {
             "Final fire-field frame is not a PNG"
@@ -56,9 +56,9 @@ class FireRainAnimationAssetsTest {
 
     @Test
     fun visibleFireFieldFootprintMatchesTheRendererGroundAnchor() {
-        listOf("00", "12").forEach { frame ->
+        listOf("000", "012").forEach { frame ->
             val image = requireNotNull(
-                ImageIO.read(File("src/main/res/drawable-nodpi/fire_rain_field_$frame.png")),
+                ImageIO.read(File("src/main/res/drawable-nodpi/anim_ammunition_fire_rain_field_$frame.png")),
             )
             var minX = image.width
             var maxX = -1

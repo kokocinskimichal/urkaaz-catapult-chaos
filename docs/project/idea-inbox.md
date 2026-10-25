@@ -10,4 +10,4 @@ treść i status zostały zachowane w miejscu docelowym.
 
 ## Do uporządkowania
 
-Brak zapisanych pomysłów.
+Brak pomysłów do przeniesienia.
