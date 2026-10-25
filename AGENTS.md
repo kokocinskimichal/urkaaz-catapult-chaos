@@ -17,6 +17,7 @@ do bieżącego zadania według [indeksu dokumentów kontekstu](docs/agent-contex
 - [Architektura definicji poziomów](docs/architecture/level-definition-architecture.md)
 - [Mapa projektu i przepływów](docs/architecture/project-map.md)
 - [Struktura projektu](docs/architecture/project-structure.md)
+- [Architektura Urkaaaz Studio (propozycja)](docs/architecture/studio-architecture.md)
 
 ### Stan i wiedza projektu
 

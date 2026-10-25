@@ -4,6 +4,14 @@
 
 ### Added
 
+- Added the proposed Urkaaaz Studio architecture
+  (`docs/architecture/studio-architecture.md`): tabbed local tool, local
+  backend with safe repository writes, unified asset index, animation
+  visualizer and `map-editor-web` migration plan.
+- Implemented Studio step 1 (`studio/`): loopback-only Node server with
+  `GET /api/health` and a React/Vite tabbed shell (Maps, Animations
+  placeholders), with Vitest coverage for the server and web client.
+
 - Added `/loadContext` and a curated Markdown index for loading the core
   project context and task-specific documentation in one command.
 - Implemented HASTE for deployed allied units: a 15-second 2× movement-speed

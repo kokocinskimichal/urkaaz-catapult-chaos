@@ -860,6 +860,20 @@ git diff --check
 
 The repository's intended development branch is `develop`.
 
+## Urkaaaz Studio
+
+`studio/` is a local developer tool (npm workspaces `server` + `web`), separate
+from the game modules; the plan lives in
+`docs/architecture/studio-architecture.md`. Step 1 (skeleton) is implemented:
+a dependency-free Node server (`node src/main.ts`, loopback-only, rejects
+non-loopback `Host` headers) exposing `GET /api/health` (version, repo root, git
+branch, working-tree state), and a React/Vite shell with Maps/Animations
+placeholder tabs. API contracts live in `studio/server/src/contracts` and are
+imported by the web app as types via `@studio/contracts`. Studio only reports
+git state and never commits or switches branches. Run it with
+`cd studio && npm run studio`; it is outside `./gradlew test assembleDebug`,
+so validate it with `npm test && npm run lint` in `studio/`.
+
 ## Push workflow
 
 The project slash command `/push` is defined in
