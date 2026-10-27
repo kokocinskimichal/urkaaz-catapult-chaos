@@ -1,3 +1,8 @@
+---
+name: push
+description: Validate and document Urkaaaz changes, commit them, and push develop.
+---
+
 # /push — commit and push Urkaaaz
 
 Use this skill when the user invokes `/push` or explicitly says `wypchnij`.
@@ -88,8 +93,8 @@ Always use the GitHub account `kokocinskimichal`. Before pushing, verify that
 this account is authenticated and make it the active GitHub CLI account:
 
 ```bash
-gh auth switch --user kokocinskimichal
-gh auth status --user kokocinskimichal
+env -u GH_TOKEN gh auth switch --user kokocinskimichal
+env -u GH_TOKEN gh auth status --active --hostname github.com
 ```
 
 If the environment-level Git helper selects another account, override the

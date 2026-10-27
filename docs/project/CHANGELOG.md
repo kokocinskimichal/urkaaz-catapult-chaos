@@ -4,6 +4,8 @@
 
 ### Added
 
+- Added the discoverable `/push` repository command for validation, changelog
+  review, committing and pushing changes to `develop`.
 - Added a small Sapper bomb flight using the existing Siege Bomb frames. The
   presentation follows an arc to the target after release without changing
   simulation damage timing.
