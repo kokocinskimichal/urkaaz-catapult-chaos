@@ -14,6 +14,9 @@
 
 - Extended all 15 Sapper return masks over the head wrap and neutralized the
   added frame regions so BLUE/RED color stays continuous across the cycle.
+- Fixed Demolishers stopping at enemy fortresses without detonating. They now
+  stop at the fortress front face, explode on contact and apply blast falloff
+  against the fortress hitbox for either team.
 
 ### Changed
 

@@ -1140,6 +1140,12 @@ class DeterministicMatchSimulation(
                 } else {
                     null
                 }
+            val demolisherFortressStopX =
+                if (waveMoving && !unit.returningToGarrison && unit.type.detonatesOnContact) {
+                    demolisherFortressStopX(unit.team)
+                } else {
+                    null
+                }
             val direction = kotlin.math.sign(targetX - unit.position.x).let {
                 if (it == 0f) {
                     if (unit.team == Team.BLUE) 1f else -1f
@@ -1290,6 +1296,7 @@ class DeterministicMatchSimulation(
                 alliedStopX,
                 bastionStopX,
                 sapperFortressStopX,
+                demolisherFortressStopX,
             )
             val movementTargetX = if (direction >= 0f) {
                 movementTargets.minOrNull() ?: targetX
@@ -1443,7 +1450,11 @@ class DeterministicMatchSimulation(
                         targetId == currentBlueFortress.id ||
                         targetId == currentRedFortress.id
                     ) {
-                        AttackType.SIEGE_MISSION
+                        if (attacker.type.detonatesOnContact) {
+                            AttackType.CONTACT_EXPLOSIVE
+                        } else {
+                            AttackType.SIEGE_MISSION
+                        }
                     } else if (bastionById(targetId) != null) {
                         if (attacker.type.detonatesOnContact) {
                             AttackType.CONTACT_EXPLOSIVE
@@ -1580,10 +1591,13 @@ class DeterministicMatchSimulation(
                 }
             } else {
                 val enemyFortress = fortress(opposingTeam(attacker.team))
-                attackIntent = if (canAttackFortress(attacker, enemyFortress, current)) {
-                    AttackIntent(attacker.id, enemyFortress.id, AttackType.SIEGE_MISSION)
-                } else {
-                    null
+                attackIntent = when {
+                    attacker.type.detonatesOnContact &&
+                        contactedFortress(attacker, enemyFortress) ->
+                        AttackIntent(attacker.id, enemyFortress.id, AttackType.CONTACT_EXPLOSIVE)
+                    canAttackFortress(attacker, enemyFortress, current) ->
+                        AttackIntent(attacker.id, enemyFortress.id, AttackType.SIEGE_MISSION)
+                    else -> null
                 }
             }
             attackIntent?.let { intent ->
@@ -1683,6 +1697,25 @@ class DeterministicMatchSimulation(
                 if (bastionTarget.isAlive &&
                     bastionTarget.team != attacker.team &&
                     contactedBastion(attacker, bastionTarget)
+                ) {
+                    detonateDemolisher(current, attackerIndex, attacker)
+                } else {
+                    current[attackerIndex] = attacker.copy(
+                        combatState = attacker.combatState.copy(
+                            action = UnitActionState.SEEKING_TARGET,
+                            targetId = null,
+                            attackProgress = 0f,
+                        ),
+                    )
+                }
+                return@forEach
+            }
+            val fortressTarget = listOf(currentBlueFortress, currentRedFortress)
+                .firstOrNull { it.id == intent.targetId }
+            if (intent.type == AttackType.CONTACT_EXPLOSIVE && fortressTarget != null) {
+                if (fortressTarget.isAlive &&
+                    fortressTarget.team != attacker.team &&
+                    contactedFortress(attacker, fortressTarget)
                 ) {
                     detonateDemolisher(current, attackerIndex, attacker)
                 } else {
@@ -2034,7 +2067,12 @@ class DeterministicMatchSimulation(
             )
         }
         if (enemyFortress.intersects(attacker.position, DEMOLISHER_BLAST_RADIUS)) {
-            val distance = attacker.position.distanceTo(enemyFortress.center)
+            val distance = FortressHitboxProfile.rectangles.minOf {
+                it.distanceTo(
+                    attacker.position.x - enemyFortress.center.x,
+                    attacker.position.y - enemyFortress.center.y,
+                )
+            }
             val falloff = (1f - distance / DEMOLISHER_BLAST_RADIUS).coerceAtLeast(0f)
             damageFortress(enemyFortress, (explosionDamage * falloff).toInt().coerceAtLeast(1))
         }
@@ -2169,14 +2207,32 @@ class DeterministicMatchSimulation(
 
     private fun sapperFortressStopX(team: Team): Float {
         val direction = if (team == Team.BLUE) 1f else -1f
-        val frontFaceOffset = if (direction > 0f) {
+        val frontFaceOffset = fortressFrontFaceOffset(team)
+        return fortress(opposingTeam(team)).center.x + frontFaceOffset -
+            direction * SAPPER_FORTRESS_STANDOFF_DISTANCE
+    }
+
+    private fun demolisherFortressStopX(team: Team): Float {
+        val direction = if (team == Team.BLUE) 1f else -1f
+        val frontFaceOffset = fortressFrontFaceOffset(team)
+        return fortress(opposingTeam(team)).center.x + frontFaceOffset -
+            direction * config.unitCollisionRadius
+    }
+
+    private fun contactedFortress(attacker: Unit, target: Fortress): Boolean {
+        val direction = if (attacker.team == Team.BLUE) 1f else -1f
+        val distanceToFront =
+            (target.center.x + fortressFrontFaceOffset(attacker.team) - attacker.position.x) *
+                direction
+        return distanceToFront <= config.unitCollisionRadius
+    }
+
+    private fun fortressFrontFaceOffset(attackingTeam: Team): Float =
+        if (attackingTeam == Team.BLUE) {
             FortressHitboxProfile.rectangles.minOf { it.left }
         } else {
             FortressHitboxProfile.rectangles.maxOf { it.right }
         }
-        return fortress(opposingTeam(team)).center.x + frontFaceOffset -
-            direction * SAPPER_FORTRESS_STANDOFF_DISTANCE
-    }
 
     private fun opposingTeam(team: Team): Team =
         if (team == Team.BLUE) Team.RED else Team.BLUE

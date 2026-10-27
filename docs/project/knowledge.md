@@ -439,6 +439,9 @@ The current match HUD also displays:
    damage the enemy fortress with their bomb before returning toward their own
    fortress. Units attack the enemy fortress when no enemy unit is in contact,
    and fortress damage is emitted through the existing match events.
+   Demolishers stop at the enemy fortress's front hitbox face and detonate
+   there for either team; fortress blast falloff uses distance to the hitbox
+   surface rather than its center.
 - Unit behavior is implemented by dedicated `DefenderUnit`, `SapperUnit`,
    `DemolisherUnit`, `RagingBoarUnit`, and `SlingmasterUnit` classes. Their
    balance values live centrally in `UnitConfigurations.kt`; `UnitFactory`

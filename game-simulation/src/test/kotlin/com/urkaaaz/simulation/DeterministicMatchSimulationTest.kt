@@ -425,6 +425,92 @@ class DeterministicMatchSimulationTest {
     }
 
     @Test
+    fun demolisherDetonatesOnEnemyFortressContactForBothTeams() {
+        Team.entries.forEach { team ->
+            val simulation = DeterministicMatchSimulation(
+                MatchId("demolisher-fortress-${team.name.lowercase()}"),
+                SimulationConfig(
+                    bounds = WorldBounds(width = 4_800f, height = 600f),
+                    combatRandomSeed = 23L,
+                ),
+            )
+            simulation.start()
+            val enemyTeam = if (team == Team.BLUE) Team.RED else Team.BLUE
+            val enemyFortress = simulation.snapshot().fortresses
+                .single { it.team == enemyTeam }
+            val fortressCenterX = requireNotNull(enemyFortress.x)
+            val initialHealth = enemyFortress.health
+            val deployed = simulation.deployUnit(UnitFactory.demolisher(), team)
+            simulation.sendWave(team)
+
+            val events = mutableListOf<MatchEvent>()
+            var previousX = simulation.snapshot().units.single { it.entityId == deployed.unitId }.x
+            for (step in 0 until 1_200) {
+                events += simulation.advance(50L)
+                val unit = simulation.snapshot().units.firstOrNull {
+                    it.entityId == deployed.unitId
+                }
+                if (unit != null) {
+                    assertTrue(
+                        if (team == Team.BLUE) unit.x >= previousX else unit.x <= previousX,
+                        "$team Demolisher reversed direction at x=${unit.x}",
+                    )
+                    previousX = unit.x
+                }
+                if (events.any {
+                        it is MatchEvent.ExplosionTriggered && it.sourceId == deployed.unitId
+                    }
+                ) {
+                    break
+                }
+                if (simulation.snapshot().status == MatchStatus.FINISHED) break
+            }
+
+            assertTrue(
+                events.filterIsInstance<MatchEvent.AttackStarted>().any {
+                    it.targetId == enemyFortress.entityId &&
+                        it.attackType == "CONTACT_EXPLOSIVE"
+                },
+                "$team Demolisher should reach and attack the enemy fortress; " +
+                    "unit=${simulation.snapshot().units.firstOrNull { it.entityId == deployed.unitId }}; " +
+                    "attacks=${events.filterIsInstance<MatchEvent.AttackStarted>()}",
+            )
+            assertTrue(
+                events.filterIsInstance<MatchEvent.ExplosionTriggered>()
+                    .any { it.sourceId == deployed.unitId },
+                "$team Demolisher should detonate at the enemy fortress",
+            )
+            val explosion = events.filterIsInstance<MatchEvent.ExplosionTriggered>()
+                .single { it.sourceId == deployed.unitId }
+            val direction = if (team == Team.BLUE) 1f else -1f
+            val frontFaceOffset = if (direction > 0f) {
+                FortressHitboxProfile.rectangles.minOf { it.left }
+            } else {
+                FortressHitboxProfile.rectangles.maxOf { it.right }
+            }
+            val distanceToFront = (
+                fortressCenterX + frontFaceOffset - explosion.x
+                ) * direction
+            assertEquals(
+                WorldScale.UNIT_COLLISION_RADIUS,
+                distanceToFront,
+                1f,
+                "$team Demolisher should stop at the fortress front face",
+            )
+            assertTrue(
+                initialHealth - simulation.snapshot().fortresses
+                    .single { it.team == enemyTeam }.health >= 150,
+                "$team Demolisher explosion should damage the fortress footprint",
+            )
+            assertTrue(
+                events.filterIsInstance<MatchEvent.UnitDefeated>()
+                    .any { it.unitId == deployed.unitId },
+                "$team Demolisher should be consumed by its explosion",
+            )
+        }
+    }
+
+    @Test
     fun snapshotExposesFortressWorldPositionsAndDefaultFoundation() {
         val simulation = DeterministicMatchSimulation(
             MatchId("fortress-render-state"),
