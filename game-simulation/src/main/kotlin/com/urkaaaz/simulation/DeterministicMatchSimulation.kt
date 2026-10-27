@@ -5,6 +5,7 @@ import com.urkaaaz.contracts.CatapultPresentationContract
 import com.urkaaaz.contracts.ActiveSpellSnapshot
 import com.urkaaaz.contracts.EntityId
 import com.urkaaaz.contracts.EventId
+import com.urkaaaz.contracts.FortressHitboxProfile
 import com.urkaaaz.contracts.FortressSnapshot
 import com.urkaaaz.contracts.FortressShieldGeometry
 import com.urkaaaz.contracts.RunicBastionGeometry
@@ -1133,6 +1134,12 @@ class DeterministicMatchSimulation(
                     ),
                 )
             }
+            val sapperFortressStopX =
+                if (waveMoving && !unit.returningToGarrison && unit.type is SapperUnit) {
+                    sapperFortressStopX(unit.team)
+                } else {
+                    null
+                }
             val direction = kotlin.math.sign(targetX - unit.position.x).let {
                 if (it == 0f) {
                     if (unit.team == Team.BLUE) 1f else -1f
@@ -1282,6 +1289,7 @@ class DeterministicMatchSimulation(
                 combatStopX,
                 alliedStopX,
                 bastionStopX,
+                sapperFortressStopX,
             )
             val movementTargetX = if (direction >= 0f) {
                 movementTargets.minOrNull() ?: targetX
@@ -1848,6 +1856,18 @@ class DeterministicMatchSimulation(
         target: Fortress,
         current: List<Unit>,
     ): Boolean {
+        if (attacker.type is SapperUnit) {
+            val direction = if (attacker.team == Team.BLUE) 1f else -1f
+            val faceOffset = if (direction > 0f) {
+                FortressHitboxProfile.rectangles.minOf { it.left }
+            } else {
+                FortressHitboxProfile.rectangles.maxOf { it.right }
+            }
+            val distanceToFront = (
+                target.center.x + faceOffset - attacker.position.x
+                ) * direction
+            return distanceToFront <= SAPPER_FORTRESS_STANDOFF_DISTANCE
+        }
         val formationRank = current
             .filter {
                 it.team == attacker.team &&
@@ -2145,6 +2165,17 @@ class DeterministicMatchSimulation(
     private fun fortressAttackX(team: Team): Float {
         val fortress = fortress(team)
         return fortress.center.x + if (team == Team.BLUE) 60f else -60f
+    }
+
+    private fun sapperFortressStopX(team: Team): Float {
+        val direction = if (team == Team.BLUE) 1f else -1f
+        val frontFaceOffset = if (direction > 0f) {
+            FortressHitboxProfile.rectangles.minOf { it.left }
+        } else {
+            FortressHitboxProfile.rectangles.maxOf { it.right }
+        }
+        return fortress(opposingTeam(team)).center.x + frontFaceOffset -
+            direction * SAPPER_FORTRESS_STANDOFF_DISTANCE
     }
 
     private fun opposingTeam(team: Team): Team =
@@ -2776,6 +2807,7 @@ class DeterministicMatchSimulation(
         private const val NEW_UNIT_REAR_OFFSET = 20f
         private const val UNIT_INTERACTION_RANGE = 260f
         private const val FORTRESS_ATTACK_RANGE = 82f
+        internal const val SAPPER_FORTRESS_STANDOFF_DISTANCE = 200f
         private const val DEMOLISHER_BLAST_RADIUS = 260f
         private const val DEMOLISHER_DAMAGE = 300
         private const val DEATH_ANIMATION_SECONDS = 0.8f

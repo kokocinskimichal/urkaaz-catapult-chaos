@@ -255,6 +255,7 @@ class BattlefieldAssetCatalog(private val context: Context) {
         return unitAnimationCache.getOrPut(cacheKey) {
             if (attacking) {
                 val prefix = when (unitType) {
+                    "SAPPER" -> "anim_character_sapper_attack_${team}"
                     "DEFENDER" -> "anim_character_defender_attack_${team}"
                     "RAGING_BOAR" -> "anim_character_raging_boar_attack_${team}"
                     else -> ""
@@ -267,12 +268,24 @@ class BattlefieldAssetCatalog(private val context: Context) {
                         team,
                         side,
                     )
+                    unitType == "SAPPER" -> loadTeamTextureAnimationFrames(
+                        "sapper",
+                        "attack",
+                        team,
+                        side,
+                    )
                     else -> loadThreeDigitAnimationFrames(prefix)
                 }
             } else if (!moving) {
                 when (unitType) {
                     "DEFENDER" -> loadTeamTextureAnimationFrames(
                         "defender",
+                        "idle",
+                        team,
+                        side,
+                    )
+                    "SAPPER" -> loadTeamTextureAnimationFrames(
+                        "sapper",
                         "idle",
                         team,
                         side,
@@ -301,6 +314,8 @@ class BattlefieldAssetCatalog(private val context: Context) {
                     loadTeamTextureAnimationFrames("defender", "move", team, side)
                 } else if (unitType == "DEMOLISHER") {
                     loadTeamTextureAnimationFrames("demolisher", "move", team, side)
+                } else if (unitType == "SAPPER") {
+                    loadTeamTextureAnimationFrames("sapper", "move", team, side)
                 } else {
                     loadThreeDigitAnimationFrames(prefix)
                 }
@@ -331,6 +346,25 @@ class BattlefieldAssetCatalog(private val context: Context) {
                     side,
                 )
                 else -> emptyList()
+            }
+        }
+    }
+
+    fun sapperTurnAnimationFrames(teamLabel: String): List<Bitmap> =
+        sapperAnimationFrames("turn", teamLabel)
+
+    fun sapperReturnAnimationFrames(teamLabel: String): List<Bitmap> =
+        sapperAnimationFrames("return", teamLabel)
+
+    private fun sapperAnimationFrames(animation: String, teamLabel: String): List<Bitmap> {
+        val side = if (teamLabel == "BLUE") "left" else "right"
+        val team = if (teamLabel == "BLUE") "blue" else "red"
+        return unitAnimationCache.getOrPut("SAPPER:$animation:$side") {
+            loadTeamTextureAnimationFrames("sapper", animation, team, side).also { frames ->
+                check(frames.size == SAPPER_RETURN_FRAME_COUNT) {
+                    "Sapper $animation animation has ${frames.size} frames; " +
+                        "expected $SAPPER_RETURN_FRAME_COUNT"
+                }
             }
         }
     }
@@ -650,6 +684,7 @@ class BattlefieldAssetCatalog(private val context: Context) {
         }
 
     private companion object {
+        const val SAPPER_RETURN_FRAME_COUNT = 15
         const val ROCK_IMPACT_BREAKUP_FRAME = 9
         const val FIRE_RAIN_FRAME_WIDTH = 512
         const val FIRE_RAIN_FRAME_HEIGHT = 512

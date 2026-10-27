@@ -110,15 +110,37 @@ internal object TeamTexturePixelTransform {
                     (originalRed * 299 + originalGreen * 587 + originalBlue * 114) / 1000f / 255f
                 val lighting = (0.5f + luminance).coerceIn(0.45f, 1.2f)
                 val fabric = texturePixels[(y % textureHeight) * textureWidth + x % textureWidth]
-                val red = blend(originalRed, (fabric ushr 16 and 0xff) * lighting, coverage)
-                val green = blend(originalGreen, (fabric ushr 8 and 0xff) * lighting, coverage)
-                val blue = blend(originalBlue, (fabric and 0xff) * lighting, coverage)
+                val fabricRed = fabric ushr 16 and 0xff
+                val fabricGreen = fabric ushr 8 and 0xff
+                val fabricBlue = fabric and 0xff
+                val fabricLuminance =
+                    (fabricRed * 299 + fabricGreen * 587 + fabricBlue * 114) / 1000f
+                val red = blend(
+                    originalRed,
+                    desaturate(fabricRed, fabricLuminance) * lighting,
+                    coverage,
+                )
+                val green = blend(
+                    originalGreen,
+                    desaturate(fabricGreen, fabricLuminance) * lighting,
+                    coverage,
+                )
+                val blue = blend(
+                    originalBlue,
+                    desaturate(fabricBlue, fabricLuminance) * lighting,
+                    coverage,
+                )
                 output[index] = (originalAlpha shl 24) or (red shl 16) or (green shl 8) or blue
             }
         }
         return output
     }
 
+    private fun desaturate(channel: Int, luminance: Float): Float =
+        luminance + (channel - luminance) * TEAM_TEXTURE_SATURATION
+
     private fun blend(original: Int, textured: Float, coverage: Float): Int =
         (original * (1f - coverage) + textured * coverage).roundToInt().coerceIn(0, 255)
+
+    internal const val TEAM_TEXTURE_SATURATION = 0.8f
 }

@@ -22,7 +22,7 @@ class TeamTexturePixelTransformTest {
     }
 
     @Test
-    fun appliesTiledTextureOnlyThroughMaskAndPreservesAlphaAndShading() {
+    fun desaturatesTiledTextureOnlyThroughMaskAndPreservesAlphaAndShading() {
         val source = intArrayOf(
             0xff204080.toInt(),
             0xff204080.toInt(),
@@ -43,11 +43,26 @@ class TeamTexturePixelTransformTest {
         )
 
         assertNotEquals(source[0], result[0])
-        // Fully covered pixel must equal the lit texture colour (0xc0 * lighting), not an overflowed blend.
         val luminance = (0x20 * 299 + 0x40 * 587 + 0x80 * 114) / 1000f / 255f
         val lighting = (0.5f + luminance).coerceIn(0.45f, 1.2f)
-        assertEquals((0xc0 * lighting).toDouble(), (result[0] ushr 16 and 0xff).toDouble(), 1.0)
-        assertEquals((0x30 * lighting).toDouble(), (result[0] and 0xff).toDouble(), 1.0)
+        val fabricLuminance = (0xc0 * 299 + 0x30 * 587 + 0x30 * 114) / 1000f
+        fun toned(channel: Int) = fabricLuminance +
+            (channel - fabricLuminance) * TeamTexturePixelTransform.TEAM_TEXTURE_SATURATION
+        assertEquals(
+            (toned(0xc0) * lighting).toDouble(),
+            (result[0] ushr 16 and 0xff).toDouble(),
+            1.0,
+        )
+        assertEquals(
+            (toned(0x30) * lighting).toDouble(),
+            (result[0] ushr 8 and 0xff).toDouble(),
+            1.0,
+        )
+        assertEquals(
+            (toned(0x30) * lighting).toDouble(),
+            (result[0] and 0xff).toDouble(),
+            1.0,
+        )
         assertTrue((result[0] ushr 16 and 0xff) > 100)
         assertTrue((result[0] ushr 16 and 0xff) > (result[0] ushr 8 and 0xff) * 2)
         assertEquals(source[1], result[1])

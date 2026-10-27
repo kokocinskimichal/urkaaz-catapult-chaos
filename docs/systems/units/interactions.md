@@ -14,13 +14,19 @@ of which team owns the row or column unit.
   interception window without making the Sapper unable to reach the fortress.
   It can also take damage from catapult projectiles, spells and area effects.
 - The Sapper travels to an enemy fortress or active Runic Bastion, attacks from
-  the appropriate stand-off distance, consumes its held bomb, then returns to
-  its own fortress using normal movement in the opposite direction. After
-  returning, it can begin another bomb run.
+  its target's stand-off distance, consumes its held bomb, then returns to its
+  own fortress using normal movement in the opposite direction. Before an
+  enemy fortress, it stops 200 world units beyond the front of the fortress
+  hitbox rather than entering the fortress footprint. After returning, it can
+  begin another bomb run.
 - The Sapper's bomb deals medium damage to the primary target and half that
   damage to units in the target fortress's garrison. Throwing consumes the bomb
-  and the Sapper returns immediately; reaching its own gate refills the bomb
-  and restores the Sapper to full health.
+  and the Sapper returns immediately. Its presentation plays one turn toward
+  its fortress, then loops a bomb-less, cheerful light jog with only a subtle
+  spring in each step; simulation movement remains authoritative. A small
+  world-space bomb flight is triggered by the held-bomb transition and is
+  presentation-only; it does not change damage timing. Reaching its own gate
+  refills the bomb and restores the Sapper to full health.
 - **Demolisher:** remains a slow, one-use suicide unit. It detonates on contact
   with an enemy Defender, Goblin on a Raging Boar, another Demolisher, a
   fortress, a Runic Bastion or a future obstacle. Its explosion deals 300
@@ -32,14 +38,14 @@ of which team owns the row or column unit.
   the existing explosion rules.
 - Mixed-unit formations are intentionally deferred and are not part of this
   decision.
-- Returning Sapper movement uses a mirrored version of the existing run
-  animation. A future animation variant should show the Sapper without its
-  bomb after throwing and while returning; the gameplay state is implemented,
-  but the bomb-less artwork is not yet available.
+- Returning Sapper animation playback is presentation-only and keyed to its
+  existing `RETURNING` action state. The turn plays once before the low-bounce
+  jog cycle; the loop keeps a stable gameplay anchor, and RED uses the existing
+  mirrored neutral-frame and team-texture pipeline.
 
 These rules are implemented for the current unit roster, including Runic
-Bastion targeting. Interactions with future obstacle types and the bomb-less
-artwork remain separate follow-up work.
+Bastion targeting. Interactions with future obstacle types remain separate
+follow-up work.
 
 ## Attack types
 

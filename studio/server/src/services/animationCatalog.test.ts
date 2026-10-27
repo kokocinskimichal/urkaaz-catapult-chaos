@@ -12,11 +12,11 @@ import { resolveRepoRoot } from "./repoRoot.ts";
 
 const config: AnimationConfig = parseAnimationConfig({
   targets: {
-    character: ["defender", "demolisher", "raging_boar", "slingmaster"],
+    character: ["defender", "demolisher", "raging_boar", "sapper", "slingmaster"],
     spell: ["fortress_shield", "haste"],
     ammunition: ["fire_rain", "rock"],
   },
-  teamTextureTargets: ["defender", "demolisher"],
+  teamTextureTargets: ["defender", "demolisher", "sapper"],
   withoutLoader: ["anim_ammunition_fire_rain_impact"],
 });
 
@@ -53,6 +53,41 @@ describe("buildAnimationCatalog", () => {
       target: "demolisher",
       type: "idle",
       variant: null,
+      supportsTeamTexture: true,
+    });
+    expect(sequenceOf("anim_character_sapper_idle", 30)).toMatchObject({
+      target: "sapper",
+      type: "idle",
+      variant: null,
+      frameIndices: Array.from({ length: 30 }, (_, index) => index),
+      supportsTeamTexture: true,
+    });
+    expect(sequenceOf("anim_character_sapper_move", 15)).toMatchObject({
+      target: "sapper",
+      type: "move",
+      variant: null,
+      frameIndices: Array.from({ length: 15 }, (_, index) => index),
+      supportsTeamTexture: true,
+    });
+    expect(sequenceOf("anim_character_sapper_attack", 15)).toMatchObject({
+      target: "sapper",
+      type: "attack",
+      variant: null,
+      frameIndices: Array.from({ length: 15 }, (_, index) => index),
+      supportsTeamTexture: true,
+    });
+    expect(sequenceOf("anim_character_sapper_turn", 15)).toMatchObject({
+      target: "sapper",
+      type: "turn",
+      variant: null,
+      frameIndices: Array.from({ length: 15 }, (_, index) => index),
+      supportsTeamTexture: true,
+    });
+    expect(sequenceOf("anim_character_sapper_return", 15)).toMatchObject({
+      target: "sapper",
+      type: "return",
+      variant: null,
+      frameIndices: Array.from({ length: 15 }, (_, index) => index),
       supportsTeamTexture: true,
     });
     expect(sequenceOf("anim_character_slingmaster_move")).toMatchObject({
@@ -126,6 +161,18 @@ describe("animationFramePath", () => {
     expect(teamAnimationMaskPath("/repo", "anim_character_demolisher_move", 7)).toBe(
       "/repo/android-app/src/main/assets/animations/demolisher/masks/move/007.png",
     );
+    expect(teamAnimationMaskPath("/repo", "anim_character_sapper_move", 7)).toBe(
+      "/repo/android-app/src/main/assets/animations/sapper/masks/move/007.png",
+    );
+    expect(teamAnimationMaskPath("/repo", "anim_character_sapper_attack", 7)).toBe(
+      "/repo/android-app/src/main/assets/animations/sapper/masks/attack/007.png",
+    );
+    expect(teamAnimationMaskPath("/repo", "anim_character_sapper_turn", 7)).toBe(
+      "/repo/android-app/src/main/assets/animations/sapper/masks/turn/007.png",
+    );
+    expect(teamAnimationMaskPath("/repo", "anim_character_sapper_return", 7)).toBe(
+      "/repo/android-app/src/main/assets/animations/sapper/masks/return/007.png",
+    );
     expect(teamAnimationMaskPath("/repo", "anim_character_../../secret_idle", 0)).toBeNull();
     expect(teamAnimationMaskPath("/repo", "anim_character_demolisher_idle", 1000)).toBeNull();
   });
@@ -138,6 +185,9 @@ describe("teamTexturePath", () => {
       "/android-app/src/main/assets/animations/defender/",
     );
     expect(await teamTexturePath(root, "demolisher", "red")).toContain(
+      "/android-app/src/main/assets/animations/defender/",
+    );
+    expect(await teamTexturePath(root, "sapper", "blue")).toContain(
       "/android-app/src/main/assets/animations/defender/",
     );
     expect(await teamTexturePath(root, "../secret", "blue")).toBeNull();
@@ -156,6 +206,21 @@ describe("repository animation catalog", () => {
       supportsTeamTexture: true,
       variant: null,
       frameIndices: Array.from({ length: 48 }, (_, index) => index),
+    });
+    expect(catalog.sequences.find(sequence => sequence.id === "anim_character_sapper_idle")).toMatchObject({
+      supportsTeamTexture: true,
+      variant: null,
+      frameIndices: Array.from({ length: 30 }, (_, index) => index),
+    });
+    expect(catalog.sequences.find(sequence => sequence.id === "anim_character_sapper_move")).toMatchObject({
+      supportsTeamTexture: true,
+      variant: null,
+      frameIndices: Array.from({ length: 15 }, (_, index) => index),
+    });
+    expect(catalog.sequences.find(sequence => sequence.id === "anim_character_sapper_attack")).toMatchObject({
+      supportsTeamTexture: true,
+      variant: null,
+      frameIndices: Array.from({ length: 15 }, (_, index) => index),
     });
   });
 });

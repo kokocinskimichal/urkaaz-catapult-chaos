@@ -38,11 +38,14 @@ class BattlefieldRenderer(
         activeImpact: ImpactRenderState?,
         animationFrame: Int,
         deathAnimationClock: UnitDeathAnimationClock,
+        sapperReturnAnimationClock: SapperReturnAnimationClock,
+        sapperMoveAnimationClock: SapperMoveAnimationClock,
         impactFrame: Int,
         fortressShieldHitAnimation: FortressShieldHitAnimationFrame?,
         runicBastionPresentation: RunicBastionPresentationFrame,
         fireRainPresentation: FireRainPresentationFrame,
         plagueCauldronPresentation: PlagueCauldronPresentationFrame,
+        sapperBombFlights: List<SapperBombFlightFrame>,
         isAiming: Boolean,
         viewportWidth: Float,
         viewportHeight: Float,
@@ -269,6 +272,12 @@ class BattlefieldRenderer(
                 projectileRenderSize,
             )
         }
+        drawSapperBombFlights(
+            canvas = canvas,
+            flights = sapperBombFlights,
+            viewportWidth = viewportWidth,
+            viewportHeight = viewportHeight,
+        )
         drawFireRainSplitFlashes(
             canvas = canvas,
             splitFlashes = fireRainPresentation.splitFlashes,
@@ -283,6 +292,8 @@ class BattlefieldRenderer(
             groundTop,
             animationFrame,
             deathAnimationClock,
+            sapperReturnAnimationClock,
+            sapperMoveAnimationClock,
         )
         drawPlagueCauldronClouds(
             canvas = canvas,
@@ -924,6 +935,8 @@ class BattlefieldRenderer(
         groundTop: Float,
         animationFrame: Int,
         deathAnimationClock: UnitDeathAnimationClock,
+        sapperReturnAnimationClock: SapperReturnAnimationClock,
+        sapperMoveAnimationClock: SapperMoveAnimationClock,
     ) {
         val unitPaint = Paint(Paint.ANTI_ALIAS_FLAG)
         val worldToViewportScale = viewportWidth / WORLD_WIDTH
@@ -942,13 +955,40 @@ class BattlefieldRenderer(
                         !unit.moving &&
                         (unit.attackCycleId > 0 || unit.attackGroupId != null)
                     )
+            val sapperReturnPosition = if (
+                !deathAnimationPlaying &&
+                unit.unitType == "SAPPER" &&
+                unit.actionState == "RETURNING"
+            ) {
+                val turnFrames = assets.sapperTurnAnimationFrames(unit.teamLabel)
+                val returnFrames = assets.sapperReturnAnimationFrames(unit.teamLabel)
+                sapperReturnAnimationClock.frame(
+                    unit.entityId,
+                    turnFrames.size,
+                    returnFrames.size,
+                )
+            } else {
+                null
+            }
+            val sapperUsesMoveAnimation =
+                sapperReturnPosition == null &&
+                    sapperMoveAnimationClock.shouldUseMoveAnimation(unit, attacking)
+            val sapperReturnFrames = when (sapperReturnPosition?.phase) {
+                SapperReturnAnimationFrame.Phase.TURN ->
+                    assets.sapperTurnAnimationFrames(unit.teamLabel)
+                SapperReturnAnimationFrame.Phase.RETURN ->
+                    assets.sapperReturnAnimationFrames(unit.teamLabel)
+                null -> emptyList()
+            }
             val frames = if (deathAnimationPlaying) {
                 assets.unitDeathAnimationFrames(unit.unitType, unit.teamLabel)
+            } else if (sapperReturnPosition != null) {
+                sapperReturnFrames
             } else {
                 assets.unitAnimationFrames(
                     unit.unitType,
                     unit.teamLabel,
-                    unit.moving,
+                    if (unit.unitType == "SAPPER") sapperUsesMoveAnimation else unit.moving,
                     attacking,
                 )
             }
@@ -957,6 +997,8 @@ class BattlefieldRenderer(
             } else if (deathAnimationPlaying) {
                 deathAnimationClock.frameIndex(unit.entityId, frames.size)
                     ?.let(frames::get)
+            } else if (sapperReturnPosition != null) {
+                frames[sapperReturnPosition.index]
             } else if (attacking) {
                 frames[(unit.attackProgress * frames.size)
                     .toInt()
@@ -984,12 +1026,38 @@ class BattlefieldRenderer(
                     frame != null &&
                         unit.unitType == "DEMOLISHER" &&
                         (unit.teamLabel == "BLUE" || unit.teamLabel == "RED")
+                val usesGeneratedSapperAnimation =
+                    frame != null &&
+                        !deathAnimationPlaying &&
+                        unit.unitType == "SAPPER" &&
+                        (unit.teamLabel == "BLUE" || unit.teamLabel == "RED")
+                val usesGeneratedSapperAttackAnimation =
+                    usesGeneratedSapperAnimation && attacking
+                val usesGeneratedSapperMoveAnimation =
+                    usesGeneratedSapperAnimation && sapperUsesMoveAnimation
+                val usesGeneratedSapperTurnAnimation =
+                    usesGeneratedSapperAnimation &&
+                        sapperReturnPosition?.phase == SapperReturnAnimationFrame.Phase.TURN
+                val usesGeneratedSapperReturnAnimation =
+                    usesGeneratedSapperAnimation &&
+                        sapperReturnPosition?.phase == SapperReturnAnimationFrame.Phase.RETURN
                 val generatedAnimationCanvasScale = when {
                     usesGeneratedDefenderAnimation -> GENERATED_DEFENDER_CANVAS_SCALE
                     usesGeneratedDemolisherAnimation && deathAnimationPlaying ->
                         GENERATED_DEMOLISHER_DEATH_CANVAS_SCALE
                     usesGeneratedDemolisherAnimation ->
                         GENERATED_DEMOLISHER_CANVAS_SCALE
+                    usesGeneratedSapperTurnAnimation ->
+                        sapperTurnCanvasScale(
+                            frameIndex = requireNotNull(sapperReturnPosition).index,
+                            frameCount = sapperReturnFrames.size,
+                        )
+                    usesGeneratedSapperReturnAnimation ->
+                        GENERATED_SAPPER_RETURN_CANVAS_SCALE
+                    usesGeneratedSapperAttackAnimation ->
+                        GENERATED_SAPPER_ATTACK_CANVAS_SCALE
+                    usesGeneratedSapperMoveAnimation -> GENERATED_SAPPER_MOVE_CANVAS_SCALE
+                    usesGeneratedSapperAnimation -> GENERATED_SAPPER_CANVAS_SCALE
                     else -> 1f
                 }
                 val spriteHeightWorld =
@@ -999,6 +1067,15 @@ class BattlefieldRenderer(
                 val generatedAnimationBottomPaddingRatio = when {
                     usesGeneratedDemolisherAnimation ->
                         GENERATED_DEMOLISHER_BOTTOM_PADDING_RATIO
+                    usesGeneratedSapperTurnAnimation ->
+                        GENERATED_SAPPER_TURN_BOTTOM_PADDING_RATIO
+                    usesGeneratedSapperReturnAnimation ->
+                        GENERATED_SAPPER_RETURN_BOTTOM_PADDING_RATIO
+                    usesGeneratedSapperAttackAnimation ->
+                        GENERATED_SAPPER_ATTACK_BOTTOM_PADDING_RATIO
+                    usesGeneratedSapperMoveAnimation ->
+                        GENERATED_SAPPER_MOVE_BOTTOM_PADDING_RATIO
+                    usesGeneratedSapperAnimation -> GENERATED_SAPPER_BOTTOM_PADDING_RATIO
                     !usesGeneratedDefenderAnimation -> 0f
                     defeated ->
                         GENERATED_BLUE_DEFENDER_DEATH_BOTTOM_PADDING_RATIO
@@ -1010,7 +1087,9 @@ class BattlefieldRenderer(
                 val transparentBottomPadding =
                     spriteHeight * generatedAnimationBottomPaddingRatio
                 val healthBarSpriteHeightWorld = if (
-                    usesGeneratedDefenderAnimation || usesGeneratedDemolisherAnimation
+                    usesGeneratedDefenderAnimation ||
+                    usesGeneratedDemolisherAnimation ||
+                    usesGeneratedSapperAnimation
                 ) {
                     baseSpriteHeightWorld
                 } else {
@@ -1057,7 +1136,8 @@ class BattlefieldRenderer(
                     drawSapperBombIndicator(
                         canvas,
                         centerX,
-                        baselineY - spriteHeight - 30f * WorldScale.UNIT_SCALE *
+                        baselineY -
+                            (healthBarSpriteHeightWorld + 30f * WorldScale.UNIT_SCALE) *
                             worldToViewportScale,
                         unit.sapperHasBomb,
                     )
@@ -1186,6 +1266,35 @@ class BattlefieldRenderer(
             setShadowLayer(3f, 1f, 1f, Color.BLACK)
         }
         canvas.drawText(if (hasBomb) "BOMB" else "EMPTY", centerX - 24f, centerY, paint)
+    }
+
+    private fun drawSapperBombFlights(
+        canvas: Canvas,
+        flights: List<SapperBombFlightFrame>,
+        viewportWidth: Float,
+        viewportHeight: Float,
+    ) {
+        if (flights.isEmpty()) return
+        val animation = assets.animationFor(SIEGE_BOMB_AMMUNITION)
+        flights.forEach { flight ->
+            val bitmap = animation.flightFrames.getOrNull(
+                flight.frameIndex % animation.flightFrames.size.coerceAtLeast(1),
+            ) ?: return@forEach
+            val centerX = worldToViewX(flight.x, viewportWidth)
+            val centerY = worldToViewY(flight.y, viewportHeight)
+            val width = worldToViewWidth(SAPPER_BOMB_FLIGHT_RENDER_SIZE_WORLD, viewportWidth)
+            val height = width * bitmap.height.toFloat() / bitmap.width.coerceAtLeast(1)
+            canvas.save()
+            canvas.rotate(flight.rotationDegrees, centerX, centerY)
+            drawTexture(
+                canvas,
+                bitmap,
+                centerX - width / 2f,
+                centerY - height / 2f,
+                width,
+            )
+            canvas.restore()
+        }
     }
 
     private fun drawDebugHitboxes(
@@ -1323,17 +1432,36 @@ class BattlefieldRenderer(
         private const val GENERATED_DEFENDER_CANVAS_SCALE = 2f
         internal const val GENERATED_DEMOLISHER_CANVAS_SCALE = 2f
         internal const val GENERATED_DEMOLISHER_DEATH_CANVAS_SCALE = 2.42f
+        internal const val GENERATED_SAPPER_CANVAS_SCALE = 2f
+        internal const val GENERATED_SAPPER_MOVE_CANVAS_SCALE = 2f
+        internal const val GENERATED_SAPPER_ATTACK_CANVAS_SCALE = 2f
+        internal const val GENERATED_SAPPER_RETURN_CANVAS_SCALE = 2.38f
         private const val GENERATED_DEMOLISHER_BOTTOM_PADDING_RATIO = 75f / 512f
+        internal const val GENERATED_SAPPER_BOTTOM_PADDING_RATIO = 31f / 256f
+        internal const val GENERATED_SAPPER_MOVE_BOTTOM_PADDING_RATIO = 33f / 256f
+        internal const val GENERATED_SAPPER_ATTACK_BOTTOM_PADDING_RATIO = 32f / 256f
+        internal const val GENERATED_SAPPER_TURN_BOTTOM_PADDING_RATIO = 29f / 256f
+        internal const val GENERATED_SAPPER_RETURN_BOTTOM_PADDING_RATIO = 27f / 256f
         private const val GENERATED_BLUE_DEFENDER_IDLE_BOTTOM_PADDING_RATIO = 68f / 512f
         private const val GENERATED_DEFENDER_JOG_BOTTOM_PADDING_RATIO = 76f / 512f
         private const val GENERATED_BLUE_DEFENDER_COMBAT_BOTTOM_PADDING_RATIO = 69f / 512f
         private const val GENERATED_BLUE_DEFENDER_DEATH_BOTTOM_PADDING_RATIO = 70f / 512f
+
+        internal fun sapperTurnCanvasScale(frameIndex: Int, frameCount: Int): Float {
+            require(frameCount > 1) { "Sapper turn animation must contain multiple frames" }
+            val progress = frameIndex.coerceIn(0, frameCount - 1).toFloat() / (frameCount - 1)
+            return GENERATED_SAPPER_ATTACK_CANVAS_SCALE +
+                (GENERATED_SAPPER_RETURN_CANVAS_SCALE -
+                    GENERATED_SAPPER_ATTACK_CANVAS_SCALE) * progress
+        }
         private const val CATAPULT_RENDER_WIDTH = WorldScale.CATAPULT_RENDER_WIDTH
         private const val PROJECTILE_DEBUG_RADIUS = 30f
         private const val DECORATION_RENDER_SIZE = 94f
         private const val DECORATION_GROUND_SINK = 12f
         private const val FIRE_RAIN_AMMUNITION = "FIRE_RAIN"
         private const val PLAGUE_CAULDRON_AMMUNITION = "PLAGUE_CAULDRON"
+        private const val SIEGE_BOMB_AMMUNITION = "SIEGE_BOMB"
+        internal const val SAPPER_BOMB_FLIGHT_RENDER_SIZE_WORLD = 30f
         private const val FIRE_RAIN_FRAGMENT_RENDER_SIZE = 28f
         private const val FIRE_RAIN_SPLIT_FLASH_RENDER_SIZE = 120f
         // Generated frames are mostly transparent; align their visible base to terrain.

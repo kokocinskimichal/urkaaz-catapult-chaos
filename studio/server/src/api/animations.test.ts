@@ -25,6 +25,11 @@ describe("animations API", () => {
     expect(catalog.sequences.some(sequence => sequence.id === "anim_character_defender_move")).toBe(true);
     expect(catalog.sequences.find(sequence => sequence.id === "anim_character_demolisher_idle")?.supportsTeamTexture).toBe(true);
     expect(catalog.sequences.find(sequence => sequence.id === "anim_character_demolisher_death")?.supportsTeamTexture).toBe(true);
+    expect(catalog.sequences.find(sequence => sequence.id === "anim_character_sapper_idle")?.supportsTeamTexture).toBe(true);
+    expect(catalog.sequences.find(sequence => sequence.id === "anim_character_sapper_move")?.supportsTeamTexture).toBe(true);
+    expect(catalog.sequences.find(sequence => sequence.id === "anim_character_sapper_attack")?.supportsTeamTexture).toBe(true);
+    expect(catalog.sequences.find(sequence => sequence.id === "anim_character_sapper_turn")?.supportsTeamTexture).toBe(true);
+    expect(catalog.sequences.find(sequence => sequence.id === "anim_character_sapper_return")?.supportsTeamTexture).toBe(true);
   });
 
   it("serves a frame as PNG", async () => {
@@ -49,10 +54,17 @@ describe("animations API", () => {
       "/api/animations/anim_character_demolisher_idle/masks/0",
       "/api/animations/anim_character_demolisher_move/masks/0",
       "/api/animations/anim_character_demolisher_death/masks/0",
+      "/api/animations/anim_character_sapper_idle/masks/0",
+      "/api/animations/anim_character_sapper_move/masks/0",
+      "/api/animations/anim_character_sapper_attack/masks/0",
+      "/api/animations/anim_character_sapper_turn/masks/0",
+      "/api/animations/anim_character_sapper_return/masks/0",
       "/api/animations/team-textures/defender/blue",
       "/api/animations/team-textures/defender/red",
       "/api/animations/team-textures/demolisher/blue",
       "/api/animations/team-textures/demolisher/red",
+      "/api/animations/team-textures/sapper/blue",
+      "/api/animations/team-textures/sapper/red",
     ]) {
       const response = await fetch(`${base}${path}`);
       expect(response.status).toBe(200);

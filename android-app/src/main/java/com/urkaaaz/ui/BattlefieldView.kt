@@ -86,6 +86,10 @@ class BattlefieldView(context: Context) : View(context) {
     private val deathAnimationClock = UnitDeathAnimationClock()
     private val unitDeathAnimationRetention =
         UnitDeathAnimationRetention(deathAnimationClock)
+    private val sapperReturnAnimationClock = SapperReturnAnimationClock()
+    private val sapperMoveAnimationClock = SapperMoveAnimationClock()
+    private val sapperBombFlightClock = SapperBombFlightClock()
+    private var sapperBombFlights = emptyList<SapperBombFlightFrame>()
     private var activeImpact: ImpactRenderState? = null
     private var lastImpactEventId: String? = null
     private var activeFortressShieldHit: FortressShieldHitRenderState? = null
@@ -165,6 +169,8 @@ class BattlefieldView(context: Context) : View(context) {
             newState.matchGeneration != state.matchGeneration
         ) {
             unitDeathAnimationRetention.reset()
+            sapperReturnAnimationClock.reset()
+            sapperMoveAnimationClock.reset()
             activeImpact = null
             impactFrame = 0
             lastImpactEventId = null
@@ -172,6 +178,9 @@ class BattlefieldView(context: Context) : View(context) {
             fortressShieldHitElapsedRenderFrames = 0
             lastFortressShieldHitEventId = null
         }
+        sapperBombFlights = sapperBombFlightClock.update(presentationState, nowMilliseconds)
+        sapperReturnAnimationClock.advance(newState.units, presentationState.isPaused)
+        sapperMoveAnimationClock.advance(newState.units, presentationState.isPaused)
         state = newState.copy(
             units = unitDeathAnimationRetention.update(
                 units = newState.units,
@@ -236,6 +245,12 @@ class BattlefieldView(context: Context) : View(context) {
             ),
             SystemClock.uptimeMillis(),
         )
+        sapperBombFlights = sapperBombFlightClock.update(
+            state.copy(
+                isPaused = state.isPaused || lifecyclePaused || !isAttachedToWindow,
+            ),
+            SystemClock.uptimeMillis(),
+        )
         invalidate()
     }
 
@@ -250,6 +265,10 @@ class BattlefieldView(context: Context) : View(context) {
             SystemClock.uptimeMillis(),
         )
         runicBastionPresentationFrame = runicBastionPresentationClock.update(
+            state.copy(isPaused = state.isPaused || lifecyclePaused),
+            SystemClock.uptimeMillis(),
+        )
+        sapperBombFlights = sapperBombFlightClock.update(
             state.copy(isPaused = state.isPaused || lifecyclePaused),
             SystemClock.uptimeMillis(),
         )
@@ -269,6 +288,10 @@ class BattlefieldView(context: Context) : View(context) {
             state.copy(isPaused = true),
             SystemClock.uptimeMillis(),
         )
+        sapperBombFlights = sapperBombFlightClock.update(
+            state.copy(isPaused = true),
+            SystemClock.uptimeMillis(),
+        )
         projectileTrails.clear()
         super.onDetachedFromWindow()
     }
@@ -282,6 +305,8 @@ class BattlefieldView(context: Context) : View(context) {
             activeImpact = activeImpact,
             animationFrame = animationFrame,
             deathAnimationClock = deathAnimationClock,
+            sapperReturnAnimationClock = sapperReturnAnimationClock,
+            sapperMoveAnimationClock = sapperMoveAnimationClock,
             impactFrame = impactFrame,
             fortressShieldHitAnimation = activeFortressShieldHit?.let {
                 FortressShieldHitAnimationFrame(
@@ -294,6 +319,7 @@ class BattlefieldView(context: Context) : View(context) {
             runicBastionPresentation = runicBastionPresentationFrame,
             fireRainPresentation = fireRainPresentationFrame,
             plagueCauldronPresentation = plagueCauldronPresentationFrame,
+            sapperBombFlights = sapperBombFlights,
             isAiming = aimController.isDragging,
             viewportWidth = width.toFloat(),
             viewportHeight = height.toFloat(),

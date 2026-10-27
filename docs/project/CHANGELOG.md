@@ -1,5 +1,44 @@
 # Changelog
 
+## 2026-10-27
+
+### Added
+
+- Added a small Sapper bomb flight using the existing Siege Bomb frames. The
+  presentation follows an arc to the target after release without changing
+  simulation damage timing.
+
+### Fixed
+
+- Extended all 15 Sapper return masks over the head wrap and neutralized the
+  added frame regions so BLUE/RED color stays continuous across the cycle.
+
+### Changed
+
+- Reduced the saturation of shared BLUE/RED team textures by 20% for all
+  masked characters, consistently in Android rendering and the Studio preview.
+
+## 2026-10-26
+
+### Changed
+
+- Replaced the Sapper's return animation with a forward-bounding hop cycle.
+  Its takeoff, airborne and landing poses visibly express forward travel while
+  the cycle returns to its starting horizontal position, leaving world
+  movement to the existing simulation. Kept the 15-frame transparent asset
+  pipeline, team masks and BLUE/RED textures.
+- Replaced the high-bounce return with a cheerful light jog. The new loop keeps
+  its vertical motion subtle and preserves the simulation as the sole owner of
+  battlefield movement.
+- Moved the Sapper's fortress attack stop point to 200 world units in front of
+  the enemy fortress hitbox; the strike now occurs before entering its
+  footprint for either team.
+- Matched the Sapper's idle canvas scale to jog and added a brief jog-to-idle
+  transition on arrival, so the Sapper does not stay in jog throughout its
+  initial attack delay.
+- Smoothed the Sapper's attack-to-turn and turn-to-return size transitions by
+  interpolating the turn canvas scale between the neighboring animation scales.
+
 ## 2026-10-25
 
 ### Added
@@ -36,6 +75,20 @@
   the existing team-texture renderer; both teams retain the unit through the
   full death animation. The renderer uses a death-specific canvas scale so the
   character matches the visible size of its 256x256 idle/move animations.
+- Added the Sapper's shared 30-frame, transparent 256x256 idle animation:
+  he tosses and catches his bomb, BLUE/RED appearance is applied through
+  per-frame masks and the existing team fabric textures, and RED mirrors the
+  BLUE-derived neutral frames. Added a matching 15-frame shared 256x256 jog
+  sequence with per-frame garment masks; RED mirrors and uses its team texture.
+  Added a 15-frame overhand bomb-throw attack that ends at release, leaving
+  projectile travel and impact to the existing separate presentation.
+  Idle, jog and attack use state-specific canvas scales and bottom offsets to
+  keep the character size and ground anchor consistent.
+- Added the Sapper's shared 15-frame turn and bomb-less hopping return
+  animations. The turn plays once on entering `RETURNING`, followed by a
+  looping return cycle; the paused, per-unit presentation clock leaves
+  simulation movement unchanged. Studio previews both sequences with team
+  masks and textures.
 - Demolisher death presentation predicts imminent unit contact and starts its
   run-and-dive early, holds before the explosion until simulation-confirmed
   death, and cancels the pre-roll when the predicted contact is no longer

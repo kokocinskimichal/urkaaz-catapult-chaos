@@ -1,6 +1,7 @@
 import type { AnimationSequence } from "@studio/contracts/animations";
 import { useEffect, useRef, useState } from "react";
 import { advancePlayback, frameUrl, stepFrame } from "./model";
+import { desaturateTeamTexture } from "./teamTexture";
 
 type Background = "dark" | "light" | "grid";
 
@@ -202,10 +203,15 @@ function composeAnimationFrame(
       const lighting = Math.max(0.45, Math.min(1.2, 0.5 + luminance));
       const textureIndex =
         ((y % textureCanvas.height) * textureCanvas.width + (x % textureCanvas.width)) * 4;
+      const textureColor: readonly [number, number, number] = showMask
+        ? [255, 30, 70]
+        : desaturateTeamTexture(
+            texturePixels.data[textureIndex],
+            texturePixels.data[textureIndex + 1],
+            texturePixels.data[textureIndex + 2],
+          );
       for (let channel = 0; channel < 3; channel++) {
-        const textured = showMask
-          ? [255, 30, 70][channel]
-          : texturePixels.data[textureIndex + channel] * lighting;
+        const textured = textureColor[channel] * (showMask ? 1 : lighting);
         sourcePixels.data[index + channel] =
           sourcePixels.data[index + channel] * (1 - coverage) + textured * coverage;
       }

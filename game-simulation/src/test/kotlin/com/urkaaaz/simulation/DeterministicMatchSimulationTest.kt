@@ -2,6 +2,7 @@ package com.urkaaaz.simulation
 
 import com.urkaaaz.contracts.CatapultPresentationContract
 import com.urkaaaz.contracts.EntityId
+import com.urkaaaz.contracts.FortressHitboxProfile
 import com.urkaaaz.contracts.MatchEvent
 import com.urkaaaz.contracts.MatchError
 import com.urkaaaz.contracts.MatchId
@@ -28,6 +29,7 @@ import kotlin.math.abs
 import kotlin.test.Test
 import kotlin.test.assertFailsWith
 import kotlin.test.assertEquals
+import kotlin.test.assertFalse
 import kotlin.test.assertNotEquals
 import kotlin.test.assertTrue
 
@@ -1128,7 +1130,10 @@ class DeterministicMatchSimulationTest {
 
     @Test
     fun aFasterAlliedUnitCanOvertakeASlowerUnit() {
-        val simulation = DeterministicMatchSimulation(MatchId("allied-overtake-match"), config)
+        val simulation = DeterministicMatchSimulation(
+            MatchId("allied-overtake-match"),
+            config.copy(bounds = WorldBounds(width = 4_800f, height = 600f)),
+        )
         simulation.start()
         simulation.deployUnit(freeUnit(com.urkaaaz.domain.UnitFactory.defender()), Team.BLUE)
         simulation.deployUnit(freeUnit(com.urkaaaz.domain.UnitFactory.sapper()), Team.BLUE)
@@ -1147,17 +1152,81 @@ class DeterministicMatchSimulationTest {
     }
 
     @Test
-    fun aSapperDamagesTheEnemyFortressAndReturnsWithAnEmptyBombSlot() {
+    fun aSapperDamagesTheEnemyFortressAndReturnsWithARefilledBomb() {
         val simulation = DeterministicMatchSimulation(MatchId("sapper-attack-match"), config)
         simulation.start()
         simulation.deployUnit(com.urkaaaz.domain.UnitFactory.sapper(), Team.BLUE)
         simulation.sendWave(Team.BLUE)
 
-        repeat(45) { simulation.advance(100) }
+        val initialFortressHealth = simulation.snapshot().fortresses
+            .first { it.team == Team.RED }
+            .health
+        var hitObserved = false
+        var returnedWithBomb = false
 
-        val redFortress = simulation.snapshot().fortresses.first { it.team == Team.RED }
-        assertTrue(redFortress.health < redFortress.maxHealth)
-        assertTrue(simulation.snapshot().units.single().moving)
+        for (attempt in 0 until 1_200) {
+            simulation.advance(50)
+            val snapshot = simulation.snapshot()
+            val redFortress = snapshot.fortresses.first { it.team == Team.RED }
+            val sapper = snapshot.units.single { it.unitType == "SAPPER" }
+            if (!hitObserved && redFortress.health < initialFortressHealth) {
+                hitObserved = true
+                assertFalse(sapper.sapperHasBomb)
+            }
+            if (hitObserved && sapper.sapperHasBomb && sapper.actionState == "GARRISONED") {
+                returnedWithBomb = true
+                break
+            }
+        }
+
+        assertTrue(hitObserved, "Sapper should damage the enemy fortress")
+        assertTrue(returnedWithBomb, "Sapper should return and refill its bomb")
+    }
+
+    @Test
+    fun aSapperStopsBeforeTheEnemyFortressForEitherTeam() {
+        Team.entries.forEach { team ->
+            val simulation = DeterministicMatchSimulation(
+                MatchId("sapper-stand-off-${team.name.lowercase()}"),
+                config,
+            )
+            simulation.start()
+            simulation.deployUnit(com.urkaaaz.domain.UnitFactory.sapper(), team)
+            simulation.sendWave(team)
+            val enemyTeam = if (team == Team.BLUE) Team.RED else Team.BLUE
+            val initialFortress = simulation.snapshot().fortresses.first { it.team == enemyTeam }
+            var firstHit: Pair<MatchSnapshot, Float>? = null
+
+            for (attempt in 0 until 600) {
+                if (firstHit != null) break
+                simulation.advance(50)
+                val snapshot = simulation.snapshot()
+                val fortress = snapshot.fortresses.first { it.team == enemyTeam }
+                if (fortress.health < fortress.maxHealth) {
+                    firstHit = snapshot to requireNotNull(initialFortress.x)
+                }
+            }
+
+            assertTrue(firstHit != null, "$team Sapper should damage the enemy fortress")
+            val (snapshot, fortressCenterX) = requireNotNull(firstHit)
+            val sapper = snapshot.units.single { it.unitType == "SAPPER" }
+            val direction = if (team == Team.BLUE) 1f else -1f
+            val frontFaceOffset = if (direction > 0f) {
+                FortressHitboxProfile.rectangles.minOf { it.left }
+            } else {
+                FortressHitboxProfile.rectangles.maxOf { it.right }
+            }
+            val distanceToFront = (
+                fortressCenterX + frontFaceOffset - sapper.x
+                ) * direction
+
+            assertTrue(
+                kotlin.math.abs(
+                    distanceToFront - DeterministicMatchSimulation.SAPPER_FORTRESS_STANDOFF_DISTANCE,
+                ) <= 1f,
+                "$team Sapper attacked $distanceToFront units from the fortress hitbox",
+            )
+        }
     }
 
     @Test

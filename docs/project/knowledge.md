@@ -467,6 +467,10 @@ frame offset so idle and walking animations do not start in sync. The shared
 animation clock uses a long cycle so idle sets with more than 16 frames are
 not truncated to a subset; unit frame playback advances at approximately
 `7.5 FPS` to match the slower legacy feel.
+- Shared BLUE/RED team-texture masks desaturate the fabric texture by 20%
+  toward its original luminance before applying frame lighting. Android
+  rendering and the Studio animation preview use the same transform for
+  every masked character, including Defender, Demolisher and Sapper.
 - Demolisher idle now uses one shared 48-frame transparent 256x256 sequence;
   move uses one shared 60-frame transparent 256x256 sequence. Both use
   `anim_character_demolisher_{idle,move}_NNN`, per-frame team-colour masks and
@@ -476,6 +480,42 @@ not truncated to a subset; unit frame playback advances at approximately
   skin, orange fuse and brown equipment remain unchanged. Original source sets
   are retained under `assets_src/animgen/demolisher/{blue,red}/{idle,jog}/`.
   Rendering retains the 2x canvas scale and `75/512` bottom anchor offset.
+- Sapper idle and movement use shared transparent 256x256 sequences,
+  `anim_character_sapper_idle_NNN` (30 frames) and
+  `anim_character_sapper_move_NNN` (15 frames), plus the 15-frame
+  `anim_character_sapper_attack_NNN` throw. All three use per-frame garment
+  masks and the existing BLUE/RED fabric textures. RED mirrors the
+  BLUE-derived neutral frames. Android renders idle and jog at 2x with their
+  respective `31/256` and `33/256` bottom padding, avoiding a size pop between
+  the states. On arriving at a target, a bomb-carrying Sapper keeps the jog
+  frames for four presentation updates, then returns to idle even if the
+  simulation remains in `MOVING` during the initial attack delay. Attack
+  renders at 2x with `32/256` bottom padding and ends when the bomb leaves his
+  hand; on release a small world-space bomb flight reuses the existing Siege
+  Bomb frames at 30 world units, animating from the Sapper to its fortress or
+  Bastion target over 500 ms. This is presentation-only; direct simulation
+  damage timing and impact resolution remain unchanged.
+  Original AnimGen output is retained under
+  `assets_src/animgen/sapper/blue/{idle,jog,attack}/`.
+- Sapper return presentation uses shared 15-frame 256x256 `turn` and `return`
+  sequences with per-frame garment masks and the existing BLUE/RED team
+  textures. The renderer plays the turn once when the existing `RETURNING`
+  action state begins, then loops the bomb-less cheerful, low-bounce jog;
+  simulation movement remains authoritative. Return masks include the head
+  wrap in all 15 frames, keeping the team color continuous; masked frame pixels
+  are neutralized and each frame covers at least 400 pixels. A per-entity
+  presentation clock pauses
+  with the match and resets when the Sapper leaves `RETURNING` or the match
+  changes. Turn scale interpolates from the attack's 2x to the return's 2.38x
+  across its 15 frames; turn uses `29/256` bottom padding and return uses
+  `27/256`. Original AnimGen output is retained under
+  `assets_src/animgen/sapper/blue/turn/` and
+  `assets_src/animgen/sapper/blue/return-cheerful-jog/`; the previous return
+  generations are retained under `assets_src/animgen/sapper/blue/return/` and
+  `assets_src/animgen/sapper/blue/return-forward-hop/`.
+- The Sapper stops 200 world units beyond an enemy fortress's front hitbox
+  face before throwing its bomb. The approach and attack check share the
+  `FortressHitboxProfile` geometry and apply symmetrically to BLUE and RED.
 - Demolisher death uses one shared 32-frame, transparent 768x432 sequence:
   the first 12 frames preserve the approved run-and-dive motion, followed by a
   20-frame explosion from the powder barrel on his back. Per-frame masks

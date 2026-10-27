@@ -18,4 +18,9 @@ class ProjectileAnimationTest {
         assertEquals(18f, animation.impactRenderSizeAt(8))
         assertEquals(36f, animation.impactRenderSizeAt(9))
     }
+
+    @Test
+    fun sapperBombUsesRequestedWorldSize() {
+        assertEquals(30f, BattlefieldRenderer.SAPPER_BOMB_FLIGHT_RENDER_SIZE_WORLD)
+    }
 }

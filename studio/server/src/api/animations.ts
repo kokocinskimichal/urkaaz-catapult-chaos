@@ -10,7 +10,7 @@ import {
 } from "../services/animationCatalog.ts";
 
 const FRAME_ROUTE = /^\/api\/animations\/([a-z0-9_]+)\/frames\/(\d+)$/;
-const MASK_ROUTE = /^\/api\/animations\/(anim_character_[a-z0-9_]+_(?:idle|move|attack|death))\/masks\/(\d+)$/;
+const MASK_ROUTE = /^\/api\/animations\/(anim_character_[a-z0-9_]+_(?:idle|move|attack|death|turn|return))\/masks\/(\d+)$/;
 const TEXTURE_ROUTE = /^\/api\/animations\/team-textures\/([a-z0-9_]+)\/(blue|red)$/;
 
 /** Returns true when the request path belongs to the animations resource. */

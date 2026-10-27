@@ -124,7 +124,7 @@ export function animationFramePath(repoRoot: string, sequenceId: string, index: 
 }
 
 export function teamAnimationMaskPath(repoRoot: string, sequenceId: string, index: number): string | null {
-  const match = /^anim_character_([a-z0-9_]+)_(idle|move|attack|death)$/.exec(sequenceId);
+  const match = /^anim_character_([a-z0-9_]+)_(idle|move|attack|death|turn|return)$/.exec(sequenceId);
   if (!match || !Number.isInteger(index) || index < 0 || index > 999) return null;
   return join(
     repoRoot,
