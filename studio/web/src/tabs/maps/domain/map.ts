@@ -131,8 +131,8 @@ export function defaultMap(id = "web-map", biome: MapBiome = "green_frontier"): 
     objects: [],
     generationMetadata: {
       seed: 1,
-      generatorVersion: "web",
-      authoringVersion: "map-editor-web/0.1.0",
+      generatorVersion: "studio",
+      authoringVersion: "urkaaz-studio/0.1.0",
     }
   };
 }

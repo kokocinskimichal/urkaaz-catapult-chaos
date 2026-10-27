@@ -2,10 +2,10 @@
 
 ## Cel
 
-Edytor map Urkaaaz jest lokalną aplikacją webową `map-editor-web` opartą na
-React i Vite. Autor edytuje profil terenu, fundamenty i dekoracje oraz importuje
-i eksportuje wersjonowany JSON zgodny z kontraktem map gry. Edytor desktopowy
-Swing został usunięty.
+Edytor map Urkaaaz jest zakładką Maps w lokalnej aplikacji Studio, opartej na
+React i Vite. Autor edytuje profil terenu, fundamenty i dekoracje w JSON zgodnym
+z kontraktem map gry. Edytor desktopowy Swing i osobna aplikacja
+`map-editor-web` zostały usunięte.
 
 Edytor nie jest drugim silnikiem gry. Ma korzystać ze wspólnych kontraktów,
 assetów i walidacji, a logikę gameplayu pozostawić modułom gry.
@@ -15,22 +15,20 @@ assetów i walidacji, a logikę gameplayu pozostawić modułom gry.
 - JSON jest jedynym źródłem prawdy dla definicji map.
 - Każda mapa jest na stałe związana z jednym biomem.
 - Wszystkie mapy mają obecny, kanoniczny wymiar świata.
-- Edytor działa lokalnie w przeglądarce.
-- Teren jest składany z kafelków, ale każdy kafelek ma również dane geometrii.
-- Obowiązuje jedna kanoniczna siatka i stała skala kafelków.
-- Kafelki mają jawne profile krawędzi i można łączyć tylko kompatybilne
-  sąsiedztwa.
-- Najpierw ustala się i wygładza teren, potem zatwierdza geometrię, a dopiero
+- Edytor działa lokalnie w Studio; backend odczytuje i zapisuje mapy repozytorium.
+- Teren jest profilem wysokości próbkowanym w osi X; edycja węzła wygładza
+  sąsiednie próbki bez naruszania chronionych fundamentów.
+- Najpierw ustala się teren i fundamenty, potem blokuje teren, a dopiero
   później dodaje dekoracje.
 - Po rozpoczęciu fazy dekorowania teren jest zablokowany.
 - Obszary krytyczne są chronione przed przypadkową edycją.
-- Eksport JSON jest blokowany przy błędach walidacji.
+- Zapis JSON jest blokowany przy błędach walidacji.
 - Wersje JSON są migrowane przez jawne migratory.
-- Wersja robocza jest zapisywana automatycznie, a eksport finalny jest osobną
-  operacją.
+- Wersja robocza jest zapisywana automatycznie w `localStorage`; zapis mapy do
+  repozytorium jest osobną operacją.
 - Obiekty mają trwałe, unikalne identyfikatory.
-- Na początku assety są odnajdywane przez konwencję nazw plików. Manifest
-  assetów zostanie dodany później.
+- Indeks assetów jest budowany przez Studio API ze źródłowego indeksu terenu
+  oraz zatwierdzonych drawable Androida; pliki są serwowane bez kopiowania.
 - Nazwy assetów są traktowane jako stabilne.
 - Edytor nie waliduje korytarzy ostrzału ani widoczności między fortecami.
 
@@ -39,8 +37,18 @@ assetów i walidacji, a logikę gameplayu pozostawić modułom gry.
 - React i TypeScript;
 - Vite;
 - Canvas 2D do renderowania mapy;
-- lokalny import, eksport i autosave w przeglądarce;
+- Studio API do odczytu i zapisu map oraz lokalny autosave;
 - testy Vitest.
+
+## Zgodność projekcji z renderowaniem meczu
+
+Canvas odwzorowuje osie świata niezależnie na rozmiar viewportu, tak jak
+renderer meczu: `x / 7200 * viewportWidth` oraz
+`y / 4800 * viewportHeight`. Nie należy stosować jednolitego skalowania z
+letterboxingiem, bo zmienia ono proporcje terenu względem widoku gry. Fortece
+mają rozmiar `672 × 504` jednostek świata, a katapulty szerokość `182.4`
+jednostki; ich kotwice i offsety pozostają wspólne z kontraktem prezentacji.
+Dekoracje i relikty zachowują rozmiary ekranowe używane przez renderer gry.
 
 ## Moduły
 
@@ -64,8 +72,8 @@ map-editor-rendering
     Współdzielone renderowanie modelu mapy.
 ```
 
-Webowy edytor wykorzystuje wspólne źródło assetów `game-assets`, udostępniane
-przeglądarce przez skrypt synchronizacji zasobów.
+Edytor wykorzystuje wspólne źródło assetów `game-assets`; Studio udostępnia je
+frontendowi przez dynamiczny indeks i API assetów.
 
 ## Źródło assetów
 
@@ -386,8 +394,9 @@ Migracje muszą mieć testy dla każdej obsługiwanej wersji.
 
 ## Stan implementacji
 
-Webowy edytor znajduje się w `map-editor-web`; instrukcje uruchomienia i opis
-funkcji są w `docs/map-editor/web/README.md`. Edytor korzysta z
-wersjonowanego kontraktu JSON mapy, zapisuje szkice w `localStorage`, oferuje
-edycję profilu terenu i dekoracji oraz udostępnia walidację przed eksportem.
+Edytor znajduje się w `studio/web/src/tabs/maps`, a instrukcje uruchomienia są
+w `docs/map-editor/web/README.md`. Zachowuje wersjonowany kontrakt JSON,
+autosave w `localStorage`, edycję profilu terenu i dekoracji oraz walidację
+TypeScript po stronie frontendu i serwera. `PUT /api/maps/{id}` zapisuje obie
+kopie map tylko wtedy, gdy zgadza się hash stanu odczytanego przez klienta.
 Nie ma osobnego desktopowego interfejsu ani modułu asset-adaptera Kotlin.

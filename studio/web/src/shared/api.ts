@@ -1,5 +1,11 @@
 import type { AnimationCatalogResponse } from "@studio/contracts/animations";
 import type { ApiErrorBody, HealthResponse } from "@studio/contracts/api";
+import type {
+  MapCatalogResponse,
+  MapDocumentResponse,
+  MapSaveRequest,
+  MapValidationResponse,
+} from "@studio/contracts/maps";
 
 export class ApiError extends Error {
   readonly status: number;
@@ -27,6 +33,37 @@ export async function requestJson<T>(path: string, fetcher: Fetcher = fetch, ini
 
 export const fetchHealth = (fetcher?: Fetcher) => requestJson<HealthResponse>("/api/health", fetcher);
 export const fetchAnimationCatalog = (fetcher?: Fetcher) => requestJson<AnimationCatalogResponse>("/api/animations", fetcher);
+export const fetchMaps = (fetcher?: Fetcher) => requestJson<MapCatalogResponse>("/api/maps", fetcher);
+export const fetchMap = (id: string, fetcher?: Fetcher) =>
+  requestJson<MapDocumentResponse>(`/api/maps/${encodeURIComponent(id)}`, fetcher);
+export const saveMap = (
+  id: string,
+  request: MapSaveRequest,
+  fetcher?: Fetcher,
+) => requestJson<MapDocumentResponse>(`/api/maps/${encodeURIComponent(id)}`, fetcher, {
+  method: "PUT",
+  headers: { "content-type": "application/json" },
+  body: JSON.stringify(request),
+});
+export const validateMap = (content: string, fetcher?: Fetcher) =>
+  requestJson<MapValidationResponse>("/api/maps/validate", fetcher, {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({ content }),
+  });
+export async function fetchTerrainAssetIndex(fetcher: Fetcher = fetch): Promise<string> {
+  const response = await fetcher("/api/assets/terrain/index");
+  if (!response.ok) {
+    const body: unknown = await response.json().catch(() => null);
+    throw new ApiError(
+      response.status,
+      isApiErrorBody(body)
+        ? body
+        : { code: "unknown", message: response.statusText, details: [] },
+    );
+  }
+  return response.text();
+}
 
 function isApiErrorBody(value: unknown): value is ApiErrorBody {
   if (typeof value !== "object" || value === null) return false;

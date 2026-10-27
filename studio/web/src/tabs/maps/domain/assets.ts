@@ -1,4 +1,4 @@
-import type { MapBiome } from "./map";
+import type { MapBiome } from "./map.ts";
 
 export type TerrainAssetCategory = "tree" | "rock" | "prop" | "relic" | "detail" | "cap" | "tile" | "soil";
 export type EditorPaletteCategory = "tree" | "rock" | "prop" | "relic";
@@ -47,9 +47,9 @@ const THEME_ASSETS: Record<MapBiome, { assetBiome: string; backgroundBiome: stri
 export function terrainThemeAssetPaths(biome: MapBiome) {
   const theme = THEME_ASSETS[biome];
   return {
-    background: `/assets/terrain/${theme.backgroundBiome}/${theme.background}.png`,
-    soil: `/assets/terrain/${theme.assetBiome}/terrain_${theme.assetBiome}_soil_00.png`,
-    cap: `/assets/terrain/${theme.assetBiome}/terrain_${theme.assetBiome}_cap_00.png`,
+    background: `/api/assets/terrain/${theme.backgroundBiome}/${theme.background}.png`,
+    soil: `/api/assets/terrain/${theme.assetBiome}/terrain_${theme.assetBiome}_soil_00.png`,
+    cap: `/api/assets/terrain/${theme.assetBiome}/terrain_${theme.assetBiome}_cap_00.png`,
   };
 }
 
@@ -74,7 +74,7 @@ export function paletteAssetsForBiome(
         assetKey,
         category,
         label: `${category} ${assetKey.slice(prefix.length).replaceAll("_", " ")}`,
-        thumbnailPath: `/assets/terrain/${assetBiome}/${assetKey}.png`,
+        thumbnailPath: `/api/assets/terrain/${assetBiome}/${assetKey}.png`,
       }));
   }
 
@@ -92,7 +92,7 @@ export function paletteAssetsForBiome(
         assetKey: `relic.${biome}.small.${index}`,
         category: "relic" as const,
         label: match[2].replaceAll("_", " "),
-        thumbnailPath: `/assets/terrain/${assetBiome}/${assetFileKey}.png`,
+        thumbnailPath: `/api/assets/terrain/${assetBiome}/${assetFileKey}.png`,
         relicSize: "SMALL" as const,
       }];
     });
@@ -106,7 +106,7 @@ export function paletteAssetsForBiome(
           assetKey: `relic.shared.medium.${name}`,
           category: "relic" as const,
           label: name.replaceAll("_", " "),
-          thumbnailPath: `/assets/terrain/shared/${assetName}.png`,
+          thumbnailPath: `/api/assets/terrain/shared/${assetName}.png`,
           relicSize: "MEDIUM" as const,
         };
       }),
@@ -137,7 +137,7 @@ export function relicAssetPath(
   const sharedMediumRelic = /^relic\.shared\.medium\.([a-z0-9_]+)$/.exec(assetKey);
   if (sharedMediumRelic) {
     const fileKey = `relic_medium_${sharedMediumRelic[1]}`;
-    return assetKeys.has(fileKey) ? `/assets/terrain/shared/${fileKey}.png` : undefined;
+    return assetKeys.has(fileKey) ? `/api/assets/terrain/shared/${fileKey}.png` : undefined;
   }
   const relic = /^relic\.([a-z_]+)\.small\.(\d+)$/.exec(assetKey);
   if (!relic || relic[1] !== biome) return undefined;
@@ -147,7 +147,7 @@ export function relicAssetPath(
   const category = biome === "copperwood" ? "detail" : "relic";
   const prefix = `terrain_${assetBiome}_${category}_${String(index).padStart(2, "0")}_`;
   const fileKey = [...assetKeys].find(key => key.startsWith(prefix));
-  return fileKey ? `/assets/terrain/${assetBiome}/${fileKey}.png` : undefined;
+  return fileKey ? `/api/assets/terrain/${assetBiome}/${fileKey}.png` : undefined;
 }
 
 export function firstAssetKeyForBiome(
@@ -183,8 +183,8 @@ export function isKnownMapDecoration(
 export function terrainAssetPath(biome: string, assetKey: string): string {
   const assetBiome = assetBiomeForMapBiome(biome);
   if (assetKey.startsWith(`terrain_${assetBiome}_`)) {
-    return `/assets/terrain/${assetBiome}/${assetKey}.png`;
+    return `/api/assets/terrain/${assetBiome}/${assetKey}.png`;
   }
   const category = assetKey.includes("rock") ? "rock" : "tree";
-  return `/assets/terrain/${assetBiome}/terrain_${assetBiome}_${category}_00.png`;
+  return `/api/assets/terrain/${assetBiome}/terrain_${assetBiome}_${category}_00.png`;
 }

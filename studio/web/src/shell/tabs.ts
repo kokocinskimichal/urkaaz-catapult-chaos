@@ -1,6 +1,6 @@
 import type { ComponentType } from "react";
 import { AnimationsTab } from "../tabs/animations/AnimationsTab";
-import { MapsTab } from "../tabs/MapsTab";
+import { MapsTab } from "../tabs/maps/MapsTab";
 
 export interface StudioTab {
   id: string;

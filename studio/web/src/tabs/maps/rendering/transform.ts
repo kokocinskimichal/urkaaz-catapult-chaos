@@ -1,7 +1,29 @@
+import { WORLD_HEIGHT, WORLD_WIDTH } from "../domain/map";
+
 export interface Viewport { zoom:number; panX:number; panY:number }
 export interface ScreenPoint { x:number; y:number }
-export function worldToScreen(x:number,y:number,v:Viewport,w:number,h:number){const scale=Math.min(w/7200,h/4800)*v.zoom;return{x:(x-3600)*scale+w/2+v.panX,y:(y-2400)*scale+h/2+v.panY}}
-export function screenToWorld(x:number,y:number,v:Viewport,w:number,h:number){const scale=Math.min(w/7200,h/4800)*v.zoom;return{x:(x-w/2-v.panX)/scale+3600,y:(y-h/2-v.panY)/scale+2400}}
+
+export function worldWidthToScreen(worldWidth: number, view: Viewport, width: number): number {
+  return worldWidth * width / WORLD_WIDTH * view.zoom;
+}
+
+export function worldHeightToScreen(worldHeight: number, view: Viewport, height: number): number {
+  return worldHeight * height / WORLD_HEIGHT * view.zoom;
+}
+
+export function worldToScreen(x:number,y:number,v:Viewport,w:number,h:number){
+  return {
+    x: worldWidthToScreen(x, v, w) + v.panX,
+    y: worldHeightToScreen(y, v, h) + v.panY,
+  };
+}
+
+export function screenToWorld(x:number,y:number,v:Viewport,w:number,h:number){
+  return {
+    x: (x - v.panX) / (w / WORLD_WIDTH * v.zoom),
+    y: (y - v.panY) / (h / WORLD_HEIGHT * v.zoom),
+  };
+}
 
 export function rotatedRectangleCorners(
   center: ScreenPoint,

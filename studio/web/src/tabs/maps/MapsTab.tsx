@@ -3,20 +3,21 @@ import { decode, encode } from "./format/codec";
 import { paletteAssetsForBiome, parseAssetIndex } from "./domain/assets";
 import {
   defaultMap,
-  EditorDocument,
   MAP_BIOMES,
   maximumTerrainHeightInRange,
-  SampleJson,
   terrainControlPoints,
   WORLD_HEIGHT,
   WORLD_WIDTH,
 } from "./domain/map";
+import type { EditorDocument, SampleJson } from "./domain/map";
 import { applyOperation, validate } from "./domain/operations";
 import { useEditorStore } from "./state/store";
 import {
   MAP_DECORATION_GROUND_SINK,
   mapDecorationAspectRatio,
   mapDecorationRenderSize,
+  mapRelicAspectRatio,
+  mapRelicRenderSize,
   renderMap,
 } from "./rendering/canvas";
 import {
@@ -25,6 +26,7 @@ import {
   transformFromCornerDrag,
   worldToScreen,
 } from "./rendering/transform";
+import { ApiError, fetchMap, fetchMaps, fetchTerrainAssetIndex, saveMap } from "../../shared/api";
 import "./ui/styles.css";
 
 const AUTOSAVE = "urkaaz-map-editor-autosave";
@@ -77,11 +79,12 @@ function findObjectAt(
   view: { zoom: number; panX: number; panY: number },
   width: number,
   height: number,
+  assetKeys?: ReadonlySet<string>,
 ): EditorDocument["map"]["objects"][number] | undefined {
   const relics = document.map.objects.filter(object => object.relicSize != null).reverse();
   const decorations = document.map.objects.filter(object => object.relicSize == null).reverse();
   return [...relics, ...decorations].find(object => {
-    const geometry = objectScreenGeometry(object, document, view, width, height);
+    const geometry = objectScreenGeometry(object, document, view, width, height, assetKeys);
     const radians = -object.rotationDegrees * Math.PI / 180;
     const dx = point.x - geometry.centerX;
     const dy = point.y - geometry.centerY;
@@ -98,13 +101,18 @@ function objectScreenGeometry(
   view: { zoom: number; panX: number; panY: number },
   width: number,
   height: number,
+  assetKeys?: ReadonlySet<string>,
 ) {
   const anchor = worldToScreen(object.x, object.y, view, width, height);
   if (object.relicSize) {
-    const relicSize = ({ SMALL: 76, MEDIUM: 112, LARGE: 176 }[object.relicSize]) * object.scale;
-    const worldScale = Math.min(width / WORLD_WIDTH, height / WORLD_HEIGHT) * view.zoom;
-    const size = relicSize * worldScale;
-    return { centerX: anchor.x, centerY: anchor.y, width: size, height: size };
+    const size = mapRelicRenderSize(
+      object.relicSize,
+      object.scale,
+      view.zoom,
+      mapRelicAspectRatio(document.map.biome, object.assetKey, assetKeys) ?? 1,
+      window.devicePixelRatio || 1,
+    );
+    return { centerX: anchor.x, centerY: anchor.y, ...size };
   }
 
   const aspectRatio = mapDecorationAspectRatio(document.map.biome, object.assetKey) ?? 1;
@@ -129,8 +137,9 @@ function findTransformHandleAt(
   view: { zoom: number; panX: number; panY: number },
   width: number,
   height: number,
+  assetKeys?: ReadonlySet<string>,
 ): boolean {
-  const geometry = objectScreenGeometry(object, document, view, width, height);
+  const geometry = objectScreenGeometry(object, document, view, width, height, assetKeys);
   return rotatedRectangleCorners(
     { x: geometry.centerX, y: geometry.centerY },
     geometry.width,
@@ -139,7 +148,7 @@ function findTransformHandleAt(
   ).some(corner => Math.hypot(corner.x - point.x, corner.y - point.y) <= 10);
 }
 
-export default function App() {
+export function MapsTab() {
   const [registeredAssetKeys, setRegisteredAssetKeys] = useState<ReadonlySet<string>>();
   const [assetCatalogError, setAssetCatalogError] = useState<string>();
   const { state, operation, undo, redo, load } = useEditorStore(registeredAssetKeys);
@@ -154,16 +163,20 @@ export default function App() {
   const [cursorPosition, setCursorPosition] = useState<CursorPosition | null>(null);
   const [sceneShiftAmount, setSceneShiftAmount] = useState(40);
   const [status, setStatus] = useState("Unsaved");
+  const [maps, setMaps] = useState<Awaited<ReturnType<typeof fetchMaps>>["maps"]>([]);
+  const [mapCatalogError, setMapCatalogError] = useState<string>();
+  const [editorReady, setEditorReady] = useState(false);
+  const [selectedMapId, setSelectedMapId] = useState(state.present.map.mapId);
+  const [savedHash, setSavedHash] = useState<string | null>(null);
+  const [saving, setSaving] = useState(false);
   const nextObjectId = useRef(0);
-  const restored = useRef(false);
+  const lastSavedContent = useRef<string | null>(null);
+  const presentRef = useRef(state.present);
+  presentRef.current = state.present;
 
   useEffect(() => {
     let cancelled = false;
-    fetch("/assets/terrain/asset-index.txt")
-      .then(response => {
-        if (!response.ok) throw new Error(`Asset index request failed (${response.status})`);
-        return response.text();
-      })
+    fetchTerrainAssetIndex()
       .then(parseAssetIndex)
       .then(assetKeys => {
         if (!cancelled) setRegisteredAssetKeys(assetKeys);
@@ -179,20 +192,74 @@ export default function App() {
   }, []);
 
   useEffect(() => {
-    if (restored.current) return;
-    restored.current = true;
-    const saved = localStorage.getItem(AUTOSAVE);
-    if (!saved) return;
-    try {
-      const map = decode(saved);
-      load({ map, phase: "TERRAIN_EDITING", revision: 0 });
-      setStatus("Restored local draft");
-    } catch (error) {
-      setStatus(error instanceof Error ? `Autosave could not be restored: ${error.message}` : String(error));
-    }
+    let cancelled = false;
+    void (async () => {
+      try {
+        let mapList: Awaited<ReturnType<typeof fetchMaps>>["maps"] = [];
+        let catalogLoaded = true;
+        try {
+          mapList = (await fetchMaps()).maps;
+          if (!cancelled) setMaps(mapList);
+        } catch (error) {
+          catalogLoaded = false;
+          if (!cancelled) setMapCatalogError(error instanceof Error ? error.message : String(error));
+        }
+
+        const saved = localStorage.getItem(AUTOSAVE);
+        if (saved) {
+          try {
+            const map = decode(saved);
+            let baseline: string | null = null;
+            let hash: string | null = null;
+            let repositoryUnavailable = !catalogLoaded;
+            if (catalogLoaded && mapList.some(entry => entry.id === map.mapId)) {
+              try {
+                const remote = await fetchMap(map.mapId);
+                baseline = encode(decode(remote.content));
+                hash = remote.hash;
+              } catch (error) {
+                repositoryUnavailable = true;
+              }
+            }
+            if (cancelled) return;
+            lastSavedContent.current = baseline;
+            setSavedHash(hash);
+            setSelectedMapId(map.mapId);
+            load({ map, phase: "TERRAIN_EDITING", revision: 0 });
+            setStatus(repositoryUnavailable
+              ? "Restored local draft; repository version could not be checked"
+              : "Restored local draft");
+            return;
+          } catch (error) {
+            if (!cancelled) setStatus(`Autosave could not be restored: ${error instanceof Error ? error.message : String(error)}`);
+          }
+        }
+
+        if (mapList[0]) {
+          try {
+            const remote = await fetchMap(mapList[0].id);
+            const map = decode(remote.content);
+            if (cancelled) return;
+            lastSavedContent.current = encode(map);
+            setSavedHash(remote.hash);
+            setSelectedMapId(remote.id);
+            load({ map, phase: "TERRAIN_EDITING", revision: 0 });
+            setStatus(remote.synchronized ? "Loaded from repository" : "Map copies differ; saving will synchronize them");
+          } catch (error) {
+            if (!cancelled) setStatus(error instanceof Error ? error.message : String(error));
+          }
+        }
+      } finally {
+        if (!cancelled) setEditorReady(true);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
   }, [load]);
 
   useEffect(() => {
+    if (!editorReady) return;
     if (canvas.current) {
       let displayDocument = state.present;
       if (controlDrag) {
@@ -231,9 +298,10 @@ export default function App() {
     }
     const validation = validate(state.present, registeredAssetKeys);
     setIssues(validation);
-    localStorage.setItem(AUTOSAVE, encode(state.present));
-    setStatus("Autosaved");
-  }, [state.present, view, controlDrag, objectDrag, cornerDrag, registeredAssetKeys, selectedObjectId]);
+    const content = encode(state.present);
+    localStorage.setItem(AUTOSAVE, content);
+    if (lastSavedContent.current !== content) setStatus("Unsaved changes");
+  }, [editorReady, state.present, view, controlDrag, objectDrag, cornerDrag, registeredAssetKeys, selectedObjectId]);
 
   useEffect(() => {
     const key = (event: KeyboardEvent) => {
@@ -252,46 +320,70 @@ export default function App() {
   }, [redo, undo]);
 
   const newMap = () => {
-    load({ map: defaultMap(), phase: "TERRAIN_EDITING", revision: 0 });
+    const mapId = `studio-map-${Date.now()}`;
+    lastSavedContent.current = null;
+    setSavedHash(null);
+    setSelectedMapId(mapId);
+    load({ map: defaultMap(mapId), phase: "TERRAIN_EDITING", revision: 0 });
     setSelectedObjectId(undefined);
+    setStatus("New map");
   };
   const resetMap = () => {
     if (!window.confirm("Reset the entire map to a new empty map? This cannot be undone.")) return;
     load({
-      map: defaultMap("web-map", state.present.map.biome),
+      map: defaultMap(state.present.map.mapId, state.present.map.biome),
       phase: "TERRAIN_EDITING",
       revision: 0,
     });
     setSelectedObjectId(undefined);
-    setStatus("Map reset");
+    setStatus("Map reset; save to apply the reset");
   };
 
-  const fileImport = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    if (!file) return;
-    file.text()
-      .then(text => {
-        const map = decode(text);
-        load({ map, phase: "TERRAIN_EDITING", revision: 0 });
-        setSelectedObjectId(undefined);
-      })
-      .catch(error => setStatus(error instanceof Error ? error.message : String(error)));
-    event.target.value = "";
+  const openSelectedMap = async () => {
+    try {
+      setStatus(`Loading ${selectedMapId}…`);
+      const remote = await fetchMap(selectedMapId);
+      const map = decode(remote.content);
+      lastSavedContent.current = encode(map);
+      setSavedHash(remote.hash);
+      load({ map, phase: "TERRAIN_EDITING", revision: 0 });
+      setSelectedObjectId(undefined);
+      setStatus(remote.synchronized ? "Loaded from repository" : "Map copies differ; saving will synchronize them");
+    } catch (error) {
+      setStatus(error instanceof Error ? error.message : String(error));
+    }
   };
 
-  const exportFile = (final = false) => {
-    if (final && validate(state.present, registeredAssetKeys).some(issue => issue.severity === "error")) {
+  const saveToRepository = async () => {
+    const currentIssues = validate(state.present, registeredAssetKeys);
+    if (currentIssues.some(issue => issue.severity === "error")) {
       setStatus("Fix validation errors before export");
       return;
     }
-    const anchor = document.createElement("a");
-    anchor.href = URL.createObjectURL(
-      new Blob([encode(state.present)], { type: "application/json" }),
-    );
-    anchor.download = `${state.present.map.mapId}.json`;
-    anchor.click();
-    URL.revokeObjectURL(anchor.href);
-    setStatus(final ? "Exported" : "Draft downloaded");
+    const content = encode(state.present);
+    setSaving(true);
+    setStatus(`Saving ${state.present.map.mapId}…`);
+    try {
+      const saved = await saveMap(state.present.map.mapId, { content, expectedHash: savedHash });
+      lastSavedContent.current = content;
+      setSavedHash(saved.hash);
+      setMaps(current => {
+        const entry = { id: saved.id, biome: state.present.map.biome, synchronized: saved.synchronized };
+        return current.some(map => map.id === saved.id)
+          ? current.map(map => map.id === saved.id ? entry : map)
+          : [...current, entry].sort((a, b) => a.id.localeCompare(b.id));
+      });
+      setStatus(encode(presentRef.current) === content
+        ? "Saved to both repository map files"
+        : "Saved; newer edits are still unsaved");
+    } catch (error) {
+      const details = error instanceof ApiError && error.details.length > 0
+        ? `: ${error.details.join("; ")}`
+        : "";
+      setStatus(`${error instanceof Error ? error.message : String(error)}${details}`);
+    } finally {
+      setSaving(false);
+    }
   };
 
   const assetPalette = registeredAssetKeys
@@ -402,8 +494,23 @@ export default function App() {
       }
       const selected = state.present.map.objects.find(item => item.id === selectedObjectId);
       if (selected && canPlaceAssets &&
-        findTransformHandleAt(screen, selected, state.present, view, rect.width, rect.height)) {
-        const geometry = objectScreenGeometry(selected, state.present, view, rect.width, rect.height);
+        findTransformHandleAt(
+          screen,
+          selected,
+          state.present,
+          view,
+          rect.width,
+          rect.height,
+          registeredAssetKeys,
+        )) {
+        const geometry = objectScreenGeometry(
+          selected,
+          state.present,
+          view,
+          rect.width,
+          rect.height,
+          registeredAssetKeys,
+        );
         element.setPointerCapture(event.pointerId);
         setCornerDrag({
           id: selected.id,
@@ -420,7 +527,14 @@ export default function App() {
         });
         return;
       }
-      const object = findObjectAt(screen, state.present, view, rect.width, rect.height);
+      const object = findObjectAt(
+        screen,
+        state.present,
+        view,
+        rect.width,
+        rect.height,
+        registeredAssetKeys,
+      );
       setSelectedObjectId(object?.id);
       if (object && canPlaceAssets) {
         element.setPointerCapture(event.pointerId);
@@ -552,23 +666,36 @@ export default function App() {
   };
 
   return (
-    <main>
-      <header>
-        <strong>Urkaaaz Map Editor</strong>
-        <button onClick={newMap}>New</button>
+    <div className="maps-editor">
+      <div className="map-editor-toolbar">
+        <strong>Maps</strong>
+        <select
+          aria-label="Repository map"
+          value={selectedMapId}
+          onChange={event => setSelectedMapId(event.currentTarget.value)}
+        >
+          {!maps.some(map => map.id === selectedMapId) && (
+            <option value={selectedMapId}>Current map · {selectedMapId}</option>
+          )}
+          {maps.map(map => (
+            <option key={map.id} value={map.id}>
+              {map.id}{map.biome ? ` · ${map.biome}` : ""}{map.synchronized ? "" : " · copies differ"}
+            </option>
+          ))}
+        </select>
+        <button onClick={openSelectedMap} disabled={!maps.some(map => map.id === selectedMapId)}>Open</button>
+        <button onClick={newMap}>New map</button>
         <button onClick={resetMap}>Reset</button>
-        <label className="button">
-          Open
-          <input type="file" accept=".json,application/json" onChange={fileImport} />
-        </label>
-        <button onClick={() => exportFile(false)}>Save draft</button>
-        <button onClick={() => exportFile(true)}>Export</button>
+        <button onClick={saveToRepository} disabled={saving || issues.some(issue => issue.severity === "error")}>
+          {saving ? "Saving…" : "Save to repository"}
+        </button>
         <button onClick={undo}>Undo</button>
         <button onClick={redo}>Redo</button>
         <button onClick={() => setView({ zoom: 1, panX: 0, panY: 0 })}>Fit</button>
         <span className="status">{status}</span>
-      </header>
-      <section className="layout">
+      </div>
+      {mapCatalogError && <p className="map-catalog-error">Map list unavailable: {mapCatalogError}</p>}
+      <section className="map-editor-layout">
         <aside>
           <h3>Biome</h3>
           <select
@@ -655,7 +782,7 @@ export default function App() {
           </button>
           <p>World<br />{WORLD_WIDTH} × {WORLD_HEIGHT}</p>
         </aside>
-        <div className="canvas-wrap">
+        <div className="map-canvas-wrap">
           <canvas
             ref={canvas}
             onPointerDown={pointer}
@@ -789,7 +916,9 @@ export default function App() {
           ))}
         </aside>
       </section>
-      <footer>{state.message ?? "Drag yellow contour nodes to shape terrain · Lock terrain to finish"}</footer>
-    </main>
+      <footer className="map-editor-footer">
+        {state.message ?? "Drag yellow contour nodes to shape terrain · Lock terrain to finish"}
+      </footer>
+    </div>
   );
 }

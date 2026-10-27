@@ -14,7 +14,7 @@ describe("map JSON codec", () => {
     expect(json.initialCameraAnchor).toBe("PLAYER_FORTRESS");
     expect(json.initialCameraZoom).toBe(1);
     expect(json.generationMetadata).toMatchObject({
-      authoringVersion: "map-editor-web/0.1.0",
+      authoringVersion: "urkaaz-studio/0.1.0",
     });
     expect(json).not.toHaveProperty("objects");
     expect(json).not.toHaveProperty("terrainTiles");

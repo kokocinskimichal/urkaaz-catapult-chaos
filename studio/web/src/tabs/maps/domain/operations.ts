@@ -1,16 +1,13 @@
 import {
-  EditorDocument,
   isMapBiome,
-  MapBiome,
-  MapObjectType,
   maximumTerrainHeightInRange,
-  Team,
   TERRAIN_CONTROL_SPACING,
   WORLD_HEIGHT,
   WORLD_WIDTH,
   terrainControlPoints,
-} from "./map";
-import { isKnownMapDecoration } from "./assets";
+} from "./map.ts";
+import type { EditorDocument, MapBiome, MapObjectType, Team } from "./map.ts";
+import { isKnownMapDecoration } from "./assets.ts";
 export type Operation =
  | { type: "CHANGE_BIOME"; biome: MapBiome }
  | { type: "DRAW_TERRAIN_PROFILE"; points: {x:number;height:number}[] }
@@ -234,7 +231,7 @@ function relicWorldFootprint(object: EditorDocument["map"]["objects"][number]) {
 }
 
 export function validate(doc: EditorDocument, assetKeys?: ReadonlySet<string>) {
-  const issues: import("./map").ValidationIssue[] = []; const m=doc.map; const samples=m.terrain.samples;
+  const issues: import("./map.ts").ValidationIssue[] = []; const m=doc.map; const samples=m.terrain.samples;
   if (m.world.width!==WORLD_WIDTH||m.world.height!==WORLD_HEIGHT) issues.push({severity:"error",path:"world",message:"World must be 7200 × 4800"});
   if (!samples.length||samples[0].x!==0) issues.push({severity:"error",path:"terrain.samples[0]",message:"Profile must start at x=0",world:{x:0,y:0}});
   if (!samples.length||samples[samples.length-1].x!==m.world.width) issues.push({severity:"error",path:`terrain.samples[${samples.length-1}]`,message:"Profile must end at world width",world:{x:m.world.width,y:0}});
@@ -280,7 +277,7 @@ export function validate(doc: EditorDocument, assetKeys?: ReadonlySet<string>) {
 function validateGroundedPlacement(
   object: EditorDocument["map"]["objects"][number],
   path: string,
-  issues: import("./map").ValidationIssue[],
+  issues: import("./map.ts").ValidationIssue[],
 ) {
   if (object.x < 0 || object.x > WORLD_WIDTH || object.y < 0 || object.y > WORLD_HEIGHT) {
     issues.push({ severity: "error", path: `${path}.position`, message: "Decoration must be inside world bounds" });
@@ -291,7 +288,7 @@ function validateRelicPlacement(
   map: EditorDocument["map"],
   object: EditorDocument["map"]["objects"][number],
   path: string,
-  issues: import("./map").ValidationIssue[],
+  issues: import("./map.ts").ValidationIssue[],
 ) {
   const footprint = relicWorldFootprint(object);
   if (!footprint) return;

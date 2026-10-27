@@ -19,7 +19,7 @@ describe("terrain asset index", () => {
     expect(firstAssetKeyForBiome(keys, "frostbound", "tree"))
       .toBe("terrain_frost_tree_00");
     expect(terrainAssetPath("frostbound", "terrain_frost_tree_00"))
-      .toBe("/assets/terrain/frost/terrain_frost_tree_00.png");
+      .toBe("/api/assets/terrain/frost/terrain_frost_tree_00.png");
   });
 
   it("rejects malformed index entries and assets from another biome", () => {
@@ -33,19 +33,19 @@ describe("terrain asset index", () => {
 
   it("resolves each biome's theme assets and shared Sunken Marshes soil", () => {
     expect(terrainThemeAssetPaths("copperwood")).toEqual({
-      background: "/assets/terrain/copperwood/background_copperwood.png",
-      soil: "/assets/terrain/copperwood/terrain_copperwood_soil_00.png",
-      cap: "/assets/terrain/copperwood/terrain_copperwood_cap_00.png",
+      background: "/api/assets/terrain/copperwood/background_copperwood.png",
+      soil: "/api/assets/terrain/copperwood/terrain_copperwood_soil_00.png",
+      cap: "/api/assets/terrain/copperwood/terrain_copperwood_cap_00.png",
     });
     expect(terrainThemeAssetPaths("frostbound")).toEqual({
-      background: "/assets/terrain/frostbound/background_frostbound_pass.png",
-      soil: "/assets/terrain/frostbound/terrain_frostbound_soil_00.png",
-      cap: "/assets/terrain/frostbound/terrain_frostbound_cap_00.png",
+      background: "/api/assets/terrain/frostbound/background_frostbound_pass.png",
+      soil: "/api/assets/terrain/frostbound/terrain_frostbound_soil_00.png",
+      cap: "/api/assets/terrain/frostbound/terrain_frostbound_cap_00.png",
     });
     expect(terrainThemeAssetPaths("sunken_marshes")).toEqual({
-      background: "/assets/terrain/sunken_marshes/background_sunken_marshes.png",
-      soil: "/assets/terrain/green_frontier/terrain_green_frontier_soil_00.png",
-      cap: "/assets/terrain/green_frontier/terrain_green_frontier_cap_00.png",
+      background: "/api/assets/terrain/sunken_marshes/background_sunken_marshes.png",
+      soil: "/api/assets/terrain/green_frontier/terrain_green_frontier_soil_00.png",
+      cap: "/api/assets/terrain/green_frontier/terrain_green_frontier_cap_00.png",
     });
     const keys = parseAssetIndex("terrain_green_frontier_tree_00.png");
     expect(firstAssetKeyForBiome(keys, "sunken_marshes", "tree"))
@@ -64,29 +64,29 @@ describe("terrain asset index", () => {
     ].join("\n"));
     const palette = paletteAssetsForBiome(keys, "green_frontier");
     expect(palette.tree[0].thumbnailPath)
-      .toBe("/assets/terrain/green_frontier/terrain_green_frontier_tree_00.png");
+      .toBe("/api/assets/terrain/green_frontier/terrain_green_frontier_tree_00.png");
     expect(palette.rock).toHaveLength(1);
     expect(palette.prop).toHaveLength(1);
     expect(palette.relic[0]).toMatchObject({
       assetKey: "relic.green_frontier.small.1",
       relicSize: "SMALL",
-      thumbnailPath: "/assets/terrain/green_frontier/terrain_green_frontier_relic_01_cracked_watering_can.png",
+      thumbnailPath: "/api/assets/terrain/green_frontier/terrain_green_frontier_relic_01_cracked_watering_can.png",
     });
     expect(relicAssetPath("green_frontier", "relic.green_frontier.small.1", keys))
       .toBe(palette.relic[0].thumbnailPath);
     expect(relicAssetPath("copperwood", "relic.copperwood.small.1", keys))
-      .toBe("/assets/terrain/copperwood/terrain_copperwood_detail_01_copper_coin.png");
+      .toBe("/api/assets/terrain/copperwood/terrain_copperwood_detail_01_copper_coin.png");
     expect(palette.relic).toContainEqual({
       assetKey: "relic.shared.medium.broken_orc_statue",
       category: "relic",
       label: "broken orc statue",
-      thumbnailPath: "/assets/terrain/shared/relic_medium_broken_orc_statue.png",
+      thumbnailPath: "/api/assets/terrain/shared/relic_medium_broken_orc_statue.png",
       relicSize: "MEDIUM",
     });
     expect(relicAssetPath("green_frontier", "relic.shared.medium.broken_orc_statue", keys))
-      .toBe("/assets/terrain/shared/relic_medium_broken_orc_statue.png");
+      .toBe("/api/assets/terrain/shared/relic_medium_broken_orc_statue.png");
     expect(relicAssetPath("copperwood", "relic.shared.medium.war_drum", keys))
-      .toBe("/assets/terrain/shared/relic_medium_war_drum.png");
+      .toBe("/api/assets/terrain/shared/relic_medium_war_drum.png");
     expect(isKnownMapDecoration("relic.shared.medium.broken_orc_statue", "frostbound", keys)).toBe(true);
     expect(isKnownMapDecoration("relic.shared.medium.unknown", "frostbound", keys)).toBe(false);
   });

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { ApiError, fetchHealth, requestJson } from "./api";
+import { ApiError, fetchHealth, fetchMap, fetchTerrainAssetIndex, requestJson, saveMap, validateMap } from "./api";
 
 const json = (status: number, body: unknown) =>
   Promise.resolve(new Response(JSON.stringify(body), { status, headers: { "content-type": "application/json" } }));
@@ -19,5 +19,30 @@ describe("api client", () => {
   it("falls back to an unknown error for non-contract bodies", async () => {
     const error = await requestJson("/api/x", () => Promise.resolve(new Response("oops", { status: 500, statusText: "Boom" }))).catch(e => e);
     expect(error).toMatchObject({ status: 500, code: "unknown", message: "Boom" });
+  });
+
+  it("uses the map API routes and preserves hash preconditions", async () => {
+    const calls: Array<{ path: string; init?: RequestInit }> = [];
+    const fetcher = (path: string, init?: RequestInit) => {
+      calls.push({ path, init });
+      return json(200, { id: "demo-map", content: "{}", hash: "hash", synchronized: true });
+    };
+
+    await fetchMap("demo-map", fetcher);
+    await saveMap("demo-map", { content: "{}", expectedHash: "hash" }, fetcher);
+    await validateMap("{}", fetcher);
+
+    expect(calls.map(call => call.path)).toEqual([
+      "/api/maps/demo-map",
+      "/api/maps/demo-map",
+      "/api/maps/validate",
+    ]);
+    expect(JSON.parse(String(calls[1].init?.body))).toEqual({ content: "{}", expectedHash: "hash" });
+    expect(JSON.parse(String(calls[2].init?.body))).toEqual({ content: "{}" });
+  });
+
+  it("reads the terrain asset index as text", async () => {
+    await expect(fetchTerrainAssetIndex(() => Promise.resolve(new Response("tree.png\n"))))
+      .resolves.toBe("tree.png\n");
   });
 });

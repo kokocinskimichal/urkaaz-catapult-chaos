@@ -1,13 +1,11 @@
 import {
-  EditorDocument,
-  MapDocumentJson,
-  Team,
   isMapBiome,
   WORLD_HEIGHT,
   WORLD_WIDTH,
   catapultsForFortresses,
   defaultMap,
-} from "../domain/map";
+} from "../domain/map.ts";
+import type { EditorDocument, MapDocumentJson, Team } from "../domain/map.ts";
 
 export const CURRENT_SCHEMA_VERSION = 1;
 

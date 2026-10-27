@@ -4,6 +4,10 @@
 
 ### Added
 
+- Migrated the map editor into the Studio Maps tab. Studio now lists, validates,
+  reads and hash-protects writes to both campaign and Android map JSON copies,
+  and serves terrain assets from their source directories without generated
+  public copies.
 - Added the discoverable `/push` repository command for validation, changelog
   review, committing and pushing changes to `develop`.
 - Added a small Sapper bomb flight using the existing Siege Bomb frames. The
@@ -17,11 +21,16 @@
 - Fixed Demolishers stopping at enemy fortresses without detonating. They now
   stop at the fortress front face, explode on contact and apply blast falloff
   against the fortress hitbox for either team.
+- Fixed Studio map selection being overwritten by local draft restoration and
+  guarded Canvas rendering against incomplete or failed asset images.
+- Matched the Studio map preview to the match renderer's independent world-axis
+  scaling and fortress/catapult dimensions.
 
 ### Changed
 
 - Reduced the saturation of shared BLUE/RED team textures by 20% for all
   masked characters, consistently in Android rendering and the Studio preview.
+- Updated Chapter 1 Level 4's terrain profile and decoration placements.
 
 ## 2026-10-26
 

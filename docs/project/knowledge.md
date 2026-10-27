@@ -905,15 +905,36 @@ The repository's intended development branch is `develop`.
 
 `studio/` is a local developer tool (npm workspaces `server` + `web`), separate
 from the game modules; the plan lives in
-`docs/architecture/studio-architecture.md`. Step 1 (skeleton) is implemented:
-a dependency-free Node server (`node src/main.ts`, loopback-only, rejects
+`docs/architecture/studio-architecture.md`. Steps 1–5 (skeleton, animation
+visualizer, asset index, map editor and removal of the standalone editor) are
+implemented: a dependency-free Node server (`node src/main.ts`, loopback-only, rejects
 non-loopback `Host` headers) exposing `GET /api/health` (version, repo root, git
 branch, working-tree state), and a React/Vite shell with Maps/Animations
-tabs (Maps remains a placeholder). API contracts live in `studio/server/src/contracts` and are
-imported by the web app as types via `@studio/contracts`. Studio only reports
-git state and never commits or switches branches. Run it with
+tabs. Maps hosts the migrated profile editor; its local API lists, validates,
+reads and saves campaign maps. API contracts live in
+`studio/server/src/contracts` and are imported by the web app as types via
+`@studio/contracts`. Studio reports git state but never commits or switches
+branches. Run it with
 `cd studio && npm run studio`; it is outside `./gradlew test assembleDebug`,
 so validate it with `npm test && npm run lint` in `studio/`.
+
+The Maps tab lives in `studio/web/src/tabs/maps/` and preserves the former
+editor's domain operations, JSON codec, Canvas renderer, viewport transforms,
+undo/redo and focused tests. `GET /api/maps` lists the union of campaign and
+Android map files; `GET /api/maps/{id}` returns the campaign contents and a
+hash of both copies; `PUT /api/maps/{id}` validates the document and updates
+both copies only when the submitted hash is current. A mismatch returns `409`.
+The server validates with the same TypeScript codec and domain validator used
+by the frontend. `POST /api/maps/validate` exposes validation independently.
+Draft autosave remains local and does not replace repository files.
+`GET /api/assets/terrain/index` builds the old decoration index from
+`game-assets` plus approved Android relic drawables; `/api/assets/terrain/{path}`
+streams PNGs directly from those source directories. The former standalone
+`map-editor-web/` and `scripts/sync-assets.mjs` were removed.
+Keep the editor store's `load` callback stable: the Maps tab's repository/draft
+initialization effect depends on it, so recreating it can rerun draft restoration
+when the repository-map selector changes. Canvas image drawing also waits for
+decoded image dimensions; broken cache entries must stay on the fallback path.
 
 Step 2 (animation visualizer, read-only) is implemented: `GET /api/animations`
 parses `anim_<category>_<target>_<type>[_<variant>]_<frame:3>.png` files in
@@ -951,16 +972,14 @@ gate and pushes `develop` using the configured project GitHub account.
 Map authoring decisions are documented in `docs/map-editor/design.md`,
 `docs/map-editor/risks.md` and `docs/map-editor/web-migration-plan.md`.
 
-The local React/Vite profile editor is available under `map-editor-web`. It
-shares the strict versioned `MapDefinition` JSON shape and stores drafts only
-in browser `localStorage`. It is the only map editor; the Swing editor and its
-Kotlin asset adapter have been removed. Run it with `npm install`,
-`npm run dev`, `npm run test`, or `npm run build` from that directory. The
-web editor uses the shared `game-assets` source, JSON as the single map
-definition source of truth, terrain locking before decoration placement, and
-validated versioned exports.
-The web editor's Debug panel can toggle a live world-coordinate readout beside
-the mouse cursor; coordinates account for the current viewport zoom and pan.
+The map editor is the Maps tab in Studio, not a standalone Vite app. It shares
+the strict versioned `MapDefinition` JSON shape, stores draft autosaves in
+browser `localStorage`, and saves validated map definitions through Studio's
+local API into both repository copies. It uses `game-assets` directly through
+the server asset routes, terrain locking before decoration placement, and
+TypeScript validation in both the UI and backend. The Debug panel can toggle a
+live world-coordinate readout beside the mouse cursor; coordinates account for
+the current viewport zoom and pan.
 
 During terrain editing, the web editor displays draggable terrain contour
 nodes at roughly 200 world-unit intervals. Dragging a node applies a smooth,
@@ -1021,9 +1040,15 @@ this runtime gate.
   was used.
 
 Map authoring uses the shared `MapDefinition` contract and
-`MapDefinitionValidator`, and stores schema-1 JSON. Drafts are written as
-`<map>.draft.json` using an atomic replace and never overwrite final export.
-The sole editor is the local React/Vite application in `map-editor-web`;
+`MapDefinitionValidator`, and stores schema-1 JSON. Studio keeps autosaved
+drafts in browser `localStorage`; saving through its API updates the campaign
+resource and Android asset map together after TypeScript validation and a
+pair-hash check. The sole editor is the Maps tab in `studio/web/src/tabs/maps`;
 shared Kotlin map-editor domain, format and rendering modules remain available
 for contract and tooling use, but there is no desktop UI or desktop asset
 adapter.
+The map canvas projects world X and Y independently to the viewport, matching
+the match renderer rather than letterboxing the canonical world aspect ratio.
+It draws fortresses at `672 × 504` world units and catapults at `182.4` world
+units wide, using the shared presentation offsets; decoration and relic render
+sizes remain screen-space values like the in-game renderer.

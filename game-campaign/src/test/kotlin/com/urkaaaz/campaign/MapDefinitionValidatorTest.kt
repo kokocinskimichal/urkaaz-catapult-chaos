@@ -4,6 +4,7 @@ import com.urkaaaz.contracts.InitialCameraAnchor
 import com.urkaaaz.contracts.MapDecoration
 import com.urkaaaz.contracts.MapWorldDimensions
 import com.urkaaaz.contracts.RelicSize
+import kotlin.math.abs
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
@@ -57,11 +58,18 @@ class MapDefinitionValidatorTest {
         assertEquals(181, definition.terrain.samples.size)
         assertEquals(2_870f, definition.terrain.samples.first().height)
         assertEquals(3_390f, definition.terrain.samples.last().height)
+        assertTrue(
+            abs(definition.terrain.samples.single { it.x == 5_040f }.height - 3_179.936f) < 0.01f,
+        )
+        assertTrue(
+            abs(definition.terrain.samples.single { it.x == 6_080f }.height - 3_386.802f) < 0.01f,
+        )
         assertEquals(2_870f, definition.fortresses.single { it.owner.name == "BLUE" }.foundationHeight)
         assertEquals(3_390f, definition.fortresses.single { it.owner.name == "RED" }.foundationHeight)
-        assertEquals(8, definition.decorations.size)
-        assertEquals(3, relics.size)
-        assertEquals(setOf(2_200f, 2_850f, 3_900f), relics.map { it.x }.toSet())
+        assertEquals(10, definition.decorations.size)
+        assertEquals(2, relics.size)
+        assertTrue(relics.any { abs(it.x - 811.189f) < 0.01f })
+        assertTrue(relics.any { abs(it.x - 4_197.316f) < 0.01f })
         assertEquals(1L, definition.generationMetadata?.seed)
         assertEquals("web", definition.generationMetadata?.generatorVersion)
         assertEquals("map-editor-web/0.1.0", definition.generationMetadata?.authoringVersion)

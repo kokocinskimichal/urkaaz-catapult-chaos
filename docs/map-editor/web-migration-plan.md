@@ -2,11 +2,11 @@
 
 ## Status dokumentu
 
-Etapy 1–7 mają lokalną implementację w `map-editor-web`. Edytor Swing i jego
-adapter assetów zostały usunięte; webowy edytor jest jedynym narzędziem
-authoringu map. Używa tego samego wersjonowanego JSON i zachowuje
-`terrainTiles` przy imporcie/eksporcie; walidacja Kotlinowa pozostaje
-autorytatywnym runtime gate.
+Migracja edytora do Studio jest ukończona. Osobny katalog `map-editor-web`,
+skrypt kopiujący assety i duplikaty PNG zostały usunięte. Zakładka Maps
+zachowuje wspólny model, format JSON, renderer i testy; lokalny backend
+udostępnia indeks assetów, walidację oraz zapis dwóch kopii map z kontrolą
+hasha. Walidator Kotlinowy pozostaje autorytatywnym runtime gate.
 
 Ten dokument opisuje migrację i decyzje, które doprowadziły do obecnej
 implementacji webowej.
@@ -235,7 +235,17 @@ loader i walidator map.
 - usunięto moduł Swing `map-editor-desktop`;
 - usunięto używany wyłącznie przez niego moduł `map-editor-assets`;
 - zaktualizowano konfigurację Gradle i dokumentację;
-- `map-editor-web` pozostaje jedynym interfejsem do authoringu map.
+- webowy edytor pozostał jedynym interfejsem do authoringu map.
+
+### Migracja do Studio (ukończona)
+
+- przeniesiono domenę, kodek, Canvas, transformacje, stan i testy do
+  `studio/web/src/tabs/maps`;
+- zastąpiono import/eksport plików przeglądarki API Studio;
+- Studio dynamicznie udostępnia assety ze źródeł i usuwa potrzebę `sync-assets`;
+- zapis sprawdza hash obu kopii, waliduje wspólnym kodem TypeScript i aktualizuje
+  mapę kampanii oraz asset Androida w jednej operacji z rollbackiem;
+- lokalny autosave draftu nadal używa `localStorage`.
 
 ## Testy i walidacja
 
