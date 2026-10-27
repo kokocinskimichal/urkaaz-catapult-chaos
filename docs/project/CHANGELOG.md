@@ -1,9 +1,26 @@
 # Changelog
 
+## 2026-10-28
+
+### Added
+
+- Replaced the Raging Boar's team-specific death sprites with a shared
+  24-frame buck-and-fall sequence, per-frame garment masks and the existing
+  BLUE/RED team textures.
+- Added the proposed campaign reward-system architecture and phased
+  implementation plan; rewards remain unimplemented.
+
 ## 2026-10-27
 
 ### Added
 
+- Replaced the Raging Boar's team-specific idle with one shared 60-frame
+  sequence, per-frame garment masks and the existing BLUE/RED team textures.
+- Replaced the Raging Boar's team-specific move with a shared 28-frame loop,
+  per-frame garment masks and the existing BLUE/RED team textures.
+- Replaced the Raging Boar's team-specific attack with a shared 19-frame
+  head-jerk sequence, per-frame garment masks and the existing BLUE/RED team
+  textures.
 - Migrated the map editor into the Studio Maps tab. Studio now lists, validates,
   reads and hash-protects writes to both campaign and Android map JSON copies,
   and serves terrain assets from their source directories without generated

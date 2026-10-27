@@ -68,6 +68,8 @@ do bieżącego zadania według [indeksu dokumentów kontekstu](docs/agent-contex
 - [System kampanii](docs/systems/campaign-system.md)
 - [Plan kamieni milowych kampanii](docs/systems/campaign-milestones-plan.md)
 - [Prompt kamieni milowych kampanii](docs/systems/campaign-milestones-implementation-prompt.md)
+- [Projekt systemu nagród (propozycja)](docs/systems/reward-system.md)
+- [Plan implementacji systemu nagród](docs/systems/reward-system-implementation-plan.md)
 - [System postępu gracza](docs/systems/player-progression-system.md)
 - [Prompt postępu gracza](docs/systems/player-progression-system-implementation-prompt.md)
 - [System loadoutu](docs/systems/loadout-system.md)

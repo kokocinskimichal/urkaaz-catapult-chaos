@@ -473,7 +473,37 @@ not truncated to a subset; unit frame playback advances at approximately
 - Shared BLUE/RED team-texture masks desaturate the fabric texture by 20%
   toward its original luminance before applying frame lighting. Android
   rendering and the Studio animation preview use the same transform for
-  every masked character, including Defender, Demolisher and Sapper.
+  every masked character, including Defender, Demolisher, Raging Boar and
+  Sapper.
+- Raging Boar idle uses one shared 60-frame transparent 368x301 sequence,
+  `anim_character_raging_boar_idle_NNN`, with per-frame garment masks and the
+  existing BLUE/RED fabric textures. RED mirrors the BLUE-derived neutral
+  frames. Renderer scale `1.22x` restores the previous visible sprite size;
+  `37/301` bottom padding preserves the ground anchor. The masks automatically
+  cover and neutralize blue-dominant clothing pixels. The original frames ZIP,
+  generated video and blue source frame are retained under
+  `assets_src/animgen/raging_boar/blue/idle/`.
+- Raging Boar movement uses a shared 28-frame transparent 368x301 loop selected
+  from the approved 60-frame AnimGen output. Its per-frame garment masks use
+  the same BLUE/RED textures and mirrored RED presentation as idle. It retains
+  the `1.22x` canvas scale and `37/301` bottom padding; playback advances one
+  frame per 33 ms match render tick to preserve the approved roughly 0.92-second
+  trot. The original output ZIP, video and blue source frame are retained under
+  `assets_src/animgen/raging_boar/blue/move/`.
+- Raging Boar attack uses one shared 19-frame transparent 368x301 head-jerk
+  sequence with per-frame garment masks and the existing BLUE/RED textures.
+  RED mirrors the BLUE-derived neutral frames. It shares the `1.22x` canvas
+  scale and `37/301` bottom padding with idle and move, and uses the existing
+  immutable `attackProgress` for playback. The original frames ZIP, video and
+  blue source frame are retained under `assets_src/animgen/raging_boar/blue/attack/`.
+- Raging Boar death uses one shared 24-frame transparent 480x480 sequence:
+  the boar bucks, throws its goblin rider, then falls onto its side. Per-frame
+  garment masks and the existing BLUE/RED textures are used; RED mirrors the
+  BLUE-derived neutral frames. Renderer scale `1.6x` and `98/480` bottom
+  padding preserve the visible size and ground anchor. The existing
+  non-looping death clock drives playback. The original ZIP, video, source
+  frames and padded AnimGen inputs are retained under
+  `assets_src/animgen/raging_boar/blue/death/`.
 - Demolisher idle now uses one shared 48-frame transparent 256x256 sequence;
   move uses one shared 60-frame transparent 256x256 sequence. Both use
   `anim_character_demolisher_{idle,move}_NNN`, per-frame team-colour masks and
@@ -770,10 +800,10 @@ must go through commands and domain/application boundaries.
 - Unit health bars use the rounded track, 8-unit height and health-ratio colors.
   Fortress health is shown only in the top HUD panels; compact reload
   indicators sit beside their catapults.
-- Raging Boar world sprites use one shared 368x301 crop across all animation
-  frames and both facing directions. Their render height compensates for the
-  crop so visible size is preserved while the alpha-bounded feet meet the
-  ground baseline.
+- Raging Boar idle, move and attack use 368x301 canvases; death uses a
+  480x480 canvas to fit the buck-and-fall motion. State-specific render scales
+  and bottom padding preserve visible size and the ground baseline. RED uses
+  horizontally mirrored shared frames and masks.
 - Match ammunition slots with no remaining stock or an active reload are
   disabled. A different ready type can still be selected while the current
   type is reloading.

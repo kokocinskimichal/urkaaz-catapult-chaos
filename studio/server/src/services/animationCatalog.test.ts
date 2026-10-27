@@ -167,6 +167,12 @@ describe("animationFramePath", () => {
     expect(teamAnimationMaskPath("/repo", "anim_character_sapper_attack", 7)).toBe(
       "/repo/android-app/src/main/assets/animations/sapper/masks/attack/007.png",
     );
+    expect(teamAnimationMaskPath("/repo", "anim_character_raging_boar_attack", 18)).toBe(
+      "/repo/android-app/src/main/assets/animations/raging_boar/masks/attack/018.png",
+    );
+    expect(teamAnimationMaskPath("/repo", "anim_character_raging_boar_death", 23)).toBe(
+      "/repo/android-app/src/main/assets/animations/raging_boar/masks/death/023.png",
+    );
     expect(teamAnimationMaskPath("/repo", "anim_character_sapper_turn", 7)).toBe(
       "/repo/android-app/src/main/assets/animations/sapper/masks/turn/007.png",
     );

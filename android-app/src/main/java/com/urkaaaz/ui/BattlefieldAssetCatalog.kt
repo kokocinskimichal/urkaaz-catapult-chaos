@@ -232,14 +232,22 @@ class BattlefieldAssetCatalog(private val context: Context) {
             "SAPPER" -> "sapper_$side"
             "DEFENDER" -> "defender_$side"
             "DEMOLISHER" -> "demolisher_$side"
-            "RAGING_BOAR" -> "anim_character_raging_boar_idle_${team}_000"
+            "RAGING_BOAR" -> "raging_boar_idle_$side"
             "SLINGMASTER" -> "anim_character_slingmaster_move_000"
             else -> return null
         }
 
         return unitBitmapCache.getOrPut(resourceName) {
-            val resourceId = resources.getIdentifier(resourceName, "drawable", context.packageName)
-            resourceId.takeIf { it != 0 }?.let { BitmapFactory.decodeResource(resources, it) }
+            if (unitType == "RAGING_BOAR") {
+                unitAnimationFrames(unitType, teamLabel, moving = false).firstOrNull()
+            } else {
+                val resourceId = resources.getIdentifier(
+                    resourceName,
+                    "drawable",
+                    context.packageName,
+                )
+                resourceId.takeIf { it != 0 }?.let { BitmapFactory.decodeResource(resources, it) }
+            }
         }
     }
 
@@ -254,27 +262,26 @@ class BattlefieldAssetCatalog(private val context: Context) {
         val cacheKey = "$unitType:$side:$moving:$attacking"
         return unitAnimationCache.getOrPut(cacheKey) {
             if (attacking) {
-                val prefix = when (unitType) {
-                    "SAPPER" -> "anim_character_sapper_attack_${team}"
-                    "DEFENDER" -> "anim_character_defender_attack_${team}"
-                    "RAGING_BOAR" -> "anim_character_raging_boar_attack_${team}"
-                    else -> ""
-                }
-                when {
-                    prefix.isEmpty() -> emptyList()
-                    unitType == "DEFENDER" -> loadTeamTextureAnimationFrames(
+                when (unitType) {
+                    "DEFENDER" -> loadTeamTextureAnimationFrames(
                         "defender",
                         "attack",
                         team,
                         side,
                     )
-                    unitType == "SAPPER" -> loadTeamTextureAnimationFrames(
+                    "SAPPER" -> loadTeamTextureAnimationFrames(
                         "sapper",
                         "attack",
                         team,
                         side,
                     )
-                    else -> loadThreeDigitAnimationFrames(prefix)
+                    "RAGING_BOAR" -> loadTeamTextureAnimationFrames(
+                        "raging_boar",
+                        "attack",
+                        team,
+                        side,
+                    )
+                    else -> emptyList()
                 }
             } else if (!moving) {
                 when (unitType) {
@@ -296,8 +303,11 @@ class BattlefieldAssetCatalog(private val context: Context) {
                         team,
                         side,
                     )
-                    "RAGING_BOAR" -> loadAnimationFrames(
-                        "anim_character_raging_boar_idle_${team}",
+                    "RAGING_BOAR" -> loadTeamTextureAnimationFrames(
+                        "raging_boar",
+                        "idle",
+                        team,
+                        side,
                     )
                     else -> emptyList()
                 }
@@ -306,7 +316,7 @@ class BattlefieldAssetCatalog(private val context: Context) {
                     "SAPPER" -> "anim_character_sapper_move_${team}"
                     "DEFENDER" -> "anim_character_defender_move_${team}"
                     "DEMOLISHER" -> "anim_character_demolisher_move_${team}"
-                    "RAGING_BOAR" -> "anim_character_raging_boar_move_${team}"
+                    "RAGING_BOAR" -> "anim_character_raging_boar_move"
                     "SLINGMASTER" -> "anim_character_slingmaster_move"
                     else -> return@getOrPut emptyList()
                 }
@@ -316,6 +326,8 @@ class BattlefieldAssetCatalog(private val context: Context) {
                     loadTeamTextureAnimationFrames("demolisher", "move", team, side)
                 } else if (unitType == "SAPPER") {
                     loadTeamTextureAnimationFrames("sapper", "move", team, side)
+                } else if (unitType == "RAGING_BOAR") {
+                    loadTeamTextureAnimationFrames("raging_boar", "move", team, side)
                 } else {
                     loadThreeDigitAnimationFrames(prefix)
                 }
@@ -336,8 +348,11 @@ class BattlefieldAssetCatalog(private val context: Context) {
                     team,
                     side,
                 )
-                "RAGING_BOAR" -> loadAnimationFrames(
-                    "anim_character_raging_boar_death_${team}",
+                "RAGING_BOAR" -> loadTeamTextureAnimationFrames(
+                    "raging_boar",
+                    "death",
+                    team,
+                    side,
                 )
                 "DEMOLISHER" -> loadTeamTextureAnimationFrames(
                     "demolisher",

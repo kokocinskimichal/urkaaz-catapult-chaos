@@ -1,8 +1,9 @@
 # Plan: dynamiczna podmiana koloru i tekstury animacji
 
 Status: **pilot Defendera zaimplementowany; użytkownik zatwierdził rozszerzenie
-mechanizmu na pozostałe jednostki. Demolisher ma wspólne idle, move i death**.
-Maski są automatycznym draftem wymagającym przeglądu wizualnego. Rozwija pomysł
+mechanizmu na pozostałe jednostki. Demolisher ma wspólne idle, move i death,
+Raging Boar ma wspólne idle, move, attack i death**. Maski są automatycznym
+draftem wymagającym przeglądu wizualnego. Rozwija pomysł
 z [`ideas.md`](../project/ideas.md) („Wspólne
 animacje postaci z kolorem drużyny nakładanym w runtime”).
 
@@ -17,7 +18,10 @@ tylko BLUE/RED.
 ## Decyzje
 
 - Pilot: **Defender**, wszystkie 4 animacje (idle 60, move 60, attack 30,
-  death 60 klatek; wszystkie 256×256). Demolisher używa wspólnego idle
+  death 60 klatek; wszystkie 256×256). Raging Boar używa wspólnego idle
+  (60×368×301), move (28×368×301), attack (19×368×301) i death
+  (24×480×480). Renderer stosuje dla śmierci Boara skalę 1,6× i padding
+  `98/480`, aby zachować widoczny rozmiar i ground anchor. Demolisher używa wspólnego idle
   (48×256×256), move (60×256×256) i death (32×768×432). Szeroki kadr death
   zachowuje miejsce na poziomy rzut i eksplozję; renderer stosuje dla death
   skalę 2,42× zamiast 2×, aby wyrównać widoczny rozmiar postaci do idle/move;
@@ -45,8 +49,8 @@ tylko BLUE/RED.
 4. **Renderer** — wspólny loader łączy neutralną klatkę, maskę i teksturę,
    zachowuje luminancję źródła oraz przezroczystość. Wyniki są buforowane z
    limitem LRU 6 MiB. RED używa poziomego odbicia neutralnej klatki. Stan
-   attack Demolishera i animacje pozostałych jednostek pozostają na razie przy
-   istniejących assetach BLUE/RED.
+   idle, move, attack i death Raging Boara dołączają do shared pipeline;
+   pozostałe stany Demolishera pozostają przy istniejących assetach BLUE/RED.
 5. **Testy** — zgodność liczby i rozmiaru klatek z maskami, zachowanie
    przezroczystości oraz test czystej transformacji pikseli.
 6. **Studio** — Animations pobiera neutralne klatki, maski i tekstury przez API;

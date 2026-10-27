@@ -1004,8 +1004,15 @@ class BattlefieldRenderer(
                     .toInt()
                     .coerceIn(0, frames.lastIndex)]
             } else {
+                val renderFramesPerAnimationFrame = if (
+                    unit.unitType == "RAGING_BOAR" && unit.moving
+                ) {
+                    GENERATED_RAGING_BOAR_MOVE_RENDER_FRAMES_PER_FRAME
+                } else {
+                    DEFAULT_UNIT_ANIMATION_RENDER_FRAMES_PER_FRAME
+                }
                 frames[
-                    (animationFrame / 4 +
+                    (animationFrame / renderFramesPerAnimationFrame +
                         Math.floorMod(unit.entityId.hashCode(), frames.size)) %
                         frames.size
                 ]
@@ -1031,6 +1038,35 @@ class BattlefieldRenderer(
                         !deathAnimationPlaying &&
                         unit.unitType == "SAPPER" &&
                         (unit.teamLabel == "BLUE" || unit.teamLabel == "RED")
+                val usesGeneratedRagingBoarIdleAnimation =
+                    bitmap != null &&
+                        unit.unitType == "RAGING_BOAR" &&
+                        (unit.teamLabel == "BLUE" || unit.teamLabel == "RED") &&
+                        !deathAnimationPlaying &&
+                        (
+                            frame == null ||
+                                (!unit.moving && !attacking)
+                        )
+                val usesGeneratedRagingBoarAttackAnimation =
+                    bitmap != null &&
+                        frame != null &&
+                        unit.unitType == "RAGING_BOAR" &&
+                        (unit.teamLabel == "BLUE" || unit.teamLabel == "RED") &&
+                        !deathAnimationPlaying &&
+                        attacking
+                val usesGeneratedRagingBoarMoveAnimation =
+                    bitmap != null &&
+                        frame != null &&
+                        unit.unitType == "RAGING_BOAR" &&
+                        (unit.teamLabel == "BLUE" || unit.teamLabel == "RED") &&
+                        !deathAnimationPlaying &&
+                        unit.moving &&
+                        !attacking
+                val usesGeneratedRagingBoarDeathAnimation =
+                    frame != null &&
+                        unit.unitType == "RAGING_BOAR" &&
+                        (unit.teamLabel == "BLUE" || unit.teamLabel == "RED") &&
+                        deathAnimationPlaying
                 val usesGeneratedSapperAttackAnimation =
                     usesGeneratedSapperAnimation && attacking
                 val usesGeneratedSapperMoveAnimation =
@@ -1043,6 +1079,12 @@ class BattlefieldRenderer(
                         sapperReturnPosition?.phase == SapperReturnAnimationFrame.Phase.RETURN
                 val generatedAnimationCanvasScale = when {
                     usesGeneratedDefenderAnimation -> GENERATED_DEFENDER_CANVAS_SCALE
+                    usesGeneratedRagingBoarDeathAnimation ->
+                        GENERATED_RAGING_BOAR_DEATH_CANVAS_SCALE
+                    usesGeneratedRagingBoarIdleAnimation ||
+                        usesGeneratedRagingBoarMoveAnimation ||
+                        usesGeneratedRagingBoarAttackAnimation ->
+                        GENERATED_RAGING_BOAR_IDLE_CANVAS_SCALE
                     usesGeneratedDemolisherAnimation && deathAnimationPlaying ->
                         GENERATED_DEMOLISHER_DEATH_CANVAS_SCALE
                     usesGeneratedDemolisherAnimation ->
@@ -1065,6 +1107,12 @@ class BattlefieldRenderer(
                 val spriteHeight = spriteHeightWorld * worldToViewportScale
                 val spriteWidth = spriteHeight * bitmap.width / bitmap.height
                 val generatedAnimationBottomPaddingRatio = when {
+                    usesGeneratedRagingBoarDeathAnimation ->
+                        GENERATED_RAGING_BOAR_DEATH_BOTTOM_PADDING_RATIO
+                    usesGeneratedRagingBoarIdleAnimation ||
+                        usesGeneratedRagingBoarMoveAnimation ||
+                        usesGeneratedRagingBoarAttackAnimation ->
+                        GENERATED_RAGING_BOAR_IDLE_BOTTOM_PADDING_RATIO
                     usesGeneratedDemolisherAnimation ->
                         GENERATED_DEMOLISHER_BOTTOM_PADDING_RATIO
                     usesGeneratedSapperTurnAnimation ->
@@ -1088,6 +1136,10 @@ class BattlefieldRenderer(
                     spriteHeight * generatedAnimationBottomPaddingRatio
                 val healthBarSpriteHeightWorld = if (
                     usesGeneratedDefenderAnimation ||
+                    usesGeneratedRagingBoarDeathAnimation ||
+                    usesGeneratedRagingBoarIdleAnimation ||
+                    usesGeneratedRagingBoarMoveAnimation ||
+                    usesGeneratedRagingBoarAttackAnimation ||
                     usesGeneratedDemolisherAnimation ||
                     usesGeneratedSapperAnimation
                 ) {
@@ -1430,6 +1482,12 @@ class BattlefieldRenderer(
         private const val UNIT_HEALTH_BAR_WIDTH_WORLD = 46.2f
         private const val BOAR_SOURCE_CROP_HEIGHT_RATIO = 301f / 512f
         private const val GENERATED_DEFENDER_CANVAS_SCALE = 2f
+        internal const val DEFAULT_UNIT_ANIMATION_RENDER_FRAMES_PER_FRAME = 4
+        internal const val GENERATED_RAGING_BOAR_MOVE_RENDER_FRAMES_PER_FRAME = 1
+        internal const val GENERATED_RAGING_BOAR_IDLE_CANVAS_SCALE = 1.22f
+        internal const val GENERATED_RAGING_BOAR_IDLE_BOTTOM_PADDING_RATIO = 37f / 301f
+        internal const val GENERATED_RAGING_BOAR_DEATH_CANVAS_SCALE = 1.6f
+        internal const val GENERATED_RAGING_BOAR_DEATH_BOTTOM_PADDING_RATIO = 98f / 480f
         internal const val GENERATED_DEMOLISHER_CANVAS_SCALE = 2f
         internal const val GENERATED_DEMOLISHER_DEATH_CANVAS_SCALE = 2.42f
         internal const val GENERATED_SAPPER_CANVAS_SCALE = 2f
