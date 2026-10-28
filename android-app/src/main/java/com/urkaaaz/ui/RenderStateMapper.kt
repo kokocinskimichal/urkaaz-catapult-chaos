@@ -138,12 +138,14 @@ data class CombatFeedbackRenderState(
     val amount: Int = 0,
     val radius: Float = 0f,
     val label: String? = null,
+    val progress: Float = 0f,
 ) {
     enum class Kind {
         DAMAGE,
         HIT_FLASH,
         EXPLOSION,
         SYNERGY,
+        GOLD_REWARD,
     }
 }
 

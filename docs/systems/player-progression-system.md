@@ -6,9 +6,11 @@
 port i use case'y profilu oparte na istniejącym `LoadoutProgressionSnapshot`.
 `android-app` zapisuje wersjonowany profil i zatwierdzony loadout w AndroidX
 DataStore, a ekran rozpoczyna mecz dopiero po odczycie, walidacji i udanym
-zapisie. CampaignSystem zapisuje osobno postęp i przyznane milestone'y, a
-read model loadoutu łączy jego czary z profilem. Zakupy i rozliczanie stocku
-pozostają poza wdrożonym zakresem.
+zapisie. CampaignSystem autoryzuje progresję i milestone'y; przy wygranej
+RewardSettlementUseCase zapisuje je atomowo wraz ze złotem i receipt.
+Read model loadoutu łączy odblokowania czarów z profilem. Zakupy i rozliczanie stocku
+pozostają poza wdrożonym zakresem. RewardSystem przyznaje złoto za wygrane
+poziomy przez atomowy adapter, a profil pozostaje właścicielem salda.
 
 ## 1. Cel i zakres
 
@@ -32,9 +34,9 @@ loadoutem. Nie stanowi pełnej ekonomii ani pełnego zapisu kampanii.
 
 - Odblokowywanie poziomów i zapis `highestUnlockedLevel` — pozostają
   odpowiedzialnością `CampaignSystem`.
-- Zakupy, nagrody, naliczanie złota, sklep oraz transakcje specjalnych
-  przedmiotów. Do czasu wdrożenia właściciela zakupów istniejący port zakupowy
-  zwraca jawny wynik `Blocked`; nie może symulować sukcesu.
+- Zakupy, sklep oraz transakcje specjalnych przedmiotów. Istniejący port
+  zakupowy zwraca jawny wynik `Blocked`; nie może symulować sukcesu. Naliczanie
+  złota za wygraną jest wyłączną odpowiedzialnością RewardSystem.
 - Rozliczanie zużytej amunicji lub czarów po meczu ani synchronizacja zapasów
   z `MatchFinished`. Runtime stocku pozostaje poza tym zakresem.
 - Stan runtime meczu, replay, aktywacja czarów i ich efekty.
@@ -204,8 +206,10 @@ profilu z nagrodami kampanii; błąd kampanii jawnie blokuje loadout.
 
 Haste jest przyznawany po zwycięstwie na poziomie 5 i dostępny od poziomu 6;
 Heal — po zwycięstwie na poziomie 7 i dostępny od poziomu 8.
-`CampaignMilestoneRegistry` jest źródłem progów i nagród. CampaignSystem
-zapisuje milestone-ID atomowo z ukończeniem/odblokowaniem, a
+`CampaignRewardRegistry` jest wspólnym katalogiem nagród i milestone'ów;
+`CampaignMilestoneRegistry` nadal zawiera definicje progów czarów.
+RewardSettlementUseCase zapisuje milestone-ID atomowo z ukończeniem,
+odblokowaniem i złotem, a
 `CampaignAwareLoadoutProgressionPort` łączy wynik z profilem wyłącznie w
 read modelu. `defaultSpellTypes` jest pochodną wyboru nowego domyślnego
 loadoutu, nie polem trwałego profilu. Zapisany wybór dla poziomu pozostaje
@@ -240,9 +244,10 @@ wersjonowanego profilu i poziomu jego snapshot oraz wynik walidacji są
 deterministyczne. DataStore odpowiada za atomową aktualizację jednego zapisu;
 nie jest źródłem kolejności symulacji ani częścią replayu.
 
-PlayerProgressionSystem nie aktualizuje profilu na podstawie
-`MatchFinished`. CampaignSystem odbiera kanoniczny event wyłącznie do własnego
-postępu i milestone'ów; nie rozlicza stocku ani salda profilu. Zapasów z
+PlayerProgressionSystem nie obserwuje bezpośrednio `MatchFinished`.
+`CampaignSystem` przekazuje kanoniczny wynik meczu i tracker rewardów do
+`RewardSettlementUseCase`, który atomowo aktualizuje postęp kampanii, receipt
+i istniejące saldo profilu. RewardSystem nie rozlicza stocku, a zapasów z
 loadoutu nie wolno deklarować jako rozliczonych po meczu.
 
 ## 12. Plan testów i kryteria akceptacji
@@ -259,7 +264,8 @@ loadoutu nie wolno deklarować jako rozliczonych po meczu.
   status; nigdy nie zamieniają się w pełny odblokowany profil.
 - `LoadoutProgressionPort` dostarcza snapshot z profilem i kampanijnymi
   odblokowaniami; niedostępna kampania blokuje odczyt, a zakupy pozostają
-  jawnie zablokowane, jeśli StoreSystem nie należy do zakresu.
+  jawnie zablokowane, jeśli StoreSystem nie należy do zakresu. RewardSystem
+  aktualizuje istniejące saldo wyłącznie po zatwierdzonym rozliczeniu.
 - Asynchroniczny LoadoutSystem otwiera ekran, filtruje zapis, ponownie
   waliduje świeży stan, zapisuje zatwierdzony wybór i zwraca konfigurację
   tylko po sukcesie.
@@ -274,8 +280,8 @@ loadoutu nie wolno deklarować jako rozliczonych po meczu.
 - Test granicy architektonicznej: DataStore/Android nie trafia do core;
   UI nie przyznaje odblokowań i nie mutuje profilu bez use case'u.
 - CampaignSystem testuje poziom początkowy, walidację wyboru, BLUE_WIN,
-  wyniki bez postępu, idempotencję, zapis nagród i read model czarów dla
-  LoadoutSystemu.
+  wyniki bez postępu, idempotencję, wspólne rozliczenie nagród i read model
+  czarów dla LoadoutSystemu.
 
 ### Kryteria akceptacji
 

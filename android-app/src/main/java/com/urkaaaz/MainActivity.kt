@@ -17,12 +17,15 @@ import com.urkaaaz.navigation.ScreenHost
 import com.urkaaaz.persistence.DataStoreCampaignProgressRepository
 import com.urkaaaz.persistence.DataStoreLoadoutRepository
 import com.urkaaaz.persistence.DataStorePlayerProgressionRepository
+import com.urkaaaz.persistence.DataStoreRewardSettlementAdapter
 import com.urkaaaz.persistence.LoadoutStorageScope
 import com.urkaaaz.persistence.urkaazPreferencesDataStore
 import com.urkaaaz.screens.campaign.CampaignScreen
 import com.urkaaaz.screens.dashboard.DashboardScreen
 import com.urkaaaz.screens.loadout.LoadoutScreen
 import com.urkaaaz.screens.match.CampaignCompletionPresenter
+import com.urkaaaz.application.reward.RewardSettlementUseCase
+import com.urkaaaz.campaign.CampaignRewardRegistry
 import com.urkaaaz.screens.match.MatchScreen
 import com.urkaaaz.screens.result.ResultScreen
 import com.urkaaaz.screens.shop.ShopScreen
@@ -35,10 +38,18 @@ class MainActivity : ComponentActivity() {
     private val campaignCompletionPresenter by lazy {
         CampaignCompletionPresenter(this, campaignSystem)
     }
+    private val campaignRewardRegistry by lazy { CampaignRewardRegistry.default() }
     private val campaignSystem by lazy {
         CampaignSystem(
             DataStoreCampaignProgressRepository(
                 applicationContext.urkaazPreferencesDataStore,
+            ),
+            rewards = campaignRewardRegistry,
+            rewardSettlement = RewardSettlementUseCase(
+                DataStoreRewardSettlementAdapter(
+                    applicationContext.urkaazPreferencesDataStore,
+                ),
+                rewards = campaignRewardRegistry,
             ),
         )
     }
@@ -159,6 +170,7 @@ class MainActivity : ComponentActivity() {
             is AppScreen.Match -> MatchScreen(
                 activity = this,
                 campaignLevel = screen.campaignLevel,
+                rewardRegistry = campaignRewardRegistry,
                 playerLoadout = screen.playerLoadout,
                 demoMode = screen.levelId == "DEMO_LEVEL",
                 onBackClicked = {
@@ -167,11 +179,12 @@ class MainActivity : ComponentActivity() {
                     }
                 },
                 openDebugOnStart = screen.levelId == "DEMO_LEVEL",
-                onMatchFinished = { level, event, onCompletionRecorded ->
+                onMatchFinished = { level, event, reward, onCompletion ->
                     campaignCompletionPresenter.onMatchFinished(
                         level,
                         event,
-                        onCompletionRecorded,
+                        reward,
+                        onCompletion,
                     )
                 },
                 onNextLevelClicked = { nextLevel ->

@@ -47,10 +47,25 @@ class MatchResultPopupStateMapperTest {
         val state = popup(completionRecorded = false)
 
         assertEquals(
-            listOf(MatchResultActionType.RETRY, MatchResultActionType.EXIT_TO_CAMPAIGN),
+            listOf(MatchResultActionType.RETRY_SAVE, MatchResultActionType.EXIT_TO_CAMPAIGN),
             state?.actions?.map { it.type },
         )
         assertEquals(MatchResultPopupStatus.COMPLETION_FAILED, state?.status)
+    }
+
+    @Test
+    fun retrySaveActionInvokesPersistenceCallbackWithoutRestartingMatch() {
+        val called = mutableListOf<String>()
+        dispatchMatchResultAction(
+            action = MatchResultActionType.RETRY_SAVE,
+            onRetry = { called += "restart" },
+            onRetrySave = { called += "save" },
+            onNextLevel = {},
+            onCampaignReturn = {},
+            onDashboardReturn = {},
+        )
+
+        assertEquals(listOf("save"), called)
     }
 
     @Test

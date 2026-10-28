@@ -89,6 +89,7 @@ class BattlefieldView(context: Context) : View(context) {
     private val sapperReturnAnimationClock = SapperReturnAnimationClock()
     private val sapperMoveAnimationClock = SapperMoveAnimationClock()
     private val sapperBombFlightClock = SapperBombFlightClock()
+    private val floatingRewardFeedbackClock = FloatingRewardFeedbackClock()
     private var sapperBombFlights = emptyList<SapperBombFlightFrame>()
     private var activeImpact: ImpactRenderState? = null
     private var lastImpactEventId: String? = null
@@ -147,9 +148,20 @@ class BattlefieldView(context: Context) : View(context) {
     fun render(newState: RenderState, showOutcomeLabel: Boolean = true) {
         this.showOutcomeLabel = showOutcomeLabel
         updateProjectileTrails(newState)
+        val matchGenerationChanged =
+            newState.matchId != state.matchId ||
+                newState.matchGeneration != state.matchGeneration
+        if (matchGenerationChanged) floatingRewardFeedbackClock.reset()
+        val presentationPaused =
+            newState.isPaused || lifecyclePaused || !isAttachedToWindow
+        val animatedRewardFeedback = floatingRewardFeedbackClock.update(
+            feedback = newState.combatFeedback,
+            nowMilliseconds = SystemClock.uptimeMillis(),
+            paused = presentationPaused,
+        )
         camera.update(newState, width.toFloat(), height.toFloat())
         val presentationState = newState.copy(
-            isPaused = newState.isPaused || lifecyclePaused || !isAttachedToWindow,
+            isPaused = presentationPaused,
         )
         val nowMilliseconds = SystemClock.uptimeMillis()
         fireRainPresentationFrame = fireRainPresentationClock.update(
@@ -165,8 +177,7 @@ class BattlefieldView(context: Context) : View(context) {
             nowMilliseconds,
         )
         if (
-            newState.matchId != state.matchId ||
-            newState.matchGeneration != state.matchGeneration
+            matchGenerationChanged
         ) {
             unitDeathAnimationRetention.reset()
             sapperReturnAnimationClock.reset()
@@ -187,6 +198,9 @@ class BattlefieldView(context: Context) : View(context) {
                 nowMilliseconds = nowMilliseconds,
                 allowAnticipation = !presentationState.isPaused,
             ),
+            combatFeedback = newState.combatFeedback
+                .filterNot { it.kind == CombatFeedbackRenderState.Kind.GOLD_REWARD } +
+                animatedRewardFeedback,
         )
         animationFrame = (animationFrame + 1) % 1024
         val shieldHit = newState.fortressShieldHits.lastOrNull()
@@ -227,6 +241,11 @@ class BattlefieldView(context: Context) : View(context) {
     fun setLifecyclePaused(paused: Boolean) {
         if (lifecyclePaused == paused) return
         lifecyclePaused = paused
+        floatingRewardFeedbackClock.update(
+            feedback = emptyList(),
+            nowMilliseconds = SystemClock.uptimeMillis(),
+            paused = true,
+        )
         fireRainPresentationFrame = fireRainPresentationClock.update(
             state.copy(
                 isPaused = state.isPaused || lifecyclePaused || !isAttachedToWindow,
@@ -276,6 +295,11 @@ class BattlefieldView(context: Context) : View(context) {
     }
 
     override fun onDetachedFromWindow() {
+        floatingRewardFeedbackClock.update(
+            feedback = emptyList(),
+            nowMilliseconds = SystemClock.uptimeMillis(),
+            paused = true,
+        )
         fireRainPresentationFrame = fireRainPresentationClock.update(
             state.copy(isPaused = true),
             SystemClock.uptimeMillis(),

@@ -23,6 +23,17 @@ class CampaignSystemTest {
             CampaignLevelSelection.Rejected(CampaignSelectionRejection.LEVEL_LOCKED),
             system.selectLevel(2),
         )
+        val completed = CampaignSystem(
+            FakeRepository(
+                CampaignProgress(highestUnlockedLevel = 2, completedLevels = setOf(1)),
+            ),
+        )
+        assertEquals(
+            CampaignLevelSelection.Rejected(
+                CampaignSelectionRejection.LEVEL_ALREADY_COMPLETED,
+            ),
+            completed.selectLevel(1),
+        )
         assertEquals(
             CampaignLevelSelection.Rejected(CampaignSelectionRejection.INVALID_LEVEL),
             system.selectLevel(0),
@@ -105,7 +116,7 @@ class CampaignSystemTest {
     }
 
     @Test
-    fun repeatedCompletionIsIdempotentAndCanReconcileMissingMilestoneId() = runTest {
+    fun previouslyCompletedLevelIsNotPaidRetroactivelyWithoutReceipt() = runTest {
         val repository = FakeRepository(
             CampaignProgress(
                 highestUnlockedLevel = 6,
@@ -115,17 +126,13 @@ class CampaignSystemTest {
         val system = CampaignSystem(repository)
         val event = finished(MatchOutcome.BLUE_WIN)
 
-        val first = assertIs<CampaignCompletionResult.Completed>(
+        assertEquals(
+            CampaignCompletionResult.Rejected(
+                CampaignSelectionRejection.LEVEL_ALREADY_COMPLETED,
+            ),
             system.completeLevel(5, event),
         )
-        val second = assertIs<CampaignCompletionResult.Completed>(
-            system.completeLevel(5, event),
-        )
-
-        assertEquals(first.progress, second.progress)
-        assertEquals(6, second.progress.highestUnlockedLevel)
-        assertEquals(setOf(5), second.progress.completedLevels)
-        assertEquals(setOf("campaign_spell_haste"), second.progress.appliedMilestoneIds)
+        assertEquals(CampaignProgress(highestUnlockedLevel = 6, completedLevels = setOf(5)), repository.progress)
     }
 
     @Test

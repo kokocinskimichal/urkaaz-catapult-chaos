@@ -20,6 +20,8 @@ import com.urkaaaz.contracts.MatchSnapshot
 import com.urkaaaz.contracts.MatchStatus
 import com.urkaaaz.contracts.PlayerId
 import com.urkaaaz.contracts.ProjectileSnapshot
+import com.urkaaaz.contracts.ProjectileResolution
+import com.urkaaaz.contracts.ProjectileTargetKind
 import com.urkaaaz.contracts.ResourceSnapshot
 import com.urkaaaz.contracts.EffectSnapshot
 import com.urkaaaz.contracts.Team
@@ -249,6 +251,8 @@ class DeterministicMatchSimulation(
                 targetLayer = "FORTRESS_SHIELD",
                 x = projectile.position.x,
                 y = projectile.position.y,
+                targetTeam = target.team,
+                targetKind = ProjectileTargetKind.FORTRESS_SHIELD,
             )
         }
         emit {
@@ -338,6 +342,7 @@ class DeterministicMatchSimulation(
                 ammunition.name,
                 projectile.position.x,
                 projectile.position.y,
+                shooterTeam = catapult.team,
             )
         }
         logAmmunition(
@@ -419,6 +424,7 @@ class DeterministicMatchSimulation(
                 simulationTimeMilliseconds,
                 unit.id,
                 type.id,
+                team = team,
             )
         }
     }
@@ -688,23 +694,36 @@ class DeterministicMatchSimulation(
                 impactProjectile.copy(position = shieldImpact.position),
                 shieldImpact.fortress,
             )
+            emitProjectileResolved(projectile.id, ProjectileResolution.SHIELD_IMPACT)
             return null
         }
         val target = targetHitBy(impactProjectile)
         return when {
             target != null -> {
                 resolveEntityImpact(impactProjectile, target)
-                impactProjectile.takeIf { !target.stopsProjectile }
+                if (target.stopsProjectile) {
+                    emitProjectileResolved(projectile.id, ProjectileResolution.ENTITY_IMPACT)
+                    null
+                } else {
+                    impactProjectile
+                }
             }
             terrainImpact != null -> {
                 resolveTerrainImpact(impactProjectile)
+                emitProjectileResolved(projectile.id, ProjectileResolution.TERRAIN_IMPACT)
                 null
             }
-            outsideBounds(advanced.position) ||
-                advanced.ageSeconds >= AmmunitionCatalog
-                    .definition(advanced.ammunition)
-                    .flight
-                    .maximumLifetimeSeconds -> null
+            outsideBounds(advanced.position) -> {
+                emitProjectileResolved(projectile.id, ProjectileResolution.OUT_OF_BOUNDS)
+                null
+            }
+            advanced.ageSeconds >= AmmunitionCatalog
+                .definition(advanced.ammunition)
+                .flight
+                .maximumLifetimeSeconds -> {
+                emitProjectileResolved(projectile.id, ProjectileResolution.LIFETIME_EXPIRED)
+                null
+            }
             else -> advanced
         }
     }
@@ -2300,6 +2319,8 @@ class DeterministicMatchSimulation(
                 targetLayer = target.layer.name,
                 x = projectile.position.x,
                 y = projectile.position.y,
+                targetTeam = target.team,
+                targetKind = target.kind,
             )
         }
         logAmmunition("projectile-hit-${target.layer.name.lowercase()}", projectile, targetId = target.id)
@@ -2639,6 +2660,8 @@ class DeterministicMatchSimulation(
                 layer = com.urkaaaz.domain.AmmunitionHitLayer.UNIT,
                 stopsProjectile = definition.collision.mode !=
                     com.urkaaaz.domain.AmmunitionCollisionMode.PIERCE_UNITS,
+                team = targetUnit.team,
+                kind = ProjectileTargetKind.UNIT,
             )
         }
         if (com.urkaaaz.domain.AmmunitionHitLayer.FORTRESS !in definition.collision.hitLayers) {
@@ -2663,6 +2686,8 @@ class DeterministicMatchSimulation(
                 bastionTarget.id,
                 com.urkaaaz.domain.AmmunitionHitLayer.FORTRESS,
                 stopsProjectile = true,
+                team = bastionTarget.team,
+                kind = ProjectileTargetKind.BASTION,
             )
         }
         val fortressCandidates = listOf(currentBlueFortress, currentRedFortress)
@@ -2691,6 +2716,8 @@ class DeterministicMatchSimulation(
                 it.id,
                 com.urkaaaz.domain.AmmunitionHitLayer.FORTRESS,
                 stopsProjectile = true,
+                team = it.team,
+                kind = ProjectileTargetKind.FORTRESS,
             )
         }
     }
@@ -2748,9 +2775,14 @@ class DeterministicMatchSimulation(
         amount: Int,
         position: WorldPosition? = null,
         sourceProjectileId: EntityId? = null,
-        targetLayer: com.urkaaaz.domain.AmmunitionHitLayer =
-            com.urkaaaz.domain.AmmunitionHitLayer.FORTRESS,
+        targetLayer: com.urkaaaz.domain.AmmunitionHitLayer? = null,
     ) {
+        val (targetTeam, targetKind) = eventTargetDetails(targetId)
+        val resolvedTargetLayer = targetLayer ?: if (targetKind == ProjectileTargetKind.UNIT) {
+            com.urkaaaz.domain.AmmunitionHitLayer.UNIT
+        } else {
+            com.urkaaaz.domain.AmmunitionHitLayer.FORTRESS
+        }
         emit {
             MatchEvent.DamageApplied(
                 eventId = it,
@@ -2761,8 +2793,10 @@ class DeterministicMatchSimulation(
                 ammunitionType = "AMMUNITION",
                 x = position?.x ?: 0f,
                 y = position?.y ?: 0f,
-                targetLayer = targetLayer.name,
+                targetLayer = resolvedTargetLayer.name,
                 sourceProjectileId = sourceProjectileId,
+                targetTeam = targetTeam,
+                targetKind = targetKind,
             )
         }
         logAmmunition(
@@ -2772,6 +2806,33 @@ class DeterministicMatchSimulation(
             y = position?.y,
             amount = amount,
         )
+    }
+
+    private fun eventTargetDetails(targetId: EntityId): Pair<Team?, ProjectileTargetKind?> {
+        listOf(currentBlueFortress, currentRedFortress)
+            .firstOrNull { it.id == targetId }
+            ?.let { return it.team to ProjectileTargetKind.FORTRESS }
+        listOfNotNull(currentBlueRunicBastion, currentRedRunicBastion)
+            .firstOrNull { it.id == targetId }
+            ?.let { return it.team to ProjectileTargetKind.BASTION }
+        units.firstOrNull { it.id == targetId }
+            ?.let { return it.team to ProjectileTargetKind.UNIT }
+        return null to null
+    }
+
+    private fun emitProjectileResolved(
+        projectileId: EntityId,
+        reason: ProjectileResolution,
+    ) {
+        emit {
+            MatchEvent.ProjectileResolved(
+                eventId = it,
+                matchId = matchId,
+                simulationTimeMilliseconds = simulationTimeMilliseconds,
+                projectileId = projectileId,
+                reason = reason,
+            )
+        }
     }
 
     private fun logAmmunition(
@@ -2843,6 +2904,8 @@ class DeterministicMatchSimulation(
         val id: EntityId,
         val layer: com.urkaaaz.domain.AmmunitionHitLayer,
         val stopsProjectile: Boolean,
+        val team: Team,
+        val kind: ProjectileTargetKind,
     )
 
     private data class ShieldImpact(

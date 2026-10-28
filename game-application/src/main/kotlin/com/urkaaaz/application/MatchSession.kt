@@ -17,6 +17,7 @@ import com.urkaaaz.contracts.WindSnapshot
 import com.urkaaaz.contracts.WorldDimensions
 import com.urkaaaz.application.loadout.LoadoutCommandRejectedException
 import com.urkaaaz.application.loadout.LoadoutError
+import com.urkaaaz.application.reward.MatchEventObserver
 import com.urkaaaz.simulation.DeterministicMatchSimulation
 import com.urkaaaz.simulation.CombatLogSink
 import com.urkaaaz.simulation.NoOpCombatLogSink
@@ -35,6 +36,7 @@ class MatchSession(
     private val combatLogSink: CombatLogSink = NoOpCombatLogSink,
     private val ammunitionLogSink: AmmunitionLogSink = NoOpAmmunitionLogSink,
     private val randomSeedProvider: () -> Long = { Random.nextLong() },
+    private val eventObserver: MatchEventObserver = MatchEventObserver { },
 ) {
     private var simulation: DeterministicMatchSimulation? = null
     private val selectedAmmunition = mutableMapOf(
@@ -126,6 +128,7 @@ class MatchSession(
         if (command !is MatchCommand.Start) {
             replaySteps += MatchReplayStep.Command(command)
         }
+        notifyEventObserver(latestEvents)
         return latestSnapshot
     }
 
@@ -188,6 +191,7 @@ class MatchSession(
 
         latestEvents = runningSimulation.drainEvents()
         latestSnapshot = runningSimulation.snapshot()
+        notifyEventObserver(latestEvents)
         if (replaySeed != null) replaySteps += MatchReplayStep.Command(command)
         val result = CommandResult.Accepted(command.commandId, latestEvents)
         if (includeEventsInResult) latestEvents = emptyList()
@@ -238,12 +242,14 @@ class MatchSession(
                 matchId = matchId,
                 playerId = playerId,
             ),
-        )
+        ).also { notifyEventObserver(latestEvents) }
 
     fun consumeEvents(): List<com.urkaaaz.contracts.MatchEvent> =
         latestEvents.also { latestEvents = emptyList() }
 
     fun snapshot(): MatchSnapshot = simulation?.snapshot() ?: latestSnapshot
+
+    fun rewardResult() = eventObserver.rewardResult()
 
     fun canDeployUnit(team: Team, unitType: String): Boolean {
         val matchScenario = scenario
@@ -290,12 +296,17 @@ class MatchSession(
             combatLogSink = combatLogSink,
             ammunitionLogSink = ammunitionLogSink,
         )
+        eventObserver.onMatchGenerationStarted(command.matchId)
         latestEvents = requireNotNull(simulation).start()
         replaySeed = randomSeed
         replaySteps.clear()
         replaySteps += MatchReplayStep.Command(command.copy(randomSeed = randomSeed))
         paused = false
         return requireNotNull(simulation).snapshot()
+    }
+
+    private fun notifyEventObserver(events: List<com.urkaaaz.contracts.MatchEvent>) {
+        if (events.isNotEmpty()) eventObserver.onEvents(events)
     }
 
     private fun requireRunning(): DeterministicMatchSimulation =

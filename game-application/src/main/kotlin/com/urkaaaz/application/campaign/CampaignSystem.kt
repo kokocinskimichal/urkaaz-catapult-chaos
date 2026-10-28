@@ -2,7 +2,12 @@ package com.urkaaaz.application.campaign
 
 import com.urkaaaz.campaign.CampaignLevelDefinition
 import com.urkaaaz.campaign.CampaignLevelRegistry
-import com.urkaaaz.campaign.CampaignMilestoneRegistry
+import com.urkaaaz.campaign.CampaignRewardRegistry
+import com.urkaaaz.application.reward.LevelRewardResult
+import com.urkaaaz.application.reward.RewardSettlementOutcome
+import com.urkaaaz.application.reward.RewardSettlementRejection
+import com.urkaaaz.application.reward.RewardSettlementRepositoryResult
+import com.urkaaaz.application.reward.RewardSettlementUseCase
 import com.urkaaaz.contracts.MatchEvent
 import com.urkaaaz.contracts.MatchOutcome
 
@@ -14,6 +19,7 @@ sealed interface CampaignProgressRead {
 enum class CampaignSelectionRejection {
     INVALID_LEVEL,
     LEVEL_LOCKED,
+    LEVEL_ALREADY_COMPLETED,
 }
 
 sealed interface CampaignLevelSelection {
@@ -23,12 +29,18 @@ sealed interface CampaignLevelSelection {
 }
 
 sealed interface CampaignCompletionResult {
-    data class Completed(val progress: CampaignProgress) : CampaignCompletionResult
+    data class Completed(
+        val progress: CampaignProgress,
+        val reward: LevelRewardResult? = null,
+    ) : CampaignCompletionResult
     data class NoProgress(
         val progress: CampaignProgress,
         val outcome: MatchOutcome,
     ) : CampaignCompletionResult
     data class Rejected(val reason: CampaignSelectionRejection) : CampaignCompletionResult
+    data class RewardRejected(
+        val reason: RewardSettlementRejection,
+    ) : CampaignCompletionResult
     data class Failure(val reason: CampaignProgressFailure) : CampaignCompletionResult
 }
 
@@ -46,7 +58,8 @@ sealed interface CampaignLoadoutRewardsRead {
 class CampaignSystem(
     private val repository: CampaignProgressRepository,
     private val levels: CampaignLevelRegistry = CampaignLevelRegistry.default(),
-    private val milestones: CampaignMilestoneRegistry = CampaignMilestoneRegistry.default(),
+    private val rewards: CampaignRewardRegistry = CampaignRewardRegistry.default(),
+    private val rewardSettlement: RewardSettlementUseCase? = null,
 ) {
     suspend fun progress(): CampaignProgressRead =
         when (val result = repository.loadOrInitialize()) {
@@ -71,12 +84,18 @@ class CampaignSystem(
         if (level > progress.highestUnlockedLevel) {
             return CampaignLevelSelection.Rejected(CampaignSelectionRejection.LEVEL_LOCKED)
         }
+        if (level in progress.completedLevels) {
+            return CampaignLevelSelection.Rejected(
+                CampaignSelectionRejection.LEVEL_ALREADY_COMPLETED,
+            )
+        }
         return CampaignLevelSelection.Selected(levels.level(level))
     }
 
     suspend fun completeLevel(
         level: Int,
         event: MatchEvent.MatchFinished,
+        rewardResult: LevelRewardResult? = null,
     ): CampaignCompletionResult {
         if (!isKnownLevel(level)) {
             return CampaignCompletionResult.Rejected(CampaignSelectionRejection.INVALID_LEVEL)
@@ -92,11 +111,63 @@ class CampaignSystem(
             return CampaignCompletionResult.NoProgress(progress, event.outcome)
         }
 
+        if (rewardSettlement != null) {
+            return when (val settlement = rewardSettlement.settle(level, event, rewardResult)) {
+                is RewardSettlementRepositoryResult.Failure ->
+                    CampaignCompletionResult.Failure(settlement.reason.toCampaignFailure())
+                is RewardSettlementRepositoryResult.Completed ->
+                    when (val outcome = settlement.outcome) {
+                        is RewardSettlementOutcome.Settled ->
+                            CampaignCompletionResult.Completed(
+                                outcome.state.campaign,
+                                outcome.reward,
+                            )
+                        is RewardSettlementOutcome.AlreadySettled ->
+                            CampaignCompletionResult.Completed(
+                                outcome.state.campaign,
+                                outcome.reward,
+                            )
+                        is RewardSettlementOutcome.Rejected ->
+                            when (outcome.reason) {
+                                RewardSettlementRejection.INVALID_LEVEL ->
+                                    CampaignCompletionResult.Rejected(
+                                        CampaignSelectionRejection.INVALID_LEVEL,
+                                    )
+                                RewardSettlementRejection.LEVEL_LOCKED ->
+                                    CampaignCompletionResult.Rejected(
+                                        CampaignSelectionRejection.LEVEL_LOCKED,
+                                    )
+                                RewardSettlementRejection.LEVEL_ALREADY_COMPLETED ->
+                                    CampaignCompletionResult.Rejected(
+                                        CampaignSelectionRejection.LEVEL_ALREADY_COMPLETED,
+                                    )
+                                RewardSettlementRejection.GOLD_OVERFLOW,
+                                RewardSettlementRejection.RESULT_MISMATCH,
+                                RewardSettlementRejection.NOT_A_WIN,
+                                -> CampaignCompletionResult.RewardRejected(outcome.reason)
+                                RewardSettlementRejection.INVALID_PROGRESS ->
+                                    CampaignCompletionResult.Failure(
+                                        CampaignProgressFailure.INVALID_DATA,
+                                    )
+                            }
+                    }
+            }
+        }
+
+        var rejection: CampaignSelectionRejection? = null
         val update = repository.update { current ->
-            if (!current.isValid() || level > current.highestUnlockedLevel) {
+            if (
+                !current.isValid()
+            ) {
+                current
+            } else if (level > current.highestUnlockedLevel) {
+                rejection = CampaignSelectionRejection.LEVEL_LOCKED
+                current
+            } else if (level in current.completedLevels) {
+                rejection = CampaignSelectionRejection.LEVEL_ALREADY_COMPLETED
                 current
             } else {
-                val newlyAppliedMilestones = milestones.milestonesForCompletedLevel(level)
+                val newlyAppliedMilestones = rewards.milestones.milestonesForCompletedLevel(level)
                     .asSequence()
                     .map { it.id }
                     .filterNot { it in current.appliedMilestoneIds }
@@ -117,8 +188,14 @@ class CampaignSystem(
             is CampaignProgressRepositoryResult.Available -> {
                 if (!update.progress.isValid()) {
                     CampaignCompletionResult.Failure(CampaignProgressFailure.INVALID_DATA)
+                } else if (rejection != null) {
+                    CampaignCompletionResult.Rejected(requireNotNull(rejection))
                 } else if (level > update.progress.highestUnlockedLevel) {
                     CampaignCompletionResult.Rejected(CampaignSelectionRejection.LEVEL_LOCKED)
+                } else if (level !in update.progress.completedLevels) {
+                    CampaignCompletionResult.Rejected(
+                        CampaignSelectionRejection.LEVEL_ALREADY_COMPLETED,
+                    )
                 } else {
                     CampaignCompletionResult.Completed(update.progress)
                 }
@@ -138,7 +215,7 @@ class CampaignSystem(
             return CampaignLoadoutRewardsRead.Rejected(CampaignSelectionRejection.LEVEL_LOCKED)
         }
         val granted = progress.appliedMilestoneIds.map { milestoneId ->
-            milestones.milestone(milestoneId)
+            rewards.milestones.milestone(milestoneId)
                 ?: return CampaignLoadoutRewardsRead.Failure(CampaignProgressFailure.INVALID_DATA)
         }
         return CampaignLoadoutRewardsRead.Available(
@@ -162,7 +239,17 @@ class CampaignSystem(
                         highestUnlockedLevel == CampaignLevelDefinition.MAX_LEVELS)
             } &&
             appliedMilestoneIds.all { milestoneId ->
-                milestones.milestone(milestoneId)
+                rewards.milestones.milestone(milestoneId)
                     ?.let { it.completedLevel in completedLevels } == true
             }
+
+    private fun com.urkaaaz.application.reward.RewardSettlementFailure.toCampaignFailure() =
+        when (this) {
+            com.urkaaaz.application.reward.RewardSettlementFailure.STORAGE_UNAVAILABLE ->
+                CampaignProgressFailure.STORAGE_UNAVAILABLE
+            com.urkaaaz.application.reward.RewardSettlementFailure.INVALID_DATA ->
+                CampaignProgressFailure.INVALID_DATA
+            com.urkaaaz.application.reward.RewardSettlementFailure.UNSUPPORTED_VERSION ->
+                CampaignProgressFailure.UNSUPPORTED_VERSION
+        }
 }

@@ -1279,6 +1279,8 @@ class LoadoutScreen(
                 R.string.loadout_error_progression_invalid_level
             LoadoutProgressionFailure.CAMPAIGN_LEVEL_LOCKED ->
                 R.string.loadout_error_progression_locked
+            LoadoutProgressionFailure.CAMPAIGN_LEVEL_COMPLETED ->
+                R.string.campaign_completion_already_completed
             LoadoutProgressionFailure.STORAGE_UNAVAILABLE ->
                 R.string.loadout_error_progression_unavailable
             LoadoutProgressionFailure.INVALID_PROFILE ->

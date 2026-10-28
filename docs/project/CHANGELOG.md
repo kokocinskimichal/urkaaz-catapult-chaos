@@ -7,8 +7,17 @@
 - Replaced the Raging Boar's team-specific death sprites with a shared
   24-frame buck-and-fall sequence, per-frame garment masks and the existing
   BLUE/RED team textures.
-- Added the proposed campaign reward-system architecture and phased
-  implementation plan; rewards remain unimplemented.
+- Implemented extensible campaign gold rewards for BLUE victories, including
+  direct-hit, fast-win, untouched-fortress and fortress-streak achievements
+  with atomic campaign/profile settlement.
+- Added provisional rising `+X OrCoins` feedback for hit-based rewards and an
+  itemized gold total in the victory popup.
+
+### Changed
+
+- Campaign levels already completed are marked and disabled; the fortress
+  streak is displayed as “Fortress combo” in the reward summary.
+- Tuned the victory reward summary to use a translucent backplate.
 
 ## 2026-10-27
 

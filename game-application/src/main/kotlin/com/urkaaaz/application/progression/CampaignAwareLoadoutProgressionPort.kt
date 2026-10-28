@@ -23,6 +23,8 @@ class CampaignAwareLoadoutProgressionPort(
                             LoadoutProgressionFailure.INVALID_LEVEL
                         CampaignSelectionRejection.LEVEL_LOCKED ->
                             LoadoutProgressionFailure.CAMPAIGN_LEVEL_LOCKED
+                        CampaignSelectionRejection.LEVEL_ALREADY_COMPLETED ->
+                            LoadoutProgressionFailure.CAMPAIGN_LEVEL_COMPLETED
                     },
                 )
             is CampaignLoadoutRewardsRead.Failure ->

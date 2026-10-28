@@ -34,6 +34,7 @@ class SimulationReplayRegressionTest {
                 MatchEvent.ProjectileFired::class,
                 MatchEvent.ProjectileHitTerrain::class,
                 MatchEvent.TerrainDeformed::class,
+                MatchEvent.ProjectileResolved::class,
             ),
             trace.events.map { it::class },
         )

@@ -1301,6 +1301,26 @@ class BattlefieldRenderer(
                     }
                     canvas.drawText("GROUP", x - 28f, y - 105f, paint)
                 }
+                CombatFeedbackRenderState.Kind.GOLD_REWARD -> {
+                    val progress = item.progress.coerceIn(0f, 1f)
+                    val easedProgress = 1f - (1f - progress) * (1f - progress) *
+                        (1f - progress)
+                    val fade = if (progress < 0.7f) {
+                        1f
+                    } else {
+                        ((1f - progress) / 0.3f).coerceIn(0f, 1f)
+                    }
+                    val label = item.label ?: return@forEach
+                    val paint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+                        color = Color.rgb(255, 220, 110)
+                        alpha = (255f * fade).toInt()
+                        textSize = 26f
+                        typeface = Typeface.create(textTypeface, Typeface.BOLD)
+                        setShadowLayer(5f, 1f, 2f, Color.BLACK)
+                    }
+                    val liftedY = y - 50f - easedProgress * 70f
+                    canvas.drawText(label, x - paint.measureText(label) / 2f, liftedY, paint)
+                }
             }
         }
     }

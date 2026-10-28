@@ -19,7 +19,7 @@ class PlayerProgressionUseCases(
 
         return when (val result = repository.loadOrInitialize(INITIAL_PROFILE)) {
             is PlayerProgressionRepositoryResult.Available -> {
-                if (result.snapshot.isValidProfile()) {
+                if (isValidProfile(result.snapshot)) {
                     LoadoutProgressionRead.Available(result.snapshot)
                 } else {
                     LoadoutProgressionRead.Blocked(LoadoutProgressionFailure.INVALID_PROFILE)
@@ -42,22 +42,22 @@ class PlayerProgressionUseCases(
     override suspend fun purchaseSpell(spellType: String): LoadoutPurchaseResult =
         LoadoutPurchaseResult.Blocked
 
-    private fun LoadoutProgressionSnapshot.isValidProfile(): Boolean {
-        val knownSpells = SpellCatalog.all.associateBy { it.type.name }
-        val knownAmmunition = AmmunitionType.values().associateBy { it.name }
-        return unlockedSpellTypes.all { id ->
-            knownSpells[id]?.special == false
-        } &&
-            defaultSpellTypes.isEmpty() &&
-            ammunitionStocks.all { (id, count) ->
-                knownAmmunition[id]?.unlimited == false && count >= 0
+    companion object {
+        fun isValidProfile(snapshot: LoadoutProgressionSnapshot): Boolean {
+            val knownSpells = SpellCatalog.all.associateBy { it.type.name }
+            val knownAmmunition = AmmunitionType.values().associateBy { it.name }
+            return snapshot.unlockedSpellTypes.all { id ->
+                knownSpells[id]?.special == false
             } &&
-            specialSpellStocks.all { (id, count) ->
-                knownSpells[id]?.special == true && count >= 0
-            }
-    }
+                snapshot.defaultSpellTypes.isEmpty() &&
+                snapshot.ammunitionStocks.all { (id, count) ->
+                    knownAmmunition[id]?.unlimited == false && count >= 0
+                } &&
+                snapshot.specialSpellStocks.all { (id, count) ->
+                    knownSpells[id]?.special == true && count >= 0
+                }
+        }
 
-    private companion object {
         val INITIAL_PROFILE = LoadoutProgressionSnapshot(
             unlockedSpellTypes = setOf(SpellType.FORTRESS_SHIELD.name),
             ammunitionStocks = emptyMap(),

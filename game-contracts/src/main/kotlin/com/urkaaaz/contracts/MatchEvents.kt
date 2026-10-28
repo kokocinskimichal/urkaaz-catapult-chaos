@@ -36,6 +36,7 @@ sealed interface MatchEvent {
         val ammunitionType: String = "ROCK",
         val x: Float = 0f,
         val y: Float = 0f,
+        val shooterTeam: Team? = null,
     ) : MatchEvent
 
     data class ProjectileSplit(
@@ -67,6 +68,8 @@ sealed interface MatchEvent {
         val targetLayer: String = "FORTRESS",
         val x: Float = 0f,
         val y: Float = 0f,
+        val targetTeam: Team? = null,
+        val targetKind: ProjectileTargetKind? = null,
     ) : MatchEvent
 
     data class DamageApplied(
@@ -81,6 +84,8 @@ sealed interface MatchEvent {
         val targetLayer: String = "FORTRESS",
         val sourceProjectileId: EntityId? = null,
         val falloffMultiplier: Float = 1f,
+        val targetTeam: Team? = null,
+        val targetKind: ProjectileTargetKind? = null,
     ) : MatchEvent
 
     data class SpellCast(
@@ -111,6 +116,15 @@ sealed interface MatchEvent {
         override val simulationTimeMilliseconds: Long,
         val unitId: EntityId,
         val unitType: String,
+        val team: Team? = null,
+    ) : MatchEvent
+
+    data class ProjectileResolved(
+        override val eventId: EventId,
+        override val matchId: MatchId,
+        override val simulationTimeMilliseconds: Long,
+        val projectileId: EntityId,
+        val reason: ProjectileResolution,
     ) : MatchEvent
 
     data class UnitDefeated(
@@ -189,4 +203,19 @@ sealed interface MatchEvent {
         override val simulationTimeMilliseconds: Long,
         val outcome: MatchOutcome,
     ) : MatchEvent
+}
+
+enum class ProjectileTargetKind {
+    UNIT,
+    FORTRESS,
+    FORTRESS_SHIELD,
+    BASTION,
+}
+
+enum class ProjectileResolution {
+    ENTITY_IMPACT,
+    SHIELD_IMPACT,
+    TERRAIN_IMPACT,
+    OUT_OF_BOUNDS,
+    LIFETIME_EXPIRED,
 }

@@ -7,6 +7,7 @@ import com.urkaaaz.contracts.MatchSnapshot
 import com.urkaaaz.contracts.MapDefinition
 import com.urkaaaz.contracts.MatchScenario
 import com.urkaaaz.contracts.WindSnapshot
+import com.urkaaaz.application.reward.MatchEventObserver
 import com.urkaaaz.simulation.CombatLogSink
 import com.urkaaaz.simulation.NoOpCombatLogSink
 import com.urkaaaz.simulation.AmmunitionLogSink
@@ -22,6 +23,7 @@ class LocalMatchGateway(
     redFortressMaxHealth: Int = 500,
     combatLogSink: CombatLogSink = NoOpCombatLogSink,
     ammunitionLogSink: AmmunitionLogSink = NoOpAmmunitionLogSink,
+    eventObserver: MatchEventObserver = MatchEventObserver { },
     private val session: MatchSession = MatchSession(
         terrainBiome = terrainBiome,
         initialWind = initialWind,
@@ -31,6 +33,7 @@ class LocalMatchGateway(
         redFortressMaxHealth = redFortressMaxHealth,
         combatLogSink = combatLogSink,
         ammunitionLogSink = ammunitionLogSink,
+        eventObserver = eventObserver,
     ),
     private val aiCoordinator: AiMatchCoordinator = AiMatchCoordinator(scenario),
 ) {
@@ -55,6 +58,8 @@ class LocalMatchGateway(
     }
 
     fun snapshot(): MatchSnapshot = session.snapshot()
+
+    fun rewardResult() = session.rewardResult()
 
     fun pause() {
         session.pause()

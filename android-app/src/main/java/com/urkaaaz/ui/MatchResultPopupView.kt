@@ -2,6 +2,7 @@ package com.urkaaaz.ui
 
 import android.content.Context
 import android.graphics.Color
+import android.graphics.drawable.GradientDrawable
 import android.view.Gravity
 import android.view.View
 import android.widget.FrameLayout
@@ -20,6 +21,8 @@ internal class MatchResultPopupView(
     private val defeatIllustration = ImageView(context)
     private val titlePlaque = ImageView(context)
     private val titleLabel = popupTextView(26f)
+    private val rewardPanel = View(context)
+    private val rewardLabel = popupTextView(11f)
     private val statusLabel = popupTextView(12f)
     private val actionButtons = mutableListOf<TextView>()
     private var currentState: MatchResultPopupState? = null
@@ -29,7 +32,7 @@ internal class MatchResultPopupView(
     private var currentPanelHeight = 0
 
     init {
-        setBackgroundColor(Color.argb(190, 0, 0, 0))
+        setBackgroundColor(Color.argb(225, 0, 0, 0))
         isClickable = true
         isFocusable = true
         setOnClickListener { }
@@ -64,6 +67,13 @@ internal class MatchResultPopupView(
         panel.addView(titlePlaque)
         panel.addView(contextLabel)
         panel.addView(titleLabel)
+        rewardPanel.background = GradientDrawable().apply {
+            setColor(Color.argb(150, 12, 9, 7))
+            cornerRadius = dp(8f).toFloat()
+            setStroke(dp(1f), Color.argb(165, 243, 210, 138))
+        }
+        panel.addView(rewardPanel)
+        panel.addView(rewardLabel)
         panel.addView(statusLabel)
         panel.clipChildren = false
         addView(panel, LayoutParams(0, 0, Gravity.CENTER))
@@ -116,6 +126,26 @@ internal class MatchResultPopupView(
                 MatchResultKind.DRAW -> Color.rgb(232, 218, 190)
             },
         )
+        rewardLabel.text = state.reward?.let { reward ->
+            val lines = reward.rewards.map { entry ->
+                val label = context.getString(
+                    when (entry.id) {
+                        "level_win" -> R.string.reward_level_win
+                        "direct_enemy_unit_hit" -> R.string.reward_direct_unit_hit
+                        "fast_win" -> R.string.reward_fast_win
+                        "untouched_fortress" -> R.string.reward_untouched_fortress
+                        "fortress_hit_streak" -> R.string.reward_fortress_streak
+                        else -> R.string.reward_generic
+                    },
+                    *if (entry.id in KNOWN_REWARD_IDS) emptyArray() else arrayOf(entry.id),
+                )
+                context.getString(R.string.match_result_reward_line, label, entry.gold)
+            }
+            (lines + context.getString(R.string.match_result_reward_total, reward.totalGold))
+                .joinToString("\n")
+        }.orEmpty()
+        rewardLabel.visibility = if (state.reward == null) View.GONE else View.VISIBLE
+        rewardPanel.visibility = rewardLabel.visibility
         statusLabel.text = state.status?.let { status ->
             context.getString(
                 when (status) {
@@ -197,6 +227,7 @@ internal class MatchResultPopupView(
                     MatchResultActionType.EXIT_TO_CAMPAIGN ->
                         R.string.match_result_exit_campaign
                     MatchResultActionType.RETRY -> R.string.match_result_retry
+                    MatchResultActionType.RETRY_SAVE -> R.string.match_result_retry_save
                     MatchResultActionType.BACK_TO_DASHBOARD ->
                         R.string.match_result_back_dashboard
                 },
@@ -234,6 +265,19 @@ internal class MatchResultPopupView(
             (panelWidth * 0.84f).toInt(),
             (panelHeight * 0.27f).toInt(),
             topMargin = (panelHeight * 0.10f).toInt(),
+        )
+        rewardLabel.textSize = (11f * scale).coerceAtLeast(9f)
+        rewardLabel.gravity = Gravity.CENTER
+        rewardLabel.maxLines = 6
+        rewardLabel.layoutParams = panelLayoutParams(
+            (panelWidth * 0.78f).toInt(),
+            (panelHeight * 0.25f).toInt(),
+            topMargin = (panelHeight * 0.34f).toInt(),
+        )
+        rewardPanel.layoutParams = panelLayoutParams(
+            (panelWidth * 0.80f).toInt(),
+            (panelHeight * 0.27f).toInt(),
+            topMargin = (panelHeight * 0.33f).toInt(),
         )
         statusLabel.textSize = (12f * scale).coerceAtLeast(10f)
         statusLabel.gravity = Gravity.CENTER
@@ -310,6 +354,13 @@ internal class MatchResultPopupView(
         (value * resources.displayMetrics.density).toInt()
 
     private companion object {
+        val KNOWN_REWARD_IDS = setOf(
+            "level_win",
+            "direct_enemy_unit_hit",
+            "fast_win",
+            "untouched_fortress",
+            "fortress_hit_streak",
+        )
         const val PANEL_WINDOW_LEFT_RATIO = 188f / 2400f
         const val PANEL_WINDOW_TOP_RATIO = 413f / 1680f
         const val PANEL_WINDOW_WIDTH_RATIO = 2024f / 2400f

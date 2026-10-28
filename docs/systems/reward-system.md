@@ -2,7 +2,9 @@
 
 ## Status i cel
 
-**Projekt architektury — system nie jest zaimplementowany.**
+**Zaimplementowany lokalnie dla kampanii.** Tracker, rozliczenie, transakcja
+DataStore i prezentacja wyniku są podłączone; sklep i inne typy nagród pozostają
+poza zakresem.
 
 `RewardSystem` przyznaje złoto za ukończenie kampanijnego poziomu oraz za
 spełnione w jego trakcie osiągnięcia. Warunki osiągnięć są oceniane na
@@ -10,10 +12,23 @@ podstawie eventów meczu, a nagrody są rozliczane dopiero po zwycięstwie BLUE.
 Po zapisanym zwycięstwie poziom jest ukończony i nie można go rozegrać ponownie;
 porażka, remis lub poddanie nie zużywają podejścia i nie przyznają złota.
 
-System ma być rozszerzalny o kolejne poziomowe warunki i typy nagród bez
-przenoszenia reguł do Android UI ani tworzenia równoległego właściciela
-kampanii lub profilu gracza. Dokument nie ustala kwot, balansu ani finalnej
-listy osiągnięć.
+Katalog kampanii jest rozszerzalny o kolejne poziomowe warunki i typy nagród
+bez przenoszenia reguł do Android UI ani tworzenia równoległego właściciela
+kampanii lub profilu gracza. Zatwierdzone wartości startowe:
+
+| Nagroda | Warunek | Złoto |
+|---|---|---:|
+| Wygrana poziomu | `BLUE_WIN` | 100 |
+| Bezpośrednie trafienie wrogiej jednostki | Co najmniej jedno trafienie w meczu | 10 |
+| Szybka wygrana | Czas symulacji do 120 s włącznie | 25 |
+| Nietknięta forteca | Brak obrażeń własnej fortecy | 25 |
+| Seria trafień wrogiej fortecy | Od drugiego kolejnego rozstrzygniętego strzału | 10 za drugie, 20 za trzecie i dalej liniowo |
+
+W serii każde trafienie od drugiego przyznaje `10 × (pozycja w serii − 1)`
+złota; na przykład trzy trafienia z rzędu dają łącznie 30 złota premii.
+Pudło, jednostka, bastion, tarcza lub teren pomiędzy trafieniami zerują serię.
+Nie ustalono limitu maksymalnego salda, dlatego rozliczenie jawnie odrzuca
+przepełnienie istniejącego typu `Int`.
 
 ## Zakres
 
@@ -25,6 +40,7 @@ listy osiągnięć.
 - dokładnie jednorazowa wypłata dla poziomu;
 - atomowy zapis zwycięstwa, odblokowania następnego poziomu i salda złota;
 - ponowne podejście po wyniku innym niż `BLUE_WIN`;
+- tymczasowe, prezentacyjne etykiety za bonusy trafieniowe w trakcie meczu;
 - prezentacja wyniku nagrody w istniejącym popupie wyniku meczu.
 
 ### Poza zakresem
@@ -34,8 +50,9 @@ listy osiągnięć.
 - sklep, ceny i transakcje zakupowe;
 - reklamy, zakupy za prawdziwe pieniądze, konta i synchronizacja chmurowa;
 - rozliczanie amunicji lub czarów zużytych w meczu;
-- nowe ekrany, animacje nagród, assety i backend;
-- ustalanie kwot, progów lub limitu maksymalnego salda.
+- nowe ekrany, grafiki nagród i backend;
+- bonusy Pogromca i Wsparcie oddziałów, osiągnięcia Odwet i Ostatni strzał;
+- limit maksymalnego salda lub migracja salda z `Int` na większy typ.
 
 ## Właściciele i granice modułów
 
@@ -84,26 +101,24 @@ Obecny przepływ ma trzy istotne elementy:
 - `CampaignSystem` przyjmuje `MatchEvent.MatchFinished`, tylko `BLUE_WIN`
   oznacza ukończenie, zapisuje `completedLevels`, odblokowuje kolejny poziom
   i atomowo dodaje spell-milestones.
-- `CampaignMilestoneRegistry` w `game-campaign` definiuje nagrody kampanii
-  odblokowujące Haste i Heal.
+- `CampaignRewardRegistry` w `game-campaign` udostępnia poziomowe nagrody oraz
+  istniejące spell-milestones Haste i Heal z zachowaniem ich stabilnych ID.
 - `LoadoutProgressionSnapshot` przechowuje `goldBalance`, a
-  `PlayerProgressionUseCases` go odczytuje. Nie istnieje jeszcze use case ani
-  repozytorium do naliczania złota. Profil i kampania korzystają z odrębnych
-  kluczy w tym samym AndroidX DataStore.
+  `PlayerProgressionUseCases` go odczytuje. `RewardSettlementUseCase` rozlicza
+  złoto przez port atomowej transakcji; profil, kampania i receipts używają
+  odrębnych kluczy w tym samym AndroidX DataStore.
 
-Dodanie osobnego, niezależnego `CampaignRewardRegistry` obok milestone registry
+Dodanie osobnego, niezależnego katalogu osiągnięć obok milestone registry
 grozi rozdzieleniem definicji nagród, kolizjami identyfikatorów oraz różną
 polityką przyznawania. Dopisanie trackingu, profilu i wszystkich nagród
 bezpośrednio do `CampaignSystem` mieszałoby ukończenie kampanii z oceną
 warunków meczu i ekonomią. Wyliczanie nagród w Android UI łamałoby granice
 architektury i utrudniało deterministyczne testy.
 
-Rekomendacja: rozdzielić **tracking i wyliczenie** od istniejącego właściciela
-kampanii, lecz rozszerzyć wspólną definicję nagród i użyć jednej aplikacyjnej
-granicy **atomowego rozliczenia**. Istniejący `CampaignSystem` nadal
-autoryzuje poziomy i zachowuje milestone'y, a jego zapis powinien korzystać z
-tej samej transakcji co zmiana złota. `PlayerProgressionSystem` pozostaje
-właścicielem salda profilu.
+Zastosowano rekomendowany wariant: tracking i wyliczenie są oddzielone od
+`CampaignSystem`, wspólne definicje pozostają w jednym katalogu nagród, a
+ukończenie poziomu, milestone'y, złoto i receipt są zapisywane jedną
+transakcją. `PlayerProgressionSystem` pozostaje właścicielem salda profilu.
 
 ## Rozważone warianty
 
@@ -141,8 +156,7 @@ obsługiwane warunki na eventy. Dzięki temu katalog pozostaje walidowalny,
 stabilny i niezależny od Androida. Dodanie nowego rodzaju warunku wymaga
 jawnego rozszerzenia kontraktu/evaluatora i testów.
 
-Możliwe przykłady do oceny w przyszłej konfiguracji — nie są zatwierdzonymi
-kwotami ani balansem:
+Warunki osiągnięć zaimplementowane w obecnym zakresie:
 
 - bezpośrednie trafienie wrogiej jednostki pociskiem z katapulty podczas
   zwycięskiego meczu;
@@ -150,18 +164,15 @@ kwotami ani balansem:
 - zwycięstwo bez otrzymania obrażeń przez własną fortecę;
 - seria kolejnych bezpośrednich trafień pociskiem z katapulty we wrogą
   fortecę: pierwsze trafienie rozpoczyna serię bez bonusu, drugie przyznaje
-  bonus, a każde następne trafienie z rzędu zwiększa jego poziom.
+  10 złota, a każde następne z rzędu dodaje kolejne 10 złota do premii.
 
-Każdy przykład wymaga dostatecznych danych o drużynie, celu i źródle w
-eventach. Jeżeli kontrakt eventu tego nie gwarantuje, kryterium nie może być
-implementowane przez heurystykę w UI ani przez odgadywanie z identyfikatorów
-tekstowych. Wynik audytu obecnego kontraktu opisuje sekcja „Audyt kontraktu
-eventów”.
+Każdy warunek korzysta z typowanych danych eventów. Nie stosuje się heurystyk
+UI ani parsowania identyfikatorów tekstowych.
 
-### Audyt kontraktu eventów
+### Audyt i implementacja kontraktu eventów
 
-Audyt wykonany na `MatchEvents.kt`, `DeterministicMatchSimulation.kt` i
-`MatchSession.kt` (stan repozytorium w chwili pisania dokumentu).
+Poniższy audyt dokumentuje luki wykryte przed implementacją. Zostały one
+zamknięte w kontraktach, symulacji i integracji trackera:
 
 **Co wystarcza już dziś**
 
@@ -182,7 +193,7 @@ Audyt wykonany na `MatchEvents.kt`, `DeterministicMatchSimulation.kt` i
   `projectile-N` są deterministyczne), więc tracker karmiony replayem daje ten
   sam wynik.
 
-**Luki kontraktu (wymagają rozszerzenia przed implementacją)**
+**Luki przed implementacją — zamknięte**
 
 1. **Brak drużyny w eventach.** `ProjectileFired`, `ProjectileHitEntity`,
    `DamageApplied` i `UnitDeployed` nie niosą drużyny.
@@ -215,31 +226,28 @@ Audyt wykonany na `MatchEvents.kt`, `DeterministicMatchSimulation.kt` i
    zasilany w `MatchSession` w miejscu, gdzie eventy powstają, przed
    udostępnieniem ich UI.
 
-**Proponowane rozszerzenia kontraktu** (propozycje, wymagają akceptacji;
-dodanie pól z wartościami domyślnymi nie zmienia istniejących konsumentów):
+**Wdrożone rozszerzenia kontraktu**
 
 - `ProjectileFired`: drużyna strzelającego;
 - `ProjectileHitEntity`: drużyna celu oraz rodzaj celu (jednostka, fortecy,
   bastion, tarcza) zamiast jedynie tekstowej warstwy;
 - `DamageApplied`: drużyna celu; poprawna warstwa dla obrażeń jednostek;
 - `UnitDeployed`: drużyna jednostki;
-- nowy event `ProjectileResolved(projectileId, reason)` emitowany raz, gdy
+- event `ProjectileResolved(projectileId, reason)` emitowany, gdy
   pocisk opuszcza symulację (powody: trafienie w encję, tarczę lub teren,
-  wyjście poza mapę, wygaśnięcie); szczegóły w
-  [planie implementacji](reward-system-implementation-plan.md).
+  wyjście poza mapę, wygaśnięcie).
 
 `UnitDefeated` pozostaje bez zmian: bonusy oparte na zabójstwach są poza
 zakresem.
 
-**Gotowość przykładowych osiągnięć**
+**Gotowość osiągnięć**
 
-| Osiągnięcie | Gotowość na obecnym kontrakcie | Czego brakuje |
-|---|---|---|
-| Szybkie pokonanie przeciwnika | Gotowe | — |
-| Zwycięstwo bez obrażeń własnej fortecy | Gotowe z `targetId` ze snapshotu startowego | — (tarcza i bastion nie liczą się jako obrażenia fortecy) |
-| Bezpośrednie trafienie wrogiej jednostki | Częściowo | Luka 1 (drużyna celu) |
-| Seria trafień w wrogą fortecę | Częściowo | Luki 1, 2 i 4; decyzja o kolejności strzałów |
-| Odwet, Ostatni strzał | Częściowo | Luki 1 i 4 |
+| Osiągnięcie | Status |
+|---|---|
+| Szybka wygrana | Zaimplementowane; próg 120 s czasu symulacji |
+| Wygrana bez obrażeń własnej fortecy | Zaimplementowane; tarcza i bastion nie liczą się jako forteca |
+| Bezpośrednie trafienie wrogiej jednostki | Zaimplementowane |
+| Seria bezpośrednich trafień wrogiej fortecy | Zaimplementowane; kolejność rozstrzygnięcia i fragmenty jako jeden strzał |
 
 Zasady klasyfikacji, które wynikają z audytu i mają być stosowane w
 evaluatorze:
@@ -270,19 +278,19 @@ zabójstwach jednostek) nie są wdrażane i nie wchodzą do zakresu.
 Rozszerzenie o nowy rodzaj osiągnięcia wymaga nowego typu warunku, jego
 obsługi w evaluatorze i testów, bez zmian w tracker lifecycle ani persystencji.
 
-Bezpośrednie trafienie musi być odróżniane od obrażeń obszarowych, a trafienie
-musi pochodzić z pocisku wystrzelonego przez katapultę gracza. „Szybkie
-pokonanie” wymaga zatwierdzonego progu czasu; czas powinien pochodzić z czasu
-symulacji, nie zegara ściennego. „Nienaruszona twierdza” oznacza brak
-jakiegokolwiek zdarzenia obrażeń skierowanego do twierdzy gracza w tym meczu.
+Bezpośrednie trafienie jest odróżniane od obrażeń obszarowych, a trafienie
+musi pochodzić z pocisku wystrzelonego przez katapultę gracza. Szybka wygrana
+korzysta z zatwierdzonego progu 120 sekund czasu symulacji, nie zegara
+ściennego. „Nietknięta forteca” oznacza brak dodatnich obrażeń skierowanych
+do fortecy gracza; obrażenia tarczy lub bastionu nie blokują tej nagrody.
 
 Seria trafień w twierdzę jest liczona tylko po własnych strzałach gracza.
 Każdy kolejny strzał gracza, który nie trafi bezpośrednio we wrogą twierdzę,
 zeruje serię — także trafienie wrogiej jednostki, trafienie obszarowe lub
 uderzenie w teren. Strzały przeciwnika nie zmieniają serii gracza. Bonus za
 trafienie z serii jest naliczany do końcowego rozliczenia meczu, nie
-bezpośrednio do salda w trakcie symulacji. Dokładne kwoty, wzrost bonusu i
-ewentualny limit serii pozostają do ustalenia.
+bezpośrednio do salda w trakcie symulacji; wynosi 10 złota za drugie trafienie,
+20 za trzecie i rośnie liniowo.
 
 ## Kontrakty, wejścia i wyjścia
 
@@ -315,9 +323,9 @@ zmieniać salda ani samodzielnie sumować kwot.
 ## Runtime state i cykl życia
 
 Tracker posiada tylko minimalne akumulatory potrzebne do skonfigurowanych
-warunków osiągnięć, na przykład liczniki zdarzeń i zestaw użytych typów
-amunicji. Nie kopiuje całego snapshotu meczu ani nie przechowuje obiektów
-domenowych.
+warunków osiągnięć: przetworzone identyfikatory eventów, grupy pocisków
+strzałów, trafione pary pocisk–jednostka, serię fortecy i flagi wyniku.
+Nie kopiuje całego snapshotu meczu ani nie przechowuje obiektów domenowych.
 
 1. Dla nowej sesji kampanijnej i poziomu tworzony jest pusty tracker z
    identyfikatorem meczu i generacją.
@@ -325,8 +333,9 @@ domenowych.
    symulacji.
 3. Pauza nie zmienia tracker state; ponieważ symulacja nie emituje w tym
    czasie eventów postępu, osiągnięcia nie są naliczane podczas pauzy.
-4. Restart tworzy nową generację i zeruje stan trackera. Zdarzenia starej
-   generacji są odrzucane.
+4. Każde uruchomienie generacji przekazuje `MatchId` do obserwatora i zeruje
+   stan trackera, także gdy symulacja ponownie używa tych samych `EventId`.
+   Zdarzenia o innym `MatchId` są ignorowane.
 5. Przy `BLUE_WIN` evaluator zamyka tracker, sprawdza końcowe warunki i
    składa wynik rozliczenia.
 6. Przy `RED_WIN`, `DRAW` lub `SURRENDER` tracker zostaje zamknięty bez
@@ -349,8 +358,8 @@ Kampania zapisuje postęp, a profil zapisuje saldo. Rozdzielenie tych dwóch
 zapisów bez wspólnej transakcji grozi oznaczeniem poziomu jako ukończonego bez
 wypłaty albo wypłatą złota bez ukończenia poziomu.
 
-Należy dodać w `game-application` jawny port rozliczenia, który w jednej
-atomowej aktualizacji:
+`RewardSettlementPort` w `game-application` opisuje jedną atomową aktualizację,
+która:
 
 - sprawdza poprawność profilu i kampanii oraz czy poziom jest odblokowany;
 - sprawdza, czy poziom nie ma już zatwierdzonego zwycięskiego rozliczenia;
@@ -361,10 +370,9 @@ atomowej aktualizacji:
   zestawem osiągnięć/nagród, by zwrócić ten sam wynik przy ponowieniu;
 - nie zmienia żadnego pola, jeśli walidacja lub zapis się nie powiedzie.
 
-Adapter może wykorzystać fakt, że bieżące profile i kampania znajdują się w
-tym samym AndroidX DataStore, ale ten szczegół nie przekracza granicy
-`android-app`. Port w core opisuje transakcję semantycznie i zwraca jawne
-wyniki.
+`DataStoreRewardSettlementAdapter` implementuje port na wspólnym AndroidX
+DataStore; szczegół DataStore nie przekracza granicy `android-app`. Port w core
+opisuje transakcję semantycznie i zwraca jawne wyniki.
 
 Idempotency key powinien być oparty o identyfikator kampanijnego poziomu i
 stabilny identyfikator rozliczenia, nie tylko o nazwę lokalnej sesji.
@@ -397,20 +405,20 @@ CampaignScreen
 ```
 
 `CampaignSystem` nadal posiada autoryzację poziomów, `highestUnlockedLevel`,
-`completedLevels` i projekcję kampanijnych spell-milestones. Interfejs wyboru
-poziomu musi dodatkowo odrzucać poziom już ukończony. Jego obecne sprawdzenie
-`level <= highestUnlockedLevel` dopuszcza powtórki, więc polityka jednego
-zwycięskiego podejścia wymaga jawnego wyniku `LEVEL_ALREADY_COMPLETED`.
+`completedLevels` i projekcję kampanijnych spell-milestones. Ukończone levele
+są oznaczone i wyłączone w `CampaignScreen`, a aplikacyjny wybór poziomu
+zwraca `LEVEL_ALREADY_COMPLETED`.
 
 `PlayerProgressionSystem` pozostaje jedynym właścicielem `goldBalance`.
 RewardSystem nie tworzy drugiego salda ani nie przenosi ceny czarów z
 `LoadoutCatalog`. Ewentualny system sklepu w przyszłości konsumuje to samo
 saldo przez osobny use case transakcyjny.
 
-Osiągnięcia nie są częścią `MatchSnapshot`, dopóki żaden ekran meczu nie
-potrzebuje ich wyświetlać w trakcie rozgrywki. Wynik rozliczenia trafia do
-popupu dopiero po poprawnym zapisie. Nie należy dodawać kontrolek do
-`MainActivity` ani przenosić reguł do `MatchResultPopupStateMapper`.
+Osiągnięcia nie są częścią `MatchSnapshot`. Tracker wystawia tymczasowe
+powiadomienia trafieniowe do warstwy prezentacyjnej; nie zmieniają one salda.
+Wynik rozliczenia trafia do popupu dopiero po poprawnym zapisie. Nie należy
+dodawać kontrolek do `MainActivity` ani przenosić reguł do
+`MatchResultPopupStateMapper`.
 
 ## Błędy, odrzucenia i przypadki brzegowe
 
@@ -433,67 +441,59 @@ popupu dopiero po poprawnym zapisie. Nie należy dodawać kontrolek do
 
 ## Android UI
 
-Używany jest istniejący in-match result popup. Po zapisanej wygranej powinien
-pokazać:
+Podczas meczu bezpośrednie trafienie wrogiej jednostki i każde płatne trafienie
+w serii fortecy pokazują nad miejscem trafienia pływającą etykietę
+`+X OrCoins`, która unosi się przez sekundę i zanika. Są to powiadomienia o
+spełnionym warunku; saldo pozostaje wypłacane dopiero po zwycięstwie. W
+końcowym rozbiciu seria jest opisana przyjazną nazwą „Fortress combo”. Warunki
+szybkiej wygranej i nietkniętej fortecy są rozstrzygane na końcu meczu i
+pojawiają się w rozbiciu nagrody.
+
+Istniejący popup wyniku po zapisanej wygranej pokazuje:
 
 - złoto za zwycięstwo;
 - osobne wiersze dla osiągnięć, które przyznały nagrodę;
 - sumę przyznaną za poziom;
 - saldo po rozliczeniu.
 
-Przy wyniku bez nagrody nie pokazuje się fałszywego payoutu. Podczas zapisu
-można pokazać istniejący stan zapisywania postępu. Po błędzie przycisk retry
-ponawia transakcję, a nie mecz. Warstwa prezentacji konsumuje typowany
-read model i nie wylicza kwot.
+Suma i rozbicie nagrody są umieszczone na półprzezroczystym, obramowanym
+panelu dla czytelności na tle ilustracji; scrim za popupem jest przyciemniony. Przy
+wyniku bez nagrody nie pokazuje się payoutu. Podczas zapisu wyświetlany jest
+stan zapisywania postępu. Po błędzie przycisk retry ponawia transakcję, a nie
+mecz. Warstwa prezentacji konsumuje typowany read model i nie wylicza kwot.
 
 Nie są wymagane nowe assety ani osobny `ResultScreen`.
 
-## Plan przyszłej implementacji
+## Zaimplementowany zakres
 
-Szczegółowy, fazowy plan: [reward-system-implementation-plan.md](reward-system-implementation-plan.md).
-Poniższa lista to przegląd.
+Fazy, pliki i wyniki wykonania opisano w
+[planie implementacji](reward-system-implementation-plan.md). W skrócie:
 
-0. Zatwierdzić i wdrożyć rozszerzenia kontraktu eventów z sekcji „Audyt
-   kontraktu eventów” (drużyny, rozstrzygnięcie pocisku bez trafienia),
-   z testami symulacji i replayu; bez tego osiągnięcia oparte na drużynie
-   pozostają zablokowane.
-1. Rozszerzyć typy progresji i port persystencji o jawne, atomowe
-   rozliczenie kampanii wraz ze złotem i idempotentnym receipt.
-2. Uogólnić katalog `CampaignMilestoneRegistry` do jednego rozszerzalnego
-   katalogu nagród kampanii, zachowując obecne spell-milestones i ich stabilne
-   ID.
-3. Dodać typowane definicje warunków osiągnięć i evaluator w
-   `game-application`; określić walidację kompletności danych eventów.
-4. Dodać tracker per match/session generation oraz podłączyć uporządkowany
-   strumień eventów z `MatchSession` bez przekazywania stanu domenowego do UI.
-5. Dodać use case finalizacji, który tworzy receipt przy `BLUE_WIN` i
-   przekazuje wynik do atomowego portu rozliczenia.
-6. Zmienić selekcję poziomu, aby odrzucała ukończone poziomy, pozostawiając
-   retry po porażce.
-7. Rozszerzyć Android DataStore adapter i wiring zależności; zachować
-   asynchroniczność oraz jawny retry zapisu.
-8. Rozszerzyć istniejący result popup o rozbicie zatwierdzonej nagrody.
-9. Zaktualizować dokumentację `CampaignSystem`, `PlayerProgressionSystem` i
-   `knowledge.md` w ramach implementacji, gdy nowe zachowanie będzie
-   rzeczywiście wdrożone.
+- kontrakty eventów i symulacja dostarczają drużynę, rodzaj celu i
+  rozstrzygnięcie pocisku;
+- `CampaignRewardRegistry` współdzieli katalog nagród poziomowych i
+  spell-milestones;
+- `RewardTracker` ocenia warunki w `game-application` i resetuje się na
+  początku każdej generacji sesji;
+- `RewardSettlementUseCase` weryfikuje wygraną, blokadę poziomu, receipt oraz
+  przepełnienie salda przed transakcją;
+- adapter DataStore atomowo zapisuje saldo, ukończenie poziomu, milestone'y i
+  receipt;
+- ekran meczu udostępnia zatwierdzone rozbicie nagrody w istniejącym popupie,
+  a ponowienie dotyczy zapisu, nie symulacji.
 
-Lista prawdopodobnych plików do zmiany przy implementacji:
+Kluczowe pliki wdrożenia:
 
-- `game-campaign/.../CampaignMilestoneDefinition.kt` lub jego uogólniony
-  odpowiednik;
-- `game-application/.../application/campaign/CampaignSystem.kt`;
-- `game-application/.../application/campaign/CampaignProgressRepository.kt`;
-- `game-application/.../application/progression/PlayerProgressionRepository.kt`;
-- `game-application/.../application/progression/PlayerProgressionUseCases.kt`;
-- nowe pliki `game-application/.../application/reward/`;
-- `android-app/.../persistence/DataStoreCampaignProgressRepository.kt` oraz
-  `DataStorePlayerProgressionRepository.kt` albo jeden adapter transakcyjny;
-- `android-app/.../ui/MatchViewModel.kt`,
-  `screens/match/CampaignCompletionPresenter.kt` i result popup;
-- testy jednostkowe katalogu, trackera, use case'ów i adaptera DataStore.
-
-Dokładny podział repozytoriów należy potwierdzić przy implementacji przez
-sprawdzenie współdzielenia instancji DataStore i atomowości update'ów.
+- `game-campaign/.../CampaignRewardDefinition.kt`;
+- `game-application/.../application/reward/RewardTracker.kt`,
+  `RewardSettlement.kt`;
+- `game-application/.../MatchSession.kt`,
+  `application/campaign/CampaignSystem.kt`;
+- `android-app/.../persistence/DataStoreRewardSettlementAdapter.kt`;
+- `android-app/.../ui/MatchViewModel.kt`, `BattlefieldView.kt`,
+  `BattlefieldRenderer.kt`, `FloatingRewardFeedbackClock.kt`,
+  `MatchResultPopupView.kt`;
+- testy katalogu, trackera, animacji etykiet, popupu i adaptera DataStore.
 
 ## Plan testów i kryteria akceptacji
 
@@ -562,23 +562,12 @@ sprawdzenie współdzielenia instancji DataStore i atomowości update'ów.
   złota;
 - UI wyłącznie prezentuje wynik use case'u.
 
-## Otwarte decyzje
+## Niezrealizowany zakres i decyzje na przyszłość
 
-- Zatwierdzenie rozszerzeń kontraktu eventów z audytu (drużyny w eventach,
-  event rozstrzygnięcia pocisku bez trafienia).
-
-- Kwoty za zwycięstwo i poszczególne osiągnięcia oraz ewentualne limity.
-- Konkretna lista osiągnięć, ich progi i czy w przyszłości mogą istnieć
-  osiągnięcia bez nagrody złotem.
-- Źródło authoringu: per-level entries w kodzie `game-campaign` czy osobny
-  serializowany format; bieżący zakres zakłada registry Kotlin, zgodny z
-  obecnymi definicjami kampanii.
-- Polityka dla istniejących zapisów: ukończone poziomy nie mają jeszcze
-  reward receipt. Rekomendacja to nie przyznawać im automatycznie nagród
-  wstecz; należy zatwierdzić migrację przed wdrożeniem.
-- Typ i granica maksymalnego salda: obecne `goldBalance` jest typu `Int`;
-  przed wdrożeniem trzeba potwierdzić limit lub bezpieczną migrację do typu
-  o większym zakresie.
-- Czy przyszłe nagrody pozłotowe (np. odblokowania, stock) mają używać
-  tego samego katalogu i receipt, czy oddzielnych use case'ów.
-- Czy osiągnięcia są widoczne w trakcie meczu, czy tylko w podsumowaniu.
+- Dostosowanie kwot, progów i warunków do balansu poziomów.
+- Limit maksymalnego salda lub migracja `goldBalance` z `Int` na większy typ;
+  obecnie przepełnienie jest jawnie odrzucane.
+- Czy przyszłe nagrody niezłote (np. odblokowania lub zapasy) mają używać tego
+  samego katalogu i receipt, czy oddzielnych use case'ów.
+- Bonusy Pogromca i Wsparcie oddziałów, a także Odwet i Ostatni strzał, są
+  poza zakresem.

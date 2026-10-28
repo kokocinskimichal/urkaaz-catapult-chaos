@@ -24,8 +24,28 @@ import kotlin.test.assertNotEquals
 import kotlin.test.assertTrue
 import com.urkaaaz.application.loadout.LoadoutCommandRejectedException
 import com.urkaaaz.application.loadout.LoadoutError
+import com.urkaaaz.application.reward.MatchEventObserver
 
 class MatchSessionTest {
+    @Test
+    fun eventObserverReceivesStartAndRestartBatchesIndependentlyOfEventConsumption() {
+        val batches = mutableListOf<List<MatchEvent>>()
+        val session = MatchSession(
+            eventObserver = MatchEventObserver { batches += it },
+        )
+        val matchId = MatchId("observer-match")
+        val playerId = PlayerId("observer-player")
+
+        session.dispatch(MatchCommand.Start(CommandId("observer-start"), matchId, playerId))
+        assertEquals(1, batches.size)
+        assertIs<MatchEvent.MatchStarted>(batches.single().first())
+        session.consumeEvents()
+
+        session.restart(matchId, playerId)
+        assertEquals(2, batches.size)
+        assertIs<MatchEvent.MatchStarted>(batches.last().first())
+    }
+
     @Test
     fun runicBastionCastBlocksAnotherCastUntilTheStructureIsDestroyed() {
         val session = MatchSession(

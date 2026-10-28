@@ -8,6 +8,9 @@ import androidx.datastore.preferences.core.stringPreferencesKey
 import com.urkaaaz.application.campaign.CampaignProgress
 import com.urkaaaz.application.campaign.CampaignProgressFailure
 import com.urkaaaz.application.campaign.CampaignProgressRepositoryResult
+import com.urkaaaz.application.campaign.CampaignCompletionResult
+import com.urkaaaz.application.campaign.CampaignProgressRead
+import com.urkaaaz.application.campaign.CampaignSystem
 import com.urkaaaz.application.loadout.LoadoutProgressionRead
 import com.urkaaaz.application.loadout.LoadoutProgressionSnapshot
 import com.urkaaaz.application.loadout.LoadoutStorageFailure
@@ -18,8 +21,18 @@ import com.urkaaaz.application.loadout.StoredLoadoutSelection
 import com.urkaaaz.application.progression.PlayerProgressionRepositoryFailure
 import com.urkaaaz.application.progression.PlayerProgressionRepositoryResult
 import com.urkaaaz.application.progression.PlayerProgressionUseCases
+import com.urkaaaz.application.reward.EarnedReward
+import com.urkaaaz.application.reward.LevelRewardResult
+import com.urkaaaz.application.reward.RewardSettlementFailure
+import com.urkaaaz.application.reward.RewardSettlementRepositoryResult
+import com.urkaaaz.application.reward.RewardSettlementUseCase
+import com.urkaaaz.contracts.EventId
+import com.urkaaaz.contracts.MatchEvent
+import com.urkaaaz.contracts.MatchId
+import com.urkaaaz.contracts.MatchOutcome
 import java.io.File
 import java.io.IOException
+import java.util.Base64
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -32,6 +45,80 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class DataStoreRepositoriesTest {
+    @Test
+    fun rewardSettlementAtomicallyPersistsCampaignProfileAndIdempotencyReceipt() = runBlocking {
+        testStore().use { store ->
+            val campaignRepository = DataStoreCampaignProgressRepository(store.dataStore)
+            val campaign = CampaignSystem(
+                campaignRepository,
+                rewardSettlement = RewardSettlementUseCase(
+                    DataStoreRewardSettlementAdapter(store.dataStore),
+                ),
+            )
+            val event = MatchEvent.MatchFinished(
+                eventId = EventId("finish-1"),
+                matchId = MatchId("match|1"),
+                simulationTimeMilliseconds = 10,
+                outcome = MatchOutcome.BLUE_WIN,
+            )
+            val reward = LevelRewardResult(
+                level = 1,
+                matchId = "match|1",
+                rewards = listOf(EarnedReward("level_win", 100L)),
+                totalGold = 100L,
+                issues = emptySet(),
+            )
+
+            assertTrue(campaign.completeLevel(1, event, reward) is CampaignCompletionResult.Completed)
+            val profile = PlayerProgressionUseCases(
+                DataStorePlayerProgressionRepository(store.dataStore),
+            ).snapshot(1)
+            assertEquals(
+                100,
+                (profile as LoadoutProgressionRead.Available).snapshot.goldBalance,
+            )
+            assertEquals(
+                setOf(1),
+                (campaign.progress() as CampaignProgressRead.Available).progress.completedLevels,
+            )
+
+            assertTrue(campaign.completeLevel(1, event, reward) is CampaignCompletionResult.Completed)
+            val repeatedProfile = PlayerProgressionUseCases(
+                DataStorePlayerProgressionRepository(store.dataStore),
+            ).snapshot(1)
+            assertEquals(
+                100,
+                (repeatedProfile as LoadoutProgressionRead.Available).snapshot.goldBalance,
+            )
+        }
+    }
+
+    @Test
+    fun malformedReceiptDataReturnsTypedFailure() = runBlocking {
+        testStore().use { store ->
+            val encode = { value: String ->
+                Base64.getUrlEncoder().withoutPadding()
+                    .encodeToString(value.toByteArray(Charsets.UTF_8))
+            }
+            store.dataStore.updateData { current ->
+                current.toMutablePreferences().apply {
+                    this[intPreferencesKey("reward.schema_version")] = 1
+                    this[stringPreferencesKey("reward.receipts")] =
+                        "${encode("1|match")},${encode("1|match|0|invalid id:0|")}"
+                }
+            }
+
+            val result = DataStoreRewardSettlementAdapter(store.dataStore).update {
+                error("invalid persisted receipt must fail before settlement")
+            }
+
+            assertEquals(
+                RewardSettlementRepositoryResult.Failure(RewardSettlementFailure.INVALID_DATA),
+                result,
+            )
+        }
+    }
+
     @Test
     fun profileInitializesOnceAndLoadoutWritesPreserveProgression() = runBlocking {
         testStore().use { store ->

@@ -85,6 +85,7 @@ enum class LoadoutCorrectionReason {
 enum class LoadoutProgressionFailure {
     INVALID_LEVEL,
     CAMPAIGN_LEVEL_LOCKED,
+    CAMPAIGN_LEVEL_COMPLETED,
     STORAGE_UNAVAILABLE,
     INVALID_PROFILE,
     UNSUPPORTED_PROFILE_VERSION,

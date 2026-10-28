@@ -17,8 +17,8 @@ Android jest nazywana **match screen**, a wybrana definicja kampanii —
 | `game-contracts` | stabilne, niemutowalne kontrakty komunikacji | komendy, snapshoty, eventy, scenariusze, identyfikatory |
 | `game-domain` | reguły i stan domeny gry | `Match`, fortece, jednostki, amunicja, obrażenia, konfiguracje |
 | `game-simulation` | deterministyczne wykonywanie meczu | ticki, pociski, kolizje, teren, wiatr, jednostki, eventy |
-| `game-application` | cykl życia meczu, lokalny gateway, loadout i przypadki użycia kampanii | `MatchSession`, `LocalMatchGateway`, `application.loadout`, `application.campaign` |
-| `game-campaign` | definicje poziomów, milestone'ów i konfiguracja kampanii | `CampaignLevelDefinition`, `CampaignMilestoneRegistry`, biom, wiatr, scenariusz |
+| `game-application` | cykl życia meczu, lokalny gateway, loadout, reward tracking i przypadki użycia kampanii | `MatchSession`, `LocalMatchGateway`, `application.loadout`, `application.campaign`, `application.reward` |
+| `game-campaign` | definicje poziomów, nagród, milestone'ów i konfiguracja kampanii | `CampaignLevelDefinition`, `CampaignRewardRegistry`, `CampaignMilestoneRegistry`, biom, wiatr, scenariusz |
 | `game-ai` | decyzje AI na podstawie snapshotu | `AiAgent`, rekrutacja, dobór kontr, wysyłanie fal |
 | `android-app` | lifecycle, nawigacja, input i renderowanie | `MainActivity`, ekrany, ViewModel, HUD, battlefield |
 
@@ -73,12 +73,16 @@ przez komendy i granice domeny/aplikacji.
 6. Snapshot jest mapowany na niemutowalny stan prezentacji.
 7. Ekran meczu obsługuje lifecycle, pauzę, restart, celowanie, amunicję,
    jednostki, HUD i debug overlay.
-8. `MatchEvent.MatchFinished` wraz z poziomem kampanii trafia do
-   `CampaignSystem`. Tylko `BLUE_WIN` atomowo zapisuje ukończenie, następny
-   poziom i milestone'y; demo, porażka, remis i poddanie nie zmieniają postępu.
-9. Powrót do CampaignScreen odczytuje trwały postęp. Wynik nadal jest
-   prezentowany przez uproszczony overlay; pełny ekran wyniku pozostaje
-   placeholderem.
+8. Uporządkowane eventy z `MatchSession` zasilają RewardTracker; przy
+   `MatchEvent.MatchFinished` wynik trafia do `CampaignSystem` i
+   `RewardSettlementUseCase`.
+9. Tylko `BLUE_WIN` atomowo zapisuje złoto, ukończenie, następny poziom,
+   milestone'y i receipt. Demo, porażka, remis i poddanie nie dają nagrody.
+10. Etykiety trafieniowych bonusów są prezentacyjne i tymczasowe; popup meczu
+    pokazuje zapisany wynik nagrody, a błąd zapisu można ponowić bez
+    restartowania meczu. Powrót do CampaignScreen odczytuje trwały postęp,
+    oznacza ukończone levele i wyłącza ich wybór; pełny `ResultScreen`
+    pozostaje placeholderem.
 
 ## Android i nawigacja
 
@@ -154,13 +158,16 @@ Logowanie amunicji jest host-independent i nie może zmieniać stanu gry.
 sesję do `SimulationConfig`. `WindSystem` posiada stan dynamicznych zmian
 wiatru; Android wyłącznie renderuje bieżący snapshot.
 
-`CampaignSystem` w `game-application` waliduje dostęp do poziomów i zapisuje
-`CampaignProgress` w AndroidX DataStore przez port. `CampaignMilestoneRegistry`
-w `game-campaign` definiuje Haste (ukończenie 5, dostępny od 6) i Heal
-(ukończenie 7, dostępny od 8). `CampaignAwareLoadoutProgressionPort` łączy
-kampanijne odblokowania z profilem wyłącznie w read modelu. Domyślne wybory
-milestone'ów stosują się do nowego loadoutu, nie nadpisują istniejącego.
-Tutoriale są poza tym zakresem i należą do przyszłego TutorialSystem.
+`CampaignSystem` w `game-application` waliduje dostęp do poziomów i koordynuje
+postęp. `RewardSettlementUseCase` rozlicza wynik przez port
+`game-application`; `DataStoreRewardSettlementAdapter` atomowo zapisuje saldo
+profilu, kampanię i receipts w `android-app`. `CampaignRewardRegistry` w
+`game-campaign` łączy nagrody poziomowe z milestone'ami Haste (ukończenie 5,
+dostępny od 6) i Heal (ukończenie 7, dostępny od 8).
+`CampaignAwareLoadoutProgressionPort` łączy kampanijne odblokowania z profilem
+wyłącznie w read modelu. Domyślne wybory milestone'ów stosują się do nowego
+loadoutu, nie nadpisują istniejącego. Tutoriale należą do przyszłego
+TutorialSystem.
 
 ## Kluczowe pliki
 

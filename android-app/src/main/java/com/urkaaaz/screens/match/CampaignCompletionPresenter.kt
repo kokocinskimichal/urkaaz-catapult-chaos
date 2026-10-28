@@ -7,12 +7,19 @@ import com.urkaaaz.application.campaign.CampaignCompletionResult
 import com.urkaaaz.application.campaign.CampaignProgressFailure
 import com.urkaaaz.application.campaign.CampaignSelectionRejection
 import com.urkaaaz.application.campaign.CampaignSystem
+import com.urkaaaz.application.reward.LevelRewardResult
+import com.urkaaaz.application.reward.RewardSettlementRejection
 import com.urkaaaz.contracts.MatchEvent
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.launch
+
+data class CampaignCompletionPresentation(
+    val recorded: Boolean,
+    val reward: LevelRewardResult?,
+)
 
 class CampaignCompletionPresenter(
     private val activity: Activity,
@@ -23,10 +30,11 @@ class CampaignCompletionPresenter(
     fun onMatchFinished(
         level: Int,
         event: MatchEvent.MatchFinished,
-        onCompletionRecorded: (Boolean) -> Unit,
+        reward: LevelRewardResult?,
+        onCompletion: (CampaignCompletionPresentation) -> Unit,
     ) {
         scope.launch {
-            val result = campaignSystem.completeLevel(level, event)
+            val result = campaignSystem.completeLevel(level, event, reward)
             when (result) {
                 is CampaignCompletionResult.Completed,
                 is CampaignCompletionResult.NoProgress -> Unit
@@ -37,6 +45,22 @@ class CampaignCompletionPresenter(
                                 R.string.campaign_selection_invalid
                             CampaignSelectionRejection.LEVEL_LOCKED ->
                                 R.string.campaign_completion_level_invalid
+                            CampaignSelectionRejection.LEVEL_ALREADY_COMPLETED ->
+                                R.string.campaign_completion_already_completed
+                        },
+                    )
+                is CampaignCompletionResult.RewardRejected ->
+                    showMessage(
+                        when (result.reason) {
+                            RewardSettlementRejection.GOLD_OVERFLOW ->
+                                R.string.campaign_reward_overflow
+                            RewardSettlementRejection.INVALID_LEVEL,
+                            RewardSettlementRejection.LEVEL_LOCKED,
+                            RewardSettlementRejection.LEVEL_ALREADY_COMPLETED,
+                            RewardSettlementRejection.INVALID_PROGRESS,
+                            RewardSettlementRejection.NOT_A_WIN,
+                            RewardSettlementRejection.RESULT_MISMATCH,
+                            -> R.string.campaign_completion_invalid
                         },
                     )
                 is CampaignCompletionResult.Failure ->
@@ -51,7 +75,15 @@ class CampaignCompletionPresenter(
                         },
                     )
             }
-            onCompletionRecorded(result is CampaignCompletionResult.Completed)
+            onCompletion(
+                when (result) {
+                    is CampaignCompletionResult.Completed ->
+                        CampaignCompletionPresentation(true, result.reward ?: reward)
+                    is CampaignCompletionResult.NoProgress ->
+                        CampaignCompletionPresentation(false, null)
+                    else -> CampaignCompletionPresentation(false, null)
+                },
+            )
         }
     }
 

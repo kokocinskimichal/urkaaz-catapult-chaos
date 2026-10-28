@@ -150,21 +150,26 @@ class CampaignScreen(
                 CampaignLevelDefinition.MAX_LEVELS,
             )
             for (level in firstLevel..lastLevel) {
-                val unlocked = level <= progress.highestUnlockedLevel
+                val completed = level in progress.completedLevels
+                val available = level <= progress.highestUnlockedLevel && !completed
                 levelsContainer.addView(TextView(context).apply {
-                    text = if (unlocked) {
-                        context.getString(R.string.campaign_level, level)
-                    } else {
-                        context.getString(R.string.campaign_level_locked, level)
+                    text = when {
+                        completed -> context.getString(R.string.campaign_level_completed, level)
+                        available -> context.getString(R.string.campaign_level, level)
+                        else -> context.getString(R.string.campaign_level_locked, level)
                     }
                     UiTypography.applyButtonTypeface(this)
                     textSize = 18f
                     setTextColor(Color.WHITE)
                     gravity = Gravity.CENTER
                     setPadding(dp(20), dp(14), dp(20), dp(14))
-                    alpha = if (unlocked) 1f else 0.42f
-                    isEnabled = unlocked
-                    isClickable = unlocked
+                    alpha = when {
+                        available -> 1f
+                        completed -> 0.62f
+                        else -> 0.42f
+                    }
+                    isEnabled = available
+                    isClickable = available
                     setBackgroundResource(R.drawable.bg_hud_panel)
                     setOnClickListener {
                         screenScope?.launch {
@@ -233,6 +238,8 @@ class CampaignScreen(
                 R.string.campaign_selection_invalid
             CampaignSelectionRejection.LEVEL_LOCKED ->
                 R.string.campaign_selection_locked
+            CampaignSelectionRejection.LEVEL_ALREADY_COMPLETED ->
+                R.string.campaign_completion_already_completed
         })
 
     private fun dp(value: Int): Int =

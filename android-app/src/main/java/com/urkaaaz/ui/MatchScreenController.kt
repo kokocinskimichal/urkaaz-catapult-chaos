@@ -22,16 +22,25 @@ import com.urkaaaz.contracts.MatchEvent
 import com.urkaaaz.contracts.MatchOutcome
 import com.urkaaaz.contracts.MatchStatus
 import com.urkaaaz.contracts.PlayerLoadoutConfig
+import com.urkaaaz.application.reward.LevelRewardResult
+import com.urkaaaz.application.reward.RewardTracker
+import com.urkaaaz.campaign.CampaignRewardRegistry
+import com.urkaaaz.screens.match.CampaignCompletionPresentation
 
 class MatchScreenController(
     private val activity: Activity,
     private val campaignLevel: Int,
+    rewardRegistry: CampaignRewardRegistry = CampaignRewardRegistry.default(),
     playerLoadout: PlayerLoadoutConfig? = null,
     private val demoMode: Boolean = false,
     private val onBackClicked: () -> Unit,
     private val openDebugOnStart: Boolean = false,
-    onMatchFinished: (Int, MatchEvent.MatchFinished, (Boolean) -> Unit) -> Unit =
-        { _, _, onCompletionRecorded -> onCompletionRecorded(false) },
+    private val onMatchFinished: (
+        Int,
+        MatchEvent.MatchFinished,
+        LevelRewardResult?,
+        (CampaignCompletionPresentation) -> Unit,
+    ) -> Unit = { _, _, _, onCompletion -> onCompletion(CampaignCompletionPresentation(false, null)) },
     private val onNextLevelClicked: (Int) -> Unit = {},
 ) {
     private val viewModel = MatchViewModel(
@@ -41,12 +50,16 @@ class MatchScreenController(
         mapRepository = MapDefinitionRepository { path -> activity.assets.open(path) },
         combatLogSink = AndroidCombatLogSink(),
         ammunitionLogSink = AndroidAmmunitionLogSink(),
-        onMatchFinished = { level, event ->
-            onMatchFinished(level, event) { completionRecorded ->
-                campaignCompletionRecorded = completionRecorded
+        onMatchFinishedWithRewards = { level, event, reward ->
+            lastMatchFinishedEvent = event
+            lastMatchReward = reward
+            onMatchFinished(level, event, reward) { completion ->
+                campaignCompletionRecorded = completion.recorded
+                campaignRewardResult = completion.reward
                 lastRenderedState?.let(::render)
             }
         },
+        rewardTracker = if (demoMode) null else RewardTracker(campaignLevel, rewardRegistry),
     )
     private val gameHandler = Handler(Looper.getMainLooper())
     private lateinit var battlefieldView: BattlefieldView
@@ -62,6 +75,9 @@ class MatchScreenController(
     private var snapshotMode = false
     private var debugPausedMatch = false
     private var campaignCompletionRecorded: Boolean? = null
+    private var campaignRewardResult: LevelRewardResult? = null
+    private var lastMatchFinishedEvent: MatchEvent.MatchFinished? = null
+    private var lastMatchReward: LevelRewardResult? = null
     private var lastRenderedState: RenderState? = null
 
     private var aimAngle = 45f
@@ -178,6 +194,7 @@ class MatchScreenController(
             dispatchMatchResultAction(
                 action = action,
                 onRetry = ::restartMatch,
+                onRetrySave = ::retryCampaignSave,
                 onNextLevel = { onNextLevelClicked(campaignLevel + 1) },
                 onCampaignReturn = onBackClicked,
                 onDashboardReturn = onBackClicked,
@@ -300,6 +317,7 @@ class MatchScreenController(
             biomeName = state.terrainBiome,
             demoMode = demoMode,
             campaignCompletionRecorded = campaignCompletionRecorded,
+            reward = campaignRewardResult,
         )
         hudView.render(state)
         ammunitionPanel.render(state)
@@ -322,9 +340,22 @@ class MatchScreenController(
 
     private fun restartMatch() {
         campaignCompletionRecorded = null
+        campaignRewardResult = null
+        lastMatchFinishedEvent = null
+        lastMatchReward = null
         aimAngle = 45f
         aimPower = 50f
         render(viewModel.dispatch(MatchUiAction.RestartMatch))
+    }
+
+    private fun retryCampaignSave() {
+        val event = lastMatchFinishedEvent ?: return
+        campaignCompletionRecorded = null
+        onMatchFinished(campaignLevel, event, lastMatchReward) { completion ->
+            campaignCompletionRecorded = completion.recorded
+            campaignRewardResult = completion.reward
+            lastRenderedState?.let(::render)
+        }
     }
 
     private fun showRetreatConfirmationDialog() {

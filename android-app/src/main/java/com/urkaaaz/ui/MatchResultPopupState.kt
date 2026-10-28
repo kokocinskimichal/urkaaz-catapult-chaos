@@ -2,6 +2,7 @@ package com.urkaaaz.ui
 
 import com.urkaaaz.campaign.CampaignLevelDefinition
 import com.urkaaaz.contracts.MatchOutcome
+import com.urkaaaz.application.reward.LevelRewardResult
 
 internal enum class MatchResultKind {
     VICTORY,
@@ -18,6 +19,7 @@ internal enum class MatchResultActionType {
     NEXT_LEVEL,
     EXIT_TO_CAMPAIGN,
     RETRY,
+    RETRY_SAVE,
     BACK_TO_DASHBOARD,
 }
 
@@ -39,6 +41,7 @@ internal data class MatchResultPopupState(
     val biomeName: String,
     val status: MatchResultPopupStatus?,
     val actions: List<MatchResultPopupAction>,
+    val reward: LevelRewardResult? = null,
 )
 
 internal object MatchResultPopupStateMapper {
@@ -49,6 +52,7 @@ internal object MatchResultPopupStateMapper {
         biomeName: String,
         demoMode: Boolean,
         campaignCompletionRecorded: Boolean?,
+        reward: LevelRewardResult? = null,
     ): MatchResultPopupState? {
         if (!isFinished || outcome == null) return null
 
@@ -65,7 +69,10 @@ internal object MatchResultPopupStateMapper {
             demoMode -> {
                 status = null
                 actions = listOf(
-                    MatchResultPopupAction(MatchResultActionType.RETRY, MatchResultButtonStyle.RED),
+                    MatchResultPopupAction(
+                        MatchResultActionType.RETRY,
+                        MatchResultButtonStyle.RED,
+                    ),
                     MatchResultPopupAction(
                         MatchResultActionType.BACK_TO_DASHBOARD,
                         MatchResultButtonStyle.DARK,
@@ -85,7 +92,10 @@ internal object MatchResultPopupStateMapper {
             campaignCompletionRecorded == false -> {
                 status = MatchResultPopupStatus.COMPLETION_FAILED
                 actions = listOf(
-                    MatchResultPopupAction(MatchResultActionType.RETRY, MatchResultButtonStyle.RED),
+                    MatchResultPopupAction(
+                        MatchResultActionType.RETRY_SAVE,
+                        MatchResultButtonStyle.RED,
+                    ),
                     MatchResultPopupAction(
                         MatchResultActionType.EXIT_TO_CAMPAIGN,
                         MatchResultButtonStyle.DARK,
@@ -140,6 +150,7 @@ internal object MatchResultPopupStateMapper {
             biomeName = normalizedBiomeName,
             status = status,
             actions = actions,
+            reward = reward,
         )
     }
 }
@@ -147,6 +158,7 @@ internal object MatchResultPopupStateMapper {
 internal fun dispatchMatchResultAction(
     action: MatchResultActionType,
     onRetry: () -> Unit,
+    onRetrySave: () -> Unit = onRetry,
     onNextLevel: () -> Unit,
     onCampaignReturn: () -> Unit,
     onDashboardReturn: () -> Unit,
@@ -155,6 +167,7 @@ internal fun dispatchMatchResultAction(
         MatchResultActionType.NEXT_LEVEL -> onNextLevel()
         MatchResultActionType.EXIT_TO_CAMPAIGN -> onCampaignReturn()
         MatchResultActionType.RETRY -> onRetry()
+        MatchResultActionType.RETRY_SAVE -> onRetrySave()
         MatchResultActionType.BACK_TO_DASHBOARD -> onDashboardReturn()
     }
 }

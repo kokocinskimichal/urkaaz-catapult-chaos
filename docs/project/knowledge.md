@@ -13,6 +13,10 @@ only after the profile and saved loadout are read, validated and committed.
 Shop and result screens remain placeholders.
 `MainActivity` hides Android status and navigation bars for immersive
 full-screen presentation; system bars can be revealed transiently with a swipe.
+Campaign wins are evaluated by RewardSystem and atomically settle gold,
+campaign completion, milestone grants and an idempotent receipt in the local
+DataStore. The match result popup presents the committed reward and can retry
+a failed save without replaying the match.
 
 Terminology convention: **mecz** means the gameplay session and runtime
 simulation only. The Android UI is called the **match screen**, while the
@@ -122,7 +126,9 @@ Eleven approved full-card spell illustrations are stored in
 `CampaignSystem`
 persists completed levels, the highest unlocked level and applied milestone
 IDs separately from the profile. Only `BLUE_WIN` advances the campaign. The
-match result remains an overlay over the dimmed battlefield. `NEXT LEVEL`
+campaign selector marks completed levels and disables them, while the
+application also rejects their selection. The match result remains an overlay
+over the dimmed battlefield. `NEXT LEVEL`
 appears only after that completion is persisted and opens the next level's
 Loadout; during a pending save, NEXT LEVEL stays disabled while campaign return
 remains available. The controller dispatches the enabled action directly;
@@ -133,8 +139,9 @@ matches offer retry and Dashboard return.
 The popup uses live level/biome and outcome text with the shared panel,
 outcome-specific plaque, and existing button assets. Separate Green Frontier
 Victory and Defeat illustrations are stored in `assets_src/match/result-ui/`
-and Android `drawable-nodpi`, sized to the panel window. Reward content remains
-deferred.
+and Android `drawable-nodpi`, sized to the panel window. The popup shows the
+committed reward breakdown and total; hit-based bonuses also use transient
+world-space feedback during the match.
 Haste is awarded for level 5 and Heal for level 7; their availability starts
 at levels 6 and 8. Campaign rewards are projected into Loadout progression,
 and preferred spells affect only newly generated defaults. Tutorials remain
@@ -906,6 +913,21 @@ must go through commands and domain/application boundaries.
   Campaign progression and Haste/Heal milestone persistence are implemented;
   tutorials remain deferred to TutorialSystem. Runtime ammunition consumption
   is not reconciled with persistent stock.
+- RewardSystem is implemented for campaign-level gold rewards: a BLUE win
+  grants 100 gold, with configurable achievement entries for a direct enemy
+  unit hit (10), a win within 120 simulation seconds (25), an untouched own
+  fortress (25), and a consecutive direct enemy-fortress hit streak (10 for
+  hit two, 20 for hit three, then +10 per hit). Streak order is projectile
+  resolution order; hits on a shield or bastion do not count. Reward settlement
+  atomically saves the profile balance, campaign progress, milestone IDs and
+  receipt. Demo/non-win runs pay nothing, completed levels cannot be retried,
+  and older completions without receipts are not paid retroactively. Purchases,
+  stock settlement, kill bonuses and other reward types remain out of scope.
+  During the match, direct enemy-unit and qualifying fortress-streak bonuses
+  show a one-second rising `+X OrCoins` label at the hit location; labels are
+  provisional until a BLUE win. The fortress streak is labeled “Fortress
+  combo” in the popup, which uses a translucent gold-bordered reward panel
+  over a dark scrim.
 - `CastSpell` is implemented for `FORTRESS_SHIELD`, HASTE and `RUNIC_BASTION`,
   including mana validation, replay, typed results and Android presentation.
   The other eight spell effects and AI casting are not implemented. HASTE's

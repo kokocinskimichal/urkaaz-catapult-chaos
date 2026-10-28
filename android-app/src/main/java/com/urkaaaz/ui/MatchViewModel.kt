@@ -6,6 +6,9 @@ import com.urkaaaz.campaign.DemoLevelDefinitions
 import com.urkaaaz.campaign.MapDefinitionRepository
 import com.urkaaaz.application.LocalMatchGateway
 import com.urkaaaz.application.MatchReplay
+import com.urkaaaz.application.reward.LevelRewardResult
+import com.urkaaaz.application.reward.MatchEventObserver
+import com.urkaaaz.application.reward.RewardTracker
 import com.urkaaaz.application.loadout.LoadoutCatalog
 import com.urkaaaz.contracts.CommandId
 import com.urkaaaz.contracts.CommandResult
@@ -40,6 +43,13 @@ class MatchViewModel(
     private val matchId: MatchId = MatchId("local-match"),
     private val playerId: PlayerId = playerLoadout?.playerId ?: PlayerId("local-player"),
     private val onMatchFinished: (Int, MatchEvent.MatchFinished) -> Unit = { _, _ -> },
+    private val onMatchFinishedWithRewards: (
+        Int,
+        MatchEvent.MatchFinished,
+        LevelRewardResult?,
+    ) -> Unit = { level, event, _ -> onMatchFinished(level, event) },
+    private val rewardTracker: RewardTracker? =
+        if (demoMode) null else RewardTracker(campaignLevel),
     private val gateway: LocalMatchGateway = LocalMatchGateway(
         loadSelectedDefinition(campaignLevel, demoMode, mapRepository).biome.name,
         loadSelectedDefinition(campaignLevel, demoMode, mapRepository).initialWind,
@@ -59,6 +69,7 @@ class MatchViewModel(
         redFortressMaxHealth = DEFAULT_FORTRESS_MAX_HEALTH,
         combatLogSink = combatLogSink,
         ammunitionLogSink = ammunitionLogSink,
+        eventObserver = rewardTracker ?: MatchEventObserver { },
     ),
 ) {
     private val campaignScenario = loadSelectedScenario(
@@ -276,10 +287,21 @@ class MatchViewModel(
         events: List<MatchEvent> = emptyList(),
     ): RenderState {
         forwardCampaignCompletionEvents(events)
-        return RenderStateMapper.map(snapshot, events).copy(
+        val mapped = RenderStateMapper.map(snapshot, events)
+        val rewardFeedback = rewardTracker?.consumeNotifications().orEmpty().map { notification ->
+            CombatFeedbackRenderState(
+                eventId = notification.id,
+                kind = CombatFeedbackRenderState.Kind.GOLD_REWARD,
+                x = notification.x,
+                y = notification.y,
+                label = "+${notification.gold} OrCoins",
+            )
+        }
+        return mapped.copy(
             matchGeneration = matchGeneration,
             selectedAmmunitionType = selectedAmmunition,
             spellFeedbackLabel = spellFeedbackLabel,
+            combatFeedback = mapped.combatFeedback + rewardFeedback,
         )
     }
 
@@ -322,7 +344,7 @@ class MatchViewModel(
         events.filterIsInstance<MatchEvent.MatchFinished>().forEach { event ->
             val delivery = Triple(matchGeneration, event.matchId, event.eventId)
             if (forwardedCampaignCompletions.add(delivery)) {
-                onMatchFinished(campaignLevel, event)
+                onMatchFinishedWithRewards(campaignLevel, event, gateway.rewardResult())
             }
         }
     }
