@@ -1,0 +1,97 @@
+STATUS: Generate one standalone, reusable Orc boss landmark for Urkaaaz's
+campaign maps. Base its design on the boss markers at levels 5 and 10 in the
+newest attached campaign-map screenshot. This is a transparent map overlay,
+not a map, screenshot, or gameplay character sprite.
+
+## Reference input
+
+- Attach the newest campaign-map screenshot showing the boss landmarks at
+  levels 5 and 10. Use those two markers as the primary reference for the
+  boss silhouette, skull, horns, banners, and compact shrine-like base.
+- Attach the approved blue-banner fortress marker only as a secondary
+  reference for matching painterly materials, navy cloth, ivory skull
+  emblems, and restrained amber lighting. The boss must remain visibly
+  different from a regular fortress.
+- The newest campaign-map screenshot supersedes older placeholder boss art.
+  Treat its map, route, level plaques, numbers, locks, and selection glow as
+  separate visual layers; do not copy them into the asset.
+
+## Output
+
+- Generate exactly one PNG:
+  `campaign_map_marker_boss.png`.
+- Save it under `assets_src/campaign/map-markers/`.
+- Canvas: exactly 512 x 512 pixels, square, RGBA.
+- Use genuine transparent alpha. Do not draw a checkerboard or any opaque or
+  colored canvas.
+- Center the complete boss landmark and keep it within the central 82% of the
+  canvas, with clean transparent margins on every side.
+- Generate one reusable boss marker for both chapter boss locations, not a
+  sprite sheet, contact sheet, or collection of variants.
+
+## Boss landmark design
+
+- Depict a compact, unmistakable Orc boss shrine/stronghold, viewed from the
+  same elevated three-quarter angle as the boss markers in the screenshot.
+- Make a large ivory horned skull the dominant focal point. Give it a
+  powerful, readable silhouette with deep eye sockets, heavy tusks or horns,
+  and a few bold bone details.
+- Set the skull into a squat, broad base of rough charcoal stone and dark
+  timber with a reinforced gate or spiked palisade details. Keep it lower and
+  more skull-centered than the tall, tower-dominant fortress marker.
+- Add small deep-navy banners with simple ivory skull emblems. Use restrained
+  amber light in eye sockets, windows, or attached torches to match the
+  screenshot's warm firelit style.
+- Use weathered stone, near-black timber, iron, bone ivory, navy cloth, and
+  limited torch amber. Keep the finish painterly, high-contrast, and
+  consistent with the approved fortress marker without copying its silhouette.
+- At 48 dp display size, the horned skull must remain the clearest feature;
+  simplify minor architecture instead of shrinking the skull or adding tiny
+  details.
+- Keep the object centered, upright, biome-neutral, and legible over both
+  bright and dark campaign-map terrain.
+
+## Separation from UI and other assets
+
+- Generate only the boss illustration. Android draws the level number,
+  marker hit target, lock/check status, and selection feedback separately.
+- Do not draw a circular or hexagonal badge, marker frame, status ring,
+  pedestal, selection glow, lock, checkmark, number plaque, level number,
+  label, text, or other UI.
+- Do not draw a map, terrain tile, path, biome background, separate scenery,
+  surrounding city, soldiers, weapons, or battle effects.
+- Do not depict a full-body boss character, attack pose, projectile, or combat
+  scene. This is a campaign landmark icon, not the in-match boss unit.
+- Do not add a large cast shadow, smoke, flames, or light rays outside the
+  landmark silhouette. Keep transparent pixels clean and attached to the art.
+- The fortress marker is a separate asset. Do not turn this boss into a
+  standard tower keep or reuse the fortress silhouette.
+
+## Negative prompt
+
+background, opaque background, colored background, checkerboard, map, terrain,
+grass tile, path, biome scenery, sky, water, sprite sheet, multiple icons,
+side-view gameplay character, full-body boss, attack pose, battle scene,
+human knight, human castle, ordinary fortress keep, tall tower-dominant
+fortress, plain human skull, tiny unreadable details, polished white stone,
+crimson banners, red roof, heraldic shield, fleur-de-lis, sprawling city,
+fortress complex, ornate filigree, soldiers, creatures, weapons, combat,
+projectiles, explosions, smoke, text, letters, numbers, labels, logo,
+watermark, signature, badge, circular frame, hexagonal frame, marker pin,
+status ring, selection glow, level plaque, lock, checkmark, UI, cropped horns,
+cropped skull, detached shadow, colored fringe, jagged alpha edges
+
+## Review checklist
+
+- Confirm exactly one centered boss landmark is present on a 512 x 512 RGBA
+  canvas with genuine transparency.
+- Preview at 48 dp and confirm the horned skull remains immediately
+  recognizable and distinct from the fortress marker.
+- Confirm the art matches the boss landmarks at levels 5 and 10 in the newest
+  screenshot and uses its navy-banner, ivory, and amber palette.
+- Confirm no badge, plaque, number, status, lock, text, map, character pose,
+  or separate scenery is baked into the image.
+- Confirm the silhouette contrasts against both light and dark map regions.
+- Do not import the generated image into Android until it is reviewed and
+  approved. Once approved, it can replace the boss vector placeholder without
+  changing map anchors or progression logic.

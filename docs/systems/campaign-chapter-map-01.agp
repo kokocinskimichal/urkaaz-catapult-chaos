@@ -1,0 +1,110 @@
+STATUS: The latest user-provided image is already an atlas-style map and is
+the current Chapter 1 map candidate. Do not use this prompt to replace it.
+Keep this generation prompt only as a fallback if a new or revised map is
+explicitly requested.
+
+Create one campaign-map background for Chapter 1 of Urkaaaz, "The Green
+Frontier". Use the attached Green Frontier biome background as the
+environment reference.
+
+## Reference input
+
+- Attach only the latest user-provided Green Frontier biome background. It
+  replaces any earlier Green Frontier reference image for this generation.
+- Preserve its bright rolling grasslands, warm golden dirt paths, rocky
+  outcrops, evergreen stands, waterways, waterfalls, distant mountains,
+  lighting, and overall color palette.
+- Treat the image as an environment reference, not as a layout to copy or a
+  requirement to reproduce gameplay terrain geometry. Design one clear
+  campaign route; do not treat every existing path or crossing as a level
+  location.
+- Do not introduce visual features from Frostbound, Copperwood, Ashen March,
+  Sunken Marshes, or another unrelated biome.
+
+## Output
+
+- Generate exactly one PNG:
+  `campaign_chapter_01_green_frontier_map.png`.
+- Save it under `assets_src/campaign/chapter-maps/`.
+- Canvas: exactly 1920 x 1080 pixels, landscape aspect ratio 16:9.
+- Fill the canvas edge-to-edge as a complete campaign map background.
+- Do not add a frame, border, title plaque, or transparent margins.
+- This is a background asset only. It will be displayed with its aspect ratio
+  preserved; level markers and all screen UI are layered separately.
+
+## Map composition
+
+- Depict a painterly, top-down atlas view of the Green Frontier. Give the
+  landscape enough terrain depth and readable environmental detail to feel
+  like a place in the Urkaaaz world, while keeping the route and level sites
+  clear at a small landscape-screen display size.
+- Show exactly ten distinct, visually identifiable, empty level locations.
+  Distribute them across the map with generous separation so ten independent
+  marker overlays and touch targets can be placed later.
+- Make each location easy to identify as a quiet anchor area, such as a
+  clearing, a bend in the route, or a natural terrain feature. Keep the area
+  behind each future marker visually simple and high-contrast enough for
+  separate artwork and status treatments.
+- Connect the ten locations with a coherent, readable travel route that
+  suggests chapter progression. The route may branch or wind naturally, but
+  it must not make the order of the ten sites ambiguous.
+- Keep all ten locations comfortably inside the canvas, away from the extreme
+  edges. Leave breathing room for screen controls that will be layered above
+  the image; do not put a level location in a corner or directly against an
+  edge.
+- Compose an attractive, balanced map rather than a flat diagram. The ten
+  level locations must remain the clearest repeated points of interest.
+
+## Landmark and UI separation
+
+- Do not draw fortresses, castles, keeps, boss characters, boss buildings,
+  towers, ruins that read as a fortress, or other settlement silhouettes at
+  any of the ten level locations. Fortress and boss illustrations are
+  independent replaceable marker assets.
+- Do not draw marker badges, marker frames, numbered pins, level icons,
+  completion symbols, lock symbols, status rings, or placeholder circles.
+- Do not include any text, letters, numbers, chapter or level labels, legends,
+  UI, buttons, interface panels, or watermark.
+- Do not bake level state, unlock state, or player progression into the art.
+- Do not include a map title, compass rose, grid, route numbers, or decorative
+  symbols that could be mistaken for level markers.
+
+## Style and readability
+
+- Match a polished, painterly fantasy atlas style suitable for the Urkaaaz
+  campaign. Keep the environment cohesive with the attached Green Frontier
+  reference rather than generic fantasy concept art.
+- Use clear value separation between the travel route, the ten empty level
+  locations, and surrounding terrain. Avoid excessive foliage, texture, fog,
+  glow, or small detail that would obscure marker placement at device scale.
+- Keep each empty location distinguishable from ordinary scenery without
+  turning it into a pre-drawn icon or structure.
+- Do not add characters, armies, combat, projectiles, or gameplay scenes.
+
+## Negative prompt
+
+text, letters, numbers, labels, title, logo, watermark, signature, UI, buttons,
+panels, map legend, compass rose, grid, route numbers, numbered pins, badges,
+icons, marker circles, status rings, locks, completion marks, fortress,
+castle, keep, boss, boss building, tower, settlement, fortress silhouette,
+generic fantasy map, snow, ice, desert, marsh, swamp, ashland, unrelated
+biome, tiny unreadable details, crowded route, overlapping locations, fewer
+than ten locations, more than ten locations, locations at the canvas edge,
+characters, army, combat, projectile, excessive fog, excessive glow
+
+## Review checklist
+
+- Confirm the image is exactly 1920 x 1080 and fills the 16:9 canvas.
+- Count exactly ten distinct, empty level locations; check that each is
+  separated enough for an independent marker and touch target.
+- Confirm the route connects the locations in an understandable progression.
+- Confirm no fortress or boss artwork, marker placeholders, text, numbers, or
+  UI is baked into the background.
+- Compare the terrain, vegetation, lighting, and palette with the attached
+  Green Frontier biome reference.
+- Preview at the intended landscape-screen size and verify all ten locations
+  remain readable and have clear space for overlays.
+- After approval, measure and record the ten anchor coordinates against this
+  exact image. Do not estimate final coordinates from the prompt.
+- Do not import the generated image into Android until it is reviewed and
+  approved.

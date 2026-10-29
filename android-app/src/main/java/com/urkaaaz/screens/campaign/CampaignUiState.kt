@@ -9,4 +9,7 @@ data class CampaignUiState(
     val progress: CampaignProgress? = null,
     val failure: CampaignProgressFailure? = null,
     val selectionRejection: CampaignSelectionRejection? = null,
+    val mapProgression: CampaignMapProgressionState? = null,
+    val selectedChapterId: String? = null,
+    val selectedLevel: Int? = null,
 )

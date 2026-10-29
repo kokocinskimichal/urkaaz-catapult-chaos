@@ -10,7 +10,14 @@ kampanię, AI oraz działający match screen. Gałąź robocza: `develop`.
 
 - Start → dashboard → campaign → match screen przez lekką nawigację
   single-activity.
-- Typowany wybór campaign level przez `game-campaign`.
+- Typowany wybór campaign level przez `game-campaign`; zwycięstwo kampanii
+  zapisuje ukończenie poziomu i atomowo rozlicza nagrody.
+- `CampaignChapterRegistry` definiuje dziesięć rozdziałów, ich biomy oraz
+  fortress/boss landmarks. Campaign screen pokazuje mapę Chapter 1,
+  postęp, rozdziały ukończone/bieżący/podgląd oraz znaczniki stanów poziomów;
+  start wymaga zaznaczenia dostępnego poziomu i przycisku **START LEVEL**.
+- Dashboard udostępnia potwierdzony reset lokalnego postępu gracza: kampanii,
+  złota, odblokowań, stocków, zapisanych loadoutów i paragonów nagród.
 - Lokalny przepływ:
   `MatchUiAction → MatchViewModel → LocalMatchGateway → MatchSession →
   simulation → MatchSnapshot`.
@@ -89,15 +96,16 @@ snapshotów i eventów zamiast mutować bezpośrednio stan innych podsystemów.
 - `LoadoutScreen` asynchronicznie odczytuje, waliduje i zapisuje domyślny
   loadout; interaktywne edytory nadal nie są gotowe. `ShopScreen` i
   `ResultScreen` pozostają placeholderami.
-- Dashboard i campaign mają działającą nawigację, ale nie pełną funkcjonalność
-  produkcyjnej progresji.
-- Wszystkie 100 poziomów kampanii jest tymczasowo odblokowane dla emulatora;
-  brak trwałego repozytorium progresji i produkcyjnych reguł unlock.
-- Wynik meczu jest uproszczonym overlayem; brakuje pełnego panelu nagród,
-  zapisu ukończenia, następnego poziomu, złota i żyć.
-- Lokalny profil i zatwierdzony loadout są zapisywane przez DataStore, ale
-  brakuje interaktywnych edytorów loadoutu, zakupów i rozliczania stocku po
-  meczu.
+- Chapter 1 ma zatwierdzoną mapę i assety campaign UI; mapy Chapter 2–10 nie
+  są jeszcze dostępne, więc te rozdziały używają listy poziomów.
+- Nie wszystkie systemy progresji są kompletne: sklep/zakupy i system żyć
+  pozostają poza obecnym zakresem. Campaign progress i nagrody za zwycięstwo
+  są już zapisywane lokalnie.
+- Match result popup prezentuje rozliczoną nagrodę i pozwala przejść do
+  następnego poziomu po zapisaniu ukończenia; przegrana i błąd zapisu mają
+  osobne ścieżki retry/powrotu.
+- Local profile i loadout są zapisywane przez DataStore; zakupy oraz pełne
+  rozliczanie zużycia stocku po meczu pozostają do uzupełnienia.
 - SpellSystem nie obejmuje jeszcze pozostałych ośmiu efektów katalogu ani
   castowania zaklęć przez AI; brakuje też tutoriala, bossów, centralnego celu
   i wszystkich legacy widgetów HUD.
@@ -111,8 +119,8 @@ snapshotów i eventów zamiast mutować bezpośrednio stan innych podsystemów.
 
 ## Jawnie odroczone decyzje
 
-1. Produkcyjna persystencja postępu kampanii i żyć oraz przepływy nagród,
-   zakupów i aktualizacji złota/stocku.
+1. Mapy i walidacja wizualnych anchorów dla rozdziałów kampanii 2–10;
+   sklep/zakupy i system żyć pozostają odroczone.
 2. Docelowa technologia nawigacji: obecny `AppNavigator` versus Android
    Navigation/Compose.
 3. Zakres i właściciel przyszłego backendu/network play.

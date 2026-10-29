@@ -10,7 +10,6 @@ import com.urkaaaz.contracts.PlayerId
 import com.urkaaaz.contracts.PlayerLoadoutConfig
 import com.urkaaaz.contracts.ResourceSnapshot
 import com.urkaaaz.contracts.Team
-import com.urkaaaz.contracts.TerrainBiome
 import com.urkaaaz.contracts.VictoryRulesConfig
 import com.urkaaaz.contracts.WindSnapshot
 import com.urkaaaz.contracts.WorldDimensions
@@ -92,10 +91,14 @@ data class CampaignLevelDefinition(
                 else -> "demo-map"
             }
             val baseMapDefinition = mapRepository.require(mapId)
-            val mapDefinition = if (safeLevel in CHAPTER_TWO_FIRST_LEVEL..CHAPTER_TWO_LAST_LEVEL) {
-                baseMapDefinition.copy(biome = TerrainBiome.FROSTBOUND.mapId)
-            } else {
+            val chapterBiome = CampaignChapterRegistry.default()
+                .chapterForLevel(safeLevel)
+                .biome
+                .mapId
+            val mapDefinition = if (baseMapDefinition.biome == chapterBiome) {
                 baseMapDefinition
+            } else {
+                baseMapDefinition.copy(biome = chapterBiome)
             }
             return CampaignLevelDefinition(
                 level = safeLevel,
@@ -160,7 +163,5 @@ data class CampaignLevelDefinition(
         private const val CHAPTER_ONE_LEVEL_THREE_MAP_ID = "chapter1-level3"
         private const val CHAPTER_ONE_LEVEL_FOUR = 4
         private const val CHAPTER_ONE_LEVEL_FOUR_MAP_ID = "chapter1-level4"
-        private const val CHAPTER_TWO_FIRST_LEVEL = 11
-        private const val CHAPTER_TWO_LAST_LEVEL = 20
     }
 }

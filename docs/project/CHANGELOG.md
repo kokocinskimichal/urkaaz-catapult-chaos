@@ -1,5 +1,25 @@
 # Changelog
 
+## 2026-10-29
+
+### Added
+
+- Added the extensible ten-chapter campaign registry with canonical chapter
+  biomes and typed fortress/boss landmarks, plus a chapter-based campaign map
+  with current/preview chapters, level selection, and a Start Level action.
+- Added a confirmed Dashboard reset for local player progress, clearing
+  campaign progress, profile balances and unlocks, inventory, loadouts, and
+  reward receipts from the shared Preferences DataStore.
+- Added and integrated the Chapter 1 map, campaign frame, fortress and boss
+  markers, three level-state plaques, status badges, and available-level glow.
+  Added copy-ready AGPs for campaign maps and reusable campaign art.
+
+### Changed
+
+- Campaign level biome assignment now comes from the canonical chapter
+  registry; the campaign map center-crops its art and positions markers using
+  the same viewport transform.
+
 ## 2026-10-28
 
 ### Added

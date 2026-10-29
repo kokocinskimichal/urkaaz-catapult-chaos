@@ -1,0 +1,107 @@
+STATUS: Generate one transparent sprite sheet containing the three campaign
+level-number plaque backgrounds shown in the latest Chapter 1 campaign-map
+screenshot. These are reusable UI assets; Android adds the level number and
+status icons separately.
+
+## Reference input
+
+- Attach the campaign-map screenshot showing level 1 completed, level 2
+  available, and the remaining levels locked. Use its three plaque treatments
+  as the primary design reference.
+- Match the screenshot's short, wide, beveled plaque shape and painterly
+  fantasy materials. Keep the same silhouette, dimensions, camera angle,
+  position, and border treatment for all three variants.
+- The plaque is a separate overlay below a fortress or boss marker. Do not
+  copy the map, marker illustration, progress bar, frame, or other UI.
+
+## Output
+
+- Generate exactly one PNG sprite sheet:
+  `campaign_map_level_plates_sheet.png`.
+- Save it under `assets_src/campaign/ui/`.
+- Canvas: 3:1 landscape, RGBA. Prefer 1536 x 512 pixels. If the image
+  generator uses a different fixed resolution, preserve the 3:1 aspect and
+  three evenly spaced states.
+- Arrange three equal-width cells horizontally, in this order:
+  1. completed;
+  2. available;
+  3. locked.
+- Center one plaque in each cell. Each plaque should occupy about 90% of its
+  cell's width and 30% of its height, with identical bounds and alignment in
+  all three cells. Keep the rest of the sheet genuinely transparent.
+- Do not draw cell dividers, crop marks, labels, or a background. Do not
+  generate separate files; the three cells will be extracted after review.
+
+## Shared plaque shape
+
+- Make each plaque a short, wide rectangular nameplate with restrained clipped
+  corners, a beveled raised edge, and a shallow dark inset for the live level
+  number.
+- Keep all three shapes visually identical so the plaque does not jump or
+  change size when a level changes state.
+- Make the empty center high-contrast and wide enough for a one- or two-digit
+  number. Leave space at the right edge for a separately rendered status icon.
+- Use a polished but worn Orc campaign-map finish: hammered metal edges,
+  dark timber or leather structure, and restrained antique-gold trim.
+
+## State treatments
+
+- **Completed, first cell:** dark charcoal or blackened timber face with
+  understated bronze/gold bevels. Keep it subdued and readable against the
+  map. The green checkmark is separate UI and must not be baked into the art.
+- **Available, second cell:** deep crimson/oxblood face with a brighter gold
+  bevel and richer highlights, matching the active level plaque in the
+  screenshot. The amber glow around the fortress is a separate UI effect.
+- **Locked, third cell:** warm parchment or light tan face with a worn
+  dark-brown/gold edge, matching the locked level plaques in the screenshot.
+  The padlock is separate UI.
+- Keep the differences limited to material, color, and restrained highlight
+  intensity. Do not change the outline, proportions, position, or perspective.
+
+## Separation from live UI
+
+- These are plaque backgrounds only. Do not draw numbers, words, letters,
+  checkmarks, locks, badges, glow, selection rings, level labels, or any other
+  status symbol.
+- Do not make the available plaque's red face a faction banner or team cue.
+- Do not place the plaque inside a circle, shield, pin, medallion, or pedestal.
+- Do not draw a fortress, boss, map, terrain, route, scenery, characters, or
+  extra decorative objects around the plaques.
+- Preserve clean alpha edges with no colored fringe or detached pixels.
+
+## Extraction after review
+
+- Split the sheet into three equal-width columns using its actual dimensions,
+  preserving the left-to-right state order; do not assume fixed pixel
+  boundaries if the generator changes resolution.
+- Use each plaque's alpha bounds to trim its cell. Normalize all three crops
+  to the same pixel dimensions and centered position, preserving transparent
+  alpha and any small intentional detail on the plate edges.
+- The extracted source assets will be named:
+  `campaign_level_plate_completed.png`,
+  `campaign_level_plate_available.png`, and
+  `campaign_level_plate_locked.png`.
+- Preview all three at campaign-map display size before importing them into
+  Android drawable resources.
+
+## Negative prompt
+
+opaque background, colored background, checkerboard, cell dividers, crop
+marks, labels, text, letters, digits, numbers, checkmark, padlock, badge,
+round frame, circle, shield, pin, medallion, pedestal, selection ring, glow,
+status icon, fortress, boss, character, map, landscape, terrain, path, water,
+sky, vegetation, scenery, multiple plaques in one cell, different plaque
+sizes, different silhouettes, changing perspective, extreme filigree,
+fleur-de-lis, clean modern UI, flat vector style, blurry edges, colored fringe,
+detached pixels, signature, logo, watermark
+
+## Review checklist
+
+- Confirm one transparent 3:1 RGBA sprite sheet with exactly three equal cells.
+- Confirm each cell contains one plaque at the same size, position, and angle.
+- Confirm the left-to-right order is completed, available, locked.
+- Confirm the completed face is dark, available is crimson with gold trim, and
+  locked is warm parchment; all numbers and status symbols remain absent.
+- Confirm the transparent cells have clean edges and no matte or background.
+- Confirm the plaque shape and contrast remain legible behind both one- and
+  two-digit level numbers.

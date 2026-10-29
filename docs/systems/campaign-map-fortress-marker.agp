@@ -1,0 +1,102 @@
+STATUS: Generate one standalone, reusable Orc fortress marker for Urkaaaz's
+campaign maps. Base its design on the newest attached campaign-map screenshot.
+This is a separate transparent overlay asset, not a map, screenshot, or
+gameplay fortress sprite.
+
+## Reference input
+
+- Attach the newest campaign-map screenshot showing the blue-banner Orc
+  fortresses. Use the fortress landmarks at levels 2–9 as the primary visual
+  reference; the illuminated level 2 fortress shows the structure most
+  clearly. This screenshot supersedes all earlier fortress-art references.
+- Match the screenshot's compact, layered stronghold silhouette, dark stone
+  and timber construction, small navy banners with ivory skull emblems, and
+  warm amber windows and torchlight.
+- Treat the screenshot's level plaques, numbers, locks, checkmark, and level 2
+  glow as separate UI. Do not copy any of those elements into the fortress.
+- Keep the illustration suitable for every campaign biome. Do not copy the
+  map, terrain, route, vegetation, water, sky, or other scenery.
+
+## Output
+
+- Generate exactly one PNG:
+  `campaign_map_marker_fortress.png`.
+- Save it under `assets_src/campaign/map-markers/`.
+- Canvas: exactly 512 x 512 pixels, square, RGBA.
+- Use genuine transparent alpha. Do not draw a checkerboard or any opaque or
+  colored canvas.
+- Center the complete fortress illustration and keep it within the central
+  82% of the canvas, with clean transparent margins on every side.
+- Export one reusable fortress icon, not a sprite sheet, contact sheet, or
+  collection of variants.
+
+## Fortress design
+
+- Depict one unmistakably Orcish fortress landmark, viewed from the elevated
+  three-quarter angle shown in the campaign screenshot.
+- Build a compact, readable silhouette from a squat dark-stone keep, rough
+  timber braces, asymmetrical battlements, a reinforced gate, and a few
+  layered towers with blunt spikes or tusk-like details.
+- Use the screenshot's deep navy cloth banners with simple ivory skull
+  emblems. Do not switch them to crimson or use faction-color cues other than
+  those in the reference.
+- Add a small number of skull or bone details to the fortress itself, but
+  keep the skull banners secondary to the building silhouette.
+- Include restrained amber light in windows or attached torches to preserve
+  the screenshot's warm, firelit look. Keep all light and shadow tight to the
+  building.
+- Use weathered charcoal stone, near-black timber, iron straps, navy cloth,
+  ivory accents, and limited torch amber. Keep the finish painterly and
+  high-contrast, not polished or human-medieval.
+- Match the screenshot's level of architectural detail while ensuring the
+  keep, gate, and banners remain readable at the campaign marker's 72 dp
+  display size.
+- Keep the object centered and upright. Preserve the same visual identity
+  when it is drawn over both bright and dark map terrain.
+
+## Separation from UI and other assets
+
+- Generate only the fortress illustration. Android draws the level number,
+  marker hit target, lock/check status, and selection feedback separately.
+- Do not draw any circular or hexagonal badge, marker frame, status ring,
+  pedestal, selection glow, lock, checkmark, number plaque, level number,
+  label, text, or other UI.
+- Do not draw a map, terrain tile, path, biome background, separate scenery,
+  surrounding buildings, characters, weapons, or battle effects.
+- Do not add a large cast shadow, smoke, flames, or light rays outside the
+  fortress silhouette. Keep transparent pixels clean and attached to the
+  illustration.
+- This is not the large side-view fortress sprite used in gameplay. Use the
+  screenshot's campaign-marker camera angle and proportions.
+- The boss marker is a separate asset and must not be included.
+
+## Negative prompt
+
+background, opaque background, colored background, checkerboard, map, terrain,
+grass tile, path, biome scenery, sky, water, sprite sheet, multiple icons,
+multiple fortresses, side-view gameplay fortress, human medieval castle,
+clean European stone keep, symmetrical fairytale castle, polished white
+stone, red banners, red roof, heraldic shield, fleur-de-lis, sprawling city,
+fortress complex, excessive towers, tiny unreadable details, ornate filigree,
+characters, soldiers, creatures, weapons, combat, fire effects, explosions,
+smoke, text, letters, numbers, labels, logo, watermark, signature, badge,
+circular frame, hexagonal frame, marker pin, status ring, selection glow,
+level plaque, lock, checkmark, UI, cropped walls, cropped towers, detached
+shadow, colored fringe, jagged alpha edges
+
+## Review checklist
+
+- Confirm exactly one centered fortress is present on a 512 x 512 RGBA canvas.
+- Verify the background has genuine transparency and clean alpha edges.
+- Preview at 72 dp and confirm the keep, gate, and navy skull banners remain
+  recognizable.
+- Confirm the design matches the blue-banner Orc fortresses in the newest
+  screenshot, not the superseded crimson-banner concept.
+- Confirm the silhouette contrasts against both light and dark map regions.
+- Confirm no badge, plaque, number, status, lock, text, map, or separate
+  scenery is baked into the image.
+- Confirm the design remains biome-neutral and does not copy the gameplay
+  sprite's camera angle or composition.
+- Do not import the generated image into Android until it is reviewed and
+  approved. Once approved, it can replace the existing campaign fortress
+  marker without changing marker anchors or progression logic.

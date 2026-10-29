@@ -17,6 +17,7 @@ import com.urkaaaz.navigation.ScreenHost
 import com.urkaaaz.persistence.DataStoreCampaignProgressRepository
 import com.urkaaaz.persistence.DataStoreLoadoutRepository
 import com.urkaaaz.persistence.DataStorePlayerProgressionRepository
+import com.urkaaaz.persistence.DataStorePlayerProgressResetRepository
 import com.urkaaaz.persistence.DataStoreRewardSettlementAdapter
 import com.urkaaaz.persistence.LoadoutStorageScope
 import com.urkaaaz.persistence.urkaazPreferencesDataStore
@@ -55,6 +56,9 @@ class MainActivity : ComponentActivity() {
     }
     private val preferencesDataStore by lazy {
         applicationContext.urkaazPreferencesDataStore
+    }
+    private val playerProgressResetRepository by lazy {
+        DataStorePlayerProgressResetRepository(preferencesDataStore)
     }
     private val campaignAwareLoadoutProgression by lazy {
         CampaignAwareLoadoutProgressionPort(
@@ -135,6 +139,7 @@ class MainActivity : ComponentActivity() {
                 onBack = { navigator.back() },
                 onCampaign = { navigator.navigate(AppScreen.Campaign) },
                 onShop = { navigator.navigate(AppScreen.Shop) },
+                onResetProgress = { playerProgressResetRepository.reset() },
             )
             AppScreen.Campaign -> CampaignScreen(
                 context = this,

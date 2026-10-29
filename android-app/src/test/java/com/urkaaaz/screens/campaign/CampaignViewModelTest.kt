@@ -10,6 +10,8 @@ import com.urkaaaz.application.campaign.CampaignSelectionRejection
 import com.urkaaaz.application.campaign.CampaignSystem
 import kotlinx.coroutines.runBlocking
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
+import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class CampaignViewModelTest {
@@ -19,10 +21,25 @@ class CampaignViewModelTest {
             CampaignSystem(FakeRepository(CampaignProgress.INITIAL)),
         )
 
+        val loadedState = viewModel.load()
+        assertEquals(CampaignProgress.INITIAL, loadedState.progress)
+        assertEquals("green_frontier", loadedState.selectedChapterId)
+        assertEquals(1, loadedState.selectedLevel)
         assertEquals(
-            CampaignUiState(progress = CampaignProgress.INITIAL),
-            viewModel.load(),
+            "green_frontier",
+            loadedState.mapProgression?.selectedChapterId,
         )
+        assertTrue(viewModel.selectChapter("broken_valley"))
+        assertEquals("broken_valley", viewModel.state.selectedChapterId)
+        assertEquals(null, viewModel.state.selectedLevel)
+        assertFalse(viewModel.selectMapLevel(11))
+        assertFalse(viewModel.selectChapter("ashen_march"))
+        assertTrue(viewModel.selectChapter("green_frontier"))
+        assertEquals(1, viewModel.state.selectedLevel)
+        assertFalse(viewModel.selectMapLevel(2))
+        assertEquals(1, viewModel.state.selectedLevel)
+        assertTrue(viewModel.selectMapLevel(1))
+
         assertEquals(
             CampaignLevelSelection.Rejected(CampaignSelectionRejection.LEVEL_LOCKED),
             viewModel.dispatch(CampaignUiAction.SelectLevel(2)),

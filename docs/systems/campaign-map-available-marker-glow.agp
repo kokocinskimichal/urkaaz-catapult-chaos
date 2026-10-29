@@ -1,0 +1,68 @@
+STATUS: Generate one reusable transparent golden glow overlay for the
+currently available campaign-map marker. The same asset will appear behind
+either a fortress or a boss; it must not contain either illustration.
+
+## Reference input
+
+- Attach the latest campaign-map screenshot showing the available level 2
+  fortress with its golden halo. Use the halo's warm color and broad, soft
+  falloff as the primary reference.
+- Attach the approved fortress and boss markers as secondary references for
+  checking the glow's scale and contrast behind both silhouettes.
+- Recreate only the glow effect. Do not copy any map, marker, plaque, number,
+  frame, or other screen content.
+
+## Output
+
+- Generate exactly one PNG:
+  `campaign_map_marker_available_glow.png`.
+- Save it under `assets_src/campaign/map-markers/`.
+- Canvas: exactly 512 x 512 pixels, square, RGBA.
+- Use genuine transparent alpha. Do not draw a checkerboard or any opaque or
+  colored canvas.
+- Center the glow and let its alpha fade smoothly to zero before the canvas
+  edges. Keep enough transparent margin for scaling behind a marker.
+- Export one reusable overlay, not separate fortress and boss variants.
+
+## Glow design
+
+- Create a broad, soft radial haze in warm gold and amber, brightest behind
+  the marker center and fading smoothly outward.
+- Match the reference's clear golden emphasis while retaining map detail
+  through the glow. Use a restrained amber outer falloff; avoid a red fringe.
+- The glow must remain visible behind both the 72 dp fortress marker and the
+  smaller 48 dp boss marker after Android scales it to fit.
+- Keep the effect diffuse and luminous. Do not create a hard-edged circle,
+  ring, selection outline, lens flare, or sharp spotlight.
+- Keep the canvas transparent outside the glow. The alpha falloff, not a
+  painted background, must produce the soft edge.
+
+## Separation from markers and UI
+
+- Generate only the glow overlay. Android draws the fortress or boss above it.
+- Do not draw a fortress, skull, boss, banner, map, terrain, route, scenery,
+  plaque, number, lock, checkmark, text, frame, or button.
+- Do not add a pedestal, circle badge, status ring, border, outer stroke, or
+  any shape that can be mistaken for a marker frame.
+- This asset is only for the current available level. Completed and locked
+  markers receive no glow.
+
+## Negative prompt
+
+opaque background, solid background, checkerboard, visible marker, fortress,
+castle, boss, skull, banner, character, map, terrain, path, biome scenery,
+plaque, number, text, lock, checkmark, UI, button, circular badge, hard
+circle, ring, outline, border, selection frame, lens flare, rays, sparks,
+explosion, fireball, red glow, neon green, abrupt alpha edge, colored fringe,
+noise, watermark, signature
+
+## Review checklist
+
+- Confirm exactly one centered glow is present on a 512 x 512 RGBA canvas.
+- Verify the canvas is genuinely transparent and the glow fades smoothly.
+- Preview it behind the approved fortress at 72 dp and boss at 48 dp.
+- Confirm it reads as the reference's golden halo without hiding the map,
+  forming a hard ring, or requiring per-marker variants.
+- Do not import the generated image into Android until it is reviewed and
+  approved. Once approved, it can replace the procedural glow without changing
+  marker artwork or campaign progression.

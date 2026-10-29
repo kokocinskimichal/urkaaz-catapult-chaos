@@ -14,9 +14,11 @@ class AddLevelSkillCompatibilityTest {
         val last = registry.mapDefinition(CampaignLevelDefinition.MAX_LEVELS)
 
         assertEquals("demo-map", first.mapId)
+        assertEquals("green_frontier", first.biome)
         assertEquals("chapter1-level3", levelThree.mapId)
         assertEquals("chapter1-level4", levelFour.mapId)
-        assertEquals(first, last)
+        assertEquals("ashen_march", last.biome)
+        assertEquals(first, last.copy(biome = first.biome))
         assertTrue(MapDefinitionValidator.validate(first).isValid)
         assertTrue(MapDefinitionValidator.validate(levelFour).isValid)
     }

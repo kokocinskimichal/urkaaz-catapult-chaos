@@ -20,6 +20,8 @@ import com.urkaaaz.application.loadout.MatchLoadout
 import com.urkaaaz.application.loadout.StoredLoadoutSelection
 import com.urkaaaz.application.progression.PlayerProgressionRepositoryFailure
 import com.urkaaaz.application.progression.PlayerProgressionRepositoryResult
+import com.urkaaaz.application.progression.PlayerProgressResetFailure
+import com.urkaaaz.application.progression.PlayerProgressResetResult
 import com.urkaaaz.application.progression.PlayerProgressionUseCases
 import com.urkaaaz.application.reward.EarnedReward
 import com.urkaaaz.application.reward.LevelRewardResult
@@ -158,6 +160,42 @@ class DataStoreRepositoriesTest {
                 PlayerProgressionRepositoryResult.Available(initialSnapshot),
                 DataStorePlayerProgressionRepository(store.dataStore)
                     .loadOrInitialize(initialSnapshot.copy(goldBalance = 999)),
+            )
+        }
+    }
+
+    @Test
+    fun resettingPlayerProgressClearsAllPersistedPlayerData() = runBlocking {
+        testStore().use { store ->
+            store.dataStore.updateData { current ->
+                current.toMutablePreferences().apply {
+                    this[intPreferencesKey("campaign.highest_unlocked_level")] = 17
+                    this[stringPreferencesKey("campaign.completed_levels")] = "1|2|3"
+                    this[intPreferencesKey("profile.gold_balance")] = 450
+                    this[stringPreferencesKey("profile.unlocked_spells")] = "FORTRESS_SHIELD|HASTE"
+                    this[stringPreferencesKey("loadout.17.units")] = "DEFENDER|SAPPER"
+                    this[stringPreferencesKey("reward.receipts")] = "receipt"
+                }
+            }
+
+            assertEquals(
+                PlayerProgressResetResult.Reset,
+                DataStorePlayerProgressResetRepository(store.dataStore).reset(),
+            )
+            assertTrue(store.dataStore.updateData { it }.asMap().isEmpty())
+            assertEquals(
+                CampaignProgressRepositoryResult.Available(CampaignProgress.INITIAL),
+                DataStoreCampaignProgressRepository(store.dataStore).loadOrInitialize(),
+            )
+            assertEquals(
+                LoadoutProgressionRead.Available(initialProfile()),
+                PlayerProgressionUseCases(
+                    DataStorePlayerProgressionRepository(store.dataStore),
+                ).snapshot(1),
+            )
+            assertEquals(
+                LoadoutStorageResult.Success(null),
+                DataStoreLoadoutRepository(store.dataStore).read(17),
             )
         }
     }
@@ -455,6 +493,12 @@ class DataStoreRepositoriesTest {
                 CampaignProgressFailure.STORAGE_UNAVAILABLE,
             ),
             DataStoreCampaignProgressRepository(failingStore).update { it },
+        )
+        assertEquals(
+            PlayerProgressResetResult.Failure(
+                PlayerProgressResetFailure.STORAGE_UNAVAILABLE,
+            ),
+            DataStorePlayerProgressResetRepository(failingStore).reset(),
         )
     }
 

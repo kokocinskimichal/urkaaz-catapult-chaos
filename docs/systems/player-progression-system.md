@@ -146,6 +146,13 @@ Lokalny zapis używa AndroidX Preferences DataStore i atomowych aktualizacji.
 CampaignProgress. Adaptery współdzielą backend, zachowując osobne klucze i
 wersje. Typy DataStore, Flow i Context nie przekraczają granicy `android-app`.
 
+Przycisk `RESET` w prawym górnym rogu Dashboardu resetuje lokalne dane gracza
+po potwierdzeniu. `PlayerProgressResetRepository` atomowo czyści wspólny
+Preferences DataStore, obejmując kampanię, profil (w tym złoto i odblokowania),
+stocki, zapisy loadoutu oraz paragony rozliczeń. Błąd zapisu jest zwracany jako
+`STORAGE_UNAVAILABLE`; UI nie pokazuje wtedy sukcesu. Reset nie obejmuje
+ustawień Androida ani zewnętrznych danych.
+
 Zatwierdzony loadout jest osobną kategorią danych i pozostaje własnością
 `LoadoutRepository`. Adaptery mogą korzystać ze wspólnego mechanizmu DataStore,
 ale nie łączą semantycznie wyboru wyposażenia z odblokowaniami, stockiem ani
@@ -305,12 +312,12 @@ Najważniejsze pliki:
 
 | Obszar | Kandydaci |
 |---|---|
-| Port profilu i use case'y | `game-application/.../progression/PlayerProgressionRepository.kt`, `PlayerProgressionUseCases.kt` |
+| Port profilu i resetu | `game-application/.../progression/PlayerProgressionRepository.kt`, `PlayerProgressionUseCases.kt`, `PlayerProgressResetRepository.kt` |
 | Porty i use case'y loadoutu | `game-application/.../loadout/LoadoutContracts.kt`, `LoadoutUseCases.kt` |
-| Adaptery DataStore | `android-app/.../persistence/DataStorePlayerProgressionRepository.kt`, `DataStoreLoadoutRepository.kt` |
+| Adaptery DataStore | `android-app/.../persistence/DataStorePlayerProgressionRepository.kt`, `DataStorePlayerProgressResetRepository.kt`, `DataStoreLoadoutRepository.kt` |
 | Wspólny DataStore | `android-app/.../persistence/LocalPreferencesDataStore.kt` |
-| Kompozycja zależności i ekran | `android-app/.../MainActivity.kt`, `screens/loadout/LoadoutScreen.kt`, `LoadoutViewModel.kt` |
-| Testy | core progression/loadout oraz `android-app/.../persistence/DataStoreRepositoriesTest.kt` i `screens/loadout/LoadoutViewModelTest.kt` |
+| Kompozycja zależności i ekran | `android-app/.../MainActivity.kt`, `screens/dashboard/DashboardScreen.kt`, `screens/loadout/LoadoutScreen.kt`, `LoadoutViewModel.kt` |
+| Testy | core progression/loadout/reset oraz `android-app/.../persistence/DataStoreRepositoriesTest.kt` i `screens/loadout/LoadoutViewModelTest.kt` |
 
 ## 14. Rozważone warianty
 

@@ -235,6 +235,30 @@ blocks selection on storage/corruption failures; it no longer exposes all 100
 levels by default. Campaign fortresses use 500 HP each; demo mode preserves its
 existing 5000 HP BLUE fortress and 500 HP RED fortress.
 
+`CampaignChapterRegistry` in `game-campaign` defines ten ordered chapters,
+their canonical biome, and the fortress/boss landmark kind for every level.
+Levels 5 and 10 within each chapter are boss landmarks. `CampaignLevelDefinition`
+derives its map biome from this registry without changing map geometry or
+gameplay balance. In `android-app`, `CampaignChapterProgressMapper` projects
+persisted campaign progress into completed/current/preview chapter pages and
+completed/available/locked level markers. The available level is selected by
+default; tapping it changes screen-local selection, and **Start Level** calls
+the existing `CampaignSystem.selectLevel` before opening Loadout.
+
+`CampaignScreen` renders Chapter 1 as a full-bleed, center-cropped map and
+positions level markers using the same crop transform. It layers a transparent
+campaign frame, live chapter/progress UI, fortress/boss artwork, state-specific
+level plaques, completed/locked badges, and a shared available-level glow.
+Chapters 2–10 do not yet have map artwork and use the explicit chapter level
+list fallback. Source art and copy-ready prompts live under
+`assets_src/campaign/` and `docs/systems/campaign-map-*.agp`.
+
+The Dashboard's confirmed **RESET** action uses
+`PlayerProgressResetRepository` to clear the shared local Preferences DataStore
+in one update. This resets campaign progress, profile gold/unlocks/stocks,
+saved loadouts, and reward receipts; storage failures remain explicit and do
+not produce a success message.
+
 Campaign maps use one immutable JSON contract in `game-contracts`:
 `MapDefinition` contains a map ID and biome, fixed world dimensions,
 `terrain.heightSamples`, protected zones, fortresses, visual-only decorations,
@@ -728,8 +752,14 @@ must go through commands and domain/application boundaries.
 | `android-app/.../navigation/AppNavigator.kt` | Navigation and back stack |
 | `android-app/.../navigation/ScreenHost.kt` | Active screen container |
 | `android-app/.../screens/start/StartScreen.kt` | Legacy-style start menu |
-| `android-app/.../screens/dashboard/DashboardScreen.kt` | Legacy-style dashboard |
-| `android-app/.../screens/campaign/CampaignScreen.kt` | Legacy-style campaign level selector |
+| `android-app/.../screens/dashboard/DashboardScreen.kt` | Dashboard navigation and confirmed player-progress reset |
+| `android-app/.../screens/campaign/CampaignScreen.kt` | Chapter campaign map, chapter selector, and Start Level flow |
+| `android-app/.../screens/campaign/CampaignChapterProgressMapper.kt` | Campaign progress to visible chapter and marker states |
+| `android-app/.../screens/campaign/CampaignMapPresentationCatalog.kt` | Chapter map resources and normalized level anchors |
+| `android-app/.../screens/campaign/CampaignMapView.kt` | Cropped map rendering, landmarks, state plaques, and status art |
+| `game-campaign/.../campaign/CampaignChapterRegistry.kt` | Canonical chapter ranges, biomes, and landmark kinds |
+| `game-application/.../progression/PlayerProgressResetRepository.kt` | Application port for resetting local player progress |
+| `android-app/.../persistence/DataStorePlayerProgressResetRepository.kt` | Atomic reset adapter for the shared local Preferences DataStore |
 | `game-application/.../progression/PlayerProgressionUseCases.kt` | Local profile initialization and snapshot validation |
 | `android-app/.../persistence/DataStorePlayerProgressionRepository.kt` | Versioned profile storage |
 | `android-app/.../persistence/DataStoreLoadoutRepository.kt` | Versioned campaign-level and demo loadout storage |

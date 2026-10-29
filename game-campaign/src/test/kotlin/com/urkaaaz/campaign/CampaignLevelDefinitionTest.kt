@@ -88,7 +88,17 @@ class CampaignLevelDefinitionTest {
     }
 
     @Test
-    fun allChapterTwoLevelsUseTheFrostboundBiome() {
+    fun eachChapterUsesItsCanonicalBiome() {
+        val chapters = CampaignChapterRegistry.default().chapters
+        chapters.forEach { chapter ->
+            (chapter.firstLevel..chapter.lastLevel).forEach { levelNumber ->
+                assertEquals(
+                    chapter.biome.mapId,
+                    CampaignLevelDefinition.forLevel(levelNumber).mapDefinition.biome,
+                    "level $levelNumber should use ${chapter.biome.mapId}",
+                )
+            }
+        }
         (11..20).forEach { levelNumber ->
             assertEquals(
                 "frostbound",
@@ -97,15 +107,15 @@ class CampaignLevelDefinitionTest {
             )
         }
         assertEquals("green_frontier", CampaignLevelDefinition.forLevel(10).mapDefinition.biome)
-        assertEquals("green_frontier", CampaignLevelDefinition.forLevel(21).mapDefinition.biome)
+        assertEquals("ashen_march", CampaignLevelDefinition.forLevel(21).mapDefinition.biome)
     }
 
     @Test
-    fun milestoneUnlocksRemainDeterministicWhileMapAssignmentIsTemporary() {
+    fun milestoneUnlocksRemainDeterministicWithChapterBiomeAssignments() {
         val level = CampaignLevelDefinition.forLevel(41)
 
         assertEquals("demo-map", level.mapDefinition.mapId)
-        assertEquals("green_frontier", level.mapDefinition.biome)
+        assertEquals("copperwood", level.mapDefinition.biome)
         assertTrue(level.availableUnits.any { it.id == UnitFactory.slingmaster().id })
         assertTrue(AmmunitionType.PLAGUE_CAULDRON in level.availableAmmunition)
         assertTrue(SpellType.RUNIC_BASTION in level.availableSpells)

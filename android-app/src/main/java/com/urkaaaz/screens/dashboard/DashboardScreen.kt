@@ -1,5 +1,6 @@
 package com.urkaaaz.screens.dashboard
 
+import android.app.AlertDialog
 import android.content.Context
 import android.graphics.Color
 import android.view.Gravity
@@ -11,17 +12,37 @@ import android.widget.ImageView
 import android.widget.LinearLayout
 import android.widget.Space
 import android.widget.TextView
+import android.widget.Toast
 import com.urkaaaz.android.R
+import com.urkaaaz.application.progression.PlayerProgressResetResult
 import com.urkaaaz.navigation.ScreenContent
 import com.urkaaaz.ui.UiTypography
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.cancel
+import kotlinx.coroutines.launch
 
 class DashboardScreen(
     private val context: Context,
     private val onBack: () -> Unit,
     private val onCampaign: () -> Unit,
     private val onShop: () -> Unit,
+    private val onResetProgress: suspend () -> PlayerProgressResetResult,
 ) : ScreenContent {
     private val viewModel = DashboardViewModel()
+    private var screenScope: CoroutineScope? = null
+    private val resetProgressButton = Button(context).apply {
+        text = context.getString(R.string.dashboard_reset_progress)
+        UiTypography.applyButtonTypeface(this)
+        textSize = 11f
+        setTextColor(Color.WHITE)
+        setPadding(dp(12), dp(6), dp(12), dp(6))
+        minHeight = 0
+        minWidth = 0
+        background = context.getDrawable(R.drawable.bg_hud_panel)
+        setOnClickListener { showResetConfirmation() }
+    }
 
     override val view = FrameLayout(context).apply {
         addView(ImageView(context).apply {
@@ -46,16 +67,7 @@ class DashboardScreen(
             marginStart = dp(24)
         })
 
-        addView(Button(context).apply {
-            text = "RESET"
-            UiTypography.applyButtonTypeface(this)
-            textSize = 11f
-            setTextColor(Color.WHITE)
-            setPadding(dp(12), dp(6), dp(12), dp(6))
-            minHeight = 0
-            minWidth = 0
-            background = context.getDrawable(R.drawable.bg_hud_panel)
-        }, FrameLayout.LayoutParams(-2, -2).apply {
+        addView(resetProgressButton, FrameLayout.LayoutParams(-2, -2).apply {
             gravity = Gravity.TOP or Gravity.END
             topMargin = dp(96)
             marginEnd = dp(16)
@@ -64,6 +76,19 @@ class DashboardScreen(
         addView(bottomActions(), FrameLayout.LayoutParams(-1, dp(104)).apply {
             gravity = Gravity.BOTTOM
         })
+    }
+
+    override fun onResume() {
+        if (screenScope != null) return
+        screenScope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
+        resetProgressButton.isEnabled = true
+    }
+
+    override fun onPause() {
+        val scope = screenScope
+        screenScope = null
+        resetProgressButton.isEnabled = false
+        scope?.cancel()
     }
 
     private fun topHud(): View = LinearLayout(context).apply {
@@ -156,6 +181,35 @@ class DashboardScreen(
         gravity = Gravity.CENTER
         includeFontPadding = false
         setTextColor(Color.WHITE)
+    }
+
+    private fun showResetConfirmation() {
+        AlertDialog.Builder(context)
+            .setTitle(R.string.dashboard_reset_progress_title)
+            .setMessage(R.string.dashboard_reset_progress_message)
+            .setNegativeButton(R.string.dashboard_reset_cancel, null)
+            .setPositiveButton(R.string.dashboard_reset_progress_confirm) { _, _ ->
+                resetPlayerProgress()
+            }
+            .show()
+    }
+
+    private fun resetPlayerProgress() {
+        val scope = screenScope ?: return
+        resetProgressButton.isEnabled = false
+        scope.launch {
+            try {
+                val message = when (onResetProgress()) {
+                    PlayerProgressResetResult.Reset ->
+                        R.string.dashboard_reset_progress_success
+                    is PlayerProgressResetResult.Failure ->
+                        R.string.dashboard_reset_progress_failure
+                }
+                Toast.makeText(context, message, Toast.LENGTH_LONG).show()
+            } finally {
+                resetProgressButton.isEnabled = screenScope != null
+            }
+        }
     }
 
     private fun dp(value: Int): Int =

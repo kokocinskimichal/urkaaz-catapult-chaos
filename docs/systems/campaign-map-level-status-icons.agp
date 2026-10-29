@@ -1,0 +1,94 @@
+STATUS: Generate one transparent two-icon sprite sheet for the completed and
+locked campaign-level plaque states. Base both badges on the newest campaign
+map screenshot; Android will place them at the right side of the matching
+number plaque.
+
+## Reference input
+
+- Attach the campaign-map screenshot showing the completed level 1 checkmark
+  and the locked-level padlocks. Use those small status badges as the primary
+  reference.
+- Attach the extracted completed and locked level-plaque assets as secondary
+  references for matching their gold, dark-metal, and parchment materials.
+- Keep each badge separate from its level plaque. Do not copy the map,
+  fortress/boss artwork, level number, or progress UI.
+
+## Output
+
+- Generate exactly one PNG sprite sheet:
+  `campaign_level_status_icons_sheet.png`.
+- Save it under `assets_src/campaign/ui/`.
+- Canvas: 2:1 landscape, RGBA. Prefer 1024 x 512 pixels. If the image
+  generator uses a different fixed resolution, preserve the 2:1 aspect and
+  two evenly spaced states.
+- Arrange two equal-width cells horizontally, in this order:
+  1. completed check badge;
+  2. locked padlock badge.
+- Center one badge in each cell. Keep their visible bounds close in size so
+  both appear balanced when rendered at 16 dp.
+- Use genuine transparent alpha around each badge. Do not draw a checkerboard
+  or a continuous background behind the cells.
+- Export one sprite sheet only; the two cells will be extracted into separate
+  runtime assets after review.
+
+## Badge design
+
+- **Completed, first cell:** a compact, round deep-green enamel badge with a
+  bold ivory checkmark. Add a restrained antique-gold rim so it fits the
+  completed dark plaque without overpowering the level number.
+- **Locked, second cell:** a compact, dark-brown iron badge with a clear
+  antique-gold padlock. Match the small rectangular padlock treatment shown
+  beside locked level numbers in the screenshot.
+- Give both badges the same apparent visual weight, detail level, edge
+  quality, and warm Orc-fantasy materials. Their silhouettes may differ to
+  preserve the round check and rectangular lock treatments.
+- Keep each mark bold and simple enough to read at 16 dp. Avoid tiny rivets,
+  thin shackle lines, or delicate highlights that disappear at phone size.
+- Keep light, shadow, and metallic highlights attached to the badge. Do not
+  add a glow or aura around either state.
+
+## Separation from live UI
+
+- Generate the complete small badge only. Do not include a level plaque,
+  number, text, label, fortress, boss, map, terrain, or other UI.
+- Do not draw a second outline or a larger circle/medallion around either
+  badge. The completed circle and compact locked tile are the badges
+  themselves.
+- The level number remains a separate text overlay. Available levels have no
+  status icon and must not receive a third sprite-sheet cell.
+- Keep both cells otherwise transparent and their contents fully inside each
+  cell.
+
+## Extraction after review
+
+- Split the sheet into two equal-width columns using its actual dimensions,
+  preserving the left-to-right order; do not assume fixed pixel boundaries
+  if the generator changes resolution.
+- Trim transparent margins around each badge and normalize both crops to the
+  same pixel dimensions while preserving alpha.
+- The extracted source assets will be named:
+  `campaign_level_status_completed.png` and
+  `campaign_level_status_locked.png`.
+- Preview both at 16 dp beside the level plaques before importing them into
+  Android drawable resources.
+
+## Negative prompt
+
+opaque background, checkerboard, continuous background, sprite sheet with
+extra cells, third available icon, level plaque, number, text, letters,
+labels, fortress, boss, map, terrain, status ring, aura, glow, large
+medallion, shield, pin, oversized ornament, completed lock, locked checkmark,
+thin checkmark, tiny lock, unreadable detail, modern flat icon, polished
+plastic, jagged alpha, colored fringe, detached shadow, watermark, signature
+
+## Review checklist
+
+- Confirm one transparent 2:1 sprite sheet contains exactly two centered
+  badges in the stated order.
+- Confirm the completed badge is green with an ivory checkmark and the locked
+  badge is dark metal with a gold padlock.
+- Confirm both have genuine transparent backgrounds and clean alpha edges.
+- Preview at 16 dp and verify the check and lock remain immediately
+  recognizable.
+- Confirm no plaque, number, text, map, fortress, boss, or third state is
+  included.

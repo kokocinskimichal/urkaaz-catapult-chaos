@@ -1,0 +1,147 @@
+STATUS: Create one high-fidelity visual concept screenshot for the Urkaaaz
+Android campaign map screen. Follow the newest attached full-screen reference,
+including its prominent Start Level button. It replaces the earlier 0 / 10
+concept without that button. This is a visual design study only; do not edit
+or generate production code or runtime assets.
+
+## Reference inputs
+
+- Attach the newest campaign-screen reference image as the primary guide for
+  the screen composition, ornate border, chapter panels, marker treatments,
+  and Start Level button. Ignore earlier campaign-screen concepts.
+- The live app screenshot with side gutters is only a problem reference:
+  never show the background from another screen at the left or right.
+- Attach
+  `assets_src/campaign/chapter-maps/campaign_chapter_01_green_frontier_map.png`
+  as the exact map background. Preserve its landscape, route, palette, and
+  composition; do not redraw or stretch it.
+- If available, attach the current fortress and boss marker assets. Keep
+  fortress and boss landmarks distinct, and do not add circular frames.
+
+## Output
+
+- Generate exactly one PNG:
+  `campaign_map_screen_concept_01.png`.
+- Save it under `assets_src/campaign/screen-concepts/`.
+- Canvas: exactly 1920 × 1080 pixels, landscape 16:9.
+- Show the complete app screen edge-to-edge, with no phone/device frame,
+  presentation mockup, annotations, or alternate screens. The campaign map
+  and frame must cover the entire screen; do not leave side gutters or reveal
+  a different screen's background.
+- This is a concept image for review, not a production screen background.
+  Keep the map and all UI as a single screenshot composition.
+
+## Preserve the screen content
+
+- Show Chapter 1, **The Green Frontier**, as the current chapter, with Chapter
+  2, **The Broken Valley**, as the next-chapter preview.
+- Match the reference progress state: level 1 is completed, level 2 is
+  available, and levels 3–10 are locked. Show 1 / 10 completed. Do not invent
+  more completed levels or unlocked chapters.
+- Show exactly ten landmarks at these normalized positions on the map image:
+
+| Level | Landmark | X | Y |
+|---:|---|---:|---:|
+| 1 | Fortress, completed | 0.145 | 0.750 |
+| 2 | Fortress, available | 0.255 | 0.545 |
+| 3 | Fortress, locked | 0.365 | 0.365 |
+| 4 | Fortress, locked | 0.485 | 0.260 |
+| 5 | Boss, locked | 0.645 | 0.330 |
+| 6 | Fortress, locked | 0.845 | 0.245 |
+| 7 | Fortress, locked | 0.855 | 0.455 |
+| 8 | Fortress, locked | 0.755 | 0.675 |
+| 9 | Fortress, locked | 0.565 | 0.750 |
+| 10 | Boss, locked | 0.485 | 0.475 |
+
+- Keep all markers attached to the map locations in the reference screenshot.
+  Do not move them to make room for UI, change the route, or add landmarks.
+- Fortress artwork is large and readable, equivalent to 72 dp on screen
+  (150% of the former size). Boss artwork is smaller and visually distinct.
+- The completed level 1 fortress has a distinct checkmark. The available
+  level 2 fortress is at full contrast with a soft amber glow behind its
+  transparent art. Locked fortress artwork remains clearly visible at about
+  72% opacity and has a small, legible lock indicator.
+- Place level numbers 1–10 on the short, wide rectangular plaques shown in the
+  reference. Use the completed, available, and locked plaque treatments while
+  keeping numbers, locks, and checkmarks as separate UI.
+- Use the reference's chapter progress and marker states.
+- Include one prominent bottom-center “START LEVEL” button, enabled for the
+  selected available level 2. Tapping the available marker selects it; the
+  button is the explicit action to proceed to Loadout. Match the gold beveled
+  button in the reference. Do not add a battle button or new reward, currency,
+  shop, or profile features.
+
+## New layout direction
+
+- Fill the whole canvas with the campaign composition: the Green Frontier map
+  beneath the ornate screen frame. Preserve the map's aspect ratio and crop
+  only as needed to cover the screen. Never stretch it or expose side bars
+  from another screen.
+- Follow the latest reference's parchment-and-wood perimeter, compact
+  upper-left campaign plaque, upper-right chapter cards, and bottom-center
+  Start Level button. Keep the map visible between these controls.
+- Show the upper-left labels “CAMPAIGN”, “CHAPTER 1”, “THE GREEN FRONTIER”,
+  and “1 / 10 COMPLETED”. Place the rectangular Back control beside the
+  campaign plaque.
+- Place a horizontal chapter progress bar directly below the chapter title.
+  Its green fill represents completed levels out of ten, with the completion
+  count centered over a dark, gold-edged track.
+- Show Chapter 1 as current and Chapter 2 as a locked preview in compact
+  upper-right cards.
+- Keep every UI panel and the Start Level button away from the ten landmarks
+  and the important map route. The button may overlay only an empty lower
+  map area.
+- Use the reference's blue Orc pennants and warm gold UI accents. Use concise,
+  correctly spelled labels only; do not generate decorative pseudo-text.
+
+## Marker and UI treatment
+
+- Render fortress and boss art as transparent illustrations directly over the
+  map. Do not put them inside circles, medallions, pins, shields, or status
+  rings.
+- Preserve the fortress marker's Orc identity: rough timber and stone, tusks,
+  skull details, and deep-blue banners with ivory skull emblems, matching the
+  approved campaign marker asset.
+- Keep boss markers distinct using their boss illustration and typography,
+  not a circular badge.
+- Use only clear status cues: a warm lock icon for locked levels, a checkmark
+  for level 1, and a brighter, broader gold radial glow behind available
+  level 2. Keep the glow's edge soft; do not form a ring or frame.
+- Render the Start Level button as a separate UI control, not as part of the
+  map or any landmark asset.
+- Maintain clear contrast over both bright grassland and dark map terrain.
+  Keep all numbers and icons legible at phone display size.
+- Keep text, chapter controls, status, and numbers as UI overlays; do not bake
+  them into the map artwork.
+
+## Negative prompt
+
+side gutters, letterboxing, background from another screen, cropped screen,
+device frame, oversized opaque panels, circular marker frames, dark circular
+marker backgrounds, status rings, round fortress badges, round boss badges,
+numbered pins, huge locks, glowing rings, selection circles, map alterations,
+stretched map, shifted level anchors, extra landmarks, missing landmarks,
+incorrect progress state, unlocked future chapters, duplicate start buttons,
+battle button, currency, gold counter, shop, profile, unrelated game HUD, text clutter,
+gibberish labels, misspelled text, device mockup, phone bezel, watermark,
+signature, multiple screenshots, wireframe, annotations
+
+## Review checklist
+
+- Confirm this is one complete landscape Android campaign-screen concept,
+  not a cropped map or a phone mockup.
+- Confirm all ten landmarks remain at the reference locations and levels 5
+  and 10 are bosses.
+- Confirm level 1 is completed, level 2 is the only available level, the
+  remaining levels are locked, and Chapter 2 is only a preview.
+- Confirm the map and frame cover every screen edge with no side gutters or
+  background from another screen.
+- Confirm the chapter controls and Start Level button do not cover landmarks
+  or the important route.
+- Confirm fortress art is enlarged, level 2 has a soft amber glow, and locked
+  fortresses remain legible.
+- Confirm no landmark has a circular background, border, pin, or status ring.
+- Confirm the result follows the newest reference while preserving campaign
+  content and map positions.
+- Do not import this concept image as a runtime asset. Use it for design
+  review before implementing any screen-layout changes.

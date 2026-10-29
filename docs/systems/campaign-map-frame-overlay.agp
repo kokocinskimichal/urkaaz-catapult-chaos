@@ -1,0 +1,116 @@
+STATUS: Generate one standalone decorative frame overlay for the Urkaaaz
+campaign map screen, matching the newly attached campaign-screen reference.
+This image replaces all earlier campaign-screen references; ignore the
+previous red-banner concept. This is not a complete screenshot, map
+background, or flattened UI. Android renders text, chapter cards, level
+markers, and progress separately.
+
+## Reference input
+
+- Use only the newest attached campaign-screen image as the visual reference.
+  Match its outer parchment-and-wood frame, deep-blue Orc pennants, gold-edged
+  rectangular Back-button mount, corner ornaments, and upper-left title
+  plaque. Ignore all earlier campaign-screen images and designs.
+  The reference also shows a bottom-center Start Level button; do not include
+  that button in this frame asset.
+- Attach
+  `assets_src/campaign/chapter-maps/campaign_chapter_01_green_frontier_map.png`
+  to check the frame's colors and transparent opening against the real map.
+  Do not include or repaint any of the map in the output.
+## Output
+
+- Generate exactly one PNG:
+  `campaign_map_frame_overlay.png`.
+- Save it under `assets_src/campaign/ui/`.
+- Canvas: exactly 1920 × 1080 pixels, landscape 16:9, RGBA.
+- The canvas must be transparent everywhere except for the decorative frame
+  and its attached ornaments. Use genuine alpha, not a checkerboard or a
+  painted transparent-looking center.
+- Extend the frame to the canvas edges. Do not leave an outer transparent
+  gutter that could reveal another screen behind the campaign screen.
+- Return the frame overlay only. Do not generate a screenshot, mockup, map,
+  or screen background.
+- Do not add nine-patch guide marks. Keep long edge sections visually simple
+  enough to be sliced or nine-patched later without stretching the detailed
+  corner ornaments.
+
+## Frame design
+
+- Create a rugged, hand-crafted Orc campaign-map frame: dark timber, worn
+  parchment, hammered iron, restrained brass details, and warm torchlit
+  highlights. Match the attached concept's rich painterly fantasy finish.
+- Make the border irregular and tactile, with carved or riveted corner
+  details. Keep the perimeter coherent as one frame and avoid delicate
+  filigree that will disappear at phone size.
+- Include a fixed, empty parchment title plaque integrated into the upper-left
+  frame area. Add a blank deep-blue ribbon above it for the live “CAMPAIGN”
+  label. Keep the plaque and ribbon free of text; Android will place the
+  campaign title, chapter title, and progress as live UI.
+- Include a blank, gold-edged rectangular mount for the Back button at the
+  upper-left corner. Android will draw the arrow; do not paint the arrow into
+  this asset.
+- Add a deep-blue Orc pennant with a simple ivory skull emblem along the left
+  frame, and a smaller matching blue pennant near the lower-right corner, as
+  shown in the new reference. These are frame decorations, not level markers
+  or status cues.
+- Add modest rolled-map, compass, or leather details in the lower corners,
+  but keep them attached to the frame and away from the playable map area.
+- Leave the upper-right area free of fixed panels so Android can place a
+  variable number of chapter cards there.
+
+## Transparent opening and safe areas
+
+- Keep the large central opening fully transparent so the campaign map can be
+  drawn behind it without tint, haze, vignette, texture, or color cast.
+- Confine most frame artwork to the outer 5–7% of the canvas.
+- The upper-left Back-button mount and title plaque may extend inward to about
+  34% of the canvas width and 21% of its height. Keep them in the map's empty
+  upper-left area.
+- Keep corner ornaments compact and clear of all map landmarks. In
+  particular, do not intrude toward the southwest level 1 anchor, which is
+  far below the title plaque.
+- Do not place decoration across the map route or the ten level-marker
+  locations. The frame must not force any anchor to move.
+- Make edges cleanly antialiased with no colored fringe, detached pixels, or
+  shadow extending into the transparent map opening.
+
+## Separation from screen UI and map art
+
+- This is a decorative overlay, not a full campaign-screen composition.
+- Do not draw the map, paths, terrain, water, sky, forts, bosses, characters,
+  or level markers.
+- Do not draw chapter cards or thumbnails; these will be separate reusable UI
+  components.
+- Do not draw numbers, words, letters, labels, progress bars, locks,
+  checkmarks, buttons, selectable states, status colors, or a Back arrow.
+- Do not bake the screenshot's chapter text, 1 / 10 progress, current-level
+  glow, level states, or any other text into the plaque or ribbon. Keep all
+  referenced screen content out of the frame artwork.
+- The blank Back-button mount is allowed, but do not paint a Back arrow or
+  other icon into it.
+- Do not add circular frames, marker rings, or opaque panels over the central
+  map area.
+
+## Negative prompt
+
+opaque background, map, landscape, terrain, path, river, fortress, castle,
+boss, character, marker, icon, numbered pin, circle, status ring, lock,
+checkmark, text, letters, numbers, labels, title, logo, UI, button, Back
+arrow, chapter card, thumbnail, progress bar, watermark, signature,
+checkerboard, haze, vignette, opaque center, colored center, jagged alpha,
+colored fringe, detached shadow, stretched ornaments, human medieval castle,
+clean European stonework, red Orc banner, red faction pennant
+
+## Review checklist
+
+- Confirm the image is exactly 1920 × 1080 RGBA and is transparent outside the
+  frame and attached ornaments.
+- Composite it over the actual Green Frontier map and confirm the map remains
+  vivid and unobscured through the large central opening.
+- Confirm the upper-left plaque, ribbon, and Back-button mount are blank and
+  the upper-right area remains free for dynamic chapter cards.
+- Confirm the frame does not cover level anchors or require moving landmarks.
+- Preview at phone display size; verify the wood, parchment, ironwork, and
+  deep-blue Orc pennants remain readable without dominating the map.
+- Confirm the result is only the overlay asset, not a flattened screenshot.
+- Do not import it into Android until the image is reviewed and approved.
