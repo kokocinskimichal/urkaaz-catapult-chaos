@@ -940,12 +940,16 @@ class BattlefieldRenderer(
     ) {
         val unitPaint = Paint(Paint.ANTI_ALIAS_FLAG)
         val worldToViewportScale = viewportWidth / WORLD_WIDTH
+        val unitEntityIds = state.units.asSequence()
+            .map(UnitRenderState::entityId)
+            .toSet()
         state.units.forEach { unit ->
             val centerX = worldToViewX(unit.x, viewportWidth)
             val baselineY =
                 worldToViewY(unit.y, viewportHeight) + 4f * worldToViewportScale
             val defeated = unit.actionState == "DEAD"
-            val deathAnimationPlaying = defeated || unit.deathAnimationPrestarted
+            val deathAnimationPlaying = defeated &&
+                !(unit.unitType == "DEMOLISHER" && unit.demolisherThrowFrameIndex != null)
             val attacking = unit.actionState == "WINDING_UP" ||
                 unit.actionState == "ATTACKING" ||
                 unit.actionState == "RECOVERING" ||
@@ -955,6 +959,22 @@ class BattlefieldRenderer(
                         !unit.moving &&
                         (unit.attackCycleId > 0 || unit.attackGroupId != null)
                     )
+            val usesDemolisherAttackAnimation =
+                unit.unitType == "DEMOLISHER" &&
+                    unit.demolisherThrowFrameIndex != null
+            val isDemolisherAttackingUnit =
+                unit.unitType == "DEMOLISHER" &&
+                    unit.targetId != null &&
+                    unit.targetId in unitEntityIds &&
+                    !deathAnimationPlaying
+            val movingAnimation =
+                unit.moving || isDemolisherAttackingUnit
+            val useAttackAnimation =
+                if (unit.unitType == "DEMOLISHER") {
+                    usesDemolisherAttackAnimation
+                } else {
+                    attacking
+                }
             val sapperReturnPosition = if (
                 !deathAnimationPlaying &&
                 unit.unitType == "SAPPER" &&
@@ -988,8 +1008,8 @@ class BattlefieldRenderer(
                 assets.unitAnimationFrames(
                     unit.unitType,
                     unit.teamLabel,
-                    if (unit.unitType == "SAPPER") sapperUsesMoveAnimation else unit.moving,
-                    attacking,
+                    if (unit.unitType == "SAPPER") sapperUsesMoveAnimation else movingAnimation,
+                    useAttackAnimation,
                 )
             }
             val frame = if (frames.isEmpty()) {
@@ -999,7 +1019,12 @@ class BattlefieldRenderer(
                     ?.let(frames::get)
             } else if (sapperReturnPosition != null) {
                 frames[sapperReturnPosition.index]
-            } else if (attacking) {
+            } else if (usesDemolisherAttackAnimation) {
+                frames[
+                    requireNotNull(unit.demolisherThrowFrameIndex)
+                        .coerceIn(0, frames.lastIndex)
+                ]
+            } else if (attacking && unit.unitType != "DEMOLISHER") {
                 frames[(unit.attackProgress * frames.size)
                     .toInt()
                     .coerceIn(0, frames.lastIndex)]
@@ -1085,8 +1110,6 @@ class BattlefieldRenderer(
                         usesGeneratedRagingBoarMoveAnimation ||
                         usesGeneratedRagingBoarAttackAnimation ->
                         GENERATED_RAGING_BOAR_IDLE_CANVAS_SCALE
-                    usesGeneratedDemolisherAnimation && deathAnimationPlaying ->
-                        GENERATED_DEMOLISHER_DEATH_CANVAS_SCALE
                     usesGeneratedDemolisherAnimation ->
                         GENERATED_DEMOLISHER_CANVAS_SCALE
                     usesGeneratedSapperTurnAnimation ->
@@ -1281,16 +1304,41 @@ class BattlefieldRenderer(
                     canvas.drawCircle(x, y - 35f, 28f, paint)
                 }
                 CombatFeedbackRenderState.Kind.EXPLOSION -> {
-                    val paint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-                        color = Color.argb(105, 255, 120, 35)
-                        style = Paint.Style.FILL
+                    val explosionFrame = if (item.sourceUnitType == "DEMOLISHER") {
+                        item.animationFrameIndex
+                            ?.let(assets.demolisherExplosionFrames::getOrNull)
+                    } else {
+                        null
                     }
-                    canvas.drawCircle(
-                        x,
-                        y,
-                        item.radius * viewportWidth / WORLD_WIDTH,
-                        paint,
-                    )
+                    if (explosionFrame != null) {
+                        val explosionSize =
+                            item.radius * 2f * viewportWidth / WORLD_WIDTH
+                        val explosionHeight =
+                            explosionSize * explosionFrame.height / explosionFrame.width
+                        val destination = RectF(
+                            x - explosionSize / 2f,
+                            y - explosionHeight / 2f,
+                            x + explosionSize / 2f,
+                            y + explosionHeight / 2f,
+                        )
+                        canvas.drawBitmap(
+                            explosionFrame,
+                            null,
+                            destination,
+                            spritePaint,
+                        )
+                    } else {
+                        val paint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+                            color = Color.argb(105, 255, 120, 35)
+                            style = Paint.Style.FILL
+                        }
+                        canvas.drawCircle(
+                            x,
+                            y,
+                            item.radius * viewportWidth / WORLD_WIDTH,
+                            paint,
+                        )
+                    }
                 }
                 CombatFeedbackRenderState.Kind.SYNERGY -> {
                     val paint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
@@ -1509,7 +1557,6 @@ class BattlefieldRenderer(
         internal const val GENERATED_RAGING_BOAR_DEATH_CANVAS_SCALE = 1.6f
         internal const val GENERATED_RAGING_BOAR_DEATH_BOTTOM_PADDING_RATIO = 98f / 480f
         internal const val GENERATED_DEMOLISHER_CANVAS_SCALE = 2f
-        internal const val GENERATED_DEMOLISHER_DEATH_CANVAS_SCALE = 2.42f
         internal const val GENERATED_SAPPER_CANVAS_SCALE = 2f
         internal const val GENERATED_SAPPER_MOVE_CANVAS_SCALE = 2f
         internal const val GENERATED_SAPPER_ATTACK_CANVAS_SCALE = 2f

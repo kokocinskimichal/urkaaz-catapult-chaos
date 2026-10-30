@@ -22,6 +22,8 @@
     <string name="campaign_status_loading">Loading campaign progress…</string>
     <string name="campaign_retry">RETRY</string>
     <string name="campaign_map_art_pending">MAP ARTWORK PENDING · SHOWING LEVEL LIST</string>
+    <string name="campaign_map_layout_invalid">Campaign map layout is invalid; map placement is unavailable.</string>
+    <string name="campaign_map_layout_unavailable">Campaign map layout could not be loaded.</string>
     <string name="campaign_map_marker_accessibility">Level %1$d, %2$s, %3$s</string>
     <string name="campaign_marker_type_fortress">fortress</string>
     <string name="campaign_marker_type_boss">boss</string>

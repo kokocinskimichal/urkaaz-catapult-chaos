@@ -2,7 +2,7 @@
   "targets": {
     "character": ["defender", "demolisher", "raging_boar", "sapper", "slingmaster"],
     "spell": ["fortress_shield", "haste", "runic_bastion"],
-    "ammunition": ["fire_rain", "plague_cauldron", "powder_barrel", "rock", "siege_bomb"]
+    "ammunition": ["demolisher", "fire_rain", "plague_cauldron", "powder_barrel", "rock", "siege_bomb"]
   },
   "teamTextureTargets": ["defender", "demolisher", "raging_boar", "sapper"],
   "withoutLoader": ["anim_ammunition_fire_rain_impact"]

@@ -1,5 +1,6 @@
 import type { ComponentType } from "react";
 import { AnimationsTab } from "../tabs/animations/AnimationsTab";
+import { CampaignTab } from "../tabs/campaign/CampaignTab";
 import { MapsTab } from "../tabs/maps/MapsTab";
 
 export interface StudioTab {
@@ -10,6 +11,7 @@ export interface StudioTab {
 
 export const TABS: readonly StudioTab[] = [
   { id: "maps", label: "Maps", component: MapsTab },
+  { id: "campaign", label: "Campaign", component: CampaignTab },
   { id: "animations", label: "Animations", component: AnimationsTab },
 ];
 

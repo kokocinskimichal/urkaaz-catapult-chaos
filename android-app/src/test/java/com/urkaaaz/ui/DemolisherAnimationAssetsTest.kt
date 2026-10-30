@@ -3,6 +3,7 @@ package com.urkaaaz.ui
 import java.io.File
 import javax.imageio.ImageIO
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -19,25 +20,19 @@ class DemolisherAnimationAssetsTest {
     }
 
     @Test
-    fun sharedDeathFramesHaveMatchingMasksAndTeamTextures() {
-        assertSharedAnimationFrames("death", 32, width = 768, height = 432)
+    fun sharedAttackFramesHaveMatchingMasksAndTeamTextures() {
+        assertSharedAnimationFrames("attack", 97)
     }
 
     @Test
-    fun deathOpeningFrameMatchesTheVisibleScaleOfIdleAndMove() {
+    fun deathAssetsAreRemovedPendingRegeneration() {
         val directory = resourceDirectory()
-        val referenceScale = listOf("idle", "move").map { animation ->
-            val frame = readFrame(directory, animation, 0)
-            visibleHeight(frame) * BattlefieldRenderer.GENERATED_DEMOLISHER_CANVAS_SCALE /
-                frame.height
-        }.average().toFloat()
-        val deathFrame = readFrame(directory, "death", 0)
-        val deathScale =
-            visibleHeight(deathFrame) *
-                BattlefieldRenderer.GENERATED_DEMOLISHER_DEATH_CANVAS_SCALE /
-                deathFrame.height
-
-        assertEquals(referenceScale, deathScale, 0.01f)
+        assertTrue(
+            directory.listFiles().orEmpty().none {
+                it.name.matches(Regex("anim_character_demolisher_death_\\d{3}\\.png"))
+            },
+        )
+        assertFalse(File(assetDirectory(), "masks/death").exists())
     }
 
     private fun assertSharedAnimationFrames(
@@ -119,28 +114,6 @@ class DemolisherAnimationAssetsTest {
                 }
             }
         }
-    }
-
-    private fun readFrame(directory: File, animation: String, index: Int) =
-        requireNotNull(
-            ImageIO.read(
-                File(directory, "anim_character_demolisher_${animation}_%03d.png".format(index)),
-            ),
-        )
-
-    private fun visibleHeight(image: java.awt.image.BufferedImage): Int {
-        var top = image.height
-        var bottom = -1
-        for (y in 0 until image.height) {
-            for (x in 0 until image.width) {
-                if (image.getRGB(x, y) ushr 24 > 0) {
-                    top = minOf(top, y)
-                    bottom = maxOf(bottom, y)
-                }
-            }
-        }
-        assertTrue("Animation frame must contain visible pixels", bottom >= top)
-        return bottom - top + 1
     }
 
     private fun assetDirectory(): File {

@@ -16,6 +16,9 @@ kampanię, AI oraz działający match screen. Gałąź robocza: `develop`.
   fortress/boss landmarks. Campaign screen pokazuje mapę Chapter 1,
   postęp, rozdziały ukończone/bieżący/podgląd oraz znaczniki stanów poziomów;
   start wymaga zaznaczenia dostępnego poziomu i przycisku **START LEVEL**.
+- Studio ma zakładkę Campaign do edycji pozycji X/Y wszystkich 10 markerów
+  danego rozdziału. Wspólny JSON rozdziałów i osobny layout JSON są czytane
+  przez Studio i grę; Chapter 2–10 są tylko do odczytu do czasu dodania map.
 - Dashboard udostępnia potwierdzony reset lokalnego postępu gracza: kampanii,
   złota, odblokowań, stocków, zapisanych loadoutów i paragonów nagród.
 - Lokalny przepływ:
@@ -40,8 +43,11 @@ kampanię, AI oraz działający match screen. Gałąź robocza: `develop`.
   separacji i kolizji jednostek pozostaje stabilna.
 - Ruch jednostek w marszu i podczas przegrupowania garnizonu używa globalnego
   mnożnika `2.0`.
-- Interakcje jednostek: melee, ataki dystansowe, detonacja Demolishera oraz
-  ataki Sapera i pozostałych jednostek na fortecę lub aktywny Bastion.
+- Interakcje jednostek: melee, ataki dystansowe i eksplozje Demolishera.
+  Kontakt z jednostką powoduje natychmiastową detonację; przy froncie fortecy
+  lub Bastionu Demolisher wykonuje rzut do przodu przez `0.5` sekundy,
+  przesuwając się o `90` jednostek świata przed wybuchem. Saper i pozostałe
+  jednostki atakują fortecę lub aktywny Bastion zgodnie ze swoimi profilami.
 - AI używa typowanych profili `CADET`, `VETERAN` i `ELITE` z kampanii.
   Strategie katapulty/amunicji, rekrutacji i fal są składane przez
   `AiStrategyRegistry`; ELITE leaduje ruchome cele i kontruje zagrożenia.

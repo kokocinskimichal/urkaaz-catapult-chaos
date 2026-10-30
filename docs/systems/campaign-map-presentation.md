@@ -8,7 +8,9 @@ progression projection for current/completed/preview chapters. Chapter 1 uses
 the supplied map with interactive markers. Per the accepted rollout decision,
 chapters without map artwork retain the chapter-specific level-list
 presentation until their backgrounds are supplied; Chapters 2–10 do not yet
-have map images.
+have map images. Chapter metadata and map marker coordinates are stored as
+shared JSON resources in `game-campaign`; the Studio Campaign tab edits the
+same Chapter 1 layout that Android reads at runtime.
 
 The first version contains ten chapters with ten levels each. The design must
 allow more chapters to be added later without changing the screen navigation
@@ -104,6 +106,12 @@ The selector must make it easy to understand:
   available at `docs/systems/campaign-map-level-status-icons.agp`.
 - `CampaignProgress` already persists `highestUnlockedLevel` and
   `completedLevels`.
+- `CampaignChapterRegistry` reads canonical chapter metadata from
+  `game-campaign/src/main/resources/campaign-chapters.json`.
+- `CampaignMapLayoutRepository` validates normalized, global level anchors
+  from `game-campaign/src/main/resources/campaign-map-layouts/<chapterId>.json`.
+  Studio writes those same per-chapter JSON resources with hash conflict
+  detection; Android uses them after the next build or app restart.
 - `CampaignSystem.selectLevel(level)` already rejects locked and completed
   levels. `CampaignScreen` also marks completed levels as unavailable.
 - Returning to campaign reloads persisted progress. Campaign completion,
@@ -115,7 +123,8 @@ The selector must make it easy to understand:
 - `MapDefinition` and the Studio map editor describe gameplay maps. They are
   not campaign-overview illustrations and must not be reused as a second
   representation of the same campaign map.
-- Chapter identity, level grouping, and biome assignment are now canonical in
+- Chapter identity, level grouping, and biome assignment are canonical in
+  `game-campaign/src/main/resources/campaign-chapters.json` and loaded by
   `CampaignChapterRegistry`; chapters 6–10 retain temporary biome assignments
   until future biome work is approved.
 
@@ -126,12 +135,14 @@ progression, level authorization, or gameplay map contracts.
 
 | Responsibility | Owner |
 |---|---|
-| Static chapter identity, title, level range, canonical biome, and per-level map landmark kind | `CampaignChapterRegistry` in `game-campaign` |
+| Static chapter identity, title, level range, canonical biome, and boss positions | `campaign-chapters.json` and `CampaignChapterRegistry` in `game-campaign` |
 | Level definitions and their chapter-consistent biome | `CampaignLevelDefinition` / `CampaignLevelRegistry` in `game-campaign` |
+| Campaign overview map key and normalized level anchors | `CampaignMapLayoutDefinition` / `CampaignMapLayoutRepository` in `game-campaign` |
 | Durable progress and level-selection authorization | Existing `CampaignSystem` in `game-application` |
 | Deriving visible chapters and marker states | Campaign screen presentation mapper in `android-app` |
-| Map backgrounds, normalized level anchors, and replaceable landmark assets | Campaign map presentation catalog in `android-app` |
+| Resolving campaign asset keys to Android drawables | `CampaignMapPresentationCatalog` in `android-app` |
 | Chapter switching, marker input, and rendering | Existing `CampaignScreen` and screen-owned campaign map view/controller |
+| Campaign layout authoring and safe persistence | `CampaignTab` / `campaignMapCatalog.ts` in `studio-web` / `studio-server` |
 | Committed map source images | `assets_src/campaign/chapter-maps/` |
 | Committed campaign frame source image | `assets_src/campaign/ui/campaign_map_frame_overlay.png` |
 | Committed level-plaque sheet and extracted state assets | `assets_src/campaign/ui/` |
@@ -143,17 +154,24 @@ Dependency direction:
 CampaignScreen / map view (android-app)
   ├── CampaignSystem progress and selectLevel (game-application)
   ├── CampaignChapterRegistry (game-campaign)
-  └── Android campaign-map presentation catalog, frame, and PNG assets
+  ├── CampaignMapLayoutRepository (game-campaign)
+  └── Android campaign-map asset catalog, frame, and PNG assets
 
 CampaignLevelDefinition (game-campaign)
   └── MapDefinition.biome set from its chapter's canonical biome
+
+Studio CampaignTab (studio-web)
+  └── campaignMapCatalog.ts (studio-server)
+      ├── campaign-chapters.json
+      └── campaign-map-layouts/<chapterId>.json
 ```
 
 `game-campaign` must not contain Android resource IDs or `Context` references.
-The Android presentation catalog resolves stable chapter IDs to map drawable
-resources and marker coordinates, then resolves each level's landmark kind to
-a separate marker asset. This is a narrow catalog for campaign map art, not a
-second terrain or gameplay map catalog.
+The Android presentation catalog resolves a stable background asset key to
+its drawable and resolves landmark kind to a separate marker asset.
+Normalized marker positions remain in the shared campaign layout resource,
+not in the Android catalog. This is campaign presentation data, not a second
+terrain or gameplay `MapDefinition` catalog.
 
 ## Landmark kinds
 
@@ -176,11 +194,12 @@ boss marker must never silently show a fortress.
 
 ## Chapter definition and first-pass biome assignment
 
-`CampaignChapterRegistry` is the canonical source for chapter identity and
-level grouping. A chapter definition contains stable ID, display title,
-ordered level range, one `TerrainBiome`, and a typed landmark kind for each
-level in that range. It does not contain progress, selected-screen state,
-Android resource IDs, or mutable runtime data.
+`game-campaign/src/main/resources/campaign-chapters.json` is the canonical
+chapter catalog consumed by both Studio and `CampaignChapterRegistry`. A typed
+chapter definition contains a stable ID, display title, ordered level range,
+one `TerrainBiome`, and a typed landmark kind for each level in that range.
+It does not contain progress, selected-screen state, Android resource IDs, or
+mutable runtime data.
 
 Current proposed mapping:
 
@@ -299,17 +318,14 @@ next chapter preview clearly signals that its landmarks are not yet
 selectable. Marker labels and status must remain live UI content rather than
 being baked into either asset.
 
-For each approved image, author ten per-level anchor coordinates in normalized
-image space (`x` and `y` in the inclusive range 0–1) in the Android
-presentation catalog. Coordinates identify the empty level locations and
-must be measured against the actual approved background, not guessed from the
-prompt. Chapter 1 has draft coordinates listed above; verify them against the
-source image and overlay sizing before implementation. The renderer covers the
-landscape viewport with a center-cropped image, preserves its aspect ratio, and
-maps anchors through that same displayed image rectangle. This prevents
-letterboxing from exposing another screen's background. Keep all ten anchors
-visible and do not place them beneath the header, chapter controls, or Back
-button.
+For each approved image, author one global-level anchor per chapter level in
+`campaign-map-layouts/<chapterId>.json`. `x` and `y` are normalized to the
+source image and inclusive in the range 0–1. Coordinates identify level marker
+centers and must be measured against the actual approved background, not
+guessed from an AGP. Studio and Android use the same normalized positions and
+center-crop transform. This prevents letterboxing from exposing another
+screen's background. Keep all ten anchors visible and do not place them beneath
+the header, chapter controls, or Back button.
 
 Each level marker is a replaceable UI component with independent image,
 number, status treatment, accessibility label, and touch target. Replacing a
@@ -333,10 +349,11 @@ Its source size is 1608 × 905 pixels, close to 16:9. Preserve the image and its
 aspect ratio; do not generate a replacement map unless requested.
 
 The following normalized coordinates are the current marker centers in
-`CampaignMapPresentationCatalog`. The points follow a broad route around the
-landscape and return to the central basin for the final boss. They are separate
-from the map artwork; visual review at supported landscape sizes is still
-required before treating them as final.
+`game-campaign/src/main/resources/campaign-map-layouts/green_frontier.json`.
+The points follow a broad route around the landscape and return to the central
+basin for the final boss. They are separate from the map artwork; visual
+review at supported landscape sizes is still required before treating them as
+final.
 
 | Level | Landmark | x | y | Visual area |
 |---:|---|---:|---:|---|
@@ -390,7 +407,10 @@ chapter.
 | `CampaignMapLandmarkKind` | `game-campaign` | Typed fortress/boss map landmark identifier |
 | `CampaignChapterRegistry` | `game-campaign` | Ordered, validated chapter definitions and level-to-chapter/landmark lookup |
 | `CampaignProgress` | `game-application` | Existing immutable persisted progress read model |
-| Chapter map presentation metadata | `android-app` | Background drawable, ten normalized level anchors, and replaceable marker-asset resolution |
+| Chapter catalog metadata | `game-campaign` | Shared chapter IDs, titles, ranges, biomes, and boss positions |
+| Campaign map layout | `game-campaign` | Stable background asset key and normalized global-level anchors |
+| Android map asset adapter | `android-app` | Drawable resolution and rendering of shared layout/marker assets |
+| Campaign map authoring | `studio-web` / `studio-server` | Framed preview, normalized X/Y editing, validation, and safe layout persistence |
 | Campaign map UI state | `android-app` | Selected chapter page and immutable marker/view status projection |
 | `CampaignUiAction.SelectLevel` | `android-app` | Existing user intent to select a level |
 | `CampaignSystem.selectLevel` result | `game-application` | Authoritative selected/rejected/failed level result |
@@ -441,38 +461,46 @@ state is required. The screen does not mutate `CampaignProgress` or
 3. **Implemented.** Add a pure campaign-map presentation projection in `android-app` that maps
    `CampaignProgress` and the chapter registry to visible chapters, selected
    current chapter, chapter completion state, and ten level-marker states.
-4. **Partially implemented.** Add the Android presentation catalog for
-   Chapter 1's supplied background, ten normalized anchors, and distinct
-   fortress/boss marker resources. Chapter 2–10 backgrounds and visual
-   anchor review remain outstanding.
+4. **Implemented for Chapter 1.** The shared campaign layout repository
+   provides ten global level anchors; Android maps the background asset key
+   to its drawable and renders the layout with fortress/boss markers.
+   Chapter 2–10 backgrounds remain outstanding.
 5. **Implemented.** Replace the single vertical list in `CampaignScreen` with the chapter
    selector, chapter map page, and dynamic fortress/boss marker overlays.
    Keep loading, storage errors, retry, Back behavior, and the current Loadout
    navigation. Chapters without map art explicitly retain the selected
    chapter's level-list presentation.
    Do not add a chapter route to `AppNavigator`.
-6. **Partially implemented.** Chapter 1's map, transparent frame, reusable
+6. **Implemented for available artwork.** Chapter 1's map, transparent frame, reusable
    fortress/boss markers, completed/available/locked plaques, status badges,
    and available-level glow are supplied. Copy-ready AGPs cover Chapter 1 and
    the reusable UI/marker assets; map AGPs and images for Chapters 2–10 remain
    outstanding.
-7. **Partially implemented.** Tests cover chapter visibility, marker states,
-   selected-chapter behavior, and center-crop geometry. The screen was also
-   reviewed on a Pixel 8 landscape emulator; additional supported landscape
-   sizes still need visual review.
-8. **Implemented.** `./gradlew test assembleDebug --quiet` and
-   `git diff --check` pass for the current implementation.
+7. **Implemented.** Kotlin/Android tests cover chapter visibility, marker
+   states, shared layout decoding, and center-crop geometry. Studio tests cover
+   API validation/conflicts and normalized coordinate transforms. Both the
+   campaign map and Studio editor were visually reviewed; additional
+   supported landscape sizes still need review.
+8. **Implemented.** `./gradlew test assembleDebug --quiet`, Studio
+   `npm test`, `npm run lint`, `npm run build`, and `git diff --check` pass for
+   the current implementation.
 
 ## Implemented files and remaining art deliverables
 
 Implemented code and tests:
 
 - `game-campaign/src/main/kotlin/com/urkaaaz/campaign/CampaignChapterDefinition.kt`
+- `game-campaign/src/main/kotlin/com/urkaaaz/campaign/CampaignChapterCatalogRepository.kt`
 - `game-campaign/src/main/kotlin/com/urkaaaz/campaign/CampaignChapterRegistry.kt`
 - `game-campaign/src/main/kotlin/com/urkaaaz/campaign/CampaignMapLandmarkKind.kt`
+- `game-campaign/src/main/kotlin/com/urkaaaz/campaign/CampaignMapLayoutDefinition.kt`
+- `game-campaign/src/main/kotlin/com/urkaaaz/campaign/CampaignMapLayoutRepository.kt`
+- `game-campaign/src/main/resources/campaign-chapters.json`
+- `game-campaign/src/main/resources/campaign-map-layouts/green_frontier.json`
 - `game-campaign/src/main/kotlin/com/urkaaaz/campaign/CampaignLevelDefinition.kt`
 - `game-campaign/src/main/kotlin/com/urkaaaz/campaign/CampaignLevelRegistry.kt`
 - `game-campaign/src/test/kotlin/com/urkaaaz/campaign/CampaignChapterRegistryTest.kt`
+- `game-campaign/src/test/kotlin/com/urkaaaz/campaign/CampaignChapterCatalogRepositoryTest.kt`
 - `android-app/src/main/java/com/urkaaaz/screens/campaign/CampaignScreen.kt`
 - `android-app/src/main/java/com/urkaaaz/screens/campaign/CampaignViewModel.kt`
 - `android-app/src/main/java/com/urkaaaz/screens/campaign/CampaignUiState.kt`
@@ -491,6 +519,13 @@ Implemented code and tests:
 - `android-app/src/test/java/com/urkaaaz/screens/campaign/CampaignChapterProgressMapperTest.kt`
 - `android-app/src/test/java/com/urkaaaz/screens/campaign/CampaignViewModelTest.kt`
 - `android-app/src/test/java/com/urkaaaz/screens/campaign/CampaignMapViewportTest.kt`
+- `game-campaign/src/test/kotlin/com/urkaaaz/campaign/CampaignMapLayoutRepositoryTest.kt`
+- `studio/server/src/services/campaignMapCatalog.ts`
+- `studio/server/src/api/campaign.ts`
+- `studio/server/src/api/campaign.test.ts`
+- `studio/server/src/services/availablePort.ts`
+- `studio/web/src/tabs/campaign/CampaignTab.tsx`
+- `studio/web/src/tabs/campaign/CampaignMapCanvas.tsx`
 
 Remaining artwork and authoring deliverables:
 
@@ -557,13 +592,14 @@ simulation are expected to remain unchanged.
   UI.
 - Opening/resuming the campaign selects the current chapter; changing pages
   does not add entries to `AppNavigator`'s Back stack or persist a chapter.
-- All ten marker anchors per map are finite, unique, in bounds, and mapped to
-  the correct level.
+- Every level in the selected chapter has exactly one finite, normalized
+  anchor in bounds and mapped to its global campaign level ID. Overlapping
+  rendered marker bounds produce a Studio warning but do not block saving.
 - Every chapter renders eight fortress markers and boss markers at positions
   5 and 10. Marker art can be replaced independently without regenerating the
   map background or changing anchors, progress status, or hit targets.
-- Marker hit targets remain independently tappable and at least 48 dp at
-  supported landscape aspect ratios.
+- Marker hit targets remain at least 48 dp at supported landscape aspect
+  ratios; Studio warns if their visible footprints overlap.
 - Every approved map background has the expected chapter biome, ten distinct
   clear level locations, no baked fortress/boss marker art or text/UI, and a
   readable composition at device scale.

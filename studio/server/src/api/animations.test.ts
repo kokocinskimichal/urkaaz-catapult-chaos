@@ -24,7 +24,19 @@ describe("animations API", () => {
     expect(response.status).toBe(200);
     expect(catalog.sequences.some(sequence => sequence.id === "anim_character_defender_move")).toBe(true);
     expect(catalog.sequences.find(sequence => sequence.id === "anim_character_demolisher_idle")?.supportsTeamTexture).toBe(true);
-    expect(catalog.sequences.find(sequence => sequence.id === "anim_character_demolisher_death")?.supportsTeamTexture).toBe(true);
+    const demolisherAttack = catalog.sequences.find(sequence => sequence.id === "anim_character_demolisher_attack");
+    expect(demolisherAttack?.supportsTeamTexture).toBe(true);
+    expect(demolisherAttack?.frameIndices).toHaveLength(97);
+    expect(catalog.sequences.some(sequence => sequence.id === "anim_character_demolisher_death")).toBe(false);
+    const demolisherExplosion = catalog.sequences.find(sequence => sequence.id === "anim_ammunition_demolisher_explosion");
+    expect(demolisherExplosion).toMatchObject({
+      category: "ammunition",
+      target: "demolisher",
+      type: "explosion",
+      targetConfigured: true,
+      supportsTeamTexture: false,
+    });
+    expect(demolisherExplosion?.frameIndices).toHaveLength(20);
     expect(catalog.sequences.find(sequence => sequence.id === "anim_character_sapper_idle")?.supportsTeamTexture).toBe(true);
     expect(catalog.sequences.find(sequence => sequence.id === "anim_character_sapper_move")?.supportsTeamTexture).toBe(true);
     expect(catalog.sequences.find(sequence => sequence.id === "anim_character_sapper_attack")?.supportsTeamTexture).toBe(true);
@@ -38,6 +50,10 @@ describe("animations API", () => {
     expect(response.headers.get("content-type")).toBe("image/png");
     const bytes = new Uint8Array(await response.arrayBuffer());
     expect([...bytes.slice(1, 4)]).toEqual([0x50, 0x4e, 0x47]);
+
+    const explosion = await fetch(`${await baseUrl()}/api/animations/anim_ammunition_demolisher_explosion/frames/0`);
+    expect(explosion.status).toBe(200);
+    expect(explosion.headers.get("content-type")).toBe("image/png");
   });
 
   it("returns 404 for missing frames and unsafe ids", async () => {
@@ -53,7 +69,7 @@ describe("animations API", () => {
       "/api/animations/anim_character_defender_idle/masks/0",
       "/api/animations/anim_character_demolisher_idle/masks/0",
       "/api/animations/anim_character_demolisher_move/masks/0",
-      "/api/animations/anim_character_demolisher_death/masks/0",
+      "/api/animations/anim_character_demolisher_attack/masks/0",
       "/api/animations/anim_character_sapper_idle/masks/0",
       "/api/animations/anim_character_sapper_move/masks/0",
       "/api/animations/anim_character_sapper_attack/masks/0",
@@ -70,6 +86,9 @@ describe("animations API", () => {
       expect(response.status).toBe(200);
       expect(response.headers.get("content-type")).toBe("image/png");
     }
+    expect(
+      (await fetch(`${base}/api/animations/anim_character_demolisher_death/masks/0`)).status,
+    ).toBe(404);
     expect((await fetch(`${base}/api/animations/anim_character_defender_idle/masks/999`)).status).toBe(404);
     expect((await fetch(`${base}/api/animations/team-textures/demolisher/green`)).status).toBe(404);
     expect((await fetch(`${base}/api/animations/anim_character_demolisher_idle/../../settings/masks/0`)).status).toBe(404);

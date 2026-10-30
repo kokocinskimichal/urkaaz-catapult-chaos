@@ -86,6 +86,10 @@ class BattlefieldView(context: Context) : View(context) {
     private val deathAnimationClock = UnitDeathAnimationClock()
     private val unitDeathAnimationRetention =
         UnitDeathAnimationRetention(deathAnimationClock)
+    private val demolisherAttackAnimationClock =
+        DemolisherAttackAnimationClock()
+    private val demolisherExplosionAnimationClock =
+        DemolisherExplosionAnimationClock()
     private val sapperReturnAnimationClock = SapperReturnAnimationClock()
     private val sapperMoveAnimationClock = SapperMoveAnimationClock()
     private val sapperBombFlightClock = SapperBombFlightClock()
@@ -180,6 +184,8 @@ class BattlefieldView(context: Context) : View(context) {
             matchGenerationChanged
         ) {
             unitDeathAnimationRetention.reset()
+            demolisherAttackAnimationClock.reset()
+            demolisherExplosionAnimationClock.reset()
             sapperReturnAnimationClock.reset()
             sapperMoveAnimationClock.reset()
             activeImpact = null
@@ -192,13 +198,30 @@ class BattlefieldView(context: Context) : View(context) {
         sapperBombFlights = sapperBombFlightClock.update(presentationState, nowMilliseconds)
         sapperReturnAnimationClock.advance(newState.units, presentationState.isPaused)
         sapperMoveAnimationClock.advance(newState.units, presentationState.isPaused)
+        val demolisherAttackFrameCount = assets.unitAnimationFrames(
+            unitType = "DEMOLISHER",
+            teamLabel = "BLUE",
+            moving = false,
+            attacking = true,
+        ).size
+        demolisherAttackAnimationClock.update(
+            units = newState.units,
+            frameCount = demolisherAttackFrameCount,
+        )
+        val presentationUnits = demolisherAttackAnimationClock.presentationUnits(
+            units = newState.units,
+            frameCount = demolisherAttackFrameCount,
+        )
+        val animatedCombatFeedback = demolisherExplosionAnimationClock.update(
+            feedback = newState.combatFeedback,
+            frameCount = assets.demolisherExplosionFrames.size,
+            paused = presentationPaused,
+            activeDemolisherAttackUnitIds =
+                demolisherAttackAnimationClock.activeEntityIds(),
+        )
         state = newState.copy(
-            units = unitDeathAnimationRetention.update(
-                units = newState.units,
-                nowMilliseconds = nowMilliseconds,
-                allowAnticipation = !presentationState.isPaused,
-            ),
-            combatFeedback = newState.combatFeedback
+            units = unitDeathAnimationRetention.update(presentationUnits),
+            combatFeedback = animatedCombatFeedback
                 .filterNot { it.kind == CombatFeedbackRenderState.Kind.GOLD_REWARD } +
                 animatedRewardFeedback,
         )

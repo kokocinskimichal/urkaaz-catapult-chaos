@@ -39,56 +39,6 @@ class UnitDeathAnimationClockTest {
         assertNull(clock.frameIndex(defender.entityId, 0))
     }
 
-    @Test
-    fun prestartedDemolisherHoldsBeforeExplosionUntilSimulationConfirmsDeath() {
-        val clock = UnitDeathAnimationClock()
-        val aliveDemolisher = unit("demolisher").copy(
-            unitType = "DEMOLISHER",
-            actionState = "SEEKING_TARGET",
-            health = 100,
-            deathAnimationPrestarted = true,
-        )
-
-        repeat(100) { clock.advance(listOf(aliveDemolisher)) }
-        assertEquals(12, clock.frameIndex(aliveDemolisher.entityId, 32))
-
-        clock.advance(
-            listOf(
-                aliveDemolisher.copy(
-                    actionState = "DEAD",
-                    health = 0,
-                    deathAnimationPrestarted = false,
-                ),
-            ),
-        )
-        assertEquals(13, clock.frameIndex(aliveDemolisher.entityId, 32))
-    }
-
-    @Test
-    fun cancelledPrestartedAnimationDoesNotCarryIntoLaterDeath() {
-        val clock = UnitDeathAnimationClock()
-        val aliveDemolisher = unit("demolisher").copy(
-            unitType = "DEMOLISHER",
-            actionState = "SEEKING_TARGET",
-            health = 100,
-            deathAnimationPrestarted = true,
-        )
-
-        clock.advance(listOf(aliveDemolisher))
-        clock.advance(emptyList())
-        clock.advance(
-            listOf(
-                aliveDemolisher.copy(
-                    actionState = "DEAD",
-                    health = 0,
-                    deathAnimationPrestarted = false,
-                ),
-            ),
-        )
-
-        assertEquals(0, clock.frameIndex(aliveDemolisher.entityId, 32))
-    }
-
     private fun unit(entityId: String, teamLabel: String = "BLUE") = UnitRenderState(
         entityId = entityId,
         teamLabel = teamLabel,
@@ -128,20 +78,35 @@ class UnitDeathAnimationRetentionTest {
     }
 
     @Test
-    fun bothTeamsDemolisherRemainVisibleUntilTheirDeathAnimationFinishes() {
+    fun demolishedUnitIsNotRetainedAfterItLeavesRenderState() {
         listOf("BLUE", "RED").forEach { teamLabel ->
             val clock = UnitDeathAnimationClock()
             val retention = UnitDeathAnimationRetention(clock)
             val demolisher = unit("$teamLabel-demolisher", teamLabel, "DEMOLISHER")
 
-            assertEquals(listOf(demolisher), retention.update(listOf(demolisher)))
-            repeat(95) {
-                assertEquals(listOf(demolisher), retention.update(emptyList()))
-            }
-            assertEquals(31, clock.frameIndex(demolisher.entityId, 32))
-            assertEquals(listOf(demolisher), retention.update(emptyList()))
+            assertEquals(emptyList<UnitRenderState>(), retention.update(listOf(demolisher)))
             assertEquals(emptyList<UnitRenderState>(), retention.update(emptyList()))
         }
+    }
+
+    @Test
+    fun demolishedUnitRemainsVisibleWhileItsThrowAnimationIsActive() {
+        val clock = UnitDeathAnimationClock()
+        val retention = UnitDeathAnimationRetention(clock)
+        val demolisher = unit("BLUE-demolisher", "BLUE", "DEMOLISHER").copy(
+            targetId = "red-fortress",
+            demolisherThrowFrameIndex = 0,
+        )
+
+        assertEquals(listOf(demolisher), retention.update(listOf(demolisher)))
+        assertEquals(
+            listOf(demolisher.copy(demolisherThrowFrameIndex = 96)),
+            retention.update(listOf(demolisher.copy(demolisherThrowFrameIndex = 96))),
+        )
+        assertEquals(
+            emptyList<UnitRenderState>(),
+            retention.update(listOf(demolisher.copy(demolisherThrowFrameIndex = null))),
+        )
     }
 
     private fun defender(entityId: String, teamLabel: String) = UnitRenderState(

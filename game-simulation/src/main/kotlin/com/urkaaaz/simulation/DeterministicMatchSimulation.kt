@@ -930,7 +930,8 @@ class DeterministicMatchSimulation(
                 y = it.position.y,
                 health = it.health.current,
                 maxHealth = it.type.maxHealth,
-                moving = it.moving && !it.isAttacking(),
+                moving = it.moving &&
+                    (!it.isAttacking() || it.combatState.action == UnitActionState.THROWING),
                 attackType = it.type.attackType.name,
                 actionState = it.combatState.action.name,
                 targetId = it.combatState.targetId,
@@ -1026,7 +1027,11 @@ class DeterministicMatchSimulation(
 
     private fun attackProgress(unit: Unit): Float {
         val cooldown = unit.combatState.attackCooldownRemainingSeconds
-        val duration = unit.type.attackCooldownSeconds
+        val duration = if (unit.isDemolisherThrowing()) {
+            DEMOLISHER_THROW_DURATION_SECONDS
+        } else {
+            unit.type.attackCooldownSeconds
+        }
         return if (duration <= 0f) 0f else (1f - cooldown / duration).coerceIn(0f, 1f)
     }
 
@@ -1123,6 +1128,21 @@ class DeterministicMatchSimulation(
                 return@map statusAdvanced.copy(
                     position = WorldPosition(heldX, terrain.heightAt(heldX)),
                     moving = false,
+                )
+            }
+            if (unit.isDemolisherThrowing()) {
+                val duration = DEMOLISHER_THROW_DURATION_SECONDS
+                val remaining = unit.combatState.attackCooldownRemainingSeconds
+                    .coerceIn(0f, duration)
+                val elapsed = duration - remaining
+                val nextElapsed = minOf(elapsed + deltaSeconds, duration)
+                val movementFraction = (nextElapsed - elapsed) / duration
+                val direction = if (unit.team == Team.BLUE) 1f else -1f
+                val nextX = unit.position.x +
+                    direction * DEMOLISHER_THROW_FORWARD_DISTANCE * movementFraction
+                return@map statusAdvanced.copy(
+                    position = WorldPosition(nextX, terrain.heightAt(nextX)),
+                    moving = movementFraction > 0f,
                 )
             }
             if (statusAdvanced.statuses.containsKey(UnitStatus.STUNNED)) {
@@ -1244,6 +1264,9 @@ class DeterministicMatchSimulation(
                 when {
                     unit.type is SapperUnit -> null
                     target.type is SapperUnit && !unit.type.attacksFromRange -> null
+                    unit.type.detonatesOnContact ->
+                        target.position.x -
+                            direction * config.unitCollisionRadius
                     unit.type.attacksFromRange ->
                         target.position.x -
                             direction * (unit.type.attackRange + formationOffset)
@@ -1434,13 +1457,29 @@ class DeterministicMatchSimulation(
         }.toMutableList()
         val hitIntents = mutableListOf<AttackIntent>()
         val startIntents = mutableListOf<AttackIntent>()
+        val completedDemolisherThrows = mutableListOf<EntityId>()
 
         current.indices.forEach { index ->
             val attacker = current[index]
-            if (!attacker.isAlive ||
-                !attacker.isAttacking() ||
-                attacker.statuses.containsKey(UnitStatus.STUNNED)
-            ) return@forEach
+            if (!attacker.isAlive) return@forEach
+            if (attacker.isDemolisherThrowing()) {
+                val progress = 1f -
+                    attacker.combatState.attackCooldownRemainingSeconds /
+                    DEMOLISHER_THROW_DURATION_SECONDS
+                current[index] = attacker.copy(
+                    moving = attacker.combatState.attackCooldownRemainingSeconds > 0f,
+                    combatState = attacker.combatState.copy(
+                        attackProgress = progress.coerceIn(0f, 1f),
+                    ),
+                )
+                if (attacker.combatState.attackCooldownRemainingSeconds <= 0f) {
+                    completedDemolisherThrows += attacker.id
+                }
+                return@forEach
+            }
+            if (!attacker.isAttacking() || attacker.statuses.containsKey(UnitStatus.STUNNED)) {
+                return@forEach
+            }
             val duration = attacker.type.attackCooldownSeconds
             val previousProgress = attacker.combatState.attackProgress
             val progress = if (duration <= 0f) {
@@ -1610,9 +1649,20 @@ class DeterministicMatchSimulation(
                 }
             } else {
                 val enemyFortress = fortress(opposingTeam(attacker.team))
-                attackIntent = when {
+                val contactedEnemyFortress =
                     attacker.type.detonatesOnContact &&
-                        contactedFortress(attacker, enemyFortress) ->
+                        contactedFortress(attacker, enemyFortress)
+                if (contactedEnemyFortress) {
+                    current[index] = attacker.copy(
+                        combatState = attacker.combatState.copy(
+                            action = UnitActionState.SEEKING_TARGET,
+                            targetId = enemyFortress.id,
+                            attackGroupId = null,
+                        ),
+                    )
+                }
+                attackIntent = when {
+                    contactedEnemyFortress ->
                         AttackIntent(attacker.id, enemyFortress.id, AttackType.CONTACT_EXPLOSIVE)
                     canAttackFortress(attacker, enemyFortress, current) ->
                         AttackIntent(attacker.id, enemyFortress.id, AttackType.SIEGE_MISSION)
@@ -1632,6 +1682,15 @@ class DeterministicMatchSimulation(
 
         resolveAttackHits(current, hitIntents)
         startAttackIntents(current, startIntents)
+        completedDemolisherThrows.forEach { unitId ->
+            val index = current.indexOfFirst { it.id == unitId }
+            if (index >= 0) {
+                val attacker = current[index]
+                if (attacker.isAlive && attacker.isDemolisherThrowing()) {
+                    detonateDemolisher(current, index, attacker)
+                }
+            }
+        }
         defeatedUnits += current.filter { !it.isAlive }.map {
             DefeatedUnit(
                 unit = it.copy(
@@ -1654,6 +1713,10 @@ class DeterministicMatchSimulation(
         intent: AttackIntent,
         startIntents: MutableList<AttackIntent>,
     ) {
+        if (intent.type == AttackType.CONTACT_EXPLOSIVE) {
+            startIntents += intent
+            return
+        }
         val attacker = current[unitIndex]
         val remainingDelay = attacker.combatState.firstAttackDelayRemainingSeconds
         if (remainingDelay == null) {
@@ -1717,7 +1780,7 @@ class DeterministicMatchSimulation(
                     bastionTarget.team != attacker.team &&
                     contactedBastion(attacker, bastionTarget)
                 ) {
-                    detonateDemolisher(current, attackerIndex, attacker)
+                    startDemolisherThrow(current, attackerIndex, attacker, intent.targetId)
                 } else {
                     current[attackerIndex] = attacker.copy(
                         combatState = attacker.combatState.copy(
@@ -1736,7 +1799,7 @@ class DeterministicMatchSimulation(
                     fortressTarget.team != attacker.team &&
                     contactedFortress(attacker, fortressTarget)
                 ) {
-                    detonateDemolisher(current, attackerIndex, attacker)
+                    startDemolisherThrow(current, attackerIndex, attacker, intent.targetId)
                 } else {
                     current[attackerIndex] = attacker.copy(
                         combatState = attacker.combatState.copy(
@@ -1808,6 +1871,32 @@ class DeterministicMatchSimulation(
             if (index < 0) return@forEach
             val attacker = current[index]
             if (!attacker.isAlive || attacker.isAttacking()) return@forEach
+            if (intent.type == AttackType.CONTACT_EXPLOSIVE) {
+                val cycle = attacker.combatState.attackCycleId + 1
+                current[index] = attacker.copy(
+                    combatState = attacker.combatState.copy(
+                        action = UnitActionState.SEEKING_TARGET,
+                        targetId = intent.targetId,
+                        attackCycleId = cycle,
+                        attackProgress = 0f,
+                        attackCooldownRemainingSeconds = 0f,
+                        firstAttackDelayRemainingSeconds = null,
+                    ),
+                )
+                emit {
+                    MatchEvent.AttackStarted(
+                        it,
+                        matchId,
+                        simulationTimeMilliseconds,
+                        attacker.id,
+                        intent.targetId,
+                        intent.type.name,
+                        cycle,
+                    )
+                }
+                resolveAttackHits(current, listOf(intent))
+                return@forEach
+            }
             val cycle = attacker.combatState.attackCycleId + 1
             val groupId = if (intent.type == AttackType.MELEE) {
                 attacker.combatState.attackGroupId?.value ?: "melee-${intent.targetId.value}"
@@ -1972,7 +2061,33 @@ class DeterministicMatchSimulation(
     private fun Unit.isAttacking(): Boolean =
         combatState.action == UnitActionState.WINDING_UP ||
             combatState.action == UnitActionState.ATTACKING ||
-            combatState.action == UnitActionState.RECOVERING
+            combatState.action == UnitActionState.RECOVERING ||
+            combatState.action == UnitActionState.THROWING
+
+    private fun Unit.isDemolisherThrowing(): Boolean =
+        type is DemolisherUnit && combatState.action == UnitActionState.THROWING
+
+    private fun startDemolisherThrow(
+        current: MutableList<Unit>,
+        attackerIndex: Int,
+        attacker: Unit,
+        targetId: EntityId,
+    ) {
+        if (attacker.type !is DemolisherUnit) {
+            detonateDemolisher(current, attackerIndex, attacker)
+            return
+        }
+        current[attackerIndex] = attacker.copy(
+            moving = true,
+            combatState = attacker.combatState.copy(
+                action = UnitActionState.THROWING,
+                targetId = targetId,
+                attackProgress = 0f,
+                attackCooldownRemainingSeconds = DEMOLISHER_THROW_DURATION_SECONDS,
+                attackGroupId = null,
+            ),
+        )
+    }
 
     private fun attackMission(
         current: MutableList<Unit>,
@@ -2927,6 +3042,8 @@ class DeterministicMatchSimulation(
         private const val UNIT_INTERACTION_RANGE = 260f
         private const val FORTRESS_ATTACK_RANGE = 82f
         internal const val SAPPER_FORTRESS_STANDOFF_DISTANCE = 200f
+        private const val DEMOLISHER_THROW_DURATION_SECONDS = 0.5f
+        private const val DEMOLISHER_THROW_FORWARD_DISTANCE = 90f
         private const val DEMOLISHER_BLAST_RADIUS = 260f
         private const val DEMOLISHER_DAMAGE = 300
         private const val DEATH_ANIMATION_SECONDS = 0.8f

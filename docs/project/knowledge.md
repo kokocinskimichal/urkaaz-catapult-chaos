@@ -235,23 +235,38 @@ blocks selection on storage/corruption failures; it no longer exposes all 100
 levels by default. Campaign fortresses use 500 HP each; demo mode preserves its
 existing 5000 HP BLUE fortress and 500 HP RED fortress.
 
-`CampaignChapterRegistry` in `game-campaign` defines ten ordered chapters,
-their canonical biome, and the fortress/boss landmark kind for every level.
-Levels 5 and 10 within each chapter are boss landmarks. `CampaignLevelDefinition`
-derives its map biome from this registry without changing map geometry or
-gameplay balance. In `android-app`, `CampaignChapterProgressMapper` projects
-persisted campaign progress into completed/current/preview chapter pages and
-completed/available/locked level markers. The available level is selected by
-default; tapping it changes screen-local selection, and **Start Level** calls
-the existing `CampaignSystem.selectLevel` before opening Loadout.
+`game-campaign/src/main/resources/campaign-chapters.json` is the canonical
+ten-chapter catalog read by `CampaignChapterRegistry` and Studio. It defines
+ordered chapter IDs/ranges, biome assignments, and boss positions 5 and 10.
+`CampaignLevelDefinition` derives its map biome from this registry without
+changing map geometry or gameplay balance. In `android-app`,
+`CampaignChapterProgressMapper` projects persisted campaign progress into
+completed/current/preview chapter pages and completed/available/locked level
+markers. The available level is selected by default; tapping it changes
+screen-local selection, and **Start Level** calls the existing
+`CampaignSystem.selectLevel` before opening Loadout.
 
 `CampaignScreen` renders Chapter 1 as a full-bleed, center-cropped map and
-positions level markers using the same crop transform. It layers a transparent
-campaign frame, live chapter/progress UI, fortress/boss artwork, state-specific
-level plaques, completed/locked badges, and a shared available-level glow.
-Chapters 2–10 do not yet have map artwork and use the explicit chapter level
-list fallback. Source art and copy-ready prompts live under
-`assets_src/campaign/` and `docs/systems/campaign-map-*.agp`.
+positions level markers using the same crop transform as the shared
+`game-campaign/src/main/resources/campaign-map-layouts/<chapterId>.json`
+layout. Android's `CampaignMapPresentationCatalog` resolves background asset
+keys to drawable resources; it does not own marker coordinates. The screen
+layers a transparent campaign frame, live chapter/progress UI, fortress/boss
+artwork, state-specific level plaques, completed/locked badges, and a shared
+available-level glow. Chapters 2–10 do not yet have map artwork and use the
+explicit chapter level-list fallback.
+
+The Studio Campaign tab edits the same chapter and layout JSON through
+`/api/campaign/*`; it never modifies `MapDefinition` or Android resource IDs.
+It supports all ten marker positions (fortresses and bosses), drag and numeric
+normalized X/Y input, and per-chapter Save/Discard/Cancel handling. Only
+Chapter 1 currently has map art; missing-art chapters show a message and
+disable editing. A saved layout is used by the game after the next build or
+application restart. X/Y validation is independent per axis, and the server
+holds a filesystem lock across the expected-hash check and atomic replacement
+so separate Studio instances cannot overwrite one another's concurrent save.
+Source art and copy-ready prompts live under `assets_src/campaign/` and
+`docs/systems/campaign-map-*.agp`.
 
 The Dashboard's confirmed **RESET** action uses
 `PlayerProgressResetRepository` to clear the shared local Preferences DataStore
@@ -329,8 +344,8 @@ locomotion aliases (`jog`, `run`, and generic `anim`) normalize to `move`;
 `anim_character_defender_move_blue_000.png`,
 `anim_spell_runic_bastion_creation_000.png`, and
 `anim_ammunition_fire_rain_fragment_flight_000.png`. Android's battlefield
-asset loader and animation-asset tests use this naming. The 1,394 imported
-frames currently form 24 character, 6 spell and 13 ammunition sequences.
+asset loader and animation-asset tests use this naming. The 1,178 imported
+frames currently form 19 character, 6 spell and 14 ammunition sequences.
 Demolisher has no red death sequence; the existing Fire Rain `impact` sequence
 is retained as an asset but is not currently loaded by the runtime catalog.
 Projectile catalog entries that use the shared animation helper provide the
@@ -464,15 +479,16 @@ The current match HUD also displays:
   unit's garrison position without an artificial positional jump, and movement
   uses the legacy `0.45` speed scale multiplied by the global `2.0` movement
   rule.
-- Unit waves now resolve legacy-style interactions in the deterministic
-   simulation: Defenders and Raging Boars fight nearby enemy units, Slingmasters
-   attack visible-range targets, Demolishers detonate on contact, and Sappers
-   damage the enemy fortress with their bomb before returning toward their own
-   fortress. Units attack the enemy fortress when no enemy unit is in contact,
-   and fortress damage is emitted through the existing match events.
-   Demolishers stop at the enemy fortress's front hitbox face and detonate
-   there for either team; fortress blast falloff uses distance to the hitbox
-   surface rather than its center.
+- Unit waves resolve legacy-style interactions in the deterministic simulation:
+  Defenders and Raging Boars fight nearby enemy units, Slingmasters attack
+  visible-range targets, Demolishers detonate on unit contact, and Sappers
+  damage the enemy fortress with their bomb before returning toward their own
+  fortress. Units attack the enemy fortress when no enemy unit is in contact,
+  and fortress damage is emitted through the existing match events.
+- At a fortress or Runic Bastion front face, a Demolisher enters `THROWING`,
+  moves 90 world units forward over 0.5 seconds, then detonates at the endpoint.
+  Unit contact still detonates immediately. Fortress blast falloff uses
+  distance to the hitbox surface rather than its center.
 - Unit behavior is implemented by dedicated `DefenderUnit`, `SapperUnit`,
    `DemolisherUnit`, `RagingBoarUnit`, and `SlingmasterUnit` classes. Their
    balance values live centrally in `UnitConfigurations.kt`; `UnitFactory`
@@ -580,25 +596,26 @@ not truncated to a subset; unit frame playback advances at approximately
 - The Sapper stops 200 world units beyond an enemy fortress's front hitbox
   face before throwing its bomb. The approach and attack check share the
   `FortressHitboxProfile` geometry and apply symmetrically to BLUE and RED.
-- Demolisher death uses one shared 32-frame, transparent 768x432 sequence:
-  the first 12 frames preserve the approved run-and-dive motion, followed by a
-  20-frame explosion from the powder barrel on his back. Per-frame masks
-  neutralize the BLUE cloth and barrel panels; RED mirrors the shared frames
-  and applies the existing RED palette. Both teams remain rendered until the
-  sequence completes. Because the death canvas is wider and taller than the
-  256x256 idle/move canvases, its opening frames use a 2.42x renderer scale
-  (versus 2x for idle/move) to keep the visible character size consistent; the
-  same scale carries through the explosion. Original AnimGen outputs are
-  retained under `assets_src/animgen/demolisher/blue/death/{throw,explosion}/`.
-  The user approved the source explosion frames without another generation;
-  smoke reaches the upper canvas edge in frames 013-024, with a visible
-  green/purple matte fringe during the fade. Android presentation estimates
-  contact time from successive unit positions and starts the run-and-dive when
-  predicted contact is within the first 13 frames' playback time. It holds on
-  the final pre-explosion frame until the simulation marks the Demolisher dead,
-  then starts the explosion at frame 13. The prediction is cancelled if
-  contact is no longer closing or the target becomes invalid; it never changes
-  simulation damage or death timing.
+- The Demolisher death sequence, its masks, pre-impact presentation and
+  archived AnimGen outputs were removed at the user's request. A future
+  replacement should use the same 256x256 canvas as the existing idle and move
+  animations, which remain unchanged.
+- The complete Demolisher forward-throw source is imported as 97 shared
+  `anim_character_demolisher_attack_NNN` frames at 256x256, with per-frame
+  masks and the existing BLUE/RED team-texture configuration. The original
+  full-length video and transparent frame export are retained under
+  `assets_src/animgen/demolisher/blue/attack/`; the earlier one-second
+  run-only export is not the active attack animation.
+- The standalone Demolisher explosion is a shared 20-frame transparent
+  256x256 sequence, `anim_ammunition_demolisher_explosion_NNN`; it contains
+  only the explosion effect and uses no team-specific mask.
+- Demolisher stops at the fortress or Runic Bastion front face, then enters the
+  simulation-owned `THROWING` action. It advances 90 world units over 0.5
+  seconds while the renderer maps attack progress to source frames 41-50; the
+  complete 97-frame source remains available in Studio, but its run-up and
+  static held tail are not played at contact. `ExplosionTriggered` is emitted
+  at the end of the throw and starts the effect immediately. Unit contacts
+  detonate immediately without a throw.
 - Defender uses one neutral 256x256 sequence for each state: idle and move have
   60 frames, attack 30, and death 60. Neutral frames were selected from the
   former BLUE sequence; RED is rendered by mirroring the shared frames. The
@@ -755,9 +772,14 @@ must go through commands and domain/application boundaries.
 | `android-app/.../screens/dashboard/DashboardScreen.kt` | Dashboard navigation and confirmed player-progress reset |
 | `android-app/.../screens/campaign/CampaignScreen.kt` | Chapter campaign map, chapter selector, and Start Level flow |
 | `android-app/.../screens/campaign/CampaignChapterProgressMapper.kt` | Campaign progress to visible chapter and marker states |
-| `android-app/.../screens/campaign/CampaignMapPresentationCatalog.kt` | Chapter map resources and normalized level anchors |
+| `game-campaign/.../campaign/CampaignChapterCatalogRepository.kt` | Shared JSON chapter metadata loading |
+| `game-campaign/.../campaign/CampaignMapLayoutRepository.kt` | Validated normalized campaign map layout resources |
+| `android-app/.../screens/campaign/CampaignMapPresentationCatalog.kt` | Campaign asset-key to Android drawable mapping |
 | `android-app/.../screens/campaign/CampaignMapView.kt` | Cropped map rendering, landmarks, state plaques, and status art |
 | `game-campaign/.../campaign/CampaignChapterRegistry.kt` | Canonical chapter ranges, biomes, and landmark kinds |
+| `studio/web/src/tabs/campaign/CampaignTab.tsx` | Campaign marker editor UI |
+| `studio/web/src/tabs/campaign/CampaignMapCanvas.tsx` | Framed campaign map preview and drag positioning |
+| `studio/server/src/services/campaignMapCatalog.ts` | Safe chapter/layout and campaign asset API |
 | `game-application/.../progression/PlayerProgressResetRepository.kt` | Application port for resetting local player progress |
 | `android-app/.../persistence/DataStorePlayerProgressResetRepository.kt` | Atomic reset adapter for the shared local Preferences DataStore |
 | `game-application/.../progression/PlayerProgressionUseCases.kt` | Local profile initialization and snapshot validation |
@@ -1032,15 +1054,16 @@ The team-texture animation renderer is shared by units: it combines one neutral
 frame sequence per state with per-frame alpha masks and a BLUE/RED texture
 configuration in `android-app/src/main/assets/animations/<unit>/`. RED mirrors
 the shared neutral frames and masks before applying its texture. The Defender
-uses this for idle, move, attack and death; Demolisher currently uses it for
-idle (48 shared 256x256 frames) and move (60 shared 256x256 frames).
+uses this for idle, move, attack and death; Demolisher uses it for idle (48
+shared 256x256 frames), move (60), and attack (97).
 Demolisher's masks cover its blue-dominant cloth and barrel panels; blue sources
 were neutralized in those masked pixels, while skin and equipment remain
-unchanged. Studio's
-`teamTextureTargets` configuration marks shared sequences and previews both
-textures plus a mask overlay. Other Demolisher states and remaining units still
-use their existing team-specific assets until migrated. This is presentation
-only and does not touch simulation state.
+unchanged. Studio's `teamTextureTargets` configuration marks shared sequences
+and previews both textures plus a mask overlay. Gameplay selects throw frames
+41–50 from the complete 97-frame attack source, skipping its run-up and held
+tail; the full source remains available in Studio. Demolisher has no character
+death sequence, and its separate 20-frame explosion is team-neutral. This is
+presentation only and does not own simulation state.
 
 ## Push workflow
 

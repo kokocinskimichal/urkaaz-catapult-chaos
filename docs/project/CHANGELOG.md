@@ -1,5 +1,29 @@
 # Changelog
 
+## 2026-10-30
+
+### Added
+
+- Imported the complete 97-frame, 256x256 Demolisher forward-throw export with
+  per-frame masks, replacing the incomplete run-only attack in Studio and
+  gameplay.
+- Imported the shared, effect-only 20-frame Demolisher explosion at 256x256.
+
+### Changed
+
+- Demolisher reaches the fortress face, plays the forward-lunge frames while
+  moving 90 world units into the target over 0.5 seconds, then explodes
+  immediately. Unit-target contacts still explode immediately without the
+  throw; gameplay damage is applied at the end of the throw.
+- Removed the Demolisher death animation, its team-color masks, pre-impact
+  presentation and archived AnimGen outputs in preparation for a new sequence
+  at the same 256x256 resolution as the existing idle and move animations.
+
+### Fixed
+
+- Campaign Studio validates X and Y coordinates independently and serializes
+  the expected-hash check and layout replacement across Studio instances.
+
 ## 2026-10-29
 
 ### Added
@@ -13,12 +37,17 @@
 - Added and integrated the Chapter 1 map, campaign frame, fortress and boss
   markers, three level-state plaques, status badges, and available-level glow.
   Added copy-ready AGPs for campaign maps and reusable campaign art.
+- Added the Studio Campaign tab for repositioning the chapter's ten map
+  markers with drag controls and numeric X/Y fields, saving layout JSON shared
+  by Studio and the Android game.
 
 ### Changed
 
 - Campaign level biome assignment now comes from the canonical chapter
   registry; the campaign map center-crops its art and positions markers using
   the same viewport transform.
+- Studio's development launcher now searches for a free API and web port when
+  the default ports are already in use.
 
 ## 2026-10-28
 

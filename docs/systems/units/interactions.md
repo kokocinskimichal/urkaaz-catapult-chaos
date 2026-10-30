@@ -27,12 +27,12 @@ of which team owns the row or column unit.
   world-space bomb flight is triggered by the held-bomb transition and is
   presentation-only; it does not change damage timing. Reaching its own gate
   refills the bomb and restores the Sapper to full health.
-- **Demolisher:** remains a slow, one-use suicide unit. It detonates on contact
-  with an enemy Defender, Goblin on a Raging Boar, another Demolisher, a
-  fortress, a Runic Bastion or a future obstacle. Its explosion deals 300
-  damage with a 260 world-unit radius. The unit that triggers the detonation
-  receives full explosion damage. Nearby units receive damage reduced by
-  distance.
+- **Demolisher:** remains a slow, one-use suicide unit. Unit contact triggers an
+  immediate detonation. At an enemy fortress or Runic Bastion front face it
+  performs a 0.5-second forward throw, moving 90 world units before detonating.
+  Its explosion deals 300 damage with a 260 world-unit radius. The unit that
+  triggers the detonation receives full explosion damage. Nearby units receive
+  damage reduced by distance.
 - Demolishers detonate on contact with Sappers. The explosion kills the Sapper
   when it is within the blast radius and continues to damage other units using
   the existing explosion rules.
@@ -63,13 +63,20 @@ rules before a unit is assigned to it.
 |---|---|---|
 | **MELEE** | Defender, Goblin Raging Boar | Approaches an enemy, establishes contact range, and attacks the selected unit directly. Participates in melee synergy. |
 | **RANGED** | Goblin Slingmaster | Keeps distance, attacks a visible target from attack range, and does not participate in melee synergy. |
-| **CONTACT_EXPLOSIVE** | Demolisher | Approaches a valid target, detonates on contact, applies area damage, and destroys itself. It is not a normal melee attacker and does not participate in melee synergy. |
+| **CONTACT_EXPLOSIVE** | Demolisher | Immediately detonates on a valid unit contact. At a fortress or Runic Bastion front face, performs a forward throw before detonating. It is not a normal melee attacker and does not participate in melee synergy. |
 | **SIEGE_MISSION** | Sapper | Follows a fortress-bomb mission, attacks the enemy fortress from its stand-off point, consumes its bomb, and returns to refill. It does not participate in unit melee synergy unless a future combat profile explicitly grants it a separate melee attack. |
 
 The attack type is a domain rule and must be available to targeting,
 movement, combat resolution, event generation and presentation. Renderers
 must select animations from the resolved action and attack type, not infer the
 type from the bitmap or unit name.
+
+On fortress or Runic Bastion contact, the Demolisher enters `THROWING`
+immediately, advances 90 world units over 0.5 seconds, then applies its
+explosion at the new position. Unit contact skips this action and detonates in
+the same simulation step. Presentation uses the forward-lunge window from the
+full attack source and starts the standalone explosion as soon as the
+simulation emits `ExplosionTriggered`.
 
 ## Melee synergy
 

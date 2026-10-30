@@ -1,5 +1,6 @@
 package com.urkaaaz.screens.campaign
 
+import com.urkaaaz.campaign.CampaignMapAnchor
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -21,7 +22,7 @@ class CampaignMapViewportTest {
 
         val center = CampaignMapViewport.anchorCenter(
             bounds,
-            NormalizedCampaignMapAnchor(level = 1, x = 0.5f, y = 0.5f),
+            CampaignMapAnchor(level = 1, x = 0.5f, y = 0.5f),
         )
         assertEquals(500f, center.x, 0.001f)
         assertEquals(500f, center.y, 0.001f)
@@ -44,7 +45,7 @@ class CampaignMapViewportTest {
 
         val levelOne = CampaignMapViewport.anchorCenter(
             bounds,
-            NormalizedCampaignMapAnchor(level = 1, x = 0.145f, y = 0.75f),
+            CampaignMapAnchor(level = 1, x = 0.145f, y = 0.75f),
         )
         assertEquals(348f, levelOne.x, 0.001f)
         assertEquals(bounds.top + bounds.height * 0.75f, levelOne.y, 0.001f)

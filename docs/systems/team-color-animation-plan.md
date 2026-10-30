@@ -1,9 +1,10 @@
 # Plan: dynamiczna podmiana koloru i tekstury animacji
 
 Status: **pilot Defendera zaimplementowany; użytkownik zatwierdził rozszerzenie
-mechanizmu na pozostałe jednostki. Demolisher ma wspólne idle, move i death,
-Raging Boar ma wspólne idle, move, attack i death**. Maski są automatycznym
-draftem wymagającym przeglądu wizualnego. Rozwija pomysł
+mechanizmu na pozostałe jednostki. Demolisher ma wspólne idle, move i attack,
+a osobny efekt explosion; jego death został usunięty. Raging Boar ma wspólne
+idle, move, attack i death**. Maski są automatycznym draftem wymagającym
+przeglądu wizualnego. Rozwija pomysł
 z [`ideas.md`](../project/ideas.md) („Wspólne
 animacje postaci z kolorem drużyny nakładanym w runtime”).
 

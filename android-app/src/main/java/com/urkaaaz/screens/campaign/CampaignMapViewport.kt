@@ -1,5 +1,6 @@
 package com.urkaaaz.screens.campaign
 
+import com.urkaaaz.campaign.CampaignMapAnchor
 import kotlin.math.max
 
 data class CampaignMapImageBounds(
@@ -43,7 +44,7 @@ object CampaignMapViewport {
 
     fun anchorCenter(
         bounds: CampaignMapImageBounds,
-        anchor: NormalizedCampaignMapAnchor,
+        anchor: CampaignMapAnchor,
     ): CampaignMapPixelPoint =
         CampaignMapPixelPoint(
             x = bounds.left + bounds.width * anchor.x,

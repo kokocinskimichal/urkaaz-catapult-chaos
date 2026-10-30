@@ -21,6 +21,9 @@ import com.urkaaaz.application.campaign.CampaignProgressFailure
 import com.urkaaaz.application.campaign.CampaignSelectionRejection
 import com.urkaaaz.application.campaign.CampaignSystem
 import com.urkaaaz.campaign.CampaignChapterRegistry
+import com.urkaaaz.campaign.CampaignMapLayoutFailure
+import com.urkaaaz.campaign.CampaignMapLayoutRead
+import com.urkaaaz.campaign.CampaignMapLayoutRepository
 import com.urkaaaz.campaign.CampaignMapLandmarkKind
 import com.urkaaaz.navigation.ScreenContent
 import com.urkaaaz.ui.UiTypography
@@ -257,20 +260,27 @@ class CampaignScreen(
         renderChapterTabs(state.mapProgression.pages, page.chapter.id)
         renderChapterHeader(page)
 
-        val mapPresentation = CampaignMapPresentationCatalog.forChapter(page.chapter.id)
-        if (mapPresentation != null) {
-            pageContent.addView(
-                CampaignMapView(
-                    context = context,
-                    presentation = mapPresentation,
-                    markers = page.markers,
-                    selectedLevel = state.selectedLevel,
-                    onMarkerSelected = ::selectMapLevel,
-                ),
-                FrameLayout.LayoutParams(-1, -1),
-            )
-        } else {
-            renderChapterLevelList(page, state.selectedLevel)
+        when (val layout = CampaignMapLayoutRepository.bundled.load(page.chapter.id)) {
+            is CampaignMapLayoutRead.Available ->
+                when (val presentation = CampaignMapPresentationCatalog.forLayout(layout.layout)) {
+                    is CampaignMapPresentationRead.Available ->
+                        pageContent.addView(
+                            CampaignMapView(
+                                context = context,
+                                presentation = presentation.presentation,
+                                markers = page.markers,
+                                selectedLevel = state.selectedLevel,
+                                onMarkerSelected = ::selectMapLevel,
+                            ),
+                            FrameLayout.LayoutParams(-1, -1),
+                        )
+                    is CampaignMapPresentationRead.Failure ->
+                        addStatus(context.getString(R.string.campaign_map_layout_invalid))
+                }
+            is CampaignMapLayoutRead.MapArtworkMissing ->
+                renderChapterLevelList(page, state.selectedLevel)
+            is CampaignMapLayoutRead.Failure ->
+                addStatus(context.getString(campaignMapLayoutFailureMessage(layout.reason)))
         }
         renderStartLevelButton(page, state.selectedLevel)
         state.selectionRejection?.let { rejection ->
@@ -560,6 +570,15 @@ class CampaignScreen(
             CampaignSelectionRejection.LEVEL_ALREADY_COMPLETED ->
                 R.string.campaign_completion_already_completed
         })
+
+    private fun campaignMapLayoutFailureMessage(reason: CampaignMapLayoutFailure): Int =
+        when (reason) {
+            CampaignMapLayoutFailure.INVALID_CHAPTER,
+            CampaignMapLayoutFailure.INVALID_DATA ->
+                R.string.campaign_map_layout_invalid
+            CampaignMapLayoutFailure.STORAGE_UNAVAILABLE ->
+                R.string.campaign_map_layout_unavailable
+        }
 
     private fun dp(value: Int): Int =
         (value * context.resources.displayMetrics.density).roundToInt()

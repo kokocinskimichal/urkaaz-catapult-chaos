@@ -1,6 +1,12 @@
 import type { AnimationCatalogResponse } from "@studio/contracts/animations";
 import type { ApiErrorBody, HealthResponse } from "@studio/contracts/api";
 import type {
+  CampaignChapterCatalogResponse,
+  CampaignMapLayoutDocumentResponse,
+  CampaignMapLayoutSaveRequest,
+  CampaignMapLayoutValidationResponse,
+} from "@studio/contracts/campaign";
+import type {
   MapCatalogResponse,
   MapDocumentResponse,
   MapSaveRequest,
@@ -51,6 +57,35 @@ export const validateMap = (content: string, fetcher?: Fetcher) =>
     headers: { "content-type": "application/json" },
     body: JSON.stringify({ content }),
   });
+export const fetchCampaignChapters = (fetcher?: Fetcher) =>
+  requestJson<CampaignChapterCatalogResponse>("/api/campaign/chapters", fetcher);
+export const fetchCampaignMapLayout = (chapterId: string, fetcher?: Fetcher) =>
+  requestJson<CampaignMapLayoutDocumentResponse>(
+    `/api/campaign/layouts/${encodeURIComponent(chapterId)}`,
+    fetcher,
+  );
+export const saveCampaignMapLayout = (
+  chapterId: string,
+  request: CampaignMapLayoutSaveRequest,
+  fetcher?: Fetcher,
+) => requestJson<CampaignMapLayoutDocumentResponse>(
+  `/api/campaign/layouts/${encodeURIComponent(chapterId)}`,
+  fetcher,
+  {
+    method: "PUT",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify(request),
+  },
+);
+export const validateCampaignMapLayout = (
+  chapterId: string,
+  content: string,
+  fetcher?: Fetcher,
+) => requestJson<CampaignMapLayoutValidationResponse>("/api/campaign/layouts/validate", fetcher, {
+  method: "POST",
+  headers: { "content-type": "application/json" },
+  body: JSON.stringify({ chapterId, content }),
+});
 export async function fetchTerrainAssetIndex(fetcher: Fetcher = fetch): Promise<string> {
   const response = await fetcher("/api/assets/terrain/index");
   if (!response.ok) {
@@ -63,6 +98,20 @@ export async function fetchTerrainAssetIndex(fetcher: Fetcher = fetch): Promise<
     );
   }
   return response.text();
+}
+
+export async function fetchCampaignAsset(assetKey: string, fetcher: Fetcher = fetch): Promise<Blob> {
+  const response = await fetcher(`/api/campaign/assets/${encodeURIComponent(assetKey)}`);
+  if (!response.ok) {
+    const body: unknown = await response.json().catch(() => null);
+    throw new ApiError(
+      response.status,
+      isApiErrorBody(body)
+        ? body
+        : { code: "unknown", message: response.statusText, details: [] },
+    );
+  }
+  return response.blob();
 }
 
 function isApiErrorBody(value: unknown): value is ApiErrorBody {

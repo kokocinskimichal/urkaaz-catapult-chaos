@@ -51,42 +51,33 @@ class CampaignChapterRegistry(
         const val LEVELS_PER_CHAPTER = 10
 
         private val defaultRegistry by lazy {
-            CampaignChapterRegistry(
-                listOf(
-                    chapter("green_frontier", "The Green Frontier", 1, TerrainBiome.GREEN_FRONTIER),
-                    chapter("broken_valley", "The Broken Valley", 11, TerrainBiome.FROSTBOUND),
-                    chapter("ashen_march", "The Ashen March", 21, TerrainBiome.ASHEN_MARCH),
-                    chapter("whispering_marsh", "The Whispering Marsh", 31, TerrainBiome.SUNKEN_MARSHES),
-                    chapter("ironwood", "The Ironwood", 41, TerrainBiome.COPPERWOOD),
-                    chapter("northern_march", "The Northern March", 51, TerrainBiome.FROSTBOUND),
-                    chapter("runic_wastes", "The Runic Wastes", 61, TerrainBiome.ASHEN_MARCH),
-                    chapter("red_peaks", "The Red Peaks", 71, TerrainBiome.FROSTBOUND),
-                    chapter("final_warpath", "The Final Warpath", 81, TerrainBiome.COPPERWOOD),
-                    chapter("last_siege", "The Last Siege", 91, TerrainBiome.ASHEN_MARCH),
-                ),
-            )
+            when (val catalog = CampaignChapterCatalogRepository.bundled.load()) {
+                is CampaignChapterCatalogRead.Available ->
+                    CampaignChapterRegistry(catalog.document.chapters.map(::chapter))
+                is CampaignChapterCatalogRead.Failure ->
+                    error("Unable to load campaign chapter catalog: ${catalog.reason}")
+            }
         }
 
         fun default(): CampaignChapterRegistry = defaultRegistry
 
         private fun chapter(
-            id: String,
-            title: String,
-            firstLevel: Int,
-            biome: TerrainBiome,
+            entry: CampaignChapterCatalogEntry,
         ): CampaignChapterDefinition {
-            val lastLevel = firstLevel + LEVELS_PER_CHAPTER - 1
-            val landmarkKinds = (firstLevel..lastLevel).associateWith { level ->
-                when (level - firstLevel + 1) {
-                    5, 10 -> CampaignMapLandmarkKind.BOSS
-                    else -> CampaignMapLandmarkKind.FORTRESS
+            val biome = TerrainBiome.fromMapId(entry.biome)
+                ?: error("Unknown campaign chapter biome '${entry.biome}'")
+            val landmarkKinds = (entry.firstLevel..entry.lastLevel).associateWith { level ->
+                if (level - entry.firstLevel + 1 in entry.bossPositions) {
+                    CampaignMapLandmarkKind.BOSS
+                } else {
+                    CampaignMapLandmarkKind.FORTRESS
                 }
             }
             return CampaignChapterDefinition(
-                id = id,
-                title = title,
-                firstLevel = firstLevel,
-                lastLevel = lastLevel,
+                id = entry.id,
+                title = entry.title,
+                firstLevel = entry.firstLevel,
+                lastLevel = entry.lastLevel,
                 biome = biome,
                 landmarkKindsByLevel = landmarkKinds,
             )

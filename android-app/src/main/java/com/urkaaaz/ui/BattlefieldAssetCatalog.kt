@@ -79,6 +79,8 @@ class BattlefieldAssetCatalog(private val context: Context) {
 
     private val rockFlightFrames = loadAnimationFrames("anim_ammunition_rock_flight")
     private val rockImpactFrames = loadAnimationFrames("anim_ammunition_rock_impact")
+    val demolisherExplosionFrames =
+        loadAnimationFrames("anim_ammunition_demolisher_explosion")
     val fireRainAnimations = FireRainAnimationSet(
         containerFlightFrames = loadRequiredFireRainFrames(
             phase = "container flight",
@@ -281,6 +283,12 @@ class BattlefieldAssetCatalog(private val context: Context) {
                         team,
                         side,
                     )
+                    "DEMOLISHER" -> loadTeamTextureAnimationFrames(
+                        "demolisher",
+                        "attack",
+                        team,
+                        side,
+                    )
                     else -> emptyList()
                 }
             } else if (!moving) {
@@ -350,12 +358,6 @@ class BattlefieldAssetCatalog(private val context: Context) {
                 )
                 "RAGING_BOAR" -> loadTeamTextureAnimationFrames(
                     "raging_boar",
-                    "death",
-                    team,
-                    side,
-                )
-                "DEMOLISHER" -> loadTeamTextureAnimationFrames(
-                    "demolisher",
                     "death",
                     team,
                     side,

@@ -1,0 +1,85 @@
+{
+  "schemaVersion": 1,
+  "chapters": [
+    {
+      "id": "green_frontier",
+      "title": "The Green Frontier",
+      "firstLevel": 1,
+      "lastLevel": 10,
+      "biome": "green_frontier",
+      "bossPositions": [5, 10]
+    },
+    {
+      "id": "broken_valley",
+      "title": "The Broken Valley",
+      "firstLevel": 11,
+      "lastLevel": 20,
+      "biome": "frostbound",
+      "bossPositions": [5, 10]
+    },
+    {
+      "id": "ashen_march",
+      "title": "The Ashen March",
+      "firstLevel": 21,
+      "lastLevel": 30,
+      "biome": "ashen_march",
+      "bossPositions": [5, 10]
+    },
+    {
+      "id": "whispering_marsh",
+      "title": "The Whispering Marsh",
+      "firstLevel": 31,
+      "lastLevel": 40,
+      "biome": "sunken_marshes",
+      "bossPositions": [5, 10]
+    },
+    {
+      "id": "ironwood",
+      "title": "The Ironwood",
+      "firstLevel": 41,
+      "lastLevel": 50,
+      "biome": "copperwood",
+      "bossPositions": [5, 10]
+    },
+    {
+      "id": "northern_march",
+      "title": "The Northern March",
+      "firstLevel": 51,
+      "lastLevel": 60,
+      "biome": "frostbound",
+      "bossPositions": [5, 10]
+    },
+    {
+      "id": "runic_wastes",
+      "title": "The Runic Wastes",
+      "firstLevel": 61,
+      "lastLevel": 70,
+      "biome": "ashen_march",
+      "bossPositions": [5, 10]
+    },
+    {
+      "id": "red_peaks",
+      "title": "The Red Peaks",
+      "firstLevel": 71,
+      "lastLevel": 80,
+      "biome": "frostbound",
+      "bossPositions": [5, 10]
+    },
+    {
+      "id": "final_warpath",
+      "title": "The Final Warpath",
+      "firstLevel": 81,
+      "lastLevel": 90,
+      "biome": "copperwood",
+      "bossPositions": [5, 10]
+    },
+    {
+      "id": "last_siege",
+      "title": "The Last Siege",
+      "firstLevel": 91,
+      "lastLevel": 100,
+      "biome": "ashen_march",
+      "bossPositions": [5, 10]
+    }
+  ]
+}

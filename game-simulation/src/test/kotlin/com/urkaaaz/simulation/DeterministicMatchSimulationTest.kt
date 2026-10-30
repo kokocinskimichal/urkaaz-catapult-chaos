@@ -409,8 +409,23 @@ class DeterministicMatchSimulationTest {
         val deployed = simulation.deployUnit(UnitFactory.demolisher(), Team.BLUE)
         simulation.sendWave(Team.BLUE)
 
-        val events = buildList {
-            repeat(180) { addAll(simulation.advance(100L)) }
+        val events = mutableListOf<MatchEvent>()
+        var sawThrowing = false
+        var previousThrowX: Float? = null
+        var movedDuringThrow = false
+        repeat(180) {
+            events += simulation.advance(100L)
+            val demolisher = simulation.snapshot().units.firstOrNull {
+                it.entityId == deployed.unitId
+            }
+            if (demolisher?.actionState == "THROWING") {
+                sawThrowing = true
+                assertEquals(360, simulation.snapshot().runicBastions.single().health)
+                previousThrowX?.let { previousX ->
+                    movedDuringThrow = movedDuringThrow || demolisher.x > previousX
+                }
+                previousThrowX = demolisher.x
+            }
         }
 
         assertTrue(
@@ -421,6 +436,8 @@ class DeterministicMatchSimulationTest {
             events.filterIsInstance<MatchEvent.ExplosionTriggered>()
                 .any { it.sourceId == deployed.unitId },
         )
+        assertTrue(sawThrowing)
+        assertTrue(movedDuringThrow)
         assertTrue(simulation.snapshot().runicBastions.single().health < 360)
     }
 
@@ -445,17 +462,45 @@ class DeterministicMatchSimulationTest {
 
             val events = mutableListOf<MatchEvent>()
             var previousX = simulation.snapshot().units.single { it.entityId == deployed.unitId }.x
+            var sawContactTarget = false
+            var sawThrowing = false
+            var movedDuringThrow = false
+            var throwStartX: Float? = null
+            var previousThrowX: Float? = null
             for (step in 0 until 1_200) {
                 events += simulation.advance(50L)
-                val unit = simulation.snapshot().units.firstOrNull {
+                val snapshot = simulation.snapshot()
+                val unit = snapshot.units.firstOrNull {
                     it.entityId == deployed.unitId
                 }
                 if (unit != null) {
+                    sawContactTarget = sawContactTarget ||
+                        (unit.targetId == enemyFortress.entityId &&
+                            unit.actionState == "THROWING")
                     assertTrue(
                         if (team == Team.BLUE) unit.x >= previousX else unit.x <= previousX,
                         "$team Demolisher reversed direction at x=${unit.x}",
                     )
                     previousX = unit.x
+                    if (unit.actionState == "THROWING") {
+                        sawThrowing = true
+                        assertTrue(
+                            unit.moving,
+                            "$team Demolisher should move during its throw",
+                        )
+                        assertEquals(
+                            initialHealth,
+                            snapshot.fortresses.single { it.team == enemyTeam }.health,
+                        )
+                        if (throwStartX == null) {
+                            throwStartX = unit.x
+                        } else {
+                            movedDuringThrow = movedDuringThrow ||
+                                (unit.x - requireNotNull(previousThrowX)) *
+                                (if (team == Team.BLUE) 1f else -1f) > 0f
+                        }
+                        previousThrowX = unit.x
+                    }
                 }
                 if (events.any {
                         it is MatchEvent.ExplosionTriggered && it.sourceId == deployed.unitId
@@ -480,8 +525,25 @@ class DeterministicMatchSimulationTest {
                     .any { it.sourceId == deployed.unitId },
                 "$team Demolisher should detonate at the enemy fortress",
             )
+            assertTrue(
+                sawContactTarget,
+                "$team Demolisher should expose its fortress target during the throw",
+            )
+            assertTrue(sawThrowing, "$team Demolisher should enter the throw state")
+            assertTrue(movedDuringThrow, "$team Demolisher should advance while throwing")
             val explosion = events.filterIsInstance<MatchEvent.ExplosionTriggered>()
                 .single { it.sourceId == deployed.unitId }
+            val attackStarted = events.filterIsInstance<MatchEvent.AttackStarted>()
+                .single { it.attackerId == deployed.unitId && it.targetId == enemyFortress.entityId }
+            assertTrue(
+                explosion.simulationTimeMilliseconds - attackStarted.simulationTimeMilliseconds in 450L..550L,
+                "The explosion should immediately follow the throw",
+            )
+            assertTrue(
+                (explosion.x - requireNotNull(throwStartX)) *
+                    (if (team == Team.BLUE) 1f else -1f) > 0f,
+                "$team Demolisher should move forward before exploding",
+            )
             val direction = if (team == Team.BLUE) 1f else -1f
             val frontFaceOffset = if (direction > 0f) {
                 FortressHitboxProfile.rectangles.minOf { it.left }
@@ -491,11 +553,18 @@ class DeterministicMatchSimulationTest {
             val distanceToFront = (
                 fortressCenterX + frontFaceOffset - explosion.x
                 ) * direction
+            val throwStartDistanceToFront = (
+                fortressCenterX + frontFaceOffset - requireNotNull(throwStartX)
+                ) * direction
             assertEquals(
                 WorldScale.UNIT_COLLISION_RADIUS,
-                distanceToFront,
+                throwStartDistanceToFront,
                 1f,
-                "$team Demolisher should stop at the fortress front face",
+                "$team Demolisher should begin throwing at the fortress front face",
+            )
+            assertTrue(
+                distanceToFront < WorldScale.UNIT_COLLISION_RADIUS,
+                "$team Demolisher should start at the fortress face and lunge forward",
             )
             assertTrue(
                 initialHealth - simulation.snapshot().fortresses

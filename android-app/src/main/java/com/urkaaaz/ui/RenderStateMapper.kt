@@ -139,6 +139,9 @@ data class CombatFeedbackRenderState(
     val radius: Float = 0f,
     val label: String? = null,
     val progress: Float = 0f,
+    val sourceUnitType: String? = null,
+    val sourceUnitId: String? = null,
+    val animationFrameIndex: Int? = null,
 ) {
     enum class Kind {
         DAMAGE,
@@ -167,7 +170,7 @@ data class UnitRenderState(
     val facingDirection: Float,
     val sapperHasBomb: Boolean,
     val hasted: Boolean = false,
-    val deathAnimationPrestarted: Boolean = false,
+    val demolisherThrowFrameIndex: Int? = null,
 )
 
 object RenderStateMapper {
@@ -414,6 +417,10 @@ object RenderStateMapper {
                     x = event.x,
                     y = event.y,
                     radius = event.radius,
+                    sourceUnitType = snapshot.units
+                        .firstOrNull { it.entityId == event.sourceId }
+                        ?.unitType,
+                    sourceUnitId = event.sourceId.value,
                 )
                 is MatchEvent.DamageApplied -> {
                     val target = snapshot.units.firstOrNull {

@@ -2,7 +2,7 @@ import { createReadStream } from "node:fs";
 import { stat } from "node:fs/promises";
 import type { IncomingMessage, ServerResponse } from "node:http";
 import type { MapValidationResponse } from "../contracts/maps.ts";
-import { sendError, sendJson } from "../http.ts";
+import { readJsonObject, sendError, sendJson } from "../http.ts";
 import { decode } from "../../../web/src/tabs/maps/format/codec.ts";
 import { parseAssetIndex } from "../../../web/src/tabs/maps/domain/assets.ts";
 import { validate } from "../../../web/src/tabs/maps/domain/operations.ts";
@@ -23,7 +23,7 @@ export async function handleMapRoute(
       sendError(response, 405, "method_not_allowed", "Only POST is supported");
       return true;
     }
-    const body = await readRequestBody(request, response);
+    const body = await readJsonObject(request, response, MAX_BODY_BYTES);
     if (!body) return true;
     if (typeof body.content !== "string") {
       sendError(response, 400, "invalid_request", "content must be a string");
@@ -64,7 +64,7 @@ export async function handleMapRoute(
     return true;
   }
 
-  const body = await readRequestBody(request, response);
+  const body = await readJsonObject(request, response, MAX_BODY_BYTES);
   if (!body) return true;
   if (typeof body.content !== "string" ||
     (body.expectedHash !== null && typeof body.expectedHash !== "string")) {
@@ -173,30 +173,5 @@ async function validateMapContent(repoRoot: string, content: string): Promise<Ma
         message: error instanceof Error ? error.message : String(error),
       }],
     };
-  }
-}
-
-async function readRequestBody(request: IncomingMessage, response: ServerResponse): Promise<Record<string, unknown> | null> {
-  try {
-    const chunks: Buffer[] = [];
-    let size = 0;
-    for await (const chunk of request) {
-      const buffer = Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk);
-      size += buffer.length;
-      if (size > MAX_BODY_BYTES) {
-        sendError(response, 413, "request_too_large", "Request body exceeds the 4 MiB limit");
-        return null;
-      }
-      chunks.push(buffer);
-    }
-    const parsed: unknown = JSON.parse(Buffer.concat(chunks).toString("utf8"));
-    if (typeof parsed !== "object" || parsed === null || Array.isArray(parsed)) {
-      sendError(response, 400, "invalid_request", "Request body must be a JSON object");
-      return null;
-    }
-    return parsed as Record<string, unknown>;
-  } catch {
-    sendError(response, 400, "invalid_request", "Request body must contain valid JSON");
-    return null;
   }
 }

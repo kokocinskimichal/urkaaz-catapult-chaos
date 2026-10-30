@@ -1,5 +1,6 @@
 import { createServer, type IncomingMessage, type Server, type ServerResponse } from "node:http";
 import { handleAnimationRoute } from "./api/animations.ts";
+import { handleCampaignRoute } from "./api/campaign.ts";
 import { handleMapRoute, handleTerrainAssetRoute } from "./api/maps.ts";
 import type { HealthResponse } from "./contracts/api.ts";
 import { sendError, sendJson } from "./http.ts";
@@ -53,6 +54,7 @@ async function handle(
     return;
   }
   if (await handleAnimationRoute(request, response, url.pathname, repoRoot)) return;
+  if (await handleCampaignRoute(request, response, url.pathname, repoRoot)) return;
   if (await handleMapRoute(request, response, url.pathname, repoRoot)) return;
   if (await handleTerrainAssetRoute(request, response, url.pathname, repoRoot)) return;
   sendError(response, 404, "not_found", `No route for ${url.pathname}`);

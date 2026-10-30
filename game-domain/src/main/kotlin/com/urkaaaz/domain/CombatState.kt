@@ -12,6 +12,7 @@ enum class UnitActionState {
     WINDING_UP,
     ATTACKING,
     RECOVERING,
+    THROWING,
     RETURNING,
     DEAD,
 }
