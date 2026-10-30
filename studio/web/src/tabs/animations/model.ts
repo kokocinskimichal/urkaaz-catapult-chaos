@@ -3,9 +3,9 @@ import type { AnimationCategory, AnimationSequence } from "@studio/contracts/ani
 export const CATEGORY_ORDER: readonly AnimationCategory[] = ["character", "spell", "ammunition"];
 
 export const CATEGORY_LABELS: Record<AnimationCategory, string> = {
-  character: "Characters",
+  character: "Units",
   spell: "Spells",
-  ammunition: "Ammunition & projectiles",
+  ammunition: "Ammunition",
 };
 
 export interface TypeNode {
@@ -71,6 +71,13 @@ export function firstSelection(tree: readonly CategoryNode[]): Selection | null 
   const target = category?.targets[0];
   const type = target?.types[0];
   return category && target && type ? { category: category.category, target: target.target, type: type.type } : null;
+}
+
+export function firstSelectionForCategory(
+  tree: readonly CategoryNode[],
+  category: AnimationCategory,
+): Selection | null {
+  return firstSelection(tree.filter(node => node.category === category));
 }
 
 /** Keeps the preferred team variant when the type has it, otherwise falls back to the first sequence. */

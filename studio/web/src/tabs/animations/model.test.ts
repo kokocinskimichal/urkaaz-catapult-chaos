@@ -1,6 +1,17 @@
 import type { AnimationSequence } from "@studio/contracts/animations";
 import { describe, expect, it } from "vitest";
-import { advancePlayback, buildTree, findTypeNode, firstSelection, frameUrl, pickSequence, stepFrame, variantsOf } from "./model";
+import {
+  advancePlayback,
+  buildTree,
+  CATEGORY_LABELS,
+  findTypeNode,
+  firstSelection,
+  firstSelectionForCategory,
+  frameUrl,
+  pickSequence,
+  stepFrame,
+  variantsOf,
+} from "./model";
 
 function sequence(id: string, category: AnimationSequence["category"], target: string, type: string, variant: string | null): AnimationSequence {
   return { id, category, target, type, variant, frameIndices: [0, 1], targetConfigured: true, hasRuntimeLoader: true, supportsTeamTexture: false, issues: [] };
@@ -40,6 +51,33 @@ describe("selection helpers", () => {
   it("selects the first type of the first target", () => {
     expect(firstSelection(tree)).toEqual({ category: "character", target: "defender", type: "idle" });
     expect(firstSelection([])).toBeNull();
+  });
+
+  it("selects the first type within each animation category", () => {
+    expect(firstSelectionForCategory(tree, "character")).toEqual({
+      category: "character",
+      target: "defender",
+      type: "idle",
+    });
+    expect(firstSelectionForCategory(tree, "spell")).toEqual({
+      category: "spell",
+      target: "haste",
+      type: "orbiting_chevron",
+    });
+    expect(firstSelectionForCategory(tree, "ammunition")).toEqual({
+      category: "ammunition",
+      target: "rock",
+      type: "flight",
+    });
+    expect(firstSelectionForCategory([], "spell")).toBeNull();
+  });
+
+  it("labels the animation tabs for game content categories", () => {
+    expect(CATEGORY_LABELS).toEqual({
+      character: "Units",
+      spell: "Spells",
+      ammunition: "Ammunition",
+    });
   });
 
   it("finds a type node and lists its variants", () => {

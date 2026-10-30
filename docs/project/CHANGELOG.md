@@ -11,6 +11,8 @@
 
 ### Changed
 
+- Split the Studio Animations browser into Units, Spells and Ammunition tabs;
+  each tab filters the sequence list while keeping the shared preview controls.
 - Demolisher reaches the fortress face, plays the forward-lunge frames while
   moving 90 world units into the target over 0.5 seconds, then explodes
   immediately. Unit-target contacts still explode immediately without the

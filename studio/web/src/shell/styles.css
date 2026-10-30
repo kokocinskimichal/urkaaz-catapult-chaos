@@ -17,7 +17,10 @@ button:disabled{opacity:.5}
 .hint-text{padding:20px;color:#9ab1c5}
 .error{color:#ff8992}
 .warning{color:#f2ca72}
-.animations-layout{display:grid;grid-template-columns:260px minmax(0,1fr);height:100%}
+.animations-view{height:100%;min-height:0;display:flex;flex-direction:column}
+.animation-type-tabs{display:flex;gap:8px;padding:10px 14px;background:#1b2939;border-bottom:1px solid #314358}
+.animation-type-tabs button[aria-pressed="true"]{background:#3775a7}
+.animations-layout{display:grid;grid-template-columns:260px minmax(0,1fr);flex:1;min-height:0}
 .animations-layout aside{padding:14px;background:#182433;border-right:1px solid #314358;overflow:auto}
 .animation-category{margin:0 0 18px}
 .animation-category h4{margin:0 0 8px;color:#c5d6e5;font-size:12px;letter-spacing:.08em;text-transform:uppercase}

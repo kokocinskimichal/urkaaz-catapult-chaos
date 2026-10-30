@@ -1046,7 +1046,9 @@ parses `anim_<category>_<target>_<type>[_<variant>]_<frame:3>.png` files in
 target = longest prefix listed in `studio/config/animations.json`, otherwise the
 last token is the type and `targetConfigured=false`; non-contiguous frames
 become `issues`), and `GET /api/animations/{id}/frames/{n}` streams a PNG with
-path-traversal checks. `studio/config/animations.json` is maintained by hand:
+path-traversal checks. The Animations UI separates sequences into Units,
+Spells and Ammunition tabs, while retaining the shared preview and team-texture
+controls. `studio/config/animations.json` is maintained by hand:
 add new targets there and list sequences without a runtime loader in
 `withoutLoader` (currently `anim_ammunition_fire_rain_impact`).
 
