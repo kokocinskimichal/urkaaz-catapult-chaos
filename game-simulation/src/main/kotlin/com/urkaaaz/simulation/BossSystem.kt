@@ -13,6 +13,7 @@ import com.urkaaaz.domain.BossBalanceProfile
 import com.urkaaaz.domain.SapperUnit
 import com.urkaaaz.domain.SlingmasterUnit
 import com.urkaaaz.domain.Unit
+import com.urkaaaz.domain.UnitActionState
 import kotlin.math.abs
 import kotlin.math.hypot
 import kotlin.random.Random
@@ -31,6 +32,7 @@ data class BossTickResult(
     val unitDamage: Map<EntityId, Int> = emptyMap(),
     val fortressDamage: Int = 0,
     val phaseChanged: Boolean = false,
+    val unitAttackStarted: Team? = null,
 )
 
 class BossSystem(
@@ -55,6 +57,13 @@ class BossSystem(
     private val remainingAttackCooldowns = profile.attacks.associate {
         it.target to it.initialCooldownSeconds
     }.toMutableMap()
+    private var pendingUnitAttack: PendingUnitAttack? = null
+
+    private data class PendingUnitAttack(
+        val attack: BossAttackBalance,
+        val targetTeam: Team,
+        var remainingWindupSeconds: Float,
+    )
 
     val isAlive: Boolean
         get() = health > 0
@@ -126,6 +135,7 @@ class BossSystem(
         val previousPhase = phase
         val applied = amount.coerceAtMost(health)
         health -= applied
+        if (health == 0) pendingUnitAttack = null
         damageByTeam[sourceTeam] = damageByTeam.getValue(sourceTeam) + applied
         lastDamageSourceTeam = sourceTeam
         phase = when {
@@ -199,6 +209,24 @@ class BossSystem(
         if (!isAlive || deltaSeconds == 0f) return BossTickResult()
         val previousPhase = phase
 
+        pendingUnitAttack?.let { pending ->
+            elapseCooldown(pending.attack.target, deltaSeconds)
+            pending.remainingWindupSeconds -= deltaSeconds
+            if (pending.remainingWindupSeconds > 0f) {
+                return BossTickResult(phaseChanged = previousPhase != phase)
+            }
+            pendingUnitAttack = null
+            val impactTargets = unitsInRange(
+                BossAttackTarget.UNIT,
+                units,
+                movingTeams,
+            ).filter { it.team == pending.targetTeam }
+            return BossTickResult(
+                unitDamage = attackTargets(pending.attack, impactTargets, pending.targetTeam),
+                phaseChanged = previousPhase != phase,
+            )
+        }
+
         if (profile.archetype == BossArchetype.CENTRAL_OBJECTIVE) {
             val targets = unitsInRange(BossAttackTarget.UNIT, units, movingTeams)
             if (targets.isEmpty()) {
@@ -210,14 +238,23 @@ class BossSystem(
                 return BossTickResult(phaseChanged = previousPhase != phase)
             }
             val attack = attack(BossAttackTarget.UNIT)
+            val targetTeam = selectAttackTeam(targets, random)
             remainingAttackCooldowns[attack.target] = attack.cooldownSeconds
-            return BossTickResult(
-                unitDamage = attackTargets(
+            if (attack.windupSeconds > 0f) {
+                pendingUnitAttack = PendingUnitAttack(
                     attack = attack,
-                    targets = targets,
-                    random = random,
-                ),
+                    targetTeam = targetTeam,
+                    remainingWindupSeconds = attack.windupSeconds,
+                )
+                return BossTickResult(
+                    phaseChanged = previousPhase != phase,
+                    unitAttackStarted = targetTeam,
+                )
+            }
+            return BossTickResult(
+                unitDamage = attackTargets(attack, targets, targetTeam),
                 phaseChanged = previousPhase != phase,
+                unitAttackStarted = targetTeam,
             )
         }
 
@@ -257,10 +294,23 @@ class BossSystem(
         }
         val cooldownMultiplier =
             if (enraged) profile.enrage()?.attackCooldownMultiplier ?: 1f else 1f
+        val targetTeam = selectAttackTeam(targets, random)
         remainingAttackCooldowns[attack.target] = attack.cooldownSeconds * cooldownMultiplier
+        if (attack.windupSeconds > 0f) {
+            pendingUnitAttack = PendingUnitAttack(
+                attack = attack,
+                targetTeam = targetTeam,
+                remainingWindupSeconds = attack.windupSeconds,
+            )
+            return BossTickResult(
+                phaseChanged = previousPhase != phase,
+                unitAttackStarted = targetTeam,
+            )
+        }
         return BossTickResult(
-            unitDamage = attackTargets(attack, targets, random),
+            unitDamage = attackTargets(attack, targets, targetTeam),
             phaseChanged = previousPhase != phase,
+            unitAttackStarted = targetTeam,
         )
     }
 
@@ -294,28 +344,53 @@ class BossSystem(
         val attack = profile.attacks.firstOrNull { it.target == target } ?: return emptyList()
         return units.asSequence()
             .filter { isActiveUnit(it, movingTeams) }
+            .filter {
+                profile.archetype != BossArchetype.CENTRAL_OBJECTIVE ||
+                    it.isEngagedInCombat()
+            }
             .filter { abs(it.position.x - x) <= attack.rangeWorldUnits }
             .sortedBy { it.id.value }
             .toList()
     }
 
+    private fun Unit.isEngagedInCombat(): Boolean =
+        combatState.targetId != null && when (combatState.action) {
+            UnitActionState.SEEKING_TARGET,
+            UnitActionState.WINDING_UP,
+            UnitActionState.ATTACKING,
+            UnitActionState.RECOVERING,
+            UnitActionState.THROWING,
+            -> true
+            else -> false
+        }
+
+    private fun selectAttackTeam(targets: List<Unit>, random: Random): Team {
+        val left = targets.filter { it.team == Team.BLUE }
+        val right = targets.filter { it.team == Team.RED }
+        return when {
+            left.isEmpty() -> Team.RED
+            right.isEmpty() -> Team.BLUE
+            left.size == right.size -> if (random.nextBoolean()) Team.BLUE else Team.RED
+            else -> {
+                val larger = if (left.size > right.size) Team.BLUE else Team.RED
+                if (random.nextFloat() < 0.72f) {
+                    larger
+                } else if (larger == Team.BLUE) {
+                    Team.RED
+                } else {
+                    Team.BLUE
+                }
+            }
+        }
+    }
+
     private fun attackTargets(
         attack: BossAttackBalance,
         targets: List<Unit>,
-        random: Random,
+        targetTeam: Team,
     ): Map<EntityId, Int> {
-        if (targets.isEmpty()) return emptyMap()
-        val left = targets.filter { it.team == Team.BLUE }
-        val right = targets.filter { it.team == Team.RED }
-        val selected = when {
-            left.isEmpty() -> right
-            right.isEmpty() -> left
-            left.size == right.size -> if (random.nextBoolean()) left else right
-            else -> {
-                val larger = if (left.size > right.size) left else right
-                if (random.nextFloat() < 0.72f) larger else if (larger === left) right else left
-            }
-        }
+        val selected = targets.filter { it.team == targetTeam }
+        if (selected.isEmpty()) return emptyMap()
         val maximumDistance = selected.maxOf { abs(it.position.x - x) }.coerceAtLeast(1f)
         return selected.associate { unit ->
             val distanceRatio = (abs(unit.position.x - x) / maximumDistance).coerceIn(0f, 1f)

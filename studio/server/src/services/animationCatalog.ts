@@ -19,12 +19,17 @@ const TEAM_VARIANTS = new Set(["blue", "red"]);
 export interface AnimationConfig {
   targets: Record<AnimationCategory, string[]>;
   teamTextureTargets: string[];
+  runtimeBossIdleTargets: string[];
+  /** Exact non-idle boss sequence ids that the Android renderer loads at runtime. */
+  runtimeBossSequences: string[];
   withoutLoader: string[];
 }
 
 export const EMPTY_ANIMATION_CONFIG: AnimationConfig = {
   targets: { character: [], spell: [], ammunition: [], boss: [] },
   teamTextureTargets: [],
+  runtimeBossIdleTargets: [],
+  runtimeBossSequences: [],
   withoutLoader: [],
 };
 
@@ -82,7 +87,14 @@ function toSequence(
   const { target, type, configured } = splitTarget(body, config.targets[category] ?? []);
   const contiguous = frameIndices.every((index, position) => index === position);
   const hasRuntimeLoader = !withoutLoader.has(stem) &&
-    (category !== "boss" || (type === "idle" && frameIndices.length === 1));
+    (
+      category !== "boss" ||
+      (
+        type === "idle" &&
+        (frameIndices.length === 1 || config.runtimeBossIdleTargets.includes(target))
+      ) ||
+      config.runtimeBossSequences.includes(stem)
+    );
   return {
     id: stem,
     category,
@@ -134,6 +146,8 @@ export function parseAnimationConfig(value: unknown): AnimationConfig {
       boss: stringArray(targets.boss),
     },
     teamTextureTargets: stringArray(source.teamTextureTargets),
+    runtimeBossIdleTargets: stringArray(source.runtimeBossIdleTargets),
+    runtimeBossSequences: stringArray(source.runtimeBossSequences),
     withoutLoader: stringArray(source.withoutLoader),
   };
 }

@@ -18,6 +18,8 @@ const config: AnimationConfig = parseAnimationConfig({
     boss: ["ancient_war_oak", "thorncrown"],
   },
   teamTextureTargets: ["defender", "demolisher", "sapper"],
+  runtimeBossIdleTargets: ["ancient_war_oak"],
+  runtimeBossSequences: ["anim_boss_ancient_war_oak_attack_right"],
   withoutLoader: ["anim_ammunition_fire_rain_impact"],
 });
 
@@ -118,11 +120,25 @@ describe("buildAnimationCatalog", () => {
       .toContain("Boss sequences cannot have team variants");
   });
 
-  it("flags boss animations beyond the loaded single-frame static sprite as having no runtime loader", () => {
+  it("marks configured multi-frame boss idles as runtime-loaded", () => {
     expect(sequenceOf("anim_boss_thorncrown_move", 3)).toMatchObject({
       hasRuntimeLoader: false,
     });
     expect(sequenceOf("anim_boss_thorncrown_idle", 3)).toMatchObject({
+      hasRuntimeLoader: false,
+    });
+    expect(sequenceOf("anim_boss_ancient_war_oak_idle", 75)).toMatchObject({
+      hasRuntimeLoader: true,
+    });
+  });
+
+  it("marks only explicitly listed non-idle boss sequences as runtime-loaded", () => {
+    expect(sequenceOf("anim_boss_ancient_war_oak_attack_right", 60)).toMatchObject({
+      target: "ancient_war_oak",
+      type: "attack_right",
+      hasRuntimeLoader: true,
+    });
+    expect(sequenceOf("anim_boss_ancient_war_oak_attack_left", 60)).toMatchObject({
       hasRuntimeLoader: false,
     });
   });
@@ -270,7 +286,26 @@ describe("repository animation catalog", () => {
       variant: null,
       frameIndices: Array.from({ length: 15 }, (_, index) => index),
     });
-    expect(catalog.sequences.filter(sequence => sequence.category === "boss")).toHaveLength(8);
+    expect(catalog.sequences.find(sequence => sequence.id === "anim_boss_ancient_war_oak_idle"))
+      .toMatchObject({
+        category: "boss",
+        target: "ancient_war_oak",
+        type: "idle",
+        variant: null,
+        frameIndices: Array.from({ length: 75 }, (_, index) => index),
+        targetConfigured: true,
+        hasRuntimeLoader: true,
+      });
+    expect(catalog.sequences.find(sequence => sequence.id === "anim_boss_ancient_war_oak_attack_right"))
+      .toMatchObject({
+        category: "boss",
+        target: "ancient_war_oak",
+        type: "attack_right",
+        frameIndices: Array.from({ length: 60 }, (_, index) => index),
+        targetConfigured: true,
+        hasRuntimeLoader: true,
+      });
+    expect(catalog.sequences.filter(sequence => sequence.category === "boss")).toHaveLength(9);
     expect(catalog.sequences.filter(sequence => sequence.category === "boss"))
       .toEqual(expect.arrayContaining([
         expect.objectContaining({

@@ -82,6 +82,14 @@ data class RenderState(
     val spellFeedbackLabel: String? = null,
     val fortressShieldHits: List<FortressShieldHitRenderState> = emptyList(),
     val boss: BossRenderState? = null,
+    val bossAttack: BossAttackRenderState? = null,
+)
+
+/** One-shot presentation trigger emitted when the boss starts a unit attack. */
+data class BossAttackRenderState(
+    val eventId: String,
+    val bossId: String,
+    val direction: BossAttackDirection,
 )
 
 data class BossRenderState(
@@ -132,6 +140,7 @@ data class ProjectileRenderState(
     val x: Float,
     val y: Float,
     val ammunitionType: String,
+    val collisionRadius: Float = 0f,
 )
 
 data class CraterRenderState(
@@ -254,6 +263,7 @@ object RenderStateMapper {
                 x = it.x,
                 y = it.y,
                 ammunitionType = it.ammunitionType,
+                collisionRadius = it.collisionRadius,
             )
         },
         blueCatapultX = snapshot.catapults.firstOrNull { it.team.name == "BLUE" }?.x ?: 450f,
@@ -538,8 +548,20 @@ object RenderStateMapper {
             }
         },
         boss = snapshot.boss?.let { it.toRenderState() },
+        bossAttack = events.lastOrNull { it is MatchEvent.BossUnitAttackStarted }?.let {
+            (it as MatchEvent.BossUnitAttackStarted).toRenderState()
+        },
         )
     }
+
+    private fun MatchEvent.BossUnitAttackStarted.toRenderState() = BossAttackRenderState(
+        eventId = eventId.value,
+        bossId = bossId.value,
+        direction = when (targetTeam) {
+            Team.BLUE -> BossAttackDirection.LEFT
+            Team.RED -> BossAttackDirection.RIGHT
+        },
+    )
 
     private fun BossSnapshot.toRenderState() = BossRenderState(
         entityId = entityId.value,

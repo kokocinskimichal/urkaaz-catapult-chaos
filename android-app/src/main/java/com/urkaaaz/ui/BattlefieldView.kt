@@ -83,6 +83,8 @@ class BattlefieldView(context: Context) : View(context) {
     private var plagueCauldronPresentationFrame = PlagueCauldronPresentationFrame()
     private val runicBastionPresentationClock = RunicBastionPresentationClock()
     private var runicBastionPresentationFrame = RunicBastionPresentationFrame()
+    private val bossPresentationClock = BossPresentationClock()
+    private var bossPresentationFrame = BossPresentationFrame()
     private val deathAnimationClock = UnitDeathAnimationClock()
     private val unitDeathAnimationRetention =
         UnitDeathAnimationRetention(deathAnimationClock)
@@ -177,6 +179,10 @@ class BattlefieldView(context: Context) : View(context) {
             nowMilliseconds,
         )
         runicBastionPresentationFrame = runicBastionPresentationClock.update(
+            presentationState,
+            nowMilliseconds,
+        )
+        bossPresentationFrame = bossPresentationClock.update(
             presentationState,
             nowMilliseconds,
         )
@@ -310,6 +316,10 @@ class BattlefieldView(context: Context) : View(context) {
             state.copy(isPaused = state.isPaused || lifecyclePaused),
             SystemClock.uptimeMillis(),
         )
+        bossPresentationFrame = bossPresentationClock.update(
+            state.copy(isPaused = state.isPaused || lifecyclePaused),
+            SystemClock.uptimeMillis(),
+        )
         sapperBombFlights = sapperBombFlightClock.update(
             state.copy(isPaused = state.isPaused || lifecyclePaused),
             SystemClock.uptimeMillis(),
@@ -332,6 +342,10 @@ class BattlefieldView(context: Context) : View(context) {
             SystemClock.uptimeMillis(),
         )
         runicBastionPresentationFrame = runicBastionPresentationClock.update(
+            state.copy(isPaused = true),
+            SystemClock.uptimeMillis(),
+        )
+        bossPresentationFrame = bossPresentationClock.update(
             state.copy(isPaused = true),
             SystemClock.uptimeMillis(),
         )
@@ -364,6 +378,7 @@ class BattlefieldView(context: Context) : View(context) {
                 )
             },
             runicBastionPresentation = runicBastionPresentationFrame,
+            bossPresentation = bossPresentationFrame,
             fireRainPresentation = fireRainPresentationFrame,
             plagueCauldronPresentation = plagueCauldronPresentationFrame,
             sapperBombFlights = sapperBombFlights,

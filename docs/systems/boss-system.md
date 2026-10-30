@@ -49,8 +49,8 @@ podstawową prezentację oraz authoring balansu w Studio.
   źródła konfiguracji;
 - nowy moduł Gradle, skrypty wykonywalne w JSON, hot reload oraz trwały zapis
   runtime state bossa;
-- animacje ruchu, walki, enrage i śmierci; obecna wersja używa statycznych
-  sprite'ów.
+- animacje ruchu, walki, enrage i śmierci; wieloklatkowy `idle` jest dokładany
+  osobno dla wybranych bossów i nie zmienia symulacji.
 
 ## Istniejące rozwiązania i ryzyko duplikacji
 
@@ -174,7 +174,7 @@ poziomów 5–50 znajdują się w zasobie:
       "presentationKey": "ancient_war_oak",
       "archetype": "CENTRAL_OBJECTIVE",
       "maxHealth": 12000,
-      "collision": { "width": 1440.0, "height": 2016.0 },
+      "collision": { "width": 432.0, "height": 576.0 },
       "movement": { "kind": "STATIC", "speedWorldUnitsPerSecond": 0.0 },
       "attacks": [
         { "target": "UNIT", "damage": 150, "minimumDamage": 35,
@@ -329,6 +329,13 @@ placementem. Mobile boss korzysta z istniejącej ścieżki obrażeń jednostek,
 fortec i amunicji; Sapper i Slingmaster nie dostają nowej ścieżki ataku na
 bossy, zgodnie z zachowaniem legacy.
 
+Obrona Central Objective zachowuje legacy'owy filtr: atakuje tylko aktywne
+jednostki, które są już zaangażowane w walkę, a nie każdą jednostkę
+przechodzącą w zasięgu. Wybiera jedną drużynę według liczebności oddziałów
+(remis rozstrzyga seedowana losowość; liczniejsza drużyna jest preferowana w
+72% przypadków), po czym zadaje obrażenia wszystkim kwalifikującym się
+jednostkom tej drużyny, z malejącymi obrażeniami zależnymi od odległości.
+
 Jednostki atakujące bossa zachowują dotychczasowe odstępy w formacji. Symulacja
 wyznacza ich rangę w kolejce względem aktywnych sojuszników zmierzających do
 tego samego bossa i dodaje `ranga × ATTACK_FORMATION_SPACING` do efektywnego
@@ -384,27 +391,77 @@ atakować boss encounter przez wspólną symulację. AI wysyła zwykłe komendy;
 
 Wybrane przez użytkownika legacy artwork zostaje przeniesione do
 `assets_src/` oraz `android-app/src/main/res/drawable-nodpi/` zgodnie z
-istniejącymi zasadami assetów. Migracja obejmuje warianty encounterów na
-poziomach 5–50 jako **statyczne grafiki**; nie generuje nowych grafik ani
-animacji, a legacy idle frames nie są w pierwszym etapie migrowane.
+istniejącymi zasadami assetów. Profile encounterów nadal korzystają z tych
+samych neutralnych grafik; Ancient War Oak ma dodatkowo zaakceptowany,
+75-klatkowy idle wygenerowany w AnimGen. Pozostałe bossy zachowują statyczny
+sprite, a animacje ruchu, walki, enrage i śmierci pozostają osobnymi zadaniami.
 
-Animacje (ruch, walka, enrage, śmierć) są dokładane stopniowo, po jednym
-stanie, osobnymi zadaniami. Do tego czasu boss jest rysowany jednym
-statycznym sprite'em we wszystkich stanach; zmiana fazy, atak i trafienie są
-sygnalizowane wyłącznie HUD-em i feedbackiem z eventów. Dodanie animacji nie
-zmienia balansu, kontraktów gameplayu ani hitboxa: wybór klatki to wyłącznie
-decyzja prezentacji na podstawie `BossSnapshot` (faza) i eventów. Każdy
-statyczny asset jest dostępny też jako jednoklatkowa sekwencja
-`anim_boss_<presentationKey>_idle_000.png`. `BossPresentationCatalog` mapuje
-`presentationKey` na klucz sprite'a i lokalizowaną nazwę, a fazy bez własnej
-sekwencji jawnie używają tego statycznego sprite'a. Późniejsze animacje mogą
-dodać mapowanie per `BossPhase` bez zmiany kontraktu gameplayu.
+Animacje są prezentacją-only i nie zmieniają kontraktów gameplayu. Ancient War
+Oak odtwarza zapętlony `idle` we wszystkich fazach; `BossPresentationCatalog`
+przechowuje liczbę klatek, czas pętli, skalę, statyczny fallback i zmierzone
+granice grafiki. Granice alpha-paddingu rozszerzonego canvasu są mapowane do
+ustawionej skali i dolnego kotwiczenia oryginalnego sprite'a. Ancient War Oak
+używa hitboxa 432×576 world units (60% widocznej szerokości i 80% wysokości)
+i skali prezentacji 5/3; zmniejszenie hitboxa z 1440×2016 zachowuje dotychczasowy
+rozmiar widocznego sprite'a, a jednocześnie pozwala jednostkom podejść do
+korzeni. Pozostałe fazy bez własnej sekwencji nadal używają statycznego sprite'a.
 
-`BattlefieldAssetCatalog` dekoduje wymagany sprite i zgłasza jawny błąd, gdy
-brakuje zasobu. `BattlefieldRenderer` rysuje bossa w world-space przed
-terrain capem. `RenderStateMapper` tworzy niemutowalny boss render state, a
-match screen pokazuje `BossHudView`: HP/fazę mobilnego bossa lub HP i damage
-race dla celu centralnego. Asset key nie trafia do JSON-u balansu.
+Oryginalne wyjście AnimGen (video i ZIP 75 klatek 1024×1024) znajduje się w
+`assets_src/animgen/bosses/ancient_war_oak/idle/`; runtime używa
+przezroczystych klatek 384×384. `BattlefieldAssetCatalog` ładuje je leniwie z
+ograniczonego cache i zgłasza jawny błąd dla brakującej klatki.
+
+### Atak na jednostki z wind-upem
+
+Atak Ancient War Oak na jednostki (`UNIT`) ma zaakceptowaną, 60-klatkową
+sekwencję AnimGen `attack_right` (4,042 s, canvas 4:3 512×384): boss unosi
+gałąź-rękę z prawej strony nad głowę i uderza nią w prawo, uderzenie przypada
+na klatkę 34. Sekwencja jest odtwarzana w całości od początku, więc symulacja
+opóźnia obrażenia o skonfigurowany `windupSeconds` (2,291 s dla Oaka), aby
+trafienie zgrało się z klatką uderzenia. Współdzielone liczby (liczba klatek,
+czas, klatka uderzenia, wind-up) trzyma `BossAttackAnimationTiming` w
+`game-contracts`.
+
+Przebieg w `BossSystem`:
+
+1. gdy cooldown dobiegnie końca i są kwalifikujące się cele, boss wybiera
+   drużynę (jak wyżej), ustawia cooldown na `cooldownSeconds` i zapamiętuje
+   oczekujący atak; symulacja emituje `MatchEvent.BossUnitAttackStarted`
+   z `targetTeam`;
+2. przez `windupSeconds` cooldown nadal maleje, więc kadencja ataku pozostaje
+   taka sama jak przed dodaniem animacji (cooldown liczony jest od startu
+   wind-upu, a nie od uderzenia);
+3. po wind-upie boss ponownie sprawdza aktywne i zaangażowane jednostki
+   wybranej drużyny będące w zasięgu i dopiero wtedy zadaje obrażenia
+   (`BossAttackHit`); jednostki, które w międzyczasie zginęły lub wycofały
+   się, nie dostają obrażeń;
+4. śmierć bossa anuluje oczekujący atak.
+
+Hitbox Ancient War Oak ma 432×576 world units i jest mniejszy od widocznego
+drzewa; skala prezentacji wynosi 5/3, więc sprite zachowuje dotychczasowy
+rozmiar. Standardowa jednostka melee zatrzymuje się około 298 units od środka
+Oaka (216 hitboxa + 82 zasięgu własnego), wewnątrz jego 780-unitowego zasięgu.
+Poprzedni hitbox 1440×2016 stawiał ją 802 units od środka, poza zasięgiem Oaka,
+więc nie powstawał event ataku ani obrażenia.
+
+`windupSeconds` jest polem profilu ataku w `game-balance.json` (domyślnie 0,
+dozwolone tylko dla celu `UNIT`); profile bez wind-upu zachowują natychmiastowe
+obrażenia i nadal emitują `BossUnitAttackStarted`.
+
+Prezentacja: `RenderStateMapper` mapuje `BossUnitAttackStarted` na
+`BossAttackRenderState` z kierunkiem (`RED` → `RIGHT`, `BLUE` → `LEFT`).
+`BossPresentationClock` startuje sekwencję raz na `eventId`, odtwarza ją bez
+pętli i wraca do `idle`; `BossPresentationCatalog` przechowuje sekwencje
+ataku per kierunek, a `BattlefieldRenderer` dopasowuje referencyjny sprite do
+hitboxa, więc szerszy canvas ataku nie zmienia rozmiaru ciała względem idle.
+Obecnie istnieje tylko sekwencja `RIGHT`; atak w lewo nie ma jeszcze animacji
+i jest pokazywany klatkami `idle`. Oryginały (video, ZIP klatek, contact
+sheet) są w `assets_src/animgen/bosses/ancient_war_oak/attack-right/`.
+
+`BattlefieldRenderer` rysuje bossa w world-space przed terrain capem.
+`RenderStateMapper` tworzy niemutowalny boss render state, a match screen
+pokazuje `BossHudView`: HP/fazę mobilnego bossa lub HP i damage race dla celu
+centralnego. Asset key nie trafia do JSON-u balansu.
 
 Match screen prezentuje:
 
@@ -442,12 +499,16 @@ walidowana. Studio nie wymaga nowej zakładki; zmiany obejmują:
 - walidację w Studio: profil z JSON-u bez klatki jest pokazany w `catalogIssues`,
   a sekwencja z nieznanym `presentationKey` ma `targetConfigured=false`.
 
-Do czasu dodania animacji boss ma tylko statyczny obraz, więc zakładka
-pokazuje go jako sekwencję jednoklatkową; kolejne stany (`move`, `attack`,
-`enrage`, `death`) dochodzą wraz z klatkami bez zmian kodu Studio. Zakładka
-pozostaje read-only i nie zapisuje assetów. Jednoklatkowy `idle` ma loader;
-pozostałe sekwencje bossów oraz wieloklatkowe `idle` są oznaczane jako bez
-runtime loadera, dopóki prezentacja nie zacznie ich odtwarzać.
+Zakładka pokazuje statyczne bossy jako sekwencje jednoklatkowe, a Ancient War
+Oak jako 75-klatkowy `idle`. Jednoklatkowy `idle` ma loader; wieloklatkowe
+sekwencje są oznaczane jako runtime-loaded tylko dla celów z
+`runtimeBossIdleTargets`. Inne stany bossów są runtime-loaded tylko, gdy ich
+dokładny identyfikator sekwencji jest wymieniony w `runtimeBossSequences`
+(obecnie `anim_boss_ancient_war_oak_attack_right`). Zakładka pozostaje
+read-only i nie zapisuje assetów. Nowy boss idle wymaga wpisu w
+`BossPresentationCatalog` z liczbą klatek i granicami obrazu oraz wpisu w
+`runtimeBossIdleTargets`; nowa sekwencja ataku — wpisu w
+`attackAnimations` katalogu i w `runtimeBossSequences`.
 
 Studio Animations i zakładka Balance nie współdzielą plików: pierwsza czyta
 klatki z `drawable-nodpi`, druga edytuje `game-balance.json`. Łączy je
@@ -587,8 +648,9 @@ profilu nie wybiera domyślnego bossa.
 - `game-simulation/src/main/kotlin/com/urkaaaz/simulation/BossSystem.kt` oraz
   integracja w `DeterministicMatchSimulation.kt` i `SimulationConfig.kt`;
 - strategia wyboru celu w `game-ai/src/main/kotlin/com/urkaaaz/ai/AiStrategies.kt`;
-- `assets_src/bosses/` i jednoklatkowe zasoby
-  `android-app/src/main/res/drawable-nodpi/anim_boss_*_idle_000.png`;
+- `assets_src/bosses/`, oryginalne wyjście AnimGen pod
+  `assets_src/animgen/bosses/` i sekwencje
+  `android-app/src/main/res/drawable-nodpi/anim_boss_*_idle_NNN.png`;
 - `android-app/src/main/java/com/urkaaaz/ui/BossPresentationCatalog.kt`,
   `BossHudView.kt`, `BattlefieldAssetCatalog.kt`, `BattlefieldRenderer.kt`
   i `RenderStateMapper.kt`;

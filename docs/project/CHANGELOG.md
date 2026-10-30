@@ -1,5 +1,26 @@
 # Changelog
 
+## 2026-10-31
+
+### Added
+
+- Added the Ancient War Oak's 75-frame idle and approved 60-frame rightward
+  branch-hand slam. The match screen plays the attack from a simulation event,
+  and Studio loads only the explicitly registered runtime sequence.
+- Added an always-visible `Show hitboxes` match control for terrain, units,
+  fortresses, bastions, bosses, projectiles and map-asset bounds.
+
+### Changed
+
+- Reduced the Ancient War Oak collision box to 432×576 world units and adjusted
+  presentation scale to preserve the visible tree size.
+
+### Fixed
+
+- Fixed the Oak ignoring melee units stopped outside its attack range. Its
+  attack now winds up for 2.291 seconds and applies damage at the animation's
+  impact frame while preserving the original cooldown cadence.
+
 ## 2026-10-30
 
 ### Added

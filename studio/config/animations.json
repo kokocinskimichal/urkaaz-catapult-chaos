@@ -6,5 +6,7 @@
     "boss": ["ancient_war_oak", "burntwood_warden", "copperwood_final_boss", "copperwood_siege_lord", "frozen_troll", "old_yeti_sovereign", "scorchbound_king", "thorncrown"]
   },
   "teamTextureTargets": ["defender", "demolisher", "raging_boar", "sapper"],
+  "runtimeBossIdleTargets": ["ancient_war_oak"],
+  "runtimeBossSequences": ["anim_boss_ancient_war_oak_attack_right"],
   "withoutLoader": ["anim_ammunition_fire_rain_impact"]
 }

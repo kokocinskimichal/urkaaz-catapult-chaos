@@ -1,6 +1,7 @@
 package com.urkaaaz.simulation
 
 import com.urkaaaz.contracts.BossArchetype
+import com.urkaaaz.contracts.BossAttackAnimationTiming
 import com.urkaaaz.contracts.BossEncounterConfig
 import com.urkaaaz.contracts.BossPhase
 import com.urkaaaz.contracts.BossVictoryRule
@@ -16,6 +17,8 @@ import com.urkaaaz.domain.BossMovementBalance
 import com.urkaaaz.domain.BossMovementKind
 import com.urkaaaz.domain.BossSpecialAbility
 import com.urkaaaz.domain.Unit
+import com.urkaaaz.domain.UnitActionState
+import com.urkaaaz.domain.UnitCombatState
 import com.urkaaaz.domain.UnitFactory
 import com.urkaaaz.domain.WorldBounds
 import com.urkaaaz.domain.WorldPosition
@@ -52,8 +55,20 @@ class BossSystemTest {
     @Test
     fun centralObjectiveDefendsAgainstUnitsFromBothTeams() {
         val boss = system(centralProfile(health = 1_000))
-        val blue = unit("blue-unit", Team.BLUE, x = 480f)
-        val red = unit("red-unit", Team.RED, x = 520f)
+        val blue = unit(
+            id = "blue-unit",
+            team = Team.BLUE,
+            x = 480f,
+            action = UnitActionState.ATTACKING,
+            targetId = EntityId("blue-target"),
+        )
+        val red = unit(
+            id = "red-unit",
+            team = Team.RED,
+            x = 520f,
+            action = UnitActionState.ATTACKING,
+            targetId = EntityId("red-target"),
+        )
 
         val result = boss.advance(
             deltaSeconds = 0.1f,
@@ -84,6 +99,170 @@ class BossSystemTest {
                 random = Random(5),
             ).unitDamage.isNotEmpty(),
         )
+    }
+
+    @Test
+    fun centralObjectiveOnlyDefendsAgainstUnitsAlreadyEngagedInCombat() {
+        val boss = system(centralProfile(health = 1_000))
+        val movingUnit = unit("moving-unit", Team.BLUE, x = 480f)
+
+        assertTrue(
+            boss.advance(
+                deltaSeconds = 0.1f,
+                units = listOf(movingUnit),
+                movingTeams = setOf(Team.BLUE),
+                blueGateX = 0f,
+                random = Random(5),
+            ).unitDamage.isEmpty(),
+        )
+
+        val engagedUnit = unit(
+            id = "engaged-unit",
+            team = Team.BLUE,
+            x = 480f,
+            action = UnitActionState.SEEKING_TARGET,
+            targetId = EntityId("engaged-target"),
+        )
+        assertTrue(
+            boss.advance(
+                deltaSeconds = 1f,
+                units = listOf(engagedUnit),
+                movingTeams = setOf(Team.BLUE),
+                blueGateX = 0f,
+                random = Random(5),
+            ).unitDamage.isNotEmpty(),
+        )
+    }
+
+    @Test
+    fun ancientWarOakStartsItsAttackBeforeDamageAndKeepsTheConfiguredCadence() {
+        val boss = system(
+            centralProfile(
+                health = 1_000,
+                windupSeconds = BossAttackAnimationTiming
+                    .ANCIENT_WAR_OAK_UNIT_ATTACK_WINDUP_SECONDS,
+            ),
+        )
+        val blue = unit(
+            id = "blue-unit",
+            team = Team.BLUE,
+            x = 480f,
+            action = UnitActionState.ATTACKING,
+            targetId = EntityId("blue-target"),
+        )
+        val red = unit(
+            id = "red-unit",
+            team = Team.RED,
+            x = 520f,
+            action = UnitActionState.ATTACKING,
+            targetId = EntityId("red-target"),
+        )
+        val targets = listOf(blue, red)
+
+        val started = boss.advance(
+            deltaSeconds = 0.1f,
+            units = targets,
+            movingTeams = setOf(Team.BLUE, Team.RED),
+            blueGateX = 500f,
+            random = Random(5),
+        )
+        val targetTeam = assertNotNull(started.unitAttackStarted)
+        assertTrue(started.unitDamage.isEmpty())
+
+        val beforeImpact = boss.advance(
+            deltaSeconds = BossAttackAnimationTiming
+                .ANCIENT_WAR_OAK_UNIT_ATTACK_WINDUP_SECONDS - 0.01f,
+            units = targets,
+            movingTeams = setOf(Team.BLUE, Team.RED),
+            blueGateX = 500f,
+            random = Random(5),
+        )
+        assertTrue(beforeImpact.unitDamage.isEmpty())
+
+        val impact = boss.advance(
+            deltaSeconds = 0.02f,
+            units = targets,
+            movingTeams = setOf(Team.BLUE, Team.RED),
+            blueGateX = 500f,
+            random = Random(5),
+        )
+        assertTrue(impact.unitDamage.isNotEmpty())
+        assertTrue(
+            impact.unitDamage.keys.all {
+                it == if (targetTeam == Team.BLUE) blue.id else red.id
+            },
+        )
+
+        // Cooldown keeps elapsing through the wind-up, so the next attack follows
+        // the original 4 s cadence measured from the wind-up start. The impact tick
+        // overshot the wind-up by 0.01 s, so keep a wider margin here.
+        val cooldownRemainingAfterImpact = 4f -
+            BossAttackAnimationTiming.ANCIENT_WAR_OAK_UNIT_ATTACK_WINDUP_SECONDS - 0.01f
+        val beforeNextAttack = boss.advance(
+            deltaSeconds = cooldownRemainingAfterImpact - 0.05f,
+            units = targets,
+            movingTeams = setOf(Team.BLUE, Team.RED),
+            blueGateX = 500f,
+            random = Random(5),
+        )
+        assertNull(beforeNextAttack.unitAttackStarted)
+
+        val nextAttack = boss.advance(
+            deltaSeconds = 0.1f,
+            units = targets,
+            movingTeams = setOf(Team.BLUE, Team.RED),
+            blueGateX = 500f,
+            random = Random(5),
+        )
+        assertNotNull(nextAttack.unitAttackStarted)
+        assertTrue(nextAttack.unitDamage.isEmpty())
+    }
+
+    @Test
+    fun ancientWarOakCanAttackMeleeUnitsAtItsAdjustedApproachBoundary() {
+        val baseProfile = centralProfile(
+            health = 1_000,
+            windupSeconds = BossAttackAnimationTiming
+                .ANCIENT_WAR_OAK_UNIT_ATTACK_WINDUP_SECONDS,
+        )
+        val profile = baseProfile.copy(
+            collision = BossCollisionBalance(width = 432f, height = 576f),
+            attacks = listOf(
+                baseProfile.attacks.single().copy(
+                    rangeWorldUnits = 780f,
+                ),
+            ),
+        )
+        val boss = system(profile, worldWidth = 2_000f)
+        val red = unit(
+            id = "red-melee",
+            team = Team.RED,
+            x = 1_298f,
+            action = UnitActionState.SEEKING_TARGET,
+            targetId = EntityId("boss-target"),
+        )
+        val movingTeams = setOf(Team.RED)
+
+        assertEquals(1_298f, requireNotNull(boss.approachX(red, movingTeams)), 0.001f)
+        val started = boss.advance(
+            deltaSeconds = 0.1f,
+            units = listOf(red),
+            movingTeams = movingTeams,
+            blueGateX = 0f,
+            random = Random(5),
+        )
+        assertEquals(Team.RED, started.unitAttackStarted)
+        assertTrue(started.unitDamage.isEmpty())
+
+        val impact = boss.advance(
+            deltaSeconds = BossAttackAnimationTiming
+                .ANCIENT_WAR_OAK_UNIT_ATTACK_WINDUP_SECONDS,
+            units = listOf(red),
+            movingTeams = movingTeams,
+            blueGateX = 0f,
+            random = Random(5),
+        )
+        assertEquals(setOf(red.id), impact.unitDamage.keys)
     }
 
     @Test
@@ -240,6 +419,7 @@ class BossSystemTest {
     private fun system(
         profile: BossBalanceProfile,
         spawnRatio: Float = 0.5f,
+        worldWidth: Float = 1_000f,
     ) = BossSystem(
         profile = profile,
         encounter = BossEncounterConfig(
@@ -251,12 +431,15 @@ class BossSystemTest {
                 BossVictoryRule.DEFEAT_BOSS
             },
         ),
-        worldWidth = 1_000f,
+        worldWidth = worldWidth,
         unitCollisionRadius = 24f,
         groundHeightAt = { 200f },
     )
 
-    private fun centralProfile(health: Int) = BossBalanceProfile(
+    private fun centralProfile(
+        health: Int,
+        windupSeconds: Float = 0f,
+    ) = BossBalanceProfile(
         id = "boss.central-test.level-05",
         presentationKey = "test_boss",
         archetype = BossArchetype.CENTRAL_OBJECTIVE,
@@ -271,6 +454,7 @@ class BossSystemTest {
                 rangeWorldUnits = 500f,
                 cooldownSeconds = 4f,
                 initialCooldownSeconds = 0f,
+                windupSeconds = windupSeconds,
             ),
         ),
         specialAbilities = emptyList(),
@@ -311,12 +495,19 @@ class BossSystemTest {
         ),
     )
 
-    private fun unit(id: String, team: Team, x: Float) = Unit(
+    private fun unit(
+        id: String,
+        team: Team,
+        x: Float,
+        action: UnitActionState = UnitActionState.MOVING,
+        targetId: EntityId? = null,
+    ) = Unit(
         id = EntityId(id),
         type = UnitFactory.defender(),
         team = team,
         position = WorldPosition(x, 200f),
         moving = true,
         inGarrison = false,
+        combatState = UnitCombatState(action = action, targetId = targetId),
     )
 }

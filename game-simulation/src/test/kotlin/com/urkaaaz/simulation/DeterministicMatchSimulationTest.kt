@@ -821,6 +821,14 @@ class DeterministicMatchSimulationTest {
         val rock = rockSimulation.snapshot().projectiles.single()
         assertEquals(rock.velocityX, fireRain.velocityX)
         assertEquals(rock.velocityY, fireRain.velocityY)
+        assertEquals(
+            AmmunitionCatalog.definition(AmmunitionType.FIRE_RAIN).collision.hitRadius,
+            fireRain.collisionRadius,
+        )
+        assertEquals(
+            AmmunitionCatalog.definition(AmmunitionType.ROCK).collision.hitRadius,
+            rock.collisionRadius,
+        )
     }
 
     @Test

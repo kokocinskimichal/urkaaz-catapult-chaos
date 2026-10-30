@@ -27,6 +27,7 @@ const validBalance = JSON.stringify({
       rangeWorldUnits: 780,
       cooldownSeconds: 4,
       initialCooldownSeconds: 2.5,
+      windupSeconds: 2.291,
     }],
     specialAbilities: [],
     immuneAmmunitionTypes: ["PLAGUE_CAULDRON"],

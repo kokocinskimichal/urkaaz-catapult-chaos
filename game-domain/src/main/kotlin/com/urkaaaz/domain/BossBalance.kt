@@ -41,6 +41,7 @@ data class BossAttackBalance(
     val rangeWorldUnits: Float,
     val cooldownSeconds: Float,
     val initialCooldownSeconds: Float,
+    val windupSeconds: Float = 0f,
 ) {
     init {
         require(damage > 0) { "boss attack damage must be positive" }
@@ -48,6 +49,12 @@ data class BossAttackBalance(
         require(rangeWorldUnits >= 0f) { "boss attack range must not be negative" }
         require(cooldownSeconds > 0f) { "boss attack cooldown must be positive" }
         require(initialCooldownSeconds >= 0f) { "boss initial cooldown must not be negative" }
+        require(windupSeconds.isFinite() && windupSeconds >= 0f) {
+            "boss attack windup must be finite and non-negative"
+        }
+        require(target == BossAttackTarget.UNIT || windupSeconds == 0f) {
+            "only unit attacks may have a windup"
+        }
     }
 }
 

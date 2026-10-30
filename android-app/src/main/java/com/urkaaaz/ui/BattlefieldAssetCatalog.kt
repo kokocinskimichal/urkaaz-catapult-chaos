@@ -61,6 +61,12 @@ class BattlefieldAssetCatalog(private val context: Context) {
     private val resources = context.resources
     private val unitBitmapCache = mutableMapOf<String, Bitmap?>()
     private val bossBitmapCache = mutableMapOf<String, Bitmap>()
+    private val bossAnimationFrameCache = object : LruCache<String, Bitmap>(
+        BOSS_ANIMATION_FRAME_CACHE_KILOBYTES,
+    ) {
+        override fun sizeOf(key: String, value: Bitmap): Int =
+            (value.allocationByteCount / 1024).coerceAtLeast(1)
+    }
     private val unitAnimationCache = mutableMapOf<String, List<Bitmap>>()
     private val teamTextureBitmapCache = TeamTextureBitmapCache()
     private val teamTextureConfigurationCache = mutableMapOf<String, Map<String, String>>()
@@ -510,6 +516,41 @@ class BattlefieldAssetCatalog(private val context: Context) {
         }
     }
 
+    fun bossIdleFrame(presentationKey: String, frameIndex: Int): Bitmap? {
+        val animation = BossPresentationCatalog.definition(presentationKey).idleAnimation
+            ?: return null
+        return bossAnimationFrame(
+            animation,
+            BossPresentationCatalog.idleFrameSpriteName(presentationKey, frameIndex),
+        )
+    }
+
+    fun bossAttackFrame(
+        presentationKey: String,
+        direction: BossAttackDirection,
+        frameIndex: Int,
+    ): Bitmap? {
+        val animation = BossPresentationCatalog.definition(presentationKey)
+            .attackAnimation(direction) ?: return null
+        return bossAnimationFrame(
+            animation,
+            BossPresentationCatalog.attackFrameSpriteName(presentationKey, direction, frameIndex),
+        )
+    }
+
+    private fun bossAnimationFrame(
+        animation: BossSpriteAnimationDefinition,
+        name: String,
+    ): Bitmap {
+        bossAnimationFrameCache.get(name)?.let { return it }
+        val bitmap = loadBitmap(name) ?: error("Missing boss animation frame '$name'")
+        check(bitmap.width == animation.frameWidth && bitmap.height == animation.frameHeight) {
+            "Boss animation frame '$name' must be ${animation.frameWidth}x${animation.frameHeight}"
+        }
+        bossAnimationFrameCache.put(name, bitmap)
+        return bitmap
+    }
+
     private fun animation(
         prefix: String,
         flightRenderSize: Float = 36f,
@@ -710,6 +751,7 @@ class BattlefieldAssetCatalog(private val context: Context) {
         }
 
     private companion object {
+        const val BOSS_ANIMATION_FRAME_CACHE_KILOBYTES = 4 * 1024
         const val SAPPER_RETURN_FRAME_COUNT = 15
         const val ROCK_IMPACT_BREAKUP_FRAME = 9
         const val FIRE_RAIN_FRAME_WIDTH = 512

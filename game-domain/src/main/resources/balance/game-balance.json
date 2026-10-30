@@ -1,13 +1,13 @@
 {
   "schemaVersion": 1,
-  "balanceRevision": "boss-legacy-baseline-1",
+  "balanceRevision": "boss-legacy-baseline-5",
   "bosses": [
     {
       "id": "boss.central-ancient-war-oak.level-05",
       "presentationKey": "ancient_war_oak",
       "archetype": "CENTRAL_OBJECTIVE",
       "maxHealth": 12000,
-      "collision": { "width": 1440.0, "height": 2016.0 },
+      "collision": { "width": 432.0, "height": 576.0 },
       "movement": { "kind": "STATIC", "speedWorldUnitsPerSecond": 0.0 },
       "attacks": [
         {
@@ -16,7 +16,8 @@
           "minimumDamage": 35,
           "rangeWorldUnits": 780.0,
           "cooldownSeconds": 4.0,
-          "initialCooldownSeconds": 2.5
+          "initialCooldownSeconds": 2.5,
+          "windupSeconds": 2.291
         }
       ],
       "specialAbilities": [],
@@ -227,7 +228,7 @@
       "presentationKey": "ancient_war_oak",
       "archetype": "CENTRAL_OBJECTIVE",
       "maxHealth": 12000,
-      "collision": { "width": 1440.0, "height": 2016.0 },
+      "collision": { "width": 432.0, "height": 576.0 },
       "movement": { "kind": "STATIC", "speedWorldUnitsPerSecond": 0.0 },
       "attacks": [
         {
@@ -236,7 +237,8 @@
           "minimumDamage": 35,
           "rangeWorldUnits": 780.0,
           "cooldownSeconds": 4.0,
-          "initialCooldownSeconds": 2.5
+          "initialCooldownSeconds": 2.5,
+          "windupSeconds": 2.291
         }
       ],
       "specialAbilities": [],

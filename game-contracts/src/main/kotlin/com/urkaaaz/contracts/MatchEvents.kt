@@ -38,6 +38,14 @@ sealed interface MatchEvent {
         val y: Float,
     ) : MatchEvent
 
+    data class BossUnitAttackStarted(
+        override val eventId: EventId,
+        override val matchId: MatchId,
+        override val simulationTimeMilliseconds: Long,
+        val bossId: EntityId,
+        val targetTeam: Team,
+    ) : MatchEvent
+
     data class BossAttackHit(
         override val eventId: EventId,
         override val matchId: MatchId,

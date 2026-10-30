@@ -145,6 +145,7 @@ private data class BossAttackDto(
     val rangeWorldUnits: Float,
     val cooldownSeconds: Float,
     val initialCooldownSeconds: Float,
+    val windupSeconds: Float = 0f,
 ) {
     fun toDomain() = BossAttackBalance(
         target = BossAttackTarget.valueOf(target),
@@ -153,6 +154,7 @@ private data class BossAttackDto(
         rangeWorldUnits = rangeWorldUnits,
         cooldownSeconds = cooldownSeconds,
         initialCooldownSeconds = initialCooldownSeconds,
+        windupSeconds = windupSeconds,
     )
 }
 

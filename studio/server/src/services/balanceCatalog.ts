@@ -200,8 +200,16 @@ function validateProfile(
       checkKeys(
         attack,
         attackPath,
-        ["target", "damage", "minimumDamage", "rangeWorldUnits", "cooldownSeconds", "initialCooldownSeconds"],
+        [
+          "target",
+          "damage",
+          "minimumDamage",
+          "rangeWorldUnits",
+          "cooldownSeconds",
+          "initialCooldownSeconds",
+        ],
         issues,
+        ["windupSeconds"],
       );
       if (attack.target !== "UNIT" && attack.target !== "FORTRESS_GATE") {
         issues.push(issue(`${attackPath}.target`, "is not a supported attack target"));
@@ -227,6 +235,12 @@ function validateProfile(
       }
       if (!nonNegativeNumber(attack.initialCooldownSeconds)) {
         issues.push(issue(`${attackPath}.initialCooldownSeconds`, "must be non-negative"));
+      }
+      if (attack.windupSeconds !== undefined && !nonNegativeNumber(attack.windupSeconds)) {
+        issues.push(issue(`${attackPath}.windupSeconds`, "must be non-negative"));
+      }
+      if (attack.windupSeconds !== undefined && attack.windupSeconds !== 0 && attack.target !== "UNIT") {
+        issues.push(issue(`${attackPath}.windupSeconds`, "is only supported for unit attacks"));
       }
     });
   }
@@ -315,8 +329,9 @@ function checkKeys(
   path: string,
   expected: readonly string[],
   issues: BalanceValidationIssue[],
+  optional: readonly string[] = [],
 ): void {
-  const expectedSet = new Set(expected);
+  const expectedSet = new Set([...expected, ...optional]);
   for (const key of expected) {
     if (!(key in value)) issues.push(issue(path ? `${path}.${key}` : key, "is required"));
   }

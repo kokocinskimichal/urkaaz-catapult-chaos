@@ -69,7 +69,9 @@ kampanię, AI oraz działający match screen. Gałąź robocza: `develop`.
   celne.
 - Legacy-style sprite'y, animacje idle/walk, HP bary jednostek, cache assetów
   i zakotwiczenie stóp do wspólnej linii terenu.
-- Debug panel z `Show hitboxes` i trybem `SNAPSHOT`.
+- Dostępny bezpośrednio na ekranie meczu checkbox `Show hitboxes`; pokazuje
+  obrysy terenu i kolizji jednostek, fortec, bastionów runicznych, bossów oraz
+  pocisków. Panel `DEBUG` nadal udostępnia tryb `SNAPSHOT`.
 - Hitbox fortecy jako wspólny profil prostokątów dla trafień bezpośrednich i
   obrażeń obszarowych; katapulty nie są celami obrażeń.
 - Testy jednostkowe i integracyjne dla kontraktów, domeny, symulacji,

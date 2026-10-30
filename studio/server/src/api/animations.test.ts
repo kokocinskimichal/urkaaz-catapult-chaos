@@ -23,7 +23,7 @@ describe("animations API", () => {
     const catalog = (await response.json()) as AnimationCatalogResponse;
     expect(response.status).toBe(200);
     expect(catalog.catalogIssues).toEqual([]);
-    expect(catalog.sequences.filter(sequence => sequence.category === "boss")).toHaveLength(8);
+    expect(catalog.sequences.filter(sequence => sequence.category === "boss")).toHaveLength(9);
     expect(catalog.sequences.find(sequence => sequence.id === "anim_boss_thorncrown_idle"))
       .toMatchObject({
         frameIndices: [0],

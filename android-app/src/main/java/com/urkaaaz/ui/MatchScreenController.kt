@@ -71,6 +71,7 @@ class MatchScreenController(
     private lateinit var commandDock: LinearLayout
     private lateinit var feedbackToast: MatchFeedbackToastView
     private lateinit var debugButton: TextView
+    private lateinit var hitboxToggle: CheckBox
     private lateinit var snapshotCloseButton: TextView
     private lateinit var resultPopupView: MatchResultPopupView
     private var snapshotMode = false
@@ -182,6 +183,18 @@ class MatchScreenController(
                 setBackgroundResource(com.urkaaaz.android.R.drawable.bg_hud_panel)
                 setOnClickListener { showDebugToolsDialog() }
         }
+        hitboxToggle = CheckBox(activity).apply {
+            text = "Show hitboxes"
+            setTextColor(Color.WHITE)
+            textSize = 12f
+            buttonTintList = ColorStateList.valueOf(Color.rgb(243, 210, 138))
+            setPadding(dp(8), dp(2), dp(8), dp(2))
+            setBackgroundResource(com.urkaaaz.android.R.drawable.bg_hud_panel)
+            isChecked = battlefieldView.debugHitboxesVisible
+            setOnCheckedChangeListener { _, checked ->
+                battlefieldView.debugHitboxesVisible = checked
+            }
+        }
         snapshotCloseButton = TextView(activity).apply {
                 text = "CLOSE SNAPSHOT"
                 setTextColor(Color.WHITE)
@@ -276,6 +289,17 @@ class MatchScreenController(
                 ).apply {
                     gravity = Gravity.TOP or Gravity.END
                     topMargin = dp(180)
+                    rightMargin = dp(12)
+                },
+            )
+            addView(
+                hitboxToggle,
+                FrameLayout.LayoutParams(
+                    FrameLayout.LayoutParams.WRAP_CONTENT,
+                    FrameLayout.LayoutParams.WRAP_CONTENT,
+                ).apply {
+                    gravity = Gravity.TOP or Gravity.END
+                    topMargin = dp(122)
                     rightMargin = dp(12)
                 },
             )
@@ -417,15 +441,6 @@ class MatchScreenController(
             setTextColor(Color.WHITE)
             textSize = 19f
             setTypeface(typeface, Typeface.BOLD)
-        })
-        root.addView(CheckBox(activity).apply {
-            text = "Show hitboxes"
-            setTextColor(Color.WHITE)
-            buttonTintList = ColorStateList.valueOf(Color.rgb(243, 210, 138))
-            isChecked = battlefieldView.debugHitboxesVisible
-            setOnCheckedChangeListener { _, checked ->
-                battlefieldView.debugHitboxesVisible = checked
-            }
         })
         if (demoMode) {
             root.addView(CheckBox(activity).apply {

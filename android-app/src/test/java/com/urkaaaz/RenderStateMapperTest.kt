@@ -28,6 +28,7 @@ import com.urkaaaz.contracts.Team
 import com.urkaaaz.contracts.WindSnapshot
 import com.urkaaaz.ui.RenderStateMapper
 import com.urkaaaz.ui.CombatFeedbackRenderState
+import com.urkaaaz.ui.BossAttackDirection
 import org.junit.Test
 import org.junit.Assert.assertEquals
 
@@ -148,6 +149,28 @@ class RenderStateMapperTest {
     }
 
     @Test
+    fun mapperConvertsBossAttackTargetTeamToPresentationDirection() {
+        val matchId = MatchId("boss-attack-direction-match")
+        val snapshot = MatchSnapshot(matchId = matchId)
+
+        fun directionFor(team: Team) = RenderStateMapper.map(
+            snapshot,
+            listOf(
+                MatchEvent.BossUnitAttackStarted(
+                    eventId = EventId("boss-attack-${team.name}"),
+                    matchId = matchId,
+                    simulationTimeMilliseconds = 1L,
+                    bossId = EntityId("boss-oak"),
+                    targetTeam = team,
+                ),
+            ),
+        ).bossAttack?.direction
+
+        assertEquals(BossAttackDirection.LEFT, directionFor(Team.BLUE))
+        assertEquals(BossAttackDirection.RIGHT, directionFor(Team.RED))
+    }
+
+    @Test
     fun mapperRoutesShieldHitToFortressTeam() {
         val state = RenderStateMapper.map(
             MatchSnapshot(
@@ -205,12 +228,14 @@ class RenderStateMapperTest {
                         y = 648f,
                         velocityX = 100f,
                         velocityY = -100f,
+                        collisionRadius = 14f,
                     ),
                 ),
             ),
         )
 
         assertEquals("projectile-42", state.projectiles.single().projectileId)
+        assertEquals(14f, state.projectiles.single().collisionRadius)
     }
 
     @Test

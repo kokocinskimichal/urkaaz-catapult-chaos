@@ -2,6 +2,7 @@ package com.urkaaaz.application.balance
 
 import com.urkaaaz.campaign.CampaignLevelDefinition
 import com.urkaaaz.contracts.BossArchetype
+import com.urkaaaz.contracts.BossAttackAnimationTiming
 import com.urkaaaz.contracts.BossVictoryRule
 import java.io.ByteArrayInputStream
 import kotlin.test.Test
@@ -17,6 +18,26 @@ class GameBalanceRepositoryTest {
 
         assertEquals(10, result.balance.config.bosses.size)
         assertEquals("boss.central-ancient-war-oak.level-05", result.balance.config.bosses.first().id)
+        assertEquals(
+            BossAttackAnimationTiming.ANCIENT_WAR_OAK_UNIT_ATTACK_WINDUP_SECONDS,
+            result.balance.config.bosses.first().attacks.single().windupSeconds,
+        )
+        assertEquals(432f, result.balance.config.bosses.first().collision.width)
+        assertEquals(576f, result.balance.config.bosses.first().collision.height)
+        val oakLevel45 = result.balance.config.bosses.single {
+            it.id == "boss.central-ancient-war-oak.level-45"
+        }
+        assertEquals(432f, oakLevel45.collision.width)
+        assertEquals(576f, oakLevel45.collision.height)
+        assertEquals(
+            BossAttackAnimationTiming.ANCIENT_WAR_OAK_UNIT_ATTACK_WINDUP_SECONDS,
+            oakLevel45.attacks.single().windupSeconds,
+        )
+        val frozenTroll = result.balance.config.bosses.single {
+            it.id == "boss.central-frozen-troll.level-15"
+        }
+        assertEquals(1_440f, frozenTroll.collision.width)
+        assertEquals(0f, frozenTroll.attacks.single().windupSeconds)
         assertTrue(result.balance.contentHash.matches(Regex("[a-f0-9]{64}")))
         (5..CampaignLevelDefinition.LAST_COMPLETE_CAMPAIGN_LEVEL step 5).forEach { level ->
             val encounter = requireNotNull(
@@ -74,7 +95,7 @@ class GameBalanceRepositoryTest {
         val content = javaClass.getResourceAsStream("/balance/game-balance.json")!!
             .bufferedReader()
             .use { it.readText() }
-        val changed = content.replace("boss-legacy-baseline-1", "boss-legacy-baseline-2")
+        val changed = content.replace("boss-legacy-baseline-5", "boss-legacy-baseline-6")
         val first = assertIs<GameBalanceRead.Available>(repository(content).load()).balance
         val second = assertIs<GameBalanceRead.Available>(repository(changed).load()).balance
 

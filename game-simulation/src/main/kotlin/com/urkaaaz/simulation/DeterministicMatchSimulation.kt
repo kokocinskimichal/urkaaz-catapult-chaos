@@ -1006,6 +1006,7 @@ class DeterministicMatchSimulation(
                 windResponse = it.windResponse,
                 gravityResponse = it.gravityResponse,
                 drag = it.drag,
+                collisionRadius = AmmunitionCatalog.definition(it.ammunition).collision.hitRadius,
             )
         },
         terrain = TerrainSnapshot(
@@ -1109,6 +1110,17 @@ class DeterministicMatchSimulation(
     private fun applyBossTick(result: BossTickResult) {
         if (status != MatchStatus.RUNNING) return
         val boss = bossSystem ?: return
+        result.unitAttackStarted?.let { targetTeam ->
+            emit {
+                MatchEvent.BossUnitAttackStarted(
+                    eventId = it,
+                    matchId = matchId,
+                    simulationTimeMilliseconds = simulationTimeMilliseconds,
+                    bossId = boss.entityId,
+                    targetTeam = targetTeam,
+                )
+            }
+        }
         val current = units.toMutableList()
         result.unitDamage.entries.sortedBy { it.key.value }.forEach { (unitId, damage) ->
             val target = current.firstOrNull { it.id == unitId && it.isAlive }

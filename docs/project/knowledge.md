@@ -695,13 +695,16 @@ a short sequence of decreasing dots rather than a full-flight line. Active
 projectile sprites use a smaller world-space render size and therefore scale
 with the battlefield camera zoom.
 
-The match now exposes a legacy-style `DEBUG` control after the match starts.
-Its panel supports `Show hitboxes`, which renders presentation hitbox guides
-for fortress targets and active projectiles, and `SNAPSHOT`, which hides
-the HUD and ammunition controls and shows the complete normalized battlefield.
-Legacy AI-unit toggles are intentionally not copied because the new match
-does not yet expose runtime unit deployment or AI-unit commands.
-`Show hitboxes` also draws the rendered canvas bounds of terrain trees, rocks,
+The match screen exposes a `Show hitboxes` checkbox directly over the
+battlefield. It renders the terrain surface, fortress target rectangles, unit
+collision circles using `WorldScale.UNIT_COLLISION_RADIUS`, Runic Bastion and
+boss rectangles, and projectile collision circles using the ammunition
+`collision.hitRadius` copied into the immutable projectile snapshot. The
+`DEBUG` panel retains `SNAPSHOT`, which hides the HUD and ammunition controls
+and shows the complete normalized battlefield. Legacy AI-unit toggles are
+intentionally not copied because the new match does not yet expose runtime
+unit deployment or AI-unit commands.
+The overlay also draws the rendered canvas bounds of terrain trees, rocks,
 props and relics. These are asset bounds, not gameplay collision shapes:
 transparent padding inside a bitmap can make the visible pixels appear offset
 from the frame. Tree, rock, prop and relic bounds use distinct debug colors,
@@ -1047,14 +1050,17 @@ target = longest prefix listed in `studio/config/animations.json`, otherwise the
 last token is the type and `targetConfigured=false`; non-contiguous frames
 become `issues`), and `GET /api/animations/{id}/frames/{n}` streams a PNG with
 path-traversal checks. The Animations UI separates sequences into Units,
-Spells and Ammunition tabs, while retaining the shared preview and team-texture
+Spells, Ammunition and Bosses tabs, while retaining the shared preview and team-texture
 controls. Bosses use the `boss` category and
 `anim_boss_<presentationKey>_idle_000.png`; the server compares boss balance
 profiles with available sprite sequences and returns `catalogIssues` for
 missing art. `studio/config/animations.json` is maintained by hand:
 add new targets there and list sequences without a runtime loader in
-`withoutLoader` (currently `anim_ammunition_fire_rain_impact`). Boss sequences
-other than the single-frame static `idle` are marked as not loaded by runtime.
+`withoutLoader` (currently `anim_ammunition_fire_rain_impact`). Single-frame
+boss idles have a static loader; multi-frame boss idles are runtime-loaded only
+when their target is listed in `runtimeBossIdleTargets`. Other boss states are
+runtime-loaded only when their exact sequence id is listed in
+`runtimeBossSequences` (currently `anim_boss_ancient_war_oak_attack_right`).
 
 The Balance tab edits the single source
 `game-domain/src/main/resources/balance/game-balance.json`. `GET /api/balance`
@@ -1096,13 +1102,30 @@ presentation only and does not own simulation state.
 siege boss. `MatchScenario.bossEncounter` selects a typed profile, spawn ratio
 and victory rule; `MatchSession` loads that profile through the application
 balance repository and passes it into deterministic simulation. Levels 5–50
-have profiles and static assets; levels 51–54 remain playable without bosses,
-and the campaign frontier stops at 54 until encounters for level 55 onward are
-complete. Static boss sprites are mapped by `presentationKey`; later
-animations are presentation-only follow-up work. Unit attack reach against a
-boss grows by formation rank times the shared formation spacing; their world
-positions remain unchanged, and units engaged with another target do not count
-toward that rank.
+have profiles and assets; levels 51–54 remain playable without bosses, and the
+campaign frontier stops at 54 until encounters for level 55 onward are
+complete. Boss sprites and optional idle sequences are mapped by
+`presentationKey`. Ancient War Oak uses a 75-frame, 5.042-second neutral
+AnimGen idle loop; the original video and 1024px frame archive are retained in
+`assets_src/animgen/bosses/ancient_war_oak/idle/`, while Android decodes
+384px runtime frames through a 4 MiB LRU cache. Normalized source/output art
+bounds preserve the visible sprite size and root baseline despite the
+transparent expansion canvas. The Oak's collision is 432x576 world units,
+narrower than the visible tree; its presentation scale is 5/3 to preserve the
+previous rendered size while letting melee units approach inside its 780-unit
+attack range. Animation timing is presentation-only and pauses with the match.
+The Oak's unit attack has a 60-frame, 4.042-second
+`attack_right` sequence (512x384, impact at frame 34); `BossAttackBalance.windupSeconds`
+(2.291 s for the Oak, from `BossAttackAnimationTiming`) delays damage so it
+lands on the impact frame, while the cooldown keeps elapsing during the
+wind-up so attack cadence is unchanged. `MatchEvent.BossUnitAttackStarted`
+(with `targetTeam`) triggers the presentation; `RenderStateMapper` maps RED to
+`BossAttackDirection.RIGHT` and BLUE to `LEFT`. Only the right sequence
+exists; left attacks fall back to idle frames. Originals live in
+`assets_src/animgen/bosses/ancient_war_oak/attack-right/`. Unit attack reach
+against a boss grows by formation rank times the shared formation spacing;
+their world positions remain unchanged, and units engaged with another target
+do not count toward that rank.
 
 ## Push workflow
 

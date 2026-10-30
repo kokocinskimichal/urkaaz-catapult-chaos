@@ -43,6 +43,7 @@ class BattlefieldRenderer(
         impactFrame: Int,
         fortressShieldHitAnimation: FortressShieldHitAnimationFrame?,
         runicBastionPresentation: RunicBastionPresentationFrame,
+        bossPresentation: BossPresentationFrame,
         fireRainPresentation: FireRainPresentationFrame,
         plagueCauldronPresentation: PlagueCauldronPresentationFrame,
         sapperBombFlights: List<SapperBombFlightFrame>,
@@ -197,6 +198,7 @@ class BattlefieldRenderer(
         drawBoss(
             canvas = canvas,
             boss = state.boss,
+            presentation = bossPresentation,
             viewportWidth = viewportWidth,
             viewportHeight = viewportHeight,
         )
@@ -525,16 +527,40 @@ class BattlefieldRenderer(
     private fun drawBoss(
         canvas: Canvas,
         boss: BossRenderState?,
+        presentation: BossPresentationFrame,
         viewportWidth: Float,
         viewportHeight: Float,
     ) {
         if (boss == null || boss.health <= 0) return
-        val bitmap = assets.bossSprite(boss.presentationKey, boss.phase)
+        val definition = BossPresentationCatalog.definition(boss.presentationKey)
+        val attackDirection = presentation.attackDirection
+        val attackFrameIndex = presentation.attackFrameIndex
+        val attackAnimation = if (attackDirection != null && attackFrameIndex != null) {
+            definition.attackAnimation(attackDirection)
+        } else {
+            null
+        }
+        val animation = attackAnimation ?: definition.idleAnimation
+        val bitmap = when {
+            attackAnimation != null -> assets.bossAttackFrame(
+                presentationKey = boss.presentationKey,
+                direction = requireNotNull(attackDirection),
+                frameIndex = requireNotNull(attackFrameIndex),
+            )
+            definition.idleAnimation != null -> assets.bossIdleFrame(
+                presentationKey = boss.presentationKey,
+                frameIndex = presentation.idleFrameIndex ?: 0,
+            )
+            else -> null
+        } ?: assets.bossSprite(boss.presentationKey, boss.phase)
         val centerX = worldToViewX(boss.x, viewportWidth)
         val baselineY = worldToViewY(boss.groundY, viewportHeight)
         val hitboxWidth = worldToViewWidth(boss.collisionWidth, viewportWidth)
         val hitboxHeight = worldToViewHeight(boss.collisionHeight, viewportHeight)
-        val sourceAspect = bitmap.width.toFloat() / bitmap.height.coerceAtLeast(1)
+        // Fit the reference art into the hitbox, so wider attack canvases do not
+        // change the body size between idle and attack frames.
+        val sourceAspect = animation?.referenceCanvasAspect
+            ?: (bitmap.width.toFloat() / bitmap.height.coerceAtLeast(1))
         val hitboxAspect = hitboxWidth / hitboxHeight
         val visualWidth: Float
         val visualHeight: Float
@@ -545,7 +571,36 @@ class BattlefieldRenderer(
             visualHeight = hitboxHeight
             visualWidth = hitboxHeight * sourceAspect
         }
-        drawTextureAtWorldSize(canvas, bitmap, centerX, baselineY, visualWidth, visualHeight)
+        val presentationWidth = visualWidth * definition.visualScale
+        val presentationHeight = visualHeight * definition.visualScale
+        val drawBounds = animation?.let {
+            BossPresentationLayout.frameDrawBounds(
+                centerX = centerX,
+                baselineY = baselineY,
+                visualWidth = presentationWidth,
+                visualHeight = presentationHeight,
+                animation = it,
+            )
+        }
+        if (drawBounds == null) {
+            drawTextureAtWorldSize(
+                canvas,
+                bitmap,
+                centerX,
+                baselineY,
+                presentationWidth,
+                presentationHeight,
+            )
+        } else {
+            drawTextureAtWorldSize(
+                canvas,
+                bitmap,
+                drawBounds.centerX,
+                drawBounds.baselineY,
+                drawBounds.width,
+                drawBounds.height,
+            )
+        }
     }
 
     private fun drawRunicBastionFrame(
@@ -1502,6 +1557,48 @@ class BattlefieldRenderer(
             }
         }
 
+        state.runicBastions.forEach { bastion ->
+            val centerX = worldToViewX(bastion.centerX, viewportWidth)
+            val centerY = worldToViewY(bastion.centerY, viewportHeight)
+            val halfWidth = worldToViewWidth(
+                RunicBastionGeometry.WIDTH / 2f,
+                viewportWidth,
+            )
+            val halfHeight = worldToViewHeight(
+                RunicBastionGeometry.HEIGHT / 2f,
+                viewportHeight,
+            )
+            canvas.drawRect(
+                centerX - halfWidth,
+                centerY - halfHeight,
+                centerX + halfWidth,
+                centerY + halfHeight,
+                hitboxPaint,
+            )
+        }
+
+        state.units.forEach { unit ->
+            val centerX = worldToViewX(unit.x, viewportWidth)
+            val centerY = worldToViewY(unit.y, viewportHeight)
+            val radiusX = worldToViewWidth(
+                WorldScale.UNIT_COLLISION_RADIUS,
+                viewportWidth,
+            )
+            val radiusY = worldToViewHeight(
+                WorldScale.UNIT_COLLISION_RADIUS,
+                viewportHeight,
+            )
+            canvas.drawOval(
+                RectF(
+                    centerX - radiusX,
+                    centerY - radiusY,
+                    centerX + radiusX,
+                    centerY + radiusY,
+                ),
+                hitboxPaint,
+            )
+        }
+
         state.boss?.takeIf { it.health > 0 }?.let { boss ->
             val centerX = worldToViewX(boss.x, viewportWidth)
             val centerY = worldToViewY(
@@ -1520,7 +1617,17 @@ class BattlefieldRenderer(
         state.projectiles.forEach { projectile ->
             val centerX = worldToViewX(projectile.x, viewportWidth)
             val centerY = worldToViewY(projectile.y, viewportHeight)
-            canvas.drawCircle(centerX, centerY, PROJECTILE_DEBUG_RADIUS, hitboxPaint)
+            val radiusX = worldToViewWidth(projectile.collisionRadius, viewportWidth)
+            val radiusY = worldToViewHeight(projectile.collisionRadius, viewportHeight)
+            canvas.drawOval(
+                RectF(
+                    centerX - radiusX,
+                    centerY - radiusY,
+                    centerX + radiusX,
+                    centerY + radiusY,
+                ),
+                hitboxPaint,
+            )
         }
     }
 
@@ -1628,7 +1735,6 @@ class BattlefieldRenderer(
                     GENERATED_SAPPER_ATTACK_CANVAS_SCALE) * progress
         }
         private const val CATAPULT_RENDER_WIDTH = WorldScale.CATAPULT_RENDER_WIDTH
-        private const val PROJECTILE_DEBUG_RADIUS = 30f
         private const val DECORATION_RENDER_SIZE = 94f
         private const val DECORATION_GROUND_SINK = 12f
         private const val FIRE_RAIN_AMMUNITION = "FIRE_RAIN"

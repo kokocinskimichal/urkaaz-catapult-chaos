@@ -116,6 +116,7 @@ data class ProjectileSnapshot(
     val windResponse: Float = 1f,
     val gravityResponse: Float = 1f,
     val drag: Float = 0f,
+    val collisionRadius: Float = 0f,
 )
 
 data class TerrainSnapshot(
