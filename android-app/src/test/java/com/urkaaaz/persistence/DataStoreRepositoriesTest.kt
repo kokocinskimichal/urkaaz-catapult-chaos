@@ -23,6 +23,10 @@ import com.urkaaaz.application.progression.PlayerProgressionRepositoryResult
 import com.urkaaaz.application.progression.PlayerProgressResetFailure
 import com.urkaaaz.application.progression.PlayerProgressResetResult
 import com.urkaaaz.application.progression.PlayerProgressionUseCases
+import com.urkaaaz.application.progression.DeveloperProgressPreset
+import com.urkaaaz.application.progression.DeveloperProgressPreset.DeveloperProgressField
+import com.urkaaaz.application.progression.DeveloperProgressPresetApply
+import com.urkaaaz.application.progression.DeveloperProgressSummary
 import com.urkaaaz.application.reward.EarnedReward
 import com.urkaaaz.application.reward.LevelRewardResult
 import com.urkaaaz.application.reward.RewardSettlementFailure
@@ -47,6 +51,94 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class DataStoreRepositoriesTest {
+    @Test
+    fun developerProgressPresetAppliesOnceAndSurvivesProgressResetMarker() = runBlocking {
+        testStore().use { store ->
+            val adapter = DataStoreDeveloperProgressPresetAdapter(store.dataStore)
+            val preset = DeveloperProgressPreset(
+                schemaVersion = 2,
+                revision = "test-2",
+                currentLevel = 8,
+                lives = 3,
+                gold = 750,
+                fieldsToApply = setOf(
+                    DeveloperProgressField.CURRENT_LEVEL,
+                    DeveloperProgressField.LIVES,
+                    DeveloperProgressField.GOLD,
+                ),
+                applyOnNextLaunch = true,
+            )
+
+            assertEquals(
+                DeveloperProgressPresetApply.Applied,
+                adapter.apply(preset, "preset-hash-2"),
+            )
+            val campaign = DataStoreCampaignProgressRepository(store.dataStore)
+                .loadOrInitialize() as CampaignProgressRepositoryResult.Available
+            assertEquals(8, campaign.progress.highestUnlockedLevel)
+            assertEquals((1..7).toSet(), campaign.progress.completedLevels)
+            assertEquals(
+                setOf("campaign_spell_haste", "campaign_spell_heal"),
+                campaign.progress.appliedMilestoneIds,
+            )
+            assertEquals(
+                LoadoutProgressionRead.Available(
+                    initialProfile().copy(goldBalance = 750),
+                ),
+                PlayerProgressionUseCases(
+                    DataStorePlayerProgressionRepository(store.dataStore),
+                ).snapshot(8),
+            )
+            assertEquals(
+                DeveloperProgressPresetApply.AlreadyApplied,
+                adapter.apply(preset, "preset-hash-2"),
+            )
+            assertEquals(DeveloperProgressSummary(8, 3, 750), adapter.summary())
+
+            assertEquals(
+                PlayerProgressResetResult.Reset,
+                DataStorePlayerProgressResetRepository(store.dataStore).reset(),
+            )
+            assertEquals(
+                DeveloperProgressPresetApply.AlreadyApplied,
+                adapter.apply(preset, "preset-hash-2"),
+            )
+            assertEquals(DeveloperProgressSummary(1, 5, 0), adapter.summary())
+        }
+    }
+
+    @Test
+    fun developerProgressPresetPreservesUnselectedProfileFields() = runBlocking {
+        testStore().use { store ->
+            store.dataStore.updateData { current ->
+                current.toMutablePreferences().apply {
+                    this[intPreferencesKey("profile.gold_balance")] = 1200
+                    this[intPreferencesKey("profile.lives")] = 2
+                }
+            }
+            val adapter = DataStoreDeveloperProgressPresetAdapter(store.dataStore)
+            val preset = DeveloperProgressPreset(
+                schemaVersion = 2,
+                revision = "test-level-only",
+                currentLevel = 5,
+                lives = 5,
+                gold = 0,
+                fieldsToApply = setOf(DeveloperProgressField.CURRENT_LEVEL),
+                applyOnNextLaunch = true,
+            )
+
+            assertEquals(
+                DeveloperProgressPresetApply.Applied,
+                adapter.apply(preset, "level-only-hash"),
+            )
+            assertEquals(DeveloperProgressSummary(5, 2, 1200), adapter.summary())
+            val campaign = DataStoreCampaignProgressRepository(store.dataStore)
+                .loadOrInitialize() as CampaignProgressRepositoryResult.Available
+            assertEquals(5, campaign.progress.highestUnlockedLevel)
+            assertEquals((1..4).toSet(), campaign.progress.completedLevels)
+        }
+    }
+
     @Test
     fun rewardSettlementAtomicallyPersistsCampaignProfileAndIdempotencyReceipt() = runBlocking {
         testStore().use { store ->

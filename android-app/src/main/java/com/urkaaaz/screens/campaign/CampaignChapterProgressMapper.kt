@@ -1,6 +1,7 @@
 package com.urkaaaz.screens.campaign
 
 import com.urkaaaz.application.campaign.CampaignProgress
+import com.urkaaaz.campaign.CampaignLevelDefinition
 import com.urkaaaz.campaign.CampaignChapterDefinition
 import com.urkaaaz.campaign.CampaignChapterRegistry
 import com.urkaaaz.campaign.CampaignMapLandmarkKind
@@ -38,12 +39,17 @@ class CampaignChapterProgressMapper(
     private val registry: CampaignChapterRegistry = CampaignChapterRegistry.default(),
 ) {
     fun map(progress: CampaignProgress): CampaignMapProgressionState {
-        val currentChapter = registry.chapterForLevel(progress.highestUnlockedLevel)
+        val playableFrontier = progress.highestUnlockedLevel.coerceAtMost(
+            CampaignLevelDefinition.LAST_COMPLETE_CAMPAIGN_LEVEL,
+        )
+        val currentChapter = registry.chapterForLevel(playableFrontier)
         val currentIndex = registry.chapters.indexOf(currentChapter)
         val currentChapterId = currentChapter.id
 
         val visibleChapters = registry.chapters.mapIndexedNotNull { index, chapter ->
-            val isCompleted = (chapter.firstLevel..chapter.lastLevel)
+            val isCompleted = chapter.lastLevel <=
+                CampaignLevelDefinition.LAST_COMPLETE_CAMPAIGN_LEVEL &&
+                (chapter.firstLevel..chapter.lastLevel)
                 .all { it in progress.completedLevels }
             val status = when {
                 isCompleted -> CampaignChapterPageStatus.COMPLETED
@@ -53,9 +59,11 @@ class CampaignChapterProgressMapper(
             }
             val markers = (chapter.firstLevel..chapter.lastLevel).map { level ->
                 val markerStatus = when {
+                    level > CampaignLevelDefinition.LAST_COMPLETE_CAMPAIGN_LEVEL ->
+                        CampaignLevelMarkerStatus.LOCKED
                     level in progress.completedLevels -> CampaignLevelMarkerStatus.COMPLETED
                     status == CampaignChapterPageStatus.CURRENT &&
-                        level == progress.highestUnlockedLevel ->
+                        level == playableFrontier ->
                         CampaignLevelMarkerStatus.AVAILABLE
                     else -> CampaignLevelMarkerStatus.LOCKED
                 }

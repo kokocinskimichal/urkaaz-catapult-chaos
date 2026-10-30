@@ -1,0 +1,281 @@
+{
+  "schemaVersion": 1,
+  "balanceRevision": "boss-legacy-baseline-1",
+  "bosses": [
+    {
+      "id": "boss.central-ancient-war-oak.level-05",
+      "presentationKey": "ancient_war_oak",
+      "archetype": "CENTRAL_OBJECTIVE",
+      "maxHealth": 12000,
+      "collision": { "width": 1440.0, "height": 2016.0 },
+      "movement": { "kind": "STATIC", "speedWorldUnitsPerSecond": 0.0 },
+      "attacks": [
+        {
+          "target": "UNIT",
+          "damage": 150,
+          "minimumDamage": 35,
+          "rangeWorldUnits": 780.0,
+          "cooldownSeconds": 4.0,
+          "initialCooldownSeconds": 2.5
+        }
+      ],
+      "specialAbilities": [],
+      "immuneAmmunitionTypes": ["PLAGUE_CAULDRON"]
+    },
+    {
+      "id": "boss.mobile-thorncrown.level-10",
+      "presentationKey": "thorncrown",
+      "archetype": "MOBILE_SIEGE_BOSS",
+      "maxHealth": 9000,
+      "collision": { "width": 431.0, "height": 518.4 },
+      "movement": { "kind": "ADVANCE", "speedWorldUnitsPerSecond": 36.4 },
+      "attacks": [
+        {
+          "target": "UNIT",
+          "damage": 180,
+          "minimumDamage": 45,
+          "rangeWorldUnits": 287.0,
+          "cooldownSeconds": 4.5,
+          "initialCooldownSeconds": 2.5
+        },
+        {
+          "target": "FORTRESS_GATE",
+          "damage": 45,
+          "minimumDamage": 45,
+          "rangeWorldUnits": 80.0,
+          "cooldownSeconds": 1.0,
+          "initialCooldownSeconds": 1.0
+        }
+      ],
+      "specialAbilities": [
+        {
+          "kind": "ENRAGE",
+          "healthFractionThreshold": 0.35,
+          "speedMultiplier": 1.35,
+          "attackCooldownMultiplier": 0.666667
+        }
+      ],
+      "immuneAmmunitionTypes": ["PLAGUE_CAULDRON"]
+    },
+    {
+      "id": "boss.central-frozen-troll.level-15",
+      "presentationKey": "frozen_troll",
+      "archetype": "CENTRAL_OBJECTIVE",
+      "maxHealth": 360,
+      "collision": { "width": 1440.0, "height": 2016.0 },
+      "movement": { "kind": "STATIC", "speedWorldUnitsPerSecond": 0.0 },
+      "attacks": [
+        {
+          "target": "UNIT",
+          "damage": 150,
+          "minimumDamage": 35,
+          "rangeWorldUnits": 780.0,
+          "cooldownSeconds": 4.0,
+          "initialCooldownSeconds": 2.5
+        }
+      ],
+      "specialAbilities": [],
+      "immuneAmmunitionTypes": ["PLAGUE_CAULDRON"]
+    },
+    {
+      "id": "boss.mobile-old-yeti-sovereign.level-20",
+      "presentationKey": "old_yeti_sovereign",
+      "archetype": "MOBILE_SIEGE_BOSS",
+      "maxHealth": 9000,
+      "collision": { "width": 431.0, "height": 518.4 },
+      "movement": { "kind": "ADVANCE", "speedWorldUnitsPerSecond": 36.4 },
+      "attacks": [
+        {
+          "target": "UNIT",
+          "damage": 180,
+          "minimumDamage": 45,
+          "rangeWorldUnits": 287.0,
+          "cooldownSeconds": 4.5,
+          "initialCooldownSeconds": 2.5
+        },
+        {
+          "target": "FORTRESS_GATE",
+          "damage": 45,
+          "minimumDamage": 45,
+          "rangeWorldUnits": 80.0,
+          "cooldownSeconds": 1.0,
+          "initialCooldownSeconds": 1.0
+        }
+      ],
+      "specialAbilities": [
+        {
+          "kind": "ENRAGE",
+          "healthFractionThreshold": 0.35,
+          "speedMultiplier": 1.35,
+          "attackCooldownMultiplier": 0.666667
+        }
+      ],
+      "immuneAmmunitionTypes": ["PLAGUE_CAULDRON"]
+    },
+    {
+      "id": "boss.central-copperwood-siege-lord.level-25",
+      "presentationKey": "copperwood_siege_lord",
+      "archetype": "CENTRAL_OBJECTIVE",
+      "maxHealth": 10000,
+      "collision": { "width": 1440.0, "height": 2016.0 },
+      "movement": { "kind": "STATIC", "speedWorldUnitsPerSecond": 0.0 },
+      "attacks": [
+        {
+          "target": "UNIT",
+          "damage": 150,
+          "minimumDamage": 35,
+          "rangeWorldUnits": 780.0,
+          "cooldownSeconds": 4.0,
+          "initialCooldownSeconds": 2.5
+        }
+      ],
+      "specialAbilities": [],
+      "immuneAmmunitionTypes": ["PLAGUE_CAULDRON"]
+    },
+    {
+      "id": "boss.mobile-copperwood-final-boss.level-30",
+      "presentationKey": "copperwood_final_boss",
+      "archetype": "MOBILE_SIEGE_BOSS",
+      "maxHealth": 9000,
+      "collision": { "width": 431.0, "height": 518.4 },
+      "movement": { "kind": "ADVANCE", "speedWorldUnitsPerSecond": 36.4 },
+      "attacks": [
+        {
+          "target": "UNIT",
+          "damage": 180,
+          "minimumDamage": 45,
+          "rangeWorldUnits": 287.0,
+          "cooldownSeconds": 4.5,
+          "initialCooldownSeconds": 2.5
+        },
+        {
+          "target": "FORTRESS_GATE",
+          "damage": 45,
+          "minimumDamage": 45,
+          "rangeWorldUnits": 80.0,
+          "cooldownSeconds": 1.0,
+          "initialCooldownSeconds": 1.0
+        }
+      ],
+      "specialAbilities": [
+        {
+          "kind": "ENRAGE",
+          "healthFractionThreshold": 0.35,
+          "speedMultiplier": 1.35,
+          "attackCooldownMultiplier": 0.666667
+        }
+      ],
+      "immuneAmmunitionTypes": ["PLAGUE_CAULDRON"]
+    },
+    {
+      "id": "boss.central-burntwood-warden.level-35",
+      "presentationKey": "burntwood_warden",
+      "archetype": "CENTRAL_OBJECTIVE",
+      "maxHealth": 12000,
+      "collision": { "width": 1440.0, "height": 2016.0 },
+      "movement": { "kind": "STATIC", "speedWorldUnitsPerSecond": 0.0 },
+      "attacks": [
+        {
+          "target": "UNIT",
+          "damage": 150,
+          "minimumDamage": 35,
+          "rangeWorldUnits": 780.0,
+          "cooldownSeconds": 4.0,
+          "initialCooldownSeconds": 2.5
+        }
+      ],
+      "specialAbilities": [],
+      "immuneAmmunitionTypes": ["PLAGUE_CAULDRON"]
+    },
+    {
+      "id": "boss.mobile-scorchbound-king.level-40",
+      "presentationKey": "scorchbound_king",
+      "archetype": "MOBILE_SIEGE_BOSS",
+      "maxHealth": 12150,
+      "collision": { "width": 431.0, "height": 518.4 },
+      "movement": { "kind": "ADVANCE", "speedWorldUnitsPerSecond": 36.4 },
+      "attacks": [
+        {
+          "target": "UNIT",
+          "damage": 180,
+          "minimumDamage": 45,
+          "rangeWorldUnits": 287.0,
+          "cooldownSeconds": 4.5,
+          "initialCooldownSeconds": 2.5
+        },
+        {
+          "target": "FORTRESS_GATE",
+          "damage": 45,
+          "minimumDamage": 45,
+          "rangeWorldUnits": 80.0,
+          "cooldownSeconds": 1.0,
+          "initialCooldownSeconds": 1.0
+        }
+      ],
+      "specialAbilities": [
+        {
+          "kind": "ENRAGE",
+          "healthFractionThreshold": 0.35,
+          "speedMultiplier": 1.35,
+          "attackCooldownMultiplier": 0.666667
+        }
+      ],
+      "immuneAmmunitionTypes": ["PLAGUE_CAULDRON"]
+    },
+    {
+      "id": "boss.central-ancient-war-oak.level-45",
+      "presentationKey": "ancient_war_oak",
+      "archetype": "CENTRAL_OBJECTIVE",
+      "maxHealth": 12000,
+      "collision": { "width": 1440.0, "height": 2016.0 },
+      "movement": { "kind": "STATIC", "speedWorldUnitsPerSecond": 0.0 },
+      "attacks": [
+        {
+          "target": "UNIT",
+          "damage": 150,
+          "minimumDamage": 35,
+          "rangeWorldUnits": 780.0,
+          "cooldownSeconds": 4.0,
+          "initialCooldownSeconds": 2.5
+        }
+      ],
+      "specialAbilities": [],
+      "immuneAmmunitionTypes": ["PLAGUE_CAULDRON"]
+    },
+    {
+      "id": "boss.mobile-thorncrown.level-50",
+      "presentationKey": "thorncrown",
+      "archetype": "MOBILE_SIEGE_BOSS",
+      "maxHealth": 9000,
+      "collision": { "width": 431.0, "height": 518.4 },
+      "movement": { "kind": "ADVANCE", "speedWorldUnitsPerSecond": 36.4 },
+      "attacks": [
+        {
+          "target": "UNIT",
+          "damage": 180,
+          "minimumDamage": 45,
+          "rangeWorldUnits": 287.0,
+          "cooldownSeconds": 4.5,
+          "initialCooldownSeconds": 2.5
+        },
+        {
+          "target": "FORTRESS_GATE",
+          "damage": 45,
+          "minimumDamage": 45,
+          "rangeWorldUnits": 80.0,
+          "cooldownSeconds": 1.0,
+          "initialCooldownSeconds": 1.0
+        }
+      ],
+      "specialAbilities": [
+        {
+          "kind": "ENRAGE",
+          "healthFractionThreshold": 0.35,
+          "speedMultiplier": 1.35,
+          "attackCooldownMultiplier": 0.666667
+        }
+      ],
+      "immuneAmmunitionTypes": ["PLAGUE_CAULDRON"]
+    }
+  ]
+}

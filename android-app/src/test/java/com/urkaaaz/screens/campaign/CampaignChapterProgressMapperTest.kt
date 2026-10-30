@@ -75,7 +75,7 @@ class CampaignChapterProgressMapperTest {
     }
 
     @Test
-    fun completedCampaignShowsAllChaptersAndSelectsTheLastOne() {
+    fun legacyProgressBeyondBossContentFrontierKeepsLaterBossLevelsLocked() {
         val state = mapper.map(
             CampaignProgress(
                 highestUnlockedLevel = 100,
@@ -83,15 +83,20 @@ class CampaignChapterProgressMapperTest {
             ),
         )
 
-        assertEquals(10, state.pages.size)
-        assertEquals("last_siege", state.selectedChapterId)
+        assertEquals(7, state.pages.size)
+        assertEquals(state.pages[5].chapter.id, state.selectedChapterId)
         assertTrue(
-            state.pages.all { page ->
-                page.status == CampaignChapterPageStatus.COMPLETED &&
-                    page.markers.all {
-                        it.status == CampaignLevelMarkerStatus.COMPLETED
-                    }
+            state.pages.take(5).all { page ->
+                page.status == CampaignChapterPageStatus.COMPLETED
             },
         )
+        assertEquals(CampaignChapterPageStatus.CURRENT, state.pages[5].status)
+        assertEquals(CampaignChapterPageStatus.PREVIEW, state.pages.last().status)
+        assertTrue(
+            state.pages[5].markers.filter { it.level >= 55 }.all { marker ->
+                marker.status == CampaignLevelMarkerStatus.LOCKED
+            },
+        )
+        assertTrue(state.pages.last().markers.all { it.status == CampaignLevelMarkerStatus.LOCKED })
     }
 }

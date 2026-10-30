@@ -3,8 +3,8 @@
 Lokalne narzędzie deweloperskie (nie część gry). Architektura i decyzje:
 [`docs/architecture/studio-architecture.md`](../docs/architecture/studio-architecture.md).
 
-Stan: **kroki 1–6 — szkielet, wizualizator animacji oraz edytory Map i Campaign**.
-Zakładka Animations wyświetla drzewo kategoria → cel → typ, odtwarza klatki
+Stan: szkielet, wizualizator animacji, edytory Map/Campaign oraz zakładki
+Balance i Progress. Zakładka Animations wyświetla drzewo kategoria → cel → typ, odtwarza klatki
 oraz dla sekwencji
 oznaczonych w `teamTextureTargets` przełącza teksturę BLUE/RED oraz nakładkę
 masek (obecnie Defender oraz idle/move Demolishera). Zakładka Maps to edytor
@@ -19,11 +19,36 @@ wyłączają edycję do czasu dodania artworku.
 Assety są indeksowane i serwowane bezpośrednio ze źródeł przez `/api/assets`.
 Serwer udostępnia też `POST /api/maps/validate`, `GET /api/health`,
 `GET /api/animations`, `GET /api/animations/{id}/frames/{n}`, team masks i
-team textures oraz `/api/campaign/*`. Znane
+team textures, `/api/campaign/*`, `/api/balance*` oraz `/api/progress*`. Znane
 cele i sekwencje bez loadera w grze opisuje ręcznie utrzymywany
 `config/animations.json`; palety wskazują
 `android-app/src/main/assets/animations/<unit>/palettes.json`. Maski są
 automatycznym draftem i wymagają przeglądu artystycznego.
+
+Animations obsługuje kategorie Units, Spells, Ammunition i Bosses.
+Statyczne bossy są jednoklatkowymi sekwencjami
+`anim_boss_<presentationKey>_idle_000.png`; katalog zgłasza profile balansu,
+których klucze prezentacji nie mają sprite'a. Nowe stany animacji są podglądane
+od razu, ale pozostają oznaczone jako bez runtime loadera, dopóki Android nie
+zacznie ich odtwarzać.
+
+Balance edytuje kanoniczny
+`game-domain/src/main/resources/balance/game-balance.json`. `GET /api/balance`
+zwraca treść i SHA-256, `POST /api/balance/validate` raportuje błędy z
+ścieżkami, a `PUT /api/balance` wymaga aktualnego hasha, waliduje profile i
+atomowo zapisuje zmianę. Zmienione dane wymagają nowej rewizji balansu, którą
+edytor automatycznie podbija, jeśli użytkownik jej nie zmienił. Zastosowanie
+balansu wymaga rebuilda i restartu aplikacji; Studio nie ma hot reloadu.
+
+Progress edytuje
+`game-application/src/main/resources/progression/developer-progress.json`:
+bieżący poziom kampanii, życia i złoto. Pola **Apply this value** wybierają,
+które wartości zmienić; samo **Apply once on next debug app launch** kolejkuje
+ich jednorazowy zapis do lokalnego DataStore. Studio waliduje preset, zapis
+wymaga aktualnego SHA-256, a rewizja jest automatycznie zwiększana. Po zmianie
+presetu wymagany jest rebuild i restart debugowej aplikacji; release build nie
+stosuje development presetów. Życia są obecnie wartością profilu i HUD-u — ich
+zużywanie ani regeneracja nie są jeszcze mechaniką gry.
 
 ```sh
 cd studio
@@ -43,7 +68,10 @@ npm run build    # build frontendu (studio/web/dist, ignorowany przez git)
 - `web/` — React/Vite. Importuje kontrakty API z `server/src/contracts` przez
   alias `@studio/contracts` (tylko typy). Zakładki rejestruje `src/shell/tabs.ts`;
   edytory map gameplayowych i map kampanii znajdują się odpowiednio w
-  `src/tabs/maps/` i `src/tabs/campaign/`.
+  `src/tabs/maps/` i `src/tabs/campaign/`; edytor balansu jest w
+  `src/tabs/balance/`.
+- `server/src/services/balanceCatalog.ts` — ścisła walidacja, SHA-256 i
+  atomowy zapis `game-balance.json` z kontrolą rewizji i konfliktów.
 - `server/src/services/mapCatalog.ts` — bezpieczny odczyt i zapis obu kopii
   definicji map z kontrolą sumy pary plików oraz wycofaniem częściowego zapisu.
 - `server/src/services/campaignMapCatalog.ts` — wspólny chapter catalog,

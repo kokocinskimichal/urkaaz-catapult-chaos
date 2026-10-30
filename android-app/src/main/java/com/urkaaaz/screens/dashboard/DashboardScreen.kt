@@ -3,6 +3,7 @@ package com.urkaaaz.screens.dashboard
 import android.app.AlertDialog
 import android.content.Context
 import android.graphics.Color
+import android.util.Log
 import android.view.Gravity
 import android.view.View
 import android.widget.Button
@@ -15,8 +16,10 @@ import android.widget.TextView
 import android.widget.Toast
 import com.urkaaaz.android.R
 import com.urkaaaz.application.progression.PlayerProgressResetResult
+import com.urkaaaz.application.progression.DeveloperProgressSummary
 import com.urkaaaz.navigation.ScreenContent
 import com.urkaaaz.ui.UiTypography
+import java.io.IOException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -29,9 +32,13 @@ class DashboardScreen(
     private val onCampaign: () -> Unit,
     private val onShop: () -> Unit,
     private val onResetProgress: suspend () -> PlayerProgressResetResult,
+    private val loadProgress: suspend () -> DeveloperProgressSummary,
 ) : ScreenContent {
     private val viewModel = DashboardViewModel()
     private var screenScope: CoroutineScope? = null
+    private val livesValue = label("5", 16f)
+    private val currentLevelValue = label(context.getString(R.string.dashboard_current_level, 1), 10f)
+    private val goldValue = label("0", 16f)
     private val resetProgressButton = Button(context).apply {
         text = context.getString(R.string.dashboard_reset_progress)
         UiTypography.applyButtonTypeface(this)
@@ -82,6 +89,15 @@ class DashboardScreen(
         if (screenScope != null) return
         screenScope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
         resetProgressButton.isEnabled = true
+        screenScope?.launch {
+            try {
+                renderProgress(viewModel.updateProgress(loadProgress()))
+            } catch (error: IOException) {
+                Log.e("DashboardScreen", "Could not load player progress summary", error)
+            } catch (error: IllegalArgumentException) {
+                Log.e("DashboardScreen", "Could not load player progress summary", error)
+            }
+        }
     }
 
     override fun onPause() {
@@ -100,8 +116,11 @@ class DashboardScreen(
             orientation = LinearLayout.HORIZONTAL
             gravity = Gravity.CENTER
             addView(image(R.drawable.icon_lives_heart, 42, 42))
-            addView(label("5", 16f), LinearLayout.LayoutParams(-2, -2).apply {
+            addView(livesValue, LinearLayout.LayoutParams(-2, -2).apply {
                 marginStart = dp(6)
+            })
+            addView(currentLevelValue, LinearLayout.LayoutParams(-2, -2).apply {
+                marginStart = dp(8)
             })
             addView(Button(context).apply {
                 text = "RESET"
@@ -121,7 +140,7 @@ class DashboardScreen(
             orientation = LinearLayout.HORIZONTAL
             gravity = Gravity.CENTER
             addView(image(R.drawable.icon_next_life_hourglass, 36, 36))
-            addView(label("FULL", 13f), LinearLayout.LayoutParams(-2, -2).apply {
+            addView(label(context.getString(R.string.dashboard_life_regeneration_unavailable), 13f), LinearLayout.LayoutParams(-2, -2).apply {
                 marginStart = dp(6)
             })
         })
@@ -130,7 +149,7 @@ class DashboardScreen(
             orientation = LinearLayout.HORIZONTAL
             gravity = Gravity.CENTER
             addView(image(R.drawable.icon_orcoins, 50, 42))
-            addView(label("0", 16f), LinearLayout.LayoutParams(-2, -2).apply {
+            addView(goldValue, LinearLayout.LayoutParams(-2, -2).apply {
                 marginStart = dp(6)
             })
         })
@@ -183,6 +202,15 @@ class DashboardScreen(
         setTextColor(Color.WHITE)
     }
 
+    private fun renderProgress(state: DashboardUiState) {
+        livesValue.text = state.lives.toString()
+        currentLevelValue.text = context.getString(
+            R.string.dashboard_current_level,
+            state.currentLevel,
+        )
+        goldValue.text = state.gold.toString()
+    }
+
     private fun showResetConfirmation() {
         AlertDialog.Builder(context)
             .setTitle(R.string.dashboard_reset_progress_title)
@@ -199,13 +227,31 @@ class DashboardScreen(
         resetProgressButton.isEnabled = false
         scope.launch {
             try {
-                val message = when (onResetProgress()) {
+                val result = onResetProgress()
+                val message = when (result) {
                     PlayerProgressResetResult.Reset ->
                         R.string.dashboard_reset_progress_success
                     is PlayerProgressResetResult.Failure ->
                         R.string.dashboard_reset_progress_failure
                 }
+                if (result == PlayerProgressResetResult.Reset) {
+                    renderProgress(viewModel.updateProgress(loadProgress()))
+                }
                 Toast.makeText(context, message, Toast.LENGTH_LONG).show()
+            } catch (error: IOException) {
+                Log.e("DashboardScreen", "Could not reset player progress", error)
+                Toast.makeText(
+                    context,
+                    R.string.dashboard_reset_progress_failure,
+                    Toast.LENGTH_LONG,
+                ).show()
+            } catch (error: IllegalArgumentException) {
+                Log.e("DashboardScreen", "Could not reset player progress", error)
+                Toast.makeText(
+                    context,
+                    R.string.dashboard_reset_progress_failure,
+                    Toast.LENGTH_LONG,
+                ).show()
             } finally {
                 resetProgressButton.isEnabled = screenScope != null
             }

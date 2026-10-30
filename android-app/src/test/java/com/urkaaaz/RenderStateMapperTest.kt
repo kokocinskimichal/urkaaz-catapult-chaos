@@ -1,6 +1,9 @@
 package com.urkaaaz
 
 import com.urkaaaz.contracts.MatchPhase
+import com.urkaaaz.contracts.BossArchetype
+import com.urkaaaz.contracts.BossPhase
+import com.urkaaaz.contracts.BossSnapshot
 import com.urkaaaz.contracts.MatchSnapshot
 import com.urkaaaz.contracts.MatchStatus
 import com.urkaaaz.contracts.EntityId
@@ -113,6 +116,35 @@ class RenderStateMapperTest {
         assertEquals(360, state.blueRunicBastionMaxHealth)
         assertEquals(1, state.runicBastions.size)
         assertEquals(380f, state.runicBastions.single().centerY)
+    }
+
+    @Test
+    fun mapperPassesBossHealthPhaseAndDamageTotalsToPresentation() {
+        val state = RenderStateMapper.map(
+            MatchSnapshot(
+                boss = BossSnapshot(
+                    entityId = EntityId("boss-oak"),
+                    profileId = "boss.central-ancient-war-oak.level-05",
+                    presentationKey = "ancient_war_oak",
+                    archetype = BossArchetype.CENTRAL_OBJECTIVE,
+                    phase = BossPhase.IDLE,
+                    x = 3_600f,
+                    groundY = 3_200f,
+                    collisionWidth = 1_440f,
+                    collisionHeight = 2_016f,
+                    health = 8_000,
+                    maxHealth = 12_000,
+                    blueDamage = 2_500,
+                    redDamage = 1_500,
+                ),
+            ),
+        )
+
+        assertEquals(8_000, state.boss?.health)
+        assertEquals(BossPhase.IDLE, state.boss?.phase)
+        assertEquals(BossArchetype.CENTRAL_OBJECTIVE, state.boss?.archetype)
+        assertEquals(2_500, state.boss?.blueDamage)
+        assertEquals(1_500, state.boss?.redDamage)
     }
 
     @Test

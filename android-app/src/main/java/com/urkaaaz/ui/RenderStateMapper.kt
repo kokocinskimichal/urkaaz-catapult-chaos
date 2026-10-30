@@ -2,6 +2,9 @@ package com.urkaaaz.ui
 
 import com.urkaaaz.contracts.MatchEvent
 import com.urkaaaz.contracts.MatchSnapshot
+import com.urkaaaz.contracts.BossSnapshot
+import com.urkaaaz.contracts.BossArchetype
+import com.urkaaaz.contracts.BossPhase
 import com.urkaaaz.contracts.CatapultPresentationContract
 import com.urkaaaz.contracts.InitialCameraAnchor
 import com.urkaaaz.contracts.RunicBastionGeometry
@@ -78,6 +81,23 @@ data class RenderState(
     val activeSpellRemainingMilliseconds: Map<String, Long> = emptyMap(),
     val spellFeedbackLabel: String? = null,
     val fortressShieldHits: List<FortressShieldHitRenderState> = emptyList(),
+    val boss: BossRenderState? = null,
+)
+
+data class BossRenderState(
+    val entityId: String,
+    val profileId: String,
+    val presentationKey: String,
+    val archetype: BossArchetype,
+    val phase: BossPhase,
+    val x: Float,
+    val groundY: Float,
+    val collisionWidth: Float,
+    val collisionHeight: Float,
+    val health: Int,
+    val maxHealth: Int,
+    val blueDamage: Int,
+    val redDamage: Int,
 )
 
 data class RunicBastionRenderState(
@@ -517,8 +537,25 @@ object RenderStateMapper {
                 )
             }
         },
+        boss = snapshot.boss?.let { it.toRenderState() },
         )
     }
+
+    private fun BossSnapshot.toRenderState() = BossRenderState(
+        entityId = entityId.value,
+        profileId = profileId,
+        presentationKey = presentationKey,
+        archetype = archetype,
+        phase = phase,
+        x = x,
+        groundY = groundY,
+        collisionWidth = collisionWidth,
+        collisionHeight = collisionHeight,
+        health = health,
+        maxHealth = maxHealth,
+        blueDamage = blueDamage,
+        redDamage = redDamage,
+    )
 
     private fun fortressX(id: String, blueX: Float, redX: Float): Float =
         if (id.startsWith("blue")) blueX else redX

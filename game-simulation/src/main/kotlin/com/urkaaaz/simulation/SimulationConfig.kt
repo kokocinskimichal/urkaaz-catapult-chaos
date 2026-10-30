@@ -1,7 +1,11 @@
 package com.urkaaaz.simulation
 
 import com.urkaaaz.contracts.MapDefinition
+import com.urkaaaz.contracts.BossEncounterConfig
+import com.urkaaaz.contracts.BossArchetype
+import com.urkaaaz.contracts.BossVictoryRule
 import com.urkaaaz.contracts.PlayerLoadoutConfig
+import com.urkaaaz.domain.BossBalanceProfile
 import com.urkaaaz.contracts.WorldScale
 import com.urkaaaz.domain.ManaConfiguration
 import com.urkaaaz.domain.WorldBounds
@@ -24,8 +28,13 @@ data class SimulationConfig(
     val manaRegenerationAmount: Int = ManaConfiguration.REGENERATION_AMOUNT,
     val manaRegenerationIntervalMilliseconds: Long =
         ManaConfiguration.REGENERATION_INTERVAL_MILLISECONDS,
-    val matchDurationMilliseconds: Long = 300_000L,
+    val matchDurationMilliseconds: Long = DEFAULT_MATCH_DURATION_MILLISECONDS,
+    val bossEncounterMatchDurationMilliseconds: Long = matchDurationMilliseconds,
     val mapDefinition: MapDefinition? = null,
+    val bossEncounter: BossEncounterConfig? = null,
+    val bossProfile: BossBalanceProfile? = null,
+    val balanceRevision: String? = null,
+    val balanceContentHash: String? = null,
     val playerLoadout: PlayerLoadoutConfig? = null,
     val availableAmmunitionTypes: Set<String> = emptySet(),
     val combatRandomSeed: Long = 0L,
@@ -60,5 +69,26 @@ data class SimulationConfig(
         require(matchDurationMilliseconds > 0) {
             "match duration must be positive"
         }
+        require(bossEncounterMatchDurationMilliseconds > 0) {
+            "boss encounter match duration must be positive"
+        }
+        require((bossEncounter == null) == (bossProfile == null)) {
+            "boss encounter and boss balance profile must be provided together"
+        }
+        if (bossEncounter != null) {
+            require(bossEncounter.profileId == bossProfile?.id) {
+                "boss encounter profile ID must match the loaded boss profile"
+            }
+            require(
+                (bossProfile?.archetype == BossArchetype.CENTRAL_OBJECTIVE) ==
+                    (bossEncounter.victoryRule == BossVictoryRule.CENTRAL_DAMAGE_RACE),
+            ) {
+                "boss victory rule must match the boss archetype"
+            }
+        }
+    }
+
+    companion object {
+        const val DEFAULT_MATCH_DURATION_MILLISECONDS = 300_000L
     }
 }

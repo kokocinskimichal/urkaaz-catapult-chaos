@@ -23,13 +23,14 @@ const sequences = [
   sequence("anim_character_defender_move_blue", "character", "defender", "move", "blue"),
   sequence("anim_character_defender_idle_blue", "character", "defender", "idle", "blue"),
   sequence("anim_spell_haste_orbiting_chevron", "spell", "haste", "orbiting_chevron", null),
+  sequence("anim_boss_thorncrown_idle", "boss", "thorncrown", "idle", null),
 ];
 
 describe("buildTree", () => {
   const tree = buildTree(sequences);
 
-  it("orders categories as characters, spells, ammunition", () => {
-    expect(tree.map(node => node.category)).toEqual(["character", "spell", "ammunition"]);
+  it("orders categories as characters, spells, ammunition, bosses", () => {
+    expect(tree.map(node => node.category)).toEqual(["character", "spell", "ammunition", "boss"]);
   });
 
   it("groups by target and type with team variants sorted", () => {
@@ -69,6 +70,11 @@ describe("selection helpers", () => {
       target: "rock",
       type: "flight",
     });
+    expect(firstSelectionForCategory(tree, "boss")).toEqual({
+      category: "boss",
+      target: "thorncrown",
+      type: "idle",
+    });
     expect(firstSelectionForCategory([], "spell")).toBeNull();
   });
 
@@ -77,6 +83,7 @@ describe("selection helpers", () => {
       character: "Units",
       spell: "Spells",
       ammunition: "Ammunition",
+      boss: "Bosses",
     });
   });
 

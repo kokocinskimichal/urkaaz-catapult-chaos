@@ -2,9 +2,11 @@
 
 ## Status
 
-**Plan architektoniczny; system nie jest zaimplementowany.** Dokument opisuje
-docelowy system bossów oraz jego pierwszą migrację z legacy. Nie dodaje kodu,
-kontraktów Kotlin, testów ani assetów.
+**Pierwszy zakres BossSystemu jest zaimplementowany.** Mobilne bossy i cele
+centralne działają na poziomach 5–50; system korzysta z typowanych kontraktów,
+deterministycznego runtime, wspólnego JSON-u balansu, Studio, statycznych
+assetów i match HUD-u. Dokument pozostaje opisem architektury oraz granic
+odłożonych rozszerzeń.
 
 Zatwierdzony zakres:
 
@@ -20,7 +22,8 @@ Zatwierdzony zakres:
   edytowane w Urkaaaz Studio; zapis wymaga rebuilda oraz ponownego uruchomienia
   aplikacji, bez hot reloadu;
 - poziomy 55–100 pozostają niedostępne w kampanii do czasu przypisania im
-  kompletnych profili bossów i assetów.
+  kompletnych profili bossów i assetów; poziomy 51–54 bez encounteru bossa są
+  grywalne, a po poziomie 54 kampania nie odblokowuje poziomu 55.
 
 ## Cel i zakres
 
@@ -46,14 +49,16 @@ podstawową prezentację oraz authoring balansu w Studio.
   źródła konfiguracji;
 - nowy moduł Gradle, skrypty wykonywalne w JSON, hot reload oraz trwały zapis
   runtime state bossa;
-- szczegółowe rozpisanie zadań do realizacji oraz kompletna, finalna
-  specyfikacja JSON-a; dokument opisuje architekturę i fazy, a kształt pliku
-  balansu jest ilustracyjny i zostanie sfinalizowany podczas implementacji.
+- animacje ruchu, walki, enrage i śmierci; obecna wersja używa statycznych
+  sprite'ów.
 
 ## Istniejące rozwiązania i ryzyko duplikacji
 
-W repozytorium nie ma jeszcze runtime bossów ani celu centralnego. Istnieją
-natomiast kanoniczne definicje balansu w `game-domain`:
+Przed tym wdrożeniem repozytorium nie miało runtime bossów ani celu
+centralnego. Obecnie runtime należy do `BossSystem` w
+`game-simulation`, a kanoniczne definicje balansu bossów znajdują się w
+typowanym modelu `game-domain` oraz zasobie JSON. Wciąż istnieją także
+kanoniczne katalogi pozostałych systemów:
 
 - `UnitConfigurations`;
 - `AmmunitionCatalog`;
@@ -70,17 +75,16 @@ kampanii. Nie są identyfikatorami runtime bossa ani jego pozycją w świecie.
 Przypisanie bossa do poziomu musi być osobną, typowaną częścią definicji
 poziomu/scenariusza.
 
-`CampaignLevelDefinition` tworzy scenariusze kampanii, a `MatchScenario`
-zawiera obecnie `VictoryRulesConfig` z ogólną regułą pokonania przeciwnika.
-Nie ma jeszcze pola `bossId`, konfiguracji spawnu bossa ani reguł zwycięstwa
-dla tych spotkań. `DeterministicMatchSimulation` jest właścicielem istniejącego
-runtime meczu i jego wyniku — BossSystem ma zostać włączony do tego lifecycle,
-nie tworzyć równoległego silnika.
+`CampaignLevelDefinition` tworzy scenariusze kampanii z typowanym
+`BossEncounterConfig`. `MatchScenario` przenosi `profileId`, spawn X jako
+proporcję world width i `BossVictoryRule`; nie importuje modelu domenowego.
+`DeterministicMatchSimulation` pozostaje właścicielem lifecycle i wyniku
+meczu, a `BossSystem` jest jego podsystemem.
 
 Studio ma istniejące wzorce lokalnego API, walidacji danych, oczekiwanego hasha
-przy zapisie, błędu konfliktu `409` oraz atomowej podmiany pliku. Balance tab
-powinien użyć tych wzorców, ale nie współdzielić katalogu ani kontraktu z
-edytorem map.
+przy zapisie, błędu konfliktu `409` oraz atomowej podmiany pliku. Balance
+korzysta z analogicznego API dla jednego pliku i nie współdzieli katalogu ani
+kontraktu z edytorem map.
 
 ## Właściciele i moduły
 
@@ -149,37 +153,36 @@ Każdy profil bossa zawiera:
 | `movement` | `STATIC` albo ruch postępowy z prędkością w world units/s |
 | `attacks` | typ ataku, legalne cele, obrażenia, zasięg i cooldown |
 | `specialAbilities` | lista typowanych zdolności i ich parametrów |
+| `immuneAmmunitionTypes` | stabilne ID amunicji ignorowane przez bossa |
 
 Profil zawiera też `collision` (rozmiar hitboxa w world units), bo trafianie
 bossa przez pociski, eksplozje i jednostki jest regułą gameplayu, a nie
 prezentacji. Rozmiar sprite'a pozostaje po stronie `BossPresentationCatalog`;
 hitbox i sprite nie dzielą jednej wartości.
 
-Poglądowy kształt (nie finalna specyfikacja; wartości są placeholderami do
-strojenia w testach):
+Kształt pliku jest finalny dla wersji schematu 1. Pełne, edytowalne profile
+poziomów 5–50 znajdują się w zasobie:
+`game-domain/src/main/resources/balance/game-balance.json`.
 
 ```json
 {
   "schemaVersion": 1,
-  "balanceRevision": "2026-10-30.1",
+  "balanceRevision": "boss-legacy-baseline-1",
   "bosses": [
     {
-      "id": "boss.mobile.thorncrown.lvl10",
-      "presentationKey": "thorncrown",
-      "archetype": "MOBILE_SIEGE_BOSS",
-      "maxHealth": 0,
-      "collision": { "width": 0, "height": 0 },
-      "movement": { "kind": "ADVANCE", "speedWorldUnitsPerSecond": 0 },
+      "id": "boss.central-ancient-war-oak.level-05",
+      "presentationKey": "ancient_war_oak",
+      "archetype": "CENTRAL_OBJECTIVE",
+      "maxHealth": 12000,
+      "collision": { "width": 1440.0, "height": 2016.0 },
+      "movement": { "kind": "STATIC", "speedWorldUnitsPerSecond": 0.0 },
       "attacks": [
-        { "kind": "MELEE", "targets": ["UNIT"], "damage": 0,
-          "range": 0, "cooldownSeconds": 0 },
-        { "kind": "MELEE", "targets": ["FORTRESS_GATE"], "damage": 0,
-          "range": 0, "cooldownSeconds": 0 }
+        { "target": "UNIT", "damage": 150, "minimumDamage": 35,
+          "rangeWorldUnits": 780.0, "cooldownSeconds": 4.0,
+          "initialCooldownSeconds": 2.5 }
       ],
-      "specialAbilities": [
-        { "kind": "ENRAGE", "healthFractionThreshold": 0,
-          "damageMultiplier": 0, "speedMultiplier": 0 }
-      ]
+      "specialAbilities": [],
+      "immuneAmmunitionTypes": ["PLAGUE_CAULDRON"]
     }
   ]
 }
@@ -191,9 +194,10 @@ Jeden profil opisuje jedno spotkanie. Poziomy powtarzające grafikę (5/45,
 łamania wcześniejszego. `presentationKey` to jedyne pole prezentacyjne w
 profilu i jest tylko stabilnym identyfikatorem, nie nazwą bitmapy.
 
-`balanceRevision` jest etykietą ludzką; replay zapisuje dodatkowo hash
-treści pliku (SHA-256 kanonicznego JSON-u), żeby zmiana liczb bez podbicia
-etykiety nie dała po cichu niewykrywalnie innego wyniku replayu.
+`balanceRevision` jest etykietą ludzką; Studio automatycznie podbija jej
+końcowy numer przy zapisie zmienionych danych. Replay zapisuje dodatkowo SHA-256
+dokładnej treści pliku, więc każda zmiana, również dokonana poza Studio,
+pozostaje wykrywalna.
 
 Ataki o różnym celu mogą mieć oddzielne obrażenia i czasy. Dla przykładu
 uderzenie jednostek i uderzenie bramy nie powinny dzielić jednej wartości,
@@ -204,7 +208,8 @@ prędkość nieujemna, a `STATIC` nie przyjmuje prędkości ruchu.
 Zdolności są dyskryminowaną unią typów domenowych, a nie dowolnym tekstem,
 refleksją, skryptem lub zbiorem niepowiązanych flag. Pierwsza wersja opisuje
 tylko zachowania potrzebne do parytetu legacy, m.in. atak obronny celu
-centralnego i enrage. `PROJECTILE_ATTACK` można dodać później jako nowy typ,
+centralnego i enrage. Enrage zmienia prędkość (`1.35×`) oraz skraca cooldown
+ataku (`0.666667×`); nie zwiększa obrażeń. `PROJECTILE_ATTACK` można dodać później jako nowy typ,
 wraz z kodem symulacji i testami. Nieznana lub nieobsługiwana zdolność w
 aktywnym profilu jest błędem konfiguracji.
 
@@ -234,7 +239,8 @@ world-space. Rozmiar mapy, pozycja spawnu, biome i warunek zwycięstwa są
 konfiguracją scenariusza, nie profilem balansu bossa. `MatchScenario` otrzymuje
 niemutowalny opis spotkania bez zależności `game-contracts -> game-domain`.
 
-Planowany kontrakt scenariusza musi jawnie rozróżniać co najmniej:
+Scenariusz używa typowanego `BossEncounterConfig` z `profileId`,
+`spawnXRatio` i `BossVictoryRule`. Reguły scenariusza jawnie rozróżniają:
 
 - standardowe zniszczenie fortec;
 - mobilnego bossa, którego trzeba pokonać przed zniszczeniem fortecy BLUE;
@@ -259,12 +265,13 @@ Mapowanie pierwszej migracji:
 | 45 | Ancient War Oak |
 | 50 | THORNCROWN |
 
-Poziomy 55–100 nie są zwracane jako grywalne przez kampanię, dopóki nie mają
-kompletnego boss assignment. `CampaignSystem` nie może odblokować poziomu bez
-tego assignmentu; samo istnienie markera `BOSS` na mapie nie wystarcza.
-Odblokowanie kolejnego poziomu po wygranej na poziomie 50 musi być ograniczone
-do ostatniego poziomu z kompletną zawartością, bez zmieniania limitu
-strukturalnego kampanii 100 poziomów.
+Kampania zachowuje poziomy 1–100 w strukturze. Po wygranej na poziomie 50
+odblokowuje zwykłe poziomy 51–54, ale nie poziom 55; limit grywalnej zawartości
+wynosi 54, dopóki bossy na poziomach 55–100 nie mają pełnych profili i assetów.
+`CampaignSystem` blokuje wybór i ukończenie poziomów od 55, a mapper mapy
+kampanii utrzymuje ich markery jako zablokowane także dla starszego profilu,
+który wcześniej odblokował dalsze poziomy. Sama ikona `BOSS` na mapie nie jest
+assignmentem spotkania.
 
 `MatchEvent.MatchFinished` i istniejące `MatchOutcome` pozostają końcowym
 kanałem wyniku, dzięki czemu `CampaignSystem` i `RewardSystem` nadal rozliczają
@@ -276,9 +283,15 @@ Przy celu centralnym wynik jest wyliczany z jawnego, runtime’owego licznika
 obrażeń BLUE i RED. Remis zachowuje dotychczasowy tie-break na rzecz BLUE,
 chyba że osobna decyzja balansowa zmieni tę regułę.
 
-Zachowanie przy upływie limitu czasu meczu, jeśli poziom go ma, jest
-otwartą decyzją (patrz „Otwarty zakres”); do jej podjęcia scenariusze bossów
-nie mogą mieć limitu czasu, żeby nie wprowadzić niezdefiniowanego wyniku.
+Limit czasu poziomów bossów jest taki sam jak na pozostałych poziomach
+(obecnie `SimulationConfig.matchDurationMilliseconds`, 300 000 ms), ale
+**wydzielony do osobnej zmiennej** `bossEncounterMatchDurationMilliseconds`
+w `SimulationConfig`, by można go było zmienić tylko dla bossów. Wartość
+domyślna jest równa limitowi standardowemu; nie trafia do profilu bossa, bo
+należy do reguł scenariusza. Obecna symulacja tylko odlicza czas do zera i nie
+rozstrzyga wyniku po jego upływie, więc BossSystem nie wprowadza własnej
+reguły timeoutu; ewentualne rozstrzygnięcie po upływie czasu zostanie
+zaprojektowane dla wszystkich poziomów razem.
 
 Zwycięzca pokonania mobilnego bossa wynika z `sourceTeam` rozstrzygającego
 obrażenia, niezależnie od tego, czy ostatni cios zadała jednostka, czy
@@ -294,10 +307,11 @@ wywoływanym przez symulację, a nie osobnym silnikiem ani singletonem.
 Runtime state obejmuje minimalny zestaw konieczny dla archetypu:
 
 - identyfikator profilu i encounteru;
-- aktualne HP oraz pozycję/phase dla mobilnego bossa;
-- cooldowny ataków, timer ataku bramy i czas fazy enrage;
+- aktualne HP, pozycję i phase;
+- cooldowny ataków;
 - łączny damage per team dla centralnego celu;
-- identyfikatory źródeł używane do poprawnej atrybucji obrażeń.
+- ostatni `sourceTeam` dla mobilnego bossa; `sourceId` jest przenoszony w
+  evencie trafienia, nie jest dodatkowym trwałym stanem.
 
 Stan inicjalizuje się ze zwalidowanego `MatchScenario` i przypiętej rewizji
 balansu na `MatchSession.start`. Restart tworzy świeży stan, pauza nie
@@ -310,20 +324,29 @@ damage resolution, ale nie mutuje bezpośrednio stanu fortec, jednostek,
 pocisków ani progresji kampanii. Kolejność względem ruchu jednostek,
 kolizji i obrażeń musi być zamrożona testami.
 
+Central objective materializuje płaską, chronioną strefę terenu pod swoim
+placementem. Mobile boss korzysta z istniejącej ścieżki obrażeń jednostek,
+fortec i amunicji; Sapper i Slingmaster nie dostają nowej ścieżki ataku na
+bossy, zgodnie z zachowaniem legacy.
+
+Jednostki atakujące bossa zachowują dotychczasowe odstępy w formacji. Symulacja
+wyznacza ich rangę w kolejce względem aktywnych sojuszników zmierzających do
+tego samego bossa i dodaje `ranga × ATTACK_FORMATION_SPACING` do efektywnego
+zasięgu ataku, dzięki czemu dalsze jednostki mogą atakować bez przesuwania
+formacji. Jednostki zaangażowane w inny cel nie zwiększają rangi.
+
 Target preference, losowanie ataku obronnego i wszelkie losowe decyzje używają
 seeda meczu. Nie wprowadzają osobnego seedowanego generatora ani zależności od
 kolejności iteracji kolekcji.
 
 ## Kontrakty, eventy i integracja
 
-Planowane rozszerzenia `game-contracts`:
-
-- pole scenariusza wskazujące boss encounter, `bossId` i placement;
-- typowana reguła zwycięstwa, zamiast dodawania stringowych wyjątków;
-- niemutowalny `BossSnapshot` zawierający typ/archetyp, pozycję, HP,
-  max HP, fazę i — dla celu centralnego — damage totals per team;
-- eventy faktów, co najmniej spawn/zmiana fazy/otrzymane obrażenia/pokonanie;
-  event obrażeń zawiera target, source i `sourceTeam`.
+`game-contracts` zawiera typowane `BossEncounterConfig` i `BossVictoryRule`,
+niemutowalny `BossSnapshot` oraz eventy `BossSpawned`, `BossDamaged`,
+`BossAttackHit`, `BossPhaseChanged` i `BossDefeated`. Event obrażeń bossa
+zawiera źródło i `sourceTeam`; `ProjectileTargetKind.BOSS` rozróżnia bossy od
+fortec i jednostek. `MatchStarted` i `MatchSnapshot` zachowują `balanceRevision`
+oraz hash treści balansu.
 
 Przepływ:
 
@@ -339,22 +362,23 @@ CampaignLevelDefinition
 ```
 
 `BossSnapshot` jest źródłem odczytu bieżącego stanu bossa dla UI. Eventy służą
-krótkotrwałym efektom, np. floating damage, zmianie fazy lub animacji trafienia.
+krótkotrwałym efektom, np. floating damage, zmianie fazy lub feedbackowi ataku.
 ViewModel i renderer nie wyliczają obrażeń, zwycięzcy, HP ani cooldownów.
 
 `MatchStarted` lub zapis replayu musi zachować `balanceRevision` obok seeda i
-konfiguracji scenariusza. Ten sam seed, scenariusz, wersja balansu i sekwencja
-komend/ticków muszą dawać identyczne snapshoty, eventy i wynik.
+konfiguracji scenariusza oraz duration dla boss encounter. Ten sam seed,
+scenariusz, rewizja/hash balansu, duration i sekwencja komend/ticków muszą
+dawać identyczne snapshoty, eventy i wynik.
 
 ## AI
 
 AI nadal otrzymuje niemutowalny `MatchSnapshot` i wysyła zwykłe komendy przez
 istniejącą granicę. Nie może mutować bossa ani mieć prywatnych wartości ataku.
 
-Na poziomach centralnego celu strategia powinna znać ten cel jako dostępny
-target, by RED mógł uczestniczyć w damage race zgodnie z legacy. Strategie
-mobilnego bossa uwzględniają jego obecność i stan, ale nie omijają walidacji
-komend. BossSystem nie otrzymuje bezpośrednio dostępu do AI.
+Na poziomach centralnego celu strategie katapulty kierują AI RED w stronę
+obiektu, by mogło uczestniczyć w damage race. Jednostki obu drużyn mogą
+atakować boss encounter przez wspólną symulację. AI wysyła zwykłe komendy;
+`BossSystem` nie otrzymuje dostępu do AI.
 
 ## Android i assety
 
@@ -369,15 +393,18 @@ stanie, osobnymi zadaniami. Do tego czasu boss jest rysowany jednym
 statycznym sprite'em we wszystkich stanach; zmiana fazy, atak i trafienie są
 sygnalizowane wyłącznie HUD-em i feedbackiem z eventów. Dodanie animacji nie
 zmienia balansu, kontraktów gameplayu ani hitboxa: wybór klatki to wyłącznie
-decyzja prezentacji na podstawie `BossSnapshot` (faza, ruch) i eventów, więc
-`BossPresentationCatalog` powinien od początku mapować `bossId` na zestaw
-assetów per stan (na start tylko stan domyślny), żeby późniejsze animacje nie
-wymagały zmiany kształtu katalogu.
+decyzja prezentacji na podstawie `BossSnapshot` (faza) i eventów. Każdy
+statyczny asset jest dostępny też jako jednoklatkowa sekwencja
+`anim_boss_<presentationKey>_idle_000.png`. `BossPresentationCatalog` mapuje
+`presentationKey` na klucz sprite'a i lokalizowaną nazwę, a fazy bez własnej
+sekwencji jawnie używają tego statycznego sprite'a. Późniejsze animacje mogą
+dodać mapowanie per `BossPhase` bez zmiany kontraktu gameplayu.
 
-`BattlefieldAssetCatalog`/dedykowany `BossPresentationCatalog` mapuje stabilny
-`bossId` do assetów. Asset key nie trafia do JSON-u balansu. Brak wymaganego
-assetu powinien powodować jawny błąd walidacji lub ładowania, a nie cichy
-fallback do losowej grafiki.
+`BattlefieldAssetCatalog` dekoduje wymagany sprite i zgłasza jawny błąd, gdy
+brakuje zasobu. `BattlefieldRenderer` rysuje bossa w world-space przed
+terrain capem. `RenderStateMapper` tworzy niemutowalny boss render state, a
+match screen pokazuje `BossHudView`: HP/fazę mobilnego bossa lub HP i damage
+race dla celu centralnego. Asset key nie trafia do JSON-u balansu.
 
 Match screen prezentuje:
 
@@ -412,18 +439,15 @@ walidowana. Studio nie wymaga nowej zakładki; zmiany obejmują:
   ten sam klucz, który profil balansu zapisuje jako `presentationKey`;
 - `studio/web/src/tabs/animations/` i `shell/tabs.ts`: filtr kategorii `boss`
   w zakładce i podgląd sekwencji w world-space bez zmian transformacji;
-- walidację w Studio: boss z profilu balansu bez żadnej klatki lub statycznej
-  grafiki jest raportowany jako `issues`, a sekwencja z nieznanym
-  `presentationKey` ma `targetConfigured=false`; stany zdefiniowane w
-  `BossPresentationCatalog` bez sekwencji (np. `move` przed jej
-  dodaniem) są jawnie widoczne jako brakujące, a nie cichy fallback.
+- walidację w Studio: profil z JSON-u bez klatki jest pokazany w `catalogIssues`,
+  a sekwencja z nieznanym `presentationKey` ma `targetConfigured=false`.
 
 Do czasu dodania animacji boss ma tylko statyczny obraz, więc zakładka
 pokazuje go jako sekwencję jednoklatkową; kolejne stany (`move`, `attack`,
 `enrage`, `death`) dochodzą wraz z klatkami bez zmian kodu Studio. Zakładka
-pozostaje read-only i nie zapisuje assetów. Sekwencje bez ładowarki w
-runtime trafiają do `withoutLoader`, aż `BossPresentationCatalog` zacznie
-je wczytywać.
+pozostaje read-only i nie zapisuje assetów. Jednoklatkowy `idle` ma loader;
+pozostałe sekwencje bossów oraz wieloklatkowe `idle` są oznaczane jako bez
+runtime loadera, dopóki prezentacja nie zacznie ich odtwarzać.
 
 Studio Animations i zakładka Balance nie współdzielą plików: pierwsza czyta
 klatki z `drawable-nodpi`, druga edytuje `game-balance.json`. Łączy je
@@ -432,9 +456,9 @@ konfiguracji animacji.
 
 ### Zakładka Balance
 
-Nowa zakładka **Balance** w Studio edytuje dokładnie
-`game-domain/src/main/resources/balance/game-balance.json`. Proponowany
-przepływ lokalnego API:
+Zakładka **Balance** w Studio edytuje dokładnie
+`game-domain/src/main/resources/balance/game-balance.json` przez ścisły edytor
+JSON oraz walidację ścieżek pól. API lokalne:
 
 1. `GET` zwraca treść i hash pliku;
 2. endpoint `validate` wykonuje ścisłe dekodowanie i walidację semantyczną;
@@ -443,54 +467,54 @@ przepływ lokalnego API:
 5. frontend pokazuje błędy wraz ze ścieżką pola, np.
    `bosses[2].attacks[1].cooldownSeconds`.
 
-Walidator serwera i testy domenowe sprawdzają ten sam kontrakt. Edytor
-udostępnia pola właściwe dla `archetype` i `ability kind`, zamiast przyjmować
-dowolny tekst skryptu. JSON jest zapisywany do repozytorium; nie ma kopii
-autorytatywnej w Android assets, nie ma hot reloadu i Studio nie commit-uje ani
-nie buduje aplikacji.
+Zmiana wartości wymaga nowej `balanceRevision`; zakładka podbija końcowy numer
+automatycznie, jeśli użytkownik jej nie zmienił. Walidator serwera i loader
+aplikacji odrzucają nieznane pola, typy i zdolności. JSON jest zapisywany do
+repozytorium; nie ma kopii autorytatywnej w Android assets, nie ma hot reloadu
+i Studio nie commit-uje ani nie buduje aplikacji.
 
 Loader używa ścisłej konfiguracji dekodera: nieznane pola, nieobsługiwane
 `schemaVersion`, brak wymaganych profili, zduplikowane ID, nieprawidłowe
 wartości lub nieznane zdolności kończą się jawnym błędem. Brak definicji
 profilu nie wybiera domyślnego bossa.
 
-## Plan implementacji
+## Zrealizowane etapy
 
-1. **Zamrozić typowany kontrakt balansu bossów.** Dodać plain domain types dla
-   profilu, archetypu, ruchu, ataków i obecnie obsługiwanych zdolności. Dodać
+1. **[x] Typowany kontrakt balansu bossów.** Dodano plain domain types dla
+   profilu, archetypu, ruchu, ataków i obecnie obsługiwanych zdolności oraz
    czystą walidację zakresów, unikalności ID i kompletności profili.
-2. **Dodać plik JSON i loader.** Utworzyć zasób balansu, ścisły DTO decoder w
-   granicy aplikacyjnej i mapowanie na niemutowalny model domenowy. Wczytać i
-   zwalidować konfigurację przed utworzeniem sesji meczu.
-3. **Dodać Studio Balance API i editor.** Wykorzystać istniejące wzorce repo
+2. **[x] Plik JSON i loader.** Dodano zasób balansu, ścisły DTO decoder w
+   granicy aplikacyjnej i mapowanie na niemutowalny model domenowy. Konfiguracja
+   jest wczytywana i walidowana przed utworzeniem sesji meczu.
+3. **[x] Studio Balance API i edytor.** Dodano walidację, `expectedHash`,
+   atomowy zapis, konflikt 409 i automatyczne podbijanie rewizji przy edycji.
+   Wykorzystano istniejące wzorce repo
    root allowlisting, walidacji po stronie serwera, `expectedHash`, konfliktu
-   i atomowego zapisu.
-4. **Dodać przypisanie spotkania do kampanii.** Poziomy 5–50 otrzymują stabilne
-   `bossId`, placement oraz właściwą regułę zwycięstwa. Rozszerzyć scenariusz
-   i kontrakt wyniku bez wprowadzania zależności contracts -> domain.
-5. **Dodać runtime central objective.** Health, damage-per-team, obronny atak,
+   oraz atomowego zapisu.
+4. **[x] Przypisanie spotkań kampanii.** Poziomy 5–50 otrzymały stabilne
+   `profileId`, placement oraz właściwą regułę zwycięstwa. Scenariusz i
+   kontrakty pozostały niezależne od `game-domain`.
+5. **[x] Runtime central objective.** HP, damage-per-team, obronny atak,
    cooldown i zniszczenie działają w deterministycznym ticku. Zwycięża strona
    z większym damage; remis zachowuje BLUE.
-6. **Dodać runtime mobile boss.** Ruch, zatrzymanie do walki, ataki jednostek,
+6. **[x] Runtime mobile boss.** Ruch, zatrzymanie do walki, ataki jednostek,
    atak fortecy przy bramie, enrage i pokonanie. Wygrana po pokonaniu bossa
    przypisywana jest drużynie rzeczywistego źródła ostatnich obrażeń.
-7. **Podłączyć walkę, pociski, AI i lifecycle.** Wszystkie trafienia bossa
+7. **[x] Walka, pociski, AI i lifecycle.** Trafienia bossa
    przechodzą przez istniejące granice; AI uwzględnia cel centralny w swoim
    snapshotowym wyborze; start/restart/pauza/koniec resetują lub zatrzymują
    state zgodnie z lifecycle sesji.
-8. **Dodać snapshoty i eventy oraz Android presentation.** Zmapować
-   niemutowalne boss state do render state, przenieść legacy artwork, dodać
-   boss HUD i feedback bez przenoszenia reguł do UI. Rozszerzyć Studio
+8. **[x] Snapshoty, eventy i Android presentation.** Zmapowano
+   niemutowalny boss state do render state, przeniesiono legacy artwork,
+   dodano boss HUD i feedback bez przenoszenia reguł do UI. Rozszerzono Studio
    Animations o kategorię `boss` (patrz „Zakładka Animations”), aby statyczne
-   grafiki i kolejne animacje były widoczne i walidowane od razu.
-9. **Zablokować zawartość po poziomie 50.** `CampaignSystem` nie udostępnia ani
-   nie odblokowuje poziomów 55–100, dopóki registry nie zawiera kompletnego
-   spotkania bossa. Późniejsze rozszerzenie frontu kampanii wymaga profilu,
-   asset mapping i testu dla każdego przypisanego spotkania.
-10. **Rozszerzać wspólny JSON etapami.** Dopiero osobnymi, testowalnymi
-    migracjami przenieść konfiguracje jednostek, amunicji, czarów i wspólnych
-    parametrów; każda migracja usuwa dotychczasowe wartości z Kotlinowych
-    katalogów.
+   grafiki i przyszłe animacje były widoczne i walidowane od razu.
+9. **[x] Zatrzymać frontier przy ostatnim pełnym spotkaniu.** Poziomy 51–54
+   pozostają grywalne; `CampaignSystem` nie odblokowuje poziomu 55 bez
+   kompletnego boss assignmentu. Strukturalny limit kampanii pozostaje 100.
+10. **[odłożone] Rozszerzyć wspólny JSON etapami.** Osobnymi migracjami
+    przenieść konfiguracje jednostek, amunicji, czarów i wspólnych parametrów;
+    każda migracja ma usunąć równoległe wartości z Kotlinowych katalogów.
 
 ## Testy i kryteria akceptacji
 
@@ -510,7 +534,10 @@ profilu nie wybiera domyślnego bossa.
 ### Kampania i kontrakty
 
 - poziomy 5–50 wskazują właściwe profile central objective/mobile boss;
-- brak profilu na 55–100 blokuje wybór i nie przesuwa dalej unlock frontier;
+- zwycięstwo na 50 odblokowuje 51, poziomy 51–54 pozostają grywalne, a
+  zwycięstwo na 54 nie odblokowuje 55;
+  nawet stary zapis z wyższym unlock frontier nie pokazuje poziomów 55–100
+  jako dostępnych;
 - typowana reguła zwycięstwa trafia do scenariusza; markery mapy nie sterują
   runtime;
 - ukończenie poziomu przechodzi przez istniejący `MatchFinished` i
@@ -549,31 +576,28 @@ profilu nie wybiera domyślnego bossa.
 - testy architektoniczne potwierdzają brak Androida w domain/simulation i
   jeden właściciel runtime state/balansu.
 
-## Proponowane pliki przyszłej implementacji
+## Główne pliki implementacji
 
 - `game-domain/src/main/resources/balance/game-balance.json`;
-- typowane modele balansu bossów oraz czysta walidacja w
-  `game-domain/src/main/kotlin/com/urkaaaz/domain/`;
-- DTO, strict decoder i `GameBalanceRepository` w
-  `game-application/src/main/kotlin/com/urkaaaz/application/balance/`;
-- rozszerzenia `CampaignLevelDefinition`, registry oraz `MatchScenario` /
-  `VictoryRulesConfig`;
-- `BossSystem` i runtime state w `game-simulation`; integracja w
-  `DeterministicMatchSimulation` i `SimulationConfig`;
-- boss snapshot/eventy w `game-contracts`;
-- targetowanie boss-level w `game-ai`;
-- asset mapping, render state, boss HUD i integracja match screen w
-  `android-app`;
-- kontrakt/API/service/testy w `studio/server/src/`;
+- `game-domain/src/main/kotlin/com/urkaaaz/domain/BossBalance.kt`;
+- `game-application/src/main/kotlin/com/urkaaaz/application/balance/GameBalanceRepository.kt`;
+- `game-contracts/src/main/kotlin/com/urkaaaz/contracts/BossEncounter.kt` oraz
+  rozszerzenia `MatchScenario`, `MatchSnapshot` i `MatchEvents`;
+- `game-campaign/src/main/kotlin/com/urkaaaz/campaign/CampaignLevelDefinition.kt`;
+- `game-simulation/src/main/kotlin/com/urkaaaz/simulation/BossSystem.kt` oraz
+  integracja w `DeterministicMatchSimulation.kt` i `SimulationConfig.kt`;
+- strategia wyboru celu w `game-ai/src/main/kotlin/com/urkaaaz/ai/AiStrategies.kt`;
+- `assets_src/bosses/` i jednoklatkowe zasoby
+  `android-app/src/main/res/drawable-nodpi/anim_boss_*_idle_000.png`;
+- `android-app/src/main/java/com/urkaaaz/ui/BossPresentationCatalog.kt`,
+  `BossHudView.kt`, `BattlefieldAssetCatalog.kt`, `BattlefieldRenderer.kt`
+  i `RenderStateMapper.kt`;
+- `studio/server/src/services/balanceCatalog.ts` i `studio/server/src/api/balance.ts`;
 - kategoria `boss` w `studio/server/src/contracts/animations.ts`,
   `studio/server/src/services/animationCatalog.ts`,
   `studio/config/animations.json` oraz filtr w
   `studio/web/src/tabs/animations/`;
-- nowa zakładka edytora w `studio/web/src/tabs/balance/`;
-- testy domeny, kampanii, kontraktów, symulacji, AI, Androida i Studio.
-
-Nazwy klas i ścieżki poza istniejącymi plikami są propozycją do implementacji,
-nie deklaracją, że kod już istnieje.
+- zakładka edytora w `studio/web/src/tabs/balance/BalanceTab.tsx`.
 
 ## Rozważone warianty
 
@@ -592,11 +616,14 @@ nie deklaracją, że kod już istnieje.
 
 ## Otwarty zakres po pierwszym etapie
 
-- zachowanie limitu czasu na poziomach bossów (czy istnieje i kto wygrywa);
-- czy boss ma odporności/modyfikatory obrażeń zależne od typu amunicji lub
-  czaru (parytet legacy do potwierdzenia w trakcie fazy 5–6);
-- wartości HP, prędkości, obrażeń i cooldownów są celowo strojone w trakcie
-  testów, nie zamrożone w tym dokumencie;
+- rozstrzygnięcie meczu po upływie limitu czasu (dziś nieobsługiwane w
+  symulacji) wspólnie dla wszystkich poziomów; limit bossów jest już osobną
+  zmianą konfiguracji;
+- odporność na `PLAGUE_CAULDRON` jest zachowana dla obu archetypów zgodnie
+  z legacy; inne modyfikatory obrażeń nie są częścią obecnego profilu;
+- początkowe HP, prędkości, obrażenia i cooldowny są przepisane z legacy
+  (zdecydowano), po czym strojone w trakcie testów; wartości nie są
+  zamrożone na stałe;
 - atak dystansowy/pocisk bossa wymaga osobnego rozszerzenia typed ability oraz
   decyzji, czy używa istniejącego profilu amunicji, czy profilu pocisku
   boss-only;

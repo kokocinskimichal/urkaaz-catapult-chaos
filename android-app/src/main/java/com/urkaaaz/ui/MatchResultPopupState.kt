@@ -102,7 +102,7 @@ internal object MatchResultPopupStateMapper {
                     ),
                 )
             }
-            campaignLevel >= CampaignLevelDefinition.MAX_LEVELS -> {
+            campaignLevel >= CampaignLevelDefinition.LAST_COMPLETE_CAMPAIGN_LEVEL -> {
                 status = if (campaignCompletionRecorded == null) {
                     MatchResultPopupStatus.SAVING_PROGRESS
                 } else {

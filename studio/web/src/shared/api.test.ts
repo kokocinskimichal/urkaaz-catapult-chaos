@@ -1,17 +1,23 @@
 import { describe, expect, it } from "vitest";
 import {
   ApiError,
+  fetchBalance,
   fetchCampaignAsset,
   fetchCampaignChapters,
   fetchCampaignMapLayout,
   fetchHealth,
   fetchMap,
+  fetchProgress,
   fetchTerrainAssetIndex,
   requestJson,
   saveCampaignMapLayout,
   saveMap,
+  saveBalance,
+  saveProgress,
   validateCampaignMapLayout,
   validateMap,
+  validateBalance,
+  validateProgress,
 } from "./api";
 
 const json = (status: number, body: unknown) =>
@@ -52,6 +58,62 @@ describe("api client", () => {
     ]);
     expect(JSON.parse(String(calls[1].init?.body))).toEqual({ content: "{}", expectedHash: "hash" });
     expect(JSON.parse(String(calls[2].init?.body))).toEqual({ content: "{}" });
+  });
+
+  it("uses the balance API routes with validation and hash preconditions", async () => {
+    const calls: Array<{ path: string; init?: RequestInit }> = [];
+    const fetcher = (path: string, init?: RequestInit) => {
+      calls.push({ path, init });
+      return json(200, {
+        content: "{}",
+        hash: "balance-hash",
+        valid: true,
+        issues: [],
+      });
+
+      it("uses progress API routes with validation and hash preconditions", async () => {
+        const calls: Array<{ path: string; init?: RequestInit }> = [];
+        const fetcher = (path: string, init?: RequestInit) => {
+          calls.push({ path, init });
+          return json(200, {
+            content: "{}",
+            hash: "progress-hash",
+            valid: true,
+            issues: [],
+          });
+        };
+
+        await fetchProgress(fetcher);
+        await validateProgress("{}", fetcher);
+        await saveProgress({ content: "{}", expectedHash: "progress-hash" }, fetcher);
+
+        expect(calls.map(call => call.path)).toEqual([
+          "/api/progress",
+          "/api/progress/validate",
+          "/api/progress",
+        ]);
+        expect(JSON.parse(String(calls[1].init?.body))).toEqual({ content: "{}" });
+        expect(JSON.parse(String(calls[2].init?.body))).toEqual({
+          content: "{}",
+          expectedHash: "progress-hash",
+        });
+      });
+    };
+
+    await fetchBalance(fetcher);
+    await validateBalance("{}", fetcher);
+    await saveBalance({ content: "{}", expectedHash: "balance-hash" }, fetcher);
+
+    expect(calls.map(call => call.path)).toEqual([
+      "/api/balance",
+      "/api/balance/validate",
+      "/api/balance",
+    ]);
+    expect(JSON.parse(String(calls[1].init?.body))).toEqual({ content: "{}" });
+    expect(JSON.parse(String(calls[2].init?.body))).toEqual({
+      content: "{}",
+      expectedHash: "balance-hash",
+    });
   });
 
   it("reads the terrain asset index as text", async () => {

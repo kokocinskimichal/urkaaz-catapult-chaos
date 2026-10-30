@@ -1009,12 +1009,12 @@ The repository's intended development branch is `develop`.
 
 `studio/` is a local developer tool (npm workspaces `server` + `web`), separate
 from the game modules; the plan lives in
-`docs/architecture/studio-architecture.md`. Steps 1–5 (skeleton, animation
-visualizer, asset index, map editor and removal of the standalone editor) are
+`docs/architecture/studio-architecture.md`. The skeleton, animation
+visualizer, asset index, Map/Campaign editors and Balance editor are
 implemented: a dependency-free Node server (`node src/main.ts`, loopback-only, rejects
 non-loopback `Host` headers) exposing `GET /api/health` (version, repo root, git
-branch, working-tree state), and a React/Vite shell with Maps/Animations
-tabs. Maps hosts the migrated profile editor; its local API lists, validates,
+branch, working-tree state), and a React/Vite shell with Maps/Campaign/Balance/
+Animations tabs. Maps hosts the migrated profile editor; its local API lists, validates,
 reads and saves campaign maps. API contracts live in
 `studio/server/src/contracts` and are imported by the web app as types via
 `@studio/contracts`. Studio reports git state but never commits or switches
@@ -1040,7 +1040,7 @@ initialization effect depends on it, so recreating it can rerun draft restoratio
 when the repository-map selector changes. Canvas image drawing also waits for
 decoded image dimensions; broken cache entries must stay on the fallback path.
 
-Step 2 (animation visualizer, read-only) is implemented: `GET /api/animations`
+The read-only animation visualizer is implemented: `GET /api/animations`
 parses `anim_<category>_<target>_<type>[_<variant>]_<frame:3>.png` files in
 `android-app/src/main/res/drawable-nodpi` (variant = trailing `blue`/`red`;
 target = longest prefix listed in `studio/config/animations.json`, otherwise the
@@ -1048,9 +1048,32 @@ last token is the type and `targetConfigured=false`; non-contiguous frames
 become `issues`), and `GET /api/animations/{id}/frames/{n}` streams a PNG with
 path-traversal checks. The Animations UI separates sequences into Units,
 Spells and Ammunition tabs, while retaining the shared preview and team-texture
-controls. `studio/config/animations.json` is maintained by hand:
+controls. Bosses use the `boss` category and
+`anim_boss_<presentationKey>_idle_000.png`; the server compares boss balance
+profiles with available sprite sequences and returns `catalogIssues` for
+missing art. `studio/config/animations.json` is maintained by hand:
 add new targets there and list sequences without a runtime loader in
-`withoutLoader` (currently `anim_ammunition_fire_rain_impact`).
+`withoutLoader` (currently `anim_ammunition_fire_rain_impact`). Boss sequences
+other than the single-frame static `idle` are marked as not loaded by runtime.
+
+The Balance tab edits the single source
+`game-domain/src/main/resources/balance/game-balance.json`. `GET /api/balance`
+returns exact file content and SHA-256, `POST /api/balance/validate` performs
+strict schema and semantic validation, and `PUT /api/balance` writes atomically
+only when `expectedHash` is current. A changed document must advance
+`balanceRevision`; the editor automatically bumps a trailing revision number.
+Balance is loaded when a match starts and its revision/hash are included in
+match snapshots and replay configuration; there is no hot reload.
+
+The Progress tab edits
+`game-application/src/main/resources/progression/developer-progress.json`.
+It defines the campaign level to make available, lives, gold, and whether to
+apply the preset on the next debug app launch. `fieldsToApply` selects which
+values the Android adapter writes, so changing only the campaign level
+preserves the player's existing lives and gold. A newly revised, queued preset
+is applied once to the local DataStore; release builds ignore it. The Dashboard
+reads the persisted level/lives/gold summary. Lives are currently stored and
+displayed only; consumption and regeneration remain unimplemented.
 
 The team-texture animation renderer is shared by units: it combines one neutral
 frame sequence per state with per-frame alpha masks and a BLUE/RED texture
@@ -1066,6 +1089,20 @@ and previews both textures plus a mask overlay. Gameplay selects throw frames
 tail; the full source remains available in Studio. Demolisher has no character
 death sequence, and its separate 20-frame explosion is team-neutral. This is
 presentation only and does not own simulation state.
+
+## BossSystem
+
+`game-simulation/BossSystem` owns runtime for the central objective and mobile
+siege boss. `MatchScenario.bossEncounter` selects a typed profile, spawn ratio
+and victory rule; `MatchSession` loads that profile through the application
+balance repository and passes it into deterministic simulation. Levels 5–50
+have profiles and static assets; levels 51–54 remain playable without bosses,
+and the campaign frontier stops at 54 until encounters for level 55 onward are
+complete. Static boss sprites are mapped by `presentationKey`; later
+animations are presentation-only follow-up work. Unit attack reach against a
+boss grows by formation rank times the shared formation spacing; their world
+positions remain unchanged, and units engaged with another target do not count
+toward that rank.
 
 ## Push workflow
 

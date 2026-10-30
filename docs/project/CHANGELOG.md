@@ -4,6 +4,11 @@
 
 ### Added
 
+- Implemented the first BossSystem scope for campaign levels 5–50, including
+  central objectives, mobile siege bosses, a shared typed balance JSON, Studio
+  Balance editing, static boss sprites, and a boss HUD.
+- Added the Studio Progress tab for debug presets that can set campaign level,
+  lives, and gold.
 - Imported the complete 97-frame, 256x256 Demolisher forward-throw export with
   per-frame masks, replacing the incomplete run-only attack in Studio and
   gameplay.
@@ -11,6 +16,11 @@
 
 ### Changed
 
+- Boss encounters now use the shared balance revision and content hash in
+  snapshots and replay configuration; campaign progression stops at level 54
+  until the remaining boss profiles and assets are available.
+- Defender formation rank extends attack reach against bosses without changing
+  the one-behind-another formation spacing.
 - Split the Studio Animations browser into Units, Spells and Ammunition tabs;
   each tab filters the sequence list while keeping the shared preview controls.
 - Demolisher reaches the fortress face, plays the forward-lunge frames while
@@ -23,6 +33,8 @@
 
 ### Fixed
 
+- Progress presets now apply only selected fields, so setting a campaign level
+  does not overwrite existing lives or gold.
 - Campaign Studio validates X and Y coordinates independently and serializes
   the expected-hash check and layout replacement across Studio instances.
 

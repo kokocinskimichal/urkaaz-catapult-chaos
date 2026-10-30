@@ -1,11 +1,12 @@
 import type { AnimationCategory, AnimationSequence } from "@studio/contracts/animations";
 
-export const CATEGORY_ORDER: readonly AnimationCategory[] = ["character", "spell", "ammunition"];
+export const CATEGORY_ORDER: readonly AnimationCategory[] = ["character", "spell", "ammunition", "boss"];
 
 export const CATEGORY_LABELS: Record<AnimationCategory, string> = {
   character: "Units",
   spell: "Spells",
   ammunition: "Ammunition",
+  boss: "Bosses",
 };
 
 export interface TypeNode {

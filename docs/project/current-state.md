@@ -37,6 +37,18 @@ kampanię, AI oraz działający match screen. Gałąź robocza: `develop`.
 - `AmmunitionCatalog` jako wspólna definicja dla gracza, AI i symulacji.
 - Dedykowane jednostki: Defender, Sapper, Demolisher, Raging Boar,
   Slingmaster; balans w `UnitConfigurations.kt`.
+- `BossSystem` obsługuje central objectives oraz mobile siege bossy na
+  poziomach 5–50. Profile legacy, w tym HP, obrażenia, prędkość, enrage i
+  odporność na `PLAGUE_CAULDRON`, pochodzą z
+  `game-domain/src/main/resources/balance/game-balance.json`; Studio ma zakładkę
+  Balance i kategorię Bosses w Animations. Bossy renderują się statycznie;
+  animacje są odrębnymi przyszłymi krokami.
+- Kampania po zwycięstwie na poziomie 50 udostępnia zwykłe poziomy 51–54, ale
+  blokuje poziomy 55–100 bez kompletnych profili bossów i assetów.
+- Studio Progress edytuje developer preset z poziomem kampanii, liczbą żyć i
+  złotem. Preset stosuje wyłącznie jawnie zaznaczone pola, jednorazowo w
+  debug buildzie po rebuildzie i restarcie; liczba żyć jest wyświetlana, ale
+  nie jest jeszcze konsumowana ani regenerowana przez mechanikę gry.
 - Rekrutacja, supply, garrison, przesuwanie jednostek, fale i ruch w symulacji.
 - Wspólny standard rozmiarów meczu: fortece mają 70% poprzedniej szerokości i
   hitboxu, a jednostki mają 3x poprzedni rozmiar prezentacji; mechanika
@@ -104,17 +116,17 @@ snapshotów i eventów zamiast mutować bezpośrednio stan innych podsystemów.
   `ResultScreen` pozostają placeholderami.
 - Chapter 1 ma zatwierdzoną mapę i assety campaign UI; mapy Chapter 2–10 nie
   są jeszcze dostępne, więc te rozdziały używają listy poziomów.
-- Nie wszystkie systemy progresji są kompletne: sklep/zakupy i system żyć
-  pozostają poza obecnym zakresem. Campaign progress i nagrody za zwycięstwo
-  są już zapisywane lokalnie.
+- Nie wszystkie systemy progresji są kompletne: sklep/zakupy oraz mechanika
+  zużywania i regeneracji żyć pozostają poza obecnym zakresem. Campaign
+  progress i nagrody za zwycięstwo są już zapisywane lokalnie.
 - Match result popup prezentuje rozliczoną nagrodę i pozwala przejść do
   następnego poziomu po zapisaniu ukończenia; przegrana i błąd zapisu mają
   osobne ścieżki retry/powrotu.
 - Local profile i loadout są zapisywane przez DataStore; zakupy oraz pełne
   rozliczanie zużycia stocku po meczu pozostają do uzupełnienia.
 - SpellSystem nie obejmuje jeszcze pozostałych ośmiu efektów katalogu ani
-  castowania zaklęć przez AI; brakuje też tutoriala, bossów, centralnego celu
-  i wszystkich legacy widgetów HUD.
+  castowania zaklęć przez AI; brakuje też tutoriala i wszystkich legacy
+  widgetów HUD.
 - Brak pełnej zgodności legacy dla wszystkich mechanik, garrisonu i fal,
   choć podstawowe jednostki i fale są już zaimplementowane.
 - Brak pełnego legacy renderingu, części wizualizacji fortec/katapult,
@@ -131,7 +143,8 @@ snapshotów i eventów zamiast mutować bezpośrednio stan innych podsystemów.
    Navigation/Compose.
 3. Zakres i właściciel przyszłego backendu/network play.
 4. Interaktywna edycja loadoutu oraz pełna migracja tutoriala, sklepu,
-   zaklęć, bossów i wyników.
+   pozostałych zaklęć i wyników; animacje bossów oraz zawartość bossów
+   poziomów 55–100 są odłożone.
 5. Zakres zgodności wizualnej i regresyjnej ze starą aplikacją poza obecnym
    deterministycznym wycinkiem M11.
 6. Finalna polityka assetów/audio dla elementów, których status lub źródło

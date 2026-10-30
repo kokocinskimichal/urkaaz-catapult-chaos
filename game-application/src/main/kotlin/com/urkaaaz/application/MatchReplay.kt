@@ -8,6 +8,7 @@ import com.urkaaaz.contracts.MatchId
 import com.urkaaaz.contracts.MatchScenario
 import com.urkaaaz.contracts.MatchSnapshot
 import com.urkaaaz.contracts.WindSnapshot
+import com.urkaaaz.simulation.SimulationConfig
 
 data class MatchReplay(
     val formatVersion: Int,
@@ -55,6 +56,10 @@ data class MatchReplayConfiguration(
     val scenario: MatchScenario?,
     val blueFortressMaxHealth: Int,
     val redFortressMaxHealth: Int = 500,
+    val balanceRevision: String? = null,
+    val balanceContentHash: String? = null,
+    val bossEncounterMatchDurationMilliseconds: Long =
+        SimulationConfig.DEFAULT_MATCH_DURATION_MILLISECONDS,
 )
 
 data class MatchReplayResult(
@@ -75,6 +80,10 @@ object MatchReplayPlayer {
             blueFortressMaxHealth = replay.configuration.blueFortressMaxHealth,
             redFortressMaxHealth = replay.configuration.redFortressMaxHealth,
             randomSeedProvider = { replay.randomSeed },
+            expectedBalanceRevision = replay.configuration.balanceRevision,
+            expectedBalanceContentHash = replay.configuration.balanceContentHash,
+            bossEncounterMatchDurationMilliseconds =
+                replay.configuration.bossEncounterMatchDurationMilliseconds,
         )
         val events = buildList {
             replay.steps.forEach { step ->

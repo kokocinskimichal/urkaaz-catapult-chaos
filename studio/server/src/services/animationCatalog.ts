@@ -4,8 +4,16 @@ import type { AnimationCatalogResponse, AnimationCategory, AnimationSequence } f
 
 export const ANIMATION_DIRECTORY = ["android-app", "src", "main", "res", "drawable-nodpi"] as const;
 export const ANIMATION_CONFIG_PATH = ["studio", "config", "animations.json"] as const;
+export const BALANCE_CONFIG_PATH = [
+  "game-domain",
+  "src",
+  "main",
+  "resources",
+  "balance",
+  "game-balance.json",
+] as const;
 
-const FRAME_NAME = /^(anim_(character|spell|ammunition)_[a-z0-9_]+)_(\d{3})\.png$/;
+const FRAME_NAME = /^(anim_(character|spell|ammunition|boss)_[a-z0-9_]+)_(\d{3})\.png$/;
 const TEAM_VARIANTS = new Set(["blue", "red"]);
 
 export interface AnimationConfig {
@@ -15,12 +23,16 @@ export interface AnimationConfig {
 }
 
 export const EMPTY_ANIMATION_CONFIG: AnimationConfig = {
-  targets: { character: [], spell: [], ammunition: [] },
+  targets: { character: [], spell: [], ammunition: [], boss: [] },
   teamTextureTargets: [],
   withoutLoader: [],
 };
 
-export function buildAnimationCatalog(fileNames: readonly string[], config: AnimationConfig): AnimationCatalogResponse {
+export function buildAnimationCatalog(
+  fileNames: readonly string[],
+  config: AnimationConfig,
+  bossProfiles: readonly { id: string; presentationKey: string }[] = [],
+): AnimationCatalogResponse {
   const framesByStem = new Map<string, { category: AnimationCategory; indices: number[] }>();
   const invalidFiles: string[] = [];
   for (const name of fileNames) {
@@ -38,7 +50,21 @@ export function buildAnimationCatalog(fileNames: readonly string[], config: Anim
   const sequences = [...framesByStem.entries()]
     .map(([stem, { category, indices }]) => toSequence(stem, category, indices, config, withoutLoader))
     .sort((a, b) => a.id.localeCompare(b.id));
-  return { sequences, invalidFiles: invalidFiles.sort() };
+  const catalogIssues = bossProfiles.flatMap(profile => {
+    const hasPresentation = sequences.some(sequence =>
+      sequence.category === "boss" &&
+      sequence.target === profile.presentationKey &&
+      sequence.type === "idle" &&
+      sequence.frameIndices.includes(0),
+    );
+    return hasPresentation
+      ? []
+      : [{
+          path: `bosses.${profile.id}.presentationKey`,
+          message: `No boss animation or static frame is registered for '${profile.presentationKey}'`,
+        }];
+  });
+  return { sequences, invalidFiles: invalidFiles.sort(), catalogIssues };
 }
 
 function toSequence(
@@ -50,10 +76,13 @@ function toSequence(
 ): AnimationSequence {
   const frameIndices = [...indices].sort((a, b) => a - b);
   const tokens = stem.slice(`anim_${category}_`.length).split("_");
-  const variant = TEAM_VARIANTS.has(tokens[tokens.length - 1]) ? tokens.pop()! : null;
+  const hasTeamSuffix = TEAM_VARIANTS.has(tokens[tokens.length - 1]);
+  const variant = category === "boss" ? null : hasTeamSuffix ? tokens.pop()! : null;
   const body = tokens.join("_");
   const { target, type, configured } = splitTarget(body, config.targets[category] ?? []);
   const contiguous = frameIndices.every((index, position) => index === position);
+  const hasRuntimeLoader = !withoutLoader.has(stem) &&
+    (category !== "boss" || (type === "idle" && frameIndices.length === 1));
   return {
     id: stem,
     category,
@@ -62,12 +91,15 @@ function toSequence(
     variant,
     frameIndices,
     targetConfigured: configured,
-    hasRuntimeLoader: !withoutLoader.has(stem),
+    hasRuntimeLoader,
     supportsTeamTexture:
       category === "character" &&
       variant === null &&
       config.teamTextureTargets.includes(target),
-    issues: contiguous ? [] : ["Frame indices are not contiguous from 000"],
+    issues: [
+      ...(!contiguous ? ["Frame indices are not contiguous from 000"] : []),
+      ...(category === "boss" && hasTeamSuffix ? ["Boss sequences cannot have team variants"] : []),
+    ],
   };
 }
 
@@ -99,6 +131,7 @@ export function parseAnimationConfig(value: unknown): AnimationConfig {
       character: stringArray(targets.character),
       spell: stringArray(targets.spell),
       ammunition: stringArray(targets.ammunition),
+      boss: stringArray(targets.boss),
     },
     teamTextureTargets: stringArray(source.teamTextureTargets),
     withoutLoader: stringArray(source.withoutLoader),
@@ -110,15 +143,43 @@ function stringArray(value: unknown): string[] {
 }
 
 export async function readAnimationCatalog(repoRoot: string): Promise<AnimationCatalogResponse> {
-  const [fileNames, config] = await Promise.all([
+  const [fileNames, config, bossProfiles] = await Promise.all([
     readdir(join(repoRoot, ...ANIMATION_DIRECTORY)),
     loadAnimationConfig(repoRoot),
+    loadBossPresentationProfiles(repoRoot),
   ]);
-  return buildAnimationCatalog(fileNames, config);
+  return buildAnimationCatalog(fileNames, config, bossProfiles);
 }
 
+async function loadBossPresentationProfiles(
+  repoRoot: string,
+): Promise<{ id: string; presentationKey: string }[]> {
+  const content = await readFile(join(repoRoot, ...BALANCE_CONFIG_PATH), "utf8");
+  const document: unknown = JSON.parse(content);
+  const root = asRecord(document);
+  if (!root || !Array.isArray(root.bosses)) {
+    throw new Error("Game balance file has no boss profile list");
+  }
+  return root.bosses.map((value, index) => {
+    const profile = asRecord(value);
+    if (
+      !profile ||
+      typeof profile.id !== "string" ||
+      typeof profile.presentationKey !== "string"
+    ) {
+      throw new Error(`Game balance boss profile at index ${index} has no presentation key`);
+    }
+    return { id: profile.id, presentationKey: profile.presentationKey };
+  });
+}
+
+const asRecord = (value: unknown): Record<string, unknown> | null =>
+  typeof value === "object" && value !== null && !Array.isArray(value)
+    ? value as Record<string, unknown>
+    : null;
+
 export function animationFramePath(repoRoot: string, sequenceId: string, index: number): string | null {
-  if (!/^anim_(character|spell|ammunition)_[a-z0-9_]+$/.test(sequenceId)) return null;
+  if (!/^anim_(character|spell|ammunition|boss)_[a-z0-9_]+$/.test(sequenceId)) return null;
   if (!Number.isInteger(index) || index < 0 || index > 999) return null;
   return join(repoRoot, ...ANIMATION_DIRECTORY, `${sequenceId}_${String(index).padStart(3, "0")}.png`);
 }

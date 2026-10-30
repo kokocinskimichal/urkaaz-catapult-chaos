@@ -19,6 +19,7 @@ data class MatchScenario(
     val victoryRules: VictoryRulesConfig = VictoryRulesConfig(),
     val mapDefinition: MapDefinition? = null,
     val aiProfile: AiProfileSelection = AiProfileSelection(),
+    val bossEncounter: BossEncounterConfig? = null,
 ) {
     init {
         require(scenarioId.isNotBlank()) { "scenarioId must not be blank" }

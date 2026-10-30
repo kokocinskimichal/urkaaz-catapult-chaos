@@ -146,10 +146,23 @@ Lokalny zapis używa AndroidX Preferences DataStore i atomowych aktualizacji.
 CampaignProgress. Adaptery współdzielą backend, zachowując osobne klucze i
 wersje. Typy DataStore, Flow i Context nie przekraczają granicy `android-app`.
 
+### Developer progress preset
+
+Studio edytuje wersjonowany plik
+`game-application/src/main/resources/progression/developer-progress.json`.
+Preset aplikacyjny waliduje zakres poziomu, życia i złota; pole `fieldsToApply`
+ogranicza zapis do wybranych wartości. `DataStoreDeveloperProgressPresetAdapter`
+stosuje kolejkę jednorazowo tylko w debug buildzie i chroni ją hashem treści.
+Zmiana poziomu aktualizuje `CampaignProgress` wraz z ukończonymi wcześniejszymi
+poziomami i milestone'ami, ale nie nadpisuje niezaznaczonych pól profilu.
+Preset nie zmienia właściciela progresji kampanii ani nie dodaje mechaniki
+zużywania/regeneracji żyć.
+
 Przycisk `RESET` w prawym górnym rogu Dashboardu resetuje lokalne dane gracza
 po potwierdzeniu. `PlayerProgressResetRepository` atomowo czyści wspólny
 Preferences DataStore, obejmując kampanię, profil (w tym złoto i odblokowania),
-stocki, zapisy loadoutu oraz paragony rozliczeń. Błąd zapisu jest zwracany jako
+stocki, zapisy loadoutu oraz paragony rozliczeń, zachowując hash już
+zastosowanego developer presetu. Błąd zapisu jest zwracany jako
 `STORAGE_UNAVAILABLE`; UI nie pokazuje wtedy sukcesu. Reset nie obejmuje
 ustawień Androida ani zewnętrznych danych.
 
@@ -313,6 +326,7 @@ Najważniejsze pliki:
 | Obszar | Kandydaci |
 |---|---|
 | Port profilu i resetu | `game-application/.../progression/PlayerProgressionRepository.kt`, `PlayerProgressionUseCases.kt`, `PlayerProgressResetRepository.kt` |
+| Developer progress preset | `game-application/.../progression/DeveloperProgressPreset.kt`, `android-app/.../persistence/DataStoreDeveloperProgressPresetAdapter.kt`, `studio/web/src/tabs/progress/ProgressTab.tsx` |
 | Porty i use case'y loadoutu | `game-application/.../loadout/LoadoutContracts.kt`, `LoadoutUseCases.kt` |
 | Adaptery DataStore | `android-app/.../persistence/DataStorePlayerProgressionRepository.kt`, `DataStorePlayerProgressResetRepository.kt`, `DataStoreLoadoutRepository.kt` |
 | Wspólny DataStore | `android-app/.../persistence/LocalPreferencesDataStore.kt` |

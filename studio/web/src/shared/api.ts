@@ -1,4 +1,14 @@
 import type { AnimationCatalogResponse } from "@studio/contracts/animations";
+import type {
+  BalanceDocumentResponse,
+  BalanceSaveRequest,
+  BalanceValidationResponse,
+} from "@studio/contracts/balance";
+import type {
+  ProgressDocumentResponse,
+  ProgressSaveRequest,
+  ProgressValidationResponse,
+} from "@studio/contracts/progress";
 import type { ApiErrorBody, HealthResponse } from "@studio/contracts/api";
 import type {
   CampaignChapterCatalogResponse,
@@ -39,6 +49,34 @@ export async function requestJson<T>(path: string, fetcher: Fetcher = fetch, ini
 
 export const fetchHealth = (fetcher?: Fetcher) => requestJson<HealthResponse>("/api/health", fetcher);
 export const fetchAnimationCatalog = (fetcher?: Fetcher) => requestJson<AnimationCatalogResponse>("/api/animations", fetcher);
+export const fetchBalance = (fetcher?: Fetcher) =>
+  requestJson<BalanceDocumentResponse>("/api/balance", fetcher);
+export const saveBalance = (request: BalanceSaveRequest, fetcher?: Fetcher) =>
+  requestJson<BalanceDocumentResponse>("/api/balance", fetcher, {
+    method: "PUT",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify(request),
+  });
+export const validateBalance = (content: string, fetcher?: Fetcher) =>
+  requestJson<BalanceValidationResponse>("/api/balance/validate", fetcher, {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({ content }),
+  });
+export const fetchProgress = (fetcher?: Fetcher) =>
+  requestJson<ProgressDocumentResponse>("/api/progress", fetcher);
+export const saveProgress = (request: ProgressSaveRequest, fetcher?: Fetcher) =>
+  requestJson<ProgressDocumentResponse>("/api/progress", fetcher, {
+    method: "PUT",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify(request),
+  });
+export const validateProgress = (content: string, fetcher?: Fetcher) =>
+  requestJson<ProgressValidationResponse>("/api/progress/validate", fetcher, {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({ content }),
+  });
 export const fetchMaps = (fetcher?: Fetcher) => requestJson<MapCatalogResponse>("/api/maps", fetcher);
 export const fetchMap = (id: string, fetcher?: Fetcher) =>
   requestJson<MapDocumentResponse>(`/api/maps/${encodeURIComponent(id)}`, fetcher);

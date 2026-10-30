@@ -70,7 +70,7 @@ class RewardSettlementUseCase(
         event: MatchEvent.MatchFinished,
         reward: LevelRewardResult?,
     ): RewardSettlementRepositoryResult {
-        if (level !in 1..CampaignLevelDefinition.MAX_LEVELS) {
+        if (level !in 1..CampaignLevelDefinition.LAST_COMPLETE_CAMPAIGN_LEVEL) {
             return rejected(RewardSettlementRejection.INVALID_LEVEL)
         }
         if (event.outcome != MatchOutcome.BLUE_WIN) {
@@ -130,8 +130,10 @@ class RewardSettlementUseCase(
             val nextState = current.copy(
                 campaign = current.campaign.copy(
                     highestUnlockedLevel = maxOf(
-                        current.campaign.highestUnlockedLevel,
-                        (level + 1).coerceAtMost(CampaignLevelDefinition.MAX_LEVELS),
+                        current.campaign.highestUnlockedLevel.coerceAtMost(
+                            CampaignLevelDefinition.LAST_COMPLETE_CAMPAIGN_LEVEL,
+                        ),
+                        (level + 1).coerceAtMost(CampaignLevelDefinition.LAST_COMPLETE_CAMPAIGN_LEVEL),
                     ),
                     completedLevels = current.campaign.completedLevels + level,
                     appliedMilestoneIds = current.campaign.appliedMilestoneIds +
@@ -168,7 +170,8 @@ class RewardSettlementUseCase(
                     completed in 1..CampaignLevelDefinition.MAX_LEVELS &&
                         (
                             completed < highest ||
-                                highest == CampaignLevelDefinition.MAX_LEVELS
+                                highest == CampaignLevelDefinition.MAX_LEVELS ||
+                                highest == CampaignLevelDefinition.LAST_COMPLETE_CAMPAIGN_LEVEL
                             )
                 } &&
                 campaign.appliedMilestoneIds.all { id ->

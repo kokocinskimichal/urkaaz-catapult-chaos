@@ -2,7 +2,8 @@
   "targets": {
     "character": ["defender", "demolisher", "raging_boar", "sapper", "slingmaster"],
     "spell": ["fortress_shield", "haste", "runic_bastion"],
-    "ammunition": ["demolisher", "fire_rain", "plague_cauldron", "powder_barrel", "rock", "siege_bomb"]
+    "ammunition": ["demolisher", "fire_rain", "plague_cauldron", "powder_barrel", "rock", "siege_bomb"],
+    "boss": ["ancient_war_oak", "burntwood_warden", "copperwood_final_boss", "copperwood_siege_lord", "frozen_troll", "old_yeti_sovereign", "scorchbound_king", "thorncrown"]
   },
   "teamTextureTargets": ["defender", "demolisher", "raging_boar", "sapper"],
   "withoutLoader": ["anim_ammunition_fire_rain_impact"]

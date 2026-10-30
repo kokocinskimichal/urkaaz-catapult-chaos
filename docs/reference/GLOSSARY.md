@@ -67,12 +67,12 @@ kontrakty są wyraźnie oddzielone.
 | **CaS** | **Campaign System** | Poziomy, chaptery, odblokowania, cele, modyfikatory i postęp kampanii. | Częściowy; lokalna progresja oraz milestone'y i nagrody poziomowe działają. Właściciel definicji: `game-campaign`; use case'y: `game-application`. |
 | **SS** | **Spell System** | Definicje czarów, mana, aktywacja, efekty, cooldowny, dostępność i integracja z walką. | Częściowy: `CastSpell`, mana, snapshoty, Fortress Shield i HASTE działają; pozostałe dziewięć efektów oraz czary AI są niezaimplementowane. |
 | **TutS** | **Tutorial System** | Kroki tutoriala, hinty, spotlighty, cele, odblokowywanie paneli i ograniczenia AI. | Planowany. |
-| **PSys** | **Persistence System** | Trwały zapis profilu, waluty, loadoutu i postępu kampanii. | Częściowy: profil, zatwierdzony loadout oraz atomowe rozliczenie lokalnych nagród kampanii używają DataStore; zakupy, lives i tutoriale pozostają poza implementacją. |
-| **PPS** | **Player Progression System** | Snapshot lokalnego profilu używany przy walidacji loadoutu; właściciel salda złota. | Częściowy: seed i zapis v1 działają; RewardSystem zasila saldo po wygranej, a zakupy i rozliczanie stocku pozostają poza zakresem. |
+| **PSys** | **Persistence System** | Trwały zapis profilu, waluty, loadoutu i postępu kampanii. | Częściowy: profil, lives, zatwierdzony loadout oraz atomowe rozliczenie lokalnych nagród kampanii używają DataStore; lives są tylko ustawiane i wyświetlane, zakupy i tutoriale pozostają poza implementacją. |
+| **PPS** | **Player Progression System** | Snapshot lokalnego profilu używany przy walidacji loadoutu; właściciel salda złota. | Częściowy: profil, złoto z nagród, stocki oraz debugowy preset wybranych pól działają; zakupy, rozliczanie stocku oraz gameplay żyć pozostają poza zakresem. |
 | **LoS** | **Loadout System** | Konfiguracja jednostek, amunicji i czarów przed poziomem. | Częściowy: walidacja, normalizacja, interaktywna selekcja, zapis DataStore i bezpieczny start działają; kampanijne odblokowania Haste/Heal są zintegrowane dla poziomów 6/8. Trwałe rozliczanie stocku pozostaje poza implementacją. |
 | **RS** | **Reward System** | Ocena osiągnięć poziomowych i naliczanie złota po zwycięstwie kampanii. | Zaimplementowany lokalnie: nagrody za wygraną i osiągnięcia są atomowo rozliczane z progresją kampanii; sklep i inne typy nagród pozostają poza zakresem. |
-| **BS** | **Balance System** | Wersjonowane parametry balansu, walidacja konfiguracji i symulacje porównawcze. | Planowany. |
-| **ObjS** | **Objective System** | Cele główne i specjalne, Central Objective oraz reguły poziomów boss/special. | Częściowy; Central Objective i pełne reguły bossów są planowane. |
+| **BS** | **Balance System** | Wersjonowane parametry balansu, walidacja konfiguracji i symulacje porównawcze. | Częściowy: profile bossów są ładowane z wersjonowanego JSON-u i edytowane w Studio; pozostałe katalogi balansu oraz symulacje porównawcze pozostają do migracji. |
+| **ObjS** | **Objective System** | Cele główne i specjalne, Central Objective oraz reguły poziomów boss/special. | Częściowy: BossSystem obsługuje central objectives i mobilnych bossów na poziomach 5–50; dalsze profile, ataki i animacje są odłożone. |
 | **AssetS** | **Asset System** | Klucze assetów, cache, mapowanie wariantów wizualnych i ładowanie zasobów. | Działa częściowo dla obecnego zakresu renderingu. |
 | **RenderS** | **Rendering System** | Mapowanie snapshotów na render state, kamera, world-space, HUD i kolejność rysowania. | Działa dla obecnego match screen. |
 | **NavS** | **Navigation System** | Przejścia między ekranami i lifecycle hosta ekranów. | Działa w lekkim modelu `AppNavigator`/`ScreenHost`. |
@@ -124,18 +124,18 @@ kontrakty są wyraźnie oddzielone.
 | **Mana Gauge** | Wskaźnik zasobu używanego do aktywowania czarów. |
 | **Wave Button** | Przycisk wysyłający zrekrutowane jednostki z garnizonu do walki. |
 | **Unit Loadout** | Ekran konfiguracji przed bitwą, na którym gracz wybiera maksymalnie trzy odblokowane jednostki dostępne w danym poziomie. Tylko wybrane jednostki są widoczne w HUD-zie i mogą zostać zrekrutowane. |
-| **Game Balance Configuration** | Planowana konfiguracja parametrów balansu, oddzielona od stanu rozgrywki. Składa się z osobnych sekcji dla jednostek, amunicji, czarów, bossów i poziomów oraz obsługuje walidację i wersjonowanie. |
+| **Game Balance Configuration** | Wersjonowana konfiguracja parametrów balansu, oddzielona od stanu rozgrywki. Obecnie jej sekcja `bosses` jest kanonicznym źródłem profili BossSystemu; pozostałe katalogi są migrowane etapami, z walidacją i rewizją treści. |
 | **AmmunitionCatalog** | Wspólny katalog domenowy wszystkich dostępnych typów amunicji. Player, AI, symulacja i UI korzystają z tego samego źródła definicji. |
 | **AmmunitionDefinition** | Jawna definicja jednego typu amunicji obejmująca identyfikator, reload, inventory, lot, kolizję, obrażenia, deformację terenu i zachowanie impactu. |
-| **AmmunitionCollisionLayer** | Warstwa celu pocisku: `TERRAIN`, `UNIT`, `FORTRESS` albo `OUT_OF_BOUNDS`. Warstwa jest częścią kontraktu symulacji, a nie heurystyką renderera. |
+| **AmmunitionCollisionLayer** | Warstwa celu pocisku: `TERRAIN`, `UNIT`, `FORTRESS`, `BOSS` albo `OUT_OF_BOUNDS`. Warstwa jest częścią kontraktu symulacji, a nie heurystyką renderera. |
 | **Subprojectile** | Pełnoprawny pocisk utworzony przez pocisk macierzysty. Ma własne ID, pozycję, prędkość, snapshot i eventy oraz nie może tworzyć kolejnych subprojectiles. |
 | **Lingering Area** | Utrzymujący się w świecie efekt obszarowy z własnym ID, czasem trwania, tickami, statusem i opcjonalnym dryfem przez wiatr. |
 | **Unit Status Effect** | Deterministyczny efekt na jednostce, np. `BURNING`, `POISONED`, `SLOWED`, `STUNNED` albo `HASTED`, z czasem trwania, siłą, capem, odpornością i immunitetem. |
 | **World-Space Projectile Rendering** | Zasada, według której pociski, lot, impacty, eksplozje i lingering areas są rysowane w przestrzeni świata i skalują się dokładnie razem z zoomem kamery. |
 | **Balance Simulation** | Planowany zestaw automatycznych rozgrywek używający wersjonowanej konfiguracji balansu do pomiaru zwycięstw, czasu gry, zużycia zasobów i skuteczności jednostek oraz loadoutów. |
 | **Fortress Health Bars** | Paski HUD-u w lewym i prawym górnym rogu pokazujące zdrowie obu fortec. |
-| **Central Objective** | Specjalny, zniszczalny obiekt umieszczony na płaskim centralnym wzgórzu poziomów 5, 15, 25 itd. Nie zastępuje fortec, ale jest dodatkowym celem ostrzału. |
-| **Ancient War Oak** | Jedna z implementacji Siege Lord; środkowy przeciwnik poziomu 5 w Green Frontier, przedstawiony jako lekko zabawny dąb wojenny z szeroką koroną i czytelnym pniem. Jego grafika jest renderowana w skali 30% dotychczasowej wielkości, bez zmiany parametrów celu, zdrowia ani kolizji. |
+| **Central Objective** | Specjalny, zniszczalny cel w centrum poziomów kampanii kończących się cyfrą 5. Symulacja kończy mecz po jego zniszczeniu i wyznacza zwycięzcę według obrażeń zadanych przez obie drużyny. |
+| **Ancient War Oak** | Central Objective poziomu 5 w Green Frontier, używany przez BossSystem jako statyczny sprite z osobnym profilem zdrowia, obrażeń i kolizji. |
 | **Frozen Troll** | Central Objective poziomu 15 i kolejnych specjalnych poziomów Frostbound; uwięziony w lodzie troll, którego sylwetka i głowa pozostają widoczne dla obu graczy. |
 | **Special Objective Level** | Co piąty poziom każdego Chapteru. Ma względnie płaskie podejścia, jedno szerokie płaskie wzgórze na środku i aktywny Central Objective. |
 | **Boss Level Terrain Profile** | Zasada generowania ostatniego poziomu Chapteru (`10, 20, 30...`): teren pozostaje deformowalny i lekko pofałdowany, ale używa łagodnego profilu wysokości oraz obniżonych mas górskich, aby nie tworzyć dużych gór zasłaniających walkę z bossem. |
@@ -350,8 +350,8 @@ hazard, collision rule, movement modifier, damage rule, or projectile rule.
 | --- | --- |
 | **Chapter** | Dziesięciopoziomowy fragment kampanii z własnym motywem, głównym celem, progresją i nagrodą. Chapter I obejmuje poziomy 1–10. |
 | **Siege Sovereign** | Końcowy boss kampanii i najwyższa ranga centralnego przeciwnika. Jest nadrzędny wobec Siege Lord i stanowi główne zagrożenie finałowego poziomu. |
-| **Boss** | Ogólne określenie potężnego przeciwnika zbliżającego się do Player Fortress, którego trzeba zatrzymać przed dotarciem do twierdzy. W finale kampanii konkretnym tytułem Bossa jest Siege Sovereign. |
+| **Boss** | Silny przeciwnik kampanijny obsługiwany przez BossSystem jako centralny cel albo mobilny siege boss. Mobilny wariant zbliża się do fortecy BLUE; spotkanie może zakończyć się także po zniszczeniu celu centralnego. |
 | **Siege Lord** | Specjalny centralny przeciwnik występujący na poziomach 5, 15, 25 i kolejnych poziomach kampanii kończących się cyfrą 5. Jest silniejszy i ważniejszy niż zwykła jednostka, ale mniej rozbudowany niż pełny Boss. Ancient War Oak jest implementacją Siege Lord dla poziomu 5. |
-| **Boss Level** | Ostatni poziom Chapter, czyli poziom 10, 20, 30 itd. Gracz walczy z mobilnym Siege Sovereign zamiast traktować Enemy Fortress jako główny cel. Zwycięża, jeśli pokona Siege Sovereign, zanim ten dotrze do Player Fortress i ją zniszczy. |
+| **Boss Level** | Poziom kończący się cyfrą 0, np. 10, 20, 30, w którym kampania przypisuje mobilnego bossa. Gracz musi go pokonać, zanim zniszczy fortecę BLUE. |
 | **Campaign Map** | Ekran wyboru poziomów trwałej kampanii. |
 | **TEST Mode** | Wewnętrzna bitwa z pełną zawartością, omijająca ograniczenia kampanii. |

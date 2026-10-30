@@ -10,6 +10,57 @@ sealed interface MatchEvent {
         override val matchId: MatchId,
         override val simulationTimeMilliseconds: Long,
         val randomSeed: Long,
+        val balanceRevision: String? = null,
+        val balanceContentHash: String? = null,
+    ) : MatchEvent
+
+    data class BossSpawned(
+        override val eventId: EventId,
+        override val matchId: MatchId,
+        override val simulationTimeMilliseconds: Long,
+        val bossId: EntityId,
+        val profileId: String,
+        val archetype: BossArchetype,
+        val x: Float,
+        val groundY: Float,
+    ) : MatchEvent
+
+    data class BossDamaged(
+        override val eventId: EventId,
+        override val matchId: MatchId,
+        override val simulationTimeMilliseconds: Long,
+        val bossId: EntityId,
+        val sourceId: EntityId?,
+        val sourceTeam: Team,
+        val amount: Int,
+        val remainingHealth: Int,
+        val x: Float,
+        val y: Float,
+    ) : MatchEvent
+
+    data class BossAttackHit(
+        override val eventId: EventId,
+        override val matchId: MatchId,
+        override val simulationTimeMilliseconds: Long,
+        val bossId: EntityId,
+        val targetId: EntityId,
+        val amount: Int,
+    ) : MatchEvent
+
+    data class BossPhaseChanged(
+        override val eventId: EventId,
+        override val matchId: MatchId,
+        override val simulationTimeMilliseconds: Long,
+        val bossId: EntityId,
+        val phase: BossPhase,
+    ) : MatchEvent
+
+    data class BossDefeated(
+        override val eventId: EventId,
+        override val matchId: MatchId,
+        override val simulationTimeMilliseconds: Long,
+        val bossId: EntityId,
+        val winner: MatchOutcome,
     ) : MatchEvent
 
     data class TurnChanged(
@@ -210,6 +261,7 @@ enum class ProjectileTargetKind {
     FORTRESS,
     FORTRESS_SHIELD,
     BASTION,
+    BOSS,
 }
 
 enum class ProjectileResolution {

@@ -29,9 +29,9 @@ class MatchResultPopupStateMapperTest {
     }
 
     @Test
-    fun finalCampaignVictoryOffersOnlyGoldCampaignReturn() {
+    fun lastImplementedBossLevelOffersOnlyGoldCampaignReturn() {
         val state = popup(
-            level = CampaignLevelDefinition.MAX_LEVELS,
+            level = CampaignLevelDefinition.LAST_COMPLETE_CAMPAIGN_LEVEL,
             completionRecorded = true,
         )
 

@@ -105,6 +105,16 @@ export function AnimationsTab() {
               </ul>
             </section>
           )}
+          {catalog.catalogIssues.length > 0 && (
+            <section className="animation-category">
+              <h4>Boss presentation issues ({catalog.catalogIssues.length})</h4>
+              <ul>
+                {catalog.catalogIssues.map(issue => (
+                  <li key={issue.path} className="error"><code>{issue.path}</code>: {issue.message}</li>
+                ))}
+              </ul>
+            </section>
+          )}
         </aside>
         <div className="animation-main">
           {usesTeamTexture ? (

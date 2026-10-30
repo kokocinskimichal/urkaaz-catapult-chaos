@@ -1,4 +1,4 @@
-export type AnimationCategory = "character" | "spell" | "ammunition";
+export type AnimationCategory = "character" | "spell" | "ammunition" | "boss";
 
 export interface AnimationSequence {
   /** Sequence stem without the frame index, e.g. `anim_character_defender_move`. */
@@ -23,4 +23,6 @@ export interface AnimationCatalogResponse {
   sequences: AnimationSequence[];
   /** `anim_*` files that do not follow the naming convention. */
   invalidFiles: string[];
+  /** Boss profiles whose configured presentation key has no animation or static frame. */
+  catalogIssues: { path: string; message: string }[];
 }

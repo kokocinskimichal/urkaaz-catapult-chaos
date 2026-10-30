@@ -13,7 +13,16 @@ class DataStorePlayerProgressResetRepository(
 ) : PlayerProgressResetRepository {
     override suspend fun reset(): PlayerProgressResetResult =
         try {
-            dataStore.updateData { emptyPreferences() }
+            dataStore.updateData { current ->
+                val appliedPresetHash =
+                    current[DataStoreDeveloperProgressPresetAdapter.APPLIED_PROGRESS_PRESET_HASH]
+                emptyPreferences().toMutablePreferences().apply {
+                    if (appliedPresetHash != null) {
+                        this[DataStoreDeveloperProgressPresetAdapter.APPLIED_PROGRESS_PRESET_HASH] =
+                            appliedPresetHash
+                    }
+                }
+            }
             PlayerProgressResetResult.Reset
         } catch (error: IOException) {
             PlayerProgressResetResult.Failure(

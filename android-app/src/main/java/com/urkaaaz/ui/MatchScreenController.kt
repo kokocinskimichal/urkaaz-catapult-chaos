@@ -64,6 +64,7 @@ class MatchScreenController(
     private val gameHandler = Handler(Looper.getMainLooper())
     private lateinit var battlefieldView: BattlefieldView
     private lateinit var hudView: MatchHudView
+    private lateinit var bossHudView: BossHudView
     private lateinit var ammunitionPanel: AmmunitionPanelView
     private lateinit var unitPanel: UnitPanelView
     private lateinit var spellPanel: SpellPanelView
@@ -109,6 +110,7 @@ class MatchScreenController(
             onPauseClicked = {
                 render(viewModel.dispatch(MatchUiAction.TogglePause))
             }
+            bossHudView = BossHudView(activity)
             onRetreatClicked = ::showRetreatConfirmationDialog
         }
         ammunitionPanel = AmmunitionPanelView(
@@ -250,6 +252,13 @@ class MatchScreenController(
                 },
             )
             addView(
+                bossHudView,
+                FrameLayout.LayoutParams(dp(300), dp(58)).apply {
+                    gravity = Gravity.TOP or Gravity.CENTER_HORIZONTAL
+                    topMargin = dp(58)
+                },
+            )
+            addView(
                 feedbackToast,
                 FrameLayout.LayoutParams(
                     FrameLayout.LayoutParams.WRAP_CONTENT,
@@ -320,6 +329,7 @@ class MatchScreenController(
             reward = campaignRewardResult,
         )
         hudView.render(state)
+        bossHudView.render(state.boss)
         ammunitionPanel.render(state)
         unitPanel.render(state)
         spellPanel.render(state)

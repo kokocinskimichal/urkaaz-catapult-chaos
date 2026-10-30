@@ -1,6 +1,8 @@
 package com.urkaaaz.campaign
 
 import com.urkaaaz.contracts.BattlefieldConfig
+import com.urkaaaz.contracts.BossEncounterConfig
+import com.urkaaaz.contracts.BossVictoryRule
 import com.urkaaaz.contracts.AiProfileId
 import com.urkaaaz.contracts.AiProfileSelection
 import com.urkaaaz.contracts.MatchScenario
@@ -75,10 +77,37 @@ data class CampaignLevelDefinition(
         victoryRules = VictoryRulesConfig(defeatAllOpponents = true),
         mapDefinition = mapDefinition,
         aiProfile = enemy.aiProfile,
+        bossEncounter = bossEncounterForLevel(level),
     )
 
     companion object {
         const val MAX_LEVELS = 100
+        const val LAST_COMPLETE_CAMPAIGN_LEVEL = 54
+
+        private fun bossEncounterForLevel(level: Int): BossEncounterConfig? {
+            val profileId = when (level) {
+                5 -> "boss.central-ancient-war-oak.level-05"
+                10 -> "boss.mobile-thorncrown.level-10"
+                15 -> "boss.central-frozen-troll.level-15"
+                20 -> "boss.mobile-old-yeti-sovereign.level-20"
+                25 -> "boss.central-copperwood-siege-lord.level-25"
+                30 -> "boss.mobile-copperwood-final-boss.level-30"
+                35 -> "boss.central-burntwood-warden.level-35"
+                40 -> "boss.mobile-scorchbound-king.level-40"
+                45 -> "boss.central-ancient-war-oak.level-45"
+                50 -> "boss.mobile-thorncrown.level-50"
+                else -> return null
+            }
+            return BossEncounterConfig(
+                profileId = profileId,
+                spawnXRatio = if (level % 10 == 5) 0.5f else 0.78f,
+                victoryRule = if (level % 10 == 5) {
+                    BossVictoryRule.CENTRAL_DAMAGE_RACE
+                } else {
+                    BossVictoryRule.DEFEAT_BOSS
+                },
+            )
+        }
 
         fun forLevel(
             level: Int,

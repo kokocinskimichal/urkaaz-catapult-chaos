@@ -15,6 +15,7 @@ const config: AnimationConfig = parseAnimationConfig({
     character: ["defender", "demolisher", "raging_boar", "sapper", "slingmaster"],
     spell: ["fortress_shield", "haste"],
     ammunition: ["fire_rain", "rock"],
+    boss: ["ancient_war_oak", "thorncrown"],
   },
   teamTextureTargets: ["defender", "demolisher", "sapper"],
   withoutLoader: ["anim_ammunition_fire_rain_impact"],
@@ -26,6 +27,7 @@ const frames = (stem: string, count: number, start = 0) =>
 function sequenceOf(stem: string, count = 2) {
   const catalog = buildAnimationCatalog(frames(stem, count), config);
   expect(catalog.invalidFiles).toEqual([]);
+  expect(catalog.catalogIssues).toEqual([]);
   return catalog.sequences[0];
 }
 
@@ -101,6 +103,42 @@ describe("buildAnimationCatalog", () => {
     expect(sequenceOf("anim_spell_haste_orbiting_chevron")).toMatchObject({ target: "haste", type: "orbiting_chevron" });
   });
 
+  it("parses static boss sprites as neutral single-frame sequences", () => {
+    expect(sequenceOf("anim_boss_thorncrown_idle", 1)).toMatchObject({
+      category: "boss",
+      target: "thorncrown",
+      type: "idle",
+      variant: null,
+      targetConfigured: true,
+    });
+  });
+
+  it("flags team variants on boss sequences", () => {
+    expect(sequenceOf("anim_boss_thorncrown_idle_blue", 1).issues)
+      .toContain("Boss sequences cannot have team variants");
+  });
+
+  it("flags boss animations beyond the loaded single-frame static sprite as having no runtime loader", () => {
+    expect(sequenceOf("anim_boss_thorncrown_move", 3)).toMatchObject({
+      hasRuntimeLoader: false,
+    });
+    expect(sequenceOf("anim_boss_thorncrown_idle", 3)).toMatchObject({
+      hasRuntimeLoader: false,
+    });
+  });
+
+  it("reports profiles with no static idle sprite even when other states exist", () => {
+    const catalog = buildAnimationCatalog(frames("anim_boss_new_boss_move", 2), config, [{
+      id: "boss.mobile-new.level-55",
+      presentationKey: "new_boss",
+    }]);
+
+    expect(catalog.catalogIssues).toEqual([{
+      path: "bosses.boss.mobile-new.level-55.presentationKey",
+      message: "No boss animation or static frame is registered for 'new_boss'",
+    }]);
+  });
+
   it("prefers the longest configured target", () => {
     const longest = parseAnimationConfig({ targets: { ammunition: ["fire", "fire_rain"] } });
     const catalog = buildAnimationCatalog(frames("anim_ammunition_fire_rain_field", 1), longest);
@@ -143,6 +181,9 @@ describe("animationFramePath", () => {
   it("builds a padded path inside the drawable directory", () => {
     expect(animationFramePath("/repo", "anim_spell_haste_orbiting_chevron", 7)).toBe(
       "/repo/android-app/src/main/res/drawable-nodpi/anim_spell_haste_orbiting_chevron_007.png",
+    );
+    expect(animationFramePath("/repo", "anim_boss_thorncrown_idle", 0)).toBe(
+      "/repo/android-app/src/main/res/drawable-nodpi/anim_boss_thorncrown_idle_000.png",
     );
   });
 
@@ -206,6 +247,7 @@ describe("repository animation catalog", () => {
     const catalog = await readAnimationCatalog(await resolveRepoRoot());
     expect(catalog.sequences.length).toBeGreaterThan(0);
     expect(catalog.invalidFiles).toEqual([]);
+    expect(catalog.catalogIssues).toEqual([]);
     expect(catalog.sequences.filter(sequence => sequence.issues.length > 0).map(sequence => sequence.id)).toEqual([]);
     expect(catalog.sequences.filter(sequence => !sequence.targetConfigured).map(sequence => sequence.id)).toEqual([]);
     expect(catalog.sequences.find(sequence => sequence.id === "anim_character_demolisher_idle")).toMatchObject({
@@ -228,5 +270,15 @@ describe("repository animation catalog", () => {
       variant: null,
       frameIndices: Array.from({ length: 15 }, (_, index) => index),
     });
+    expect(catalog.sequences.filter(sequence => sequence.category === "boss")).toHaveLength(8);
+    expect(catalog.sequences.filter(sequence => sequence.category === "boss"))
+      .toEqual(expect.arrayContaining([
+        expect.objectContaining({
+          target: "thorncrown",
+          type: "idle",
+          frameIndices: [0],
+          targetConfigured: true,
+        }),
+      ]));
   });
 });

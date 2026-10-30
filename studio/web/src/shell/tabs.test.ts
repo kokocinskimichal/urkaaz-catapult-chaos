@@ -11,6 +11,8 @@ describe("tabIdFromHash", () => {
 
   it("registers the Campaign editor tab", () => {
     expect(TABS.map(tab => tab.id)).toContain("campaign");
+    expect(TABS.map(tab => tab.id)).toContain("balance");
+    expect(TABS.map(tab => tab.id)).toContain("progress");
     expect(tabIdFromHash("#/campaign")).toBe("campaign");
   });
 

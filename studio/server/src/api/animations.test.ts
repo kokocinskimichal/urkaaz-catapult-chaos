@@ -22,6 +22,14 @@ describe("animations API", () => {
     const response = await fetch(`${await baseUrl()}/api/animations`);
     const catalog = (await response.json()) as AnimationCatalogResponse;
     expect(response.status).toBe(200);
+    expect(catalog.catalogIssues).toEqual([]);
+    expect(catalog.sequences.filter(sequence => sequence.category === "boss")).toHaveLength(8);
+    expect(catalog.sequences.find(sequence => sequence.id === "anim_boss_thorncrown_idle"))
+      .toMatchObject({
+        frameIndices: [0],
+        targetConfigured: true,
+        hasRuntimeLoader: true,
+      });
     expect(catalog.sequences.some(sequence => sequence.id === "anim_character_defender_move")).toBe(true);
     expect(catalog.sequences.find(sequence => sequence.id === "anim_character_demolisher_idle")?.supportsTeamTexture).toBe(true);
     const demolisherAttack = catalog.sequences.find(sequence => sequence.id === "anim_character_demolisher_attack");

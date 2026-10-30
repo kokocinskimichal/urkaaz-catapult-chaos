@@ -18,6 +18,8 @@ import com.urkaaaz.contracts.WorldDimensions
 import com.urkaaaz.application.loadout.LoadoutCommandRejectedException
 import com.urkaaaz.application.loadout.LoadoutError
 import com.urkaaaz.application.reward.MatchEventObserver
+import com.urkaaaz.application.balance.GameBalanceRead
+import com.urkaaaz.application.balance.GameBalanceRepository
 import com.urkaaaz.simulation.DeterministicMatchSimulation
 import com.urkaaaz.simulation.CombatLogSink
 import com.urkaaaz.simulation.NoOpCombatLogSink
@@ -37,6 +39,11 @@ class MatchSession(
     private val ammunitionLogSink: AmmunitionLogSink = NoOpAmmunitionLogSink,
     private val randomSeedProvider: () -> Long = { Random.nextLong() },
     private val eventObserver: MatchEventObserver = MatchEventObserver { },
+    private val balanceRepository: GameBalanceRepository = GameBalanceRepository.bundled,
+    private val expectedBalanceRevision: String? = null,
+    private val expectedBalanceContentHash: String? = null,
+    private val bossEncounterMatchDurationMilliseconds: Long =
+        SimulationConfig.DEFAULT_MATCH_DURATION_MILLISECONDS,
 ) {
     private var simulation: DeterministicMatchSimulation? = null
     private val selectedAmmunition = mutableMapOf(
@@ -49,13 +56,14 @@ class MatchSession(
     private var replaySeed: Long? = null
     private val replaySteps = mutableListOf<MatchReplayStep>()
 
-    private val replayConfiguration = MatchReplayConfiguration(
+    private var replayConfiguration = MatchReplayConfiguration(
         terrainBiome = terrainBiome,
         initialWind = initialWind,
-        mapDefinition = mapDefinition,
+        mapDefinition = mapDefinition ?: scenario?.mapDefinition,
         scenario = scenario,
         blueFortressMaxHealth = blueFortressMaxHealth,
         redFortressMaxHealth = redFortressMaxHealth,
+        bossEncounterMatchDurationMilliseconds = bossEncounterMatchDurationMilliseconds,
     )
 
     fun dispatch(command: MatchCommand): MatchSnapshot {
@@ -277,6 +285,27 @@ class MatchSession(
         selectedAmmunition[Team.BLUE] = AmmunitionType.ROCK
         selectedAmmunition[Team.RED] = AmmunitionType.ROCK
         val randomSeed = command.randomSeed ?: randomSeedProvider()
+        val loadedBalance = when (val result = balanceRepository.load()) {
+            is GameBalanceRead.Available -> result.balance
+            is GameBalanceRead.Failure ->
+                error("Unable to load game balance: ${result.reason}")
+        }
+        expectedBalanceRevision?.let { expected ->
+            check(loadedBalance.config.balanceRevision == expected) {
+                "replay balance revision does not match the current game balance"
+            }
+        }
+        expectedBalanceContentHash?.let { expected ->
+            check(loadedBalance.contentHash == expected) {
+                "replay balance content does not match the current game balance"
+            }
+        }
+        val bossEncounter = scenario?.bossEncounter
+        val bossProfile = bossEncounter?.let { loadedBalance.config.bossProfile(it.profileId) }
+        replayConfiguration = replayConfiguration.copy(
+            balanceRevision = loadedBalance.config.balanceRevision,
+            balanceContentHash = loadedBalance.contentHash,
+        )
         simulation = DeterministicMatchSimulation(
             matchId = command.matchId,
             config = SimulationConfig(
@@ -288,10 +317,16 @@ class MatchSession(
                 windAccelerationX = initialWind.direction * initialWind.strength,
                 blueFortressMaxHealth = blueFortressMaxHealth,
                 redFortressMaxHealth = redFortressMaxHealth,
-                mapDefinition = mapDefinition,
+                mapDefinition = mapDefinition ?: scenario?.mapDefinition,
+                bossEncounter = bossEncounter,
+                bossProfile = bossProfile,
+                balanceRevision = loadedBalance.config.balanceRevision,
+                balanceContentHash = loadedBalance.contentHash,
                 playerLoadout = scenario?.playerLoadout,
                 availableAmmunitionTypes = scenario?.availableAmmunition?.toSet().orEmpty(),
                 combatRandomSeed = randomSeed,
+                bossEncounterMatchDurationMilliseconds =
+                    bossEncounterMatchDurationMilliseconds,
             ),
             combatLogSink = combatLogSink,
             ammunitionLogSink = ammunitionLogSink,

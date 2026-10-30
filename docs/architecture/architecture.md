@@ -1586,7 +1586,12 @@ wersjonowanym namespace DataStore: ukończone poziomy, najwyższy odblokowany
 poziom i zastosowane milestone-ID. Tylko `BLUE_WIN` atomowo zapisuje
 ukończenie, następny poziom i nagrody.
 
-Lives, ustawienia oraz tutorial progress pozostają przyszłą pracą.
+Developer-only zakładka Progress może jednorazowo ustawić wybrane pola
+`currentLevel`, `lives` i `gold` w debug buildzie, przez aplikacyjny port oraz
+adapter DataStore w `android-app`. Hash zastosowanego presetu zapobiega
+ponownemu nadpisaniu danych przy kolejnym starcie; release build ignoruje
+preset. Życia są zapisywane i wyświetlane, ale ich zużywanie oraz regeneracja,
+ustawienia i tutorial progress pozostają przyszłą pracą.
 Milestone'y kampanii nie zapisują tutorial flags; przyszły TutorialSystem
 będzie ich właścicielem.
 

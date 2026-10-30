@@ -1,6 +1,7 @@
 package com.urkaaaz.ai
 
 import com.urkaaaz.contracts.CatapultSnapshot
+import com.urkaaaz.contracts.BossArchetype
 import com.urkaaaz.contracts.CommandId
 import com.urkaaaz.contracts.MatchSnapshot
 import com.urkaaaz.contracts.MatchCommand
@@ -149,7 +150,15 @@ private fun fireAt(
         ?: 0f
     if (reloadRemaining > 0f || team in context.snapshot.activeProjectileTeams) return emptyList()
 
-    val target = preferredTarget(context, enemyCatapult)
+    val boss = context.snapshot.boss
+    val target = if (boss?.archetype == BossArchetype.CENTRAL_OBJECTIVE) {
+        TargetPoint(
+            x = boss.x,
+            y = boss.groundY - boss.collisionHeight / 2f,
+        )
+    } else {
+        preferredTarget(context, enemyCatapult)
+    }
     val horizontalDistance = abs(target.x - catapult.x).coerceAtLeast(1f)
     val angleFromHorizontal = Math.toDegrees(
         atan2(abs(target.y - catapult.y).toDouble(), horizontalDistance.toDouble()),

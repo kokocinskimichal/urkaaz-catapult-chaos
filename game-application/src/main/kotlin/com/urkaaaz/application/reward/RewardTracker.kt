@@ -178,6 +178,7 @@ class RewardTracker(
             }
             ProjectileTargetKind.FORTRESS_SHIELD,
             ProjectileTargetKind.BASTION,
+            ProjectileTargetKind.BOSS,
             -> Unit
             null -> issues += RewardTrackingIssue.INCOMPLETE_TARGET_METADATA
         }
@@ -201,6 +202,7 @@ class RewardTracker(
                 if (event.amount > 0) unknownFortressDamage = true
                 issues += RewardTrackingIssue.INCOMPLETE_TARGET_METADATA
             }
+            ProjectileTargetKind.BOSS -> Unit
             else -> if (event.targetTeam == null) {
                 issues += RewardTrackingIssue.INCOMPLETE_TARGET_METADATA
             }

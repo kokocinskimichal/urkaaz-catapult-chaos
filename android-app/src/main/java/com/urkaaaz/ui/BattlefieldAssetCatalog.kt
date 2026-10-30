@@ -7,6 +7,7 @@ import android.graphics.Color
 import android.graphics.Matrix
 import android.util.LruCache
 import com.urkaaaz.android.R
+import com.urkaaaz.contracts.BossPhase
 import org.json.JSONObject
 
 data class BattlefieldTheme(
@@ -59,6 +60,7 @@ data class FireRainAnimationSet(
 class BattlefieldAssetCatalog(private val context: Context) {
     private val resources = context.resources
     private val unitBitmapCache = mutableMapOf<String, Bitmap?>()
+    private val bossBitmapCache = mutableMapOf<String, Bitmap>()
     private val unitAnimationCache = mutableMapOf<String, List<Bitmap>>()
     private val teamTextureBitmapCache = TeamTextureBitmapCache()
     private val teamTextureConfigurationCache = mutableMapOf<String, Map<String, String>>()
@@ -500,6 +502,13 @@ class BattlefieldAssetCatalog(private val context: Context) {
     fun animationFor(ammunitionType: String): ProjectileAnimation =
         animations[ammunitionType]
             ?: error("No projectile animation is registered for ammunition '$ammunitionType'")
+
+    fun bossSprite(presentationKey: String, phase: BossPhase): Bitmap {
+        val name = BossPresentationCatalog.definition(presentationKey).spriteFor(phase)
+        return bossBitmapCache.getOrPut(name) {
+            loadBitmap(name) ?: error("Missing boss drawable '$name'")
+        }
+    }
 
     private fun animation(
         prefix: String,

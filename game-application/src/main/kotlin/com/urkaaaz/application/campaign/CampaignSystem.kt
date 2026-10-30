@@ -75,7 +75,13 @@ class CampaignSystem(
 
     suspend fun selectLevel(level: Int): CampaignLevelSelection {
         if (!isKnownLevel(level)) {
-            return CampaignLevelSelection.Rejected(CampaignSelectionRejection.INVALID_LEVEL)
+            return CampaignLevelSelection.Rejected(
+                if (level in 1..CampaignLevelDefinition.MAX_LEVELS) {
+                    CampaignSelectionRejection.LEVEL_LOCKED
+                } else {
+                    CampaignSelectionRejection.INVALID_LEVEL
+                },
+            )
         }
         val progress = when (val read = progress()) {
             is CampaignProgressRead.Available -> read.progress
@@ -174,8 +180,12 @@ class CampaignSystem(
                     .toSet()
                 current.copy(
                     highestUnlockedLevel = maxOf(
-                        current.highestUnlockedLevel,
-                        (level + 1).coerceAtMost(CampaignLevelDefinition.MAX_LEVELS),
+                        current.highestUnlockedLevel.coerceAtMost(
+                            CampaignLevelDefinition.LAST_COMPLETE_CAMPAIGN_LEVEL,
+                        ),
+                        (level + 1).coerceAtMost(
+                            CampaignLevelDefinition.LAST_COMPLETE_CAMPAIGN_LEVEL,
+                        ),
                     ),
                     completedLevels = current.completedLevels + level,
                     appliedMilestoneIds = current.appliedMilestoneIds + newlyAppliedMilestones,
@@ -229,14 +239,16 @@ class CampaignSystem(
     }
 
     private fun isKnownLevel(level: Int): Boolean =
-        level in 1..CampaignLevelDefinition.MAX_LEVELS && levels.contains(level)
+        level in 1..CampaignLevelDefinition.LAST_COMPLETE_CAMPAIGN_LEVEL &&
+            levels.contains(level)
 
     private fun CampaignProgress.isValid(): Boolean =
         levels.contains(highestUnlockedLevel) &&
             completedLevels.all { completedLevel ->
                 levels.contains(completedLevel) &&
                     (completedLevel < highestUnlockedLevel ||
-                        highestUnlockedLevel == CampaignLevelDefinition.MAX_LEVELS)
+                        highestUnlockedLevel == CampaignLevelDefinition.MAX_LEVELS ||
+                        highestUnlockedLevel == CampaignLevelDefinition.LAST_COMPLETE_CAMPAIGN_LEVEL)
             } &&
             appliedMilestoneIds.all { milestoneId ->
                 rewards.milestones.milestone(milestoneId)

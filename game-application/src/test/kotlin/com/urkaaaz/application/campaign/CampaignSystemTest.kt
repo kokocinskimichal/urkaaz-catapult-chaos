@@ -55,6 +55,24 @@ class CampaignSystemTest {
     }
 
     @Test
+    fun winningLevelFiftyUnlocksPlayableLevelsBeforeTheNextBossEncounter() = runTest {
+        val system = CampaignSystem(
+            FakeRepository(CampaignProgress(highestUnlockedLevel = 50)),
+        )
+
+        val completion = assertIs<CampaignCompletionResult.Completed>(
+            system.completeLevel(50, finished(MatchOutcome.BLUE_WIN)),
+        )
+
+        assertEquals(51, completion.progress.highestUnlockedLevel)
+        assertIs<CampaignLevelSelection.Selected>(system.selectLevel(51))
+        assertEquals(
+            CampaignLevelSelection.Rejected(CampaignSelectionRejection.LEVEL_LOCKED),
+            system.selectLevel(55),
+        )
+    }
+
+    @Test
     fun blueWinAtomicallyCompletesLevelUnlocksNextAndGrantsMilestone() = runTest {
         val system = CampaignSystem(FakeRepository(CampaignProgress(highestUnlockedLevel = 5)))
 
@@ -154,16 +172,23 @@ class CampaignSystemTest {
     }
 
     @Test
-    fun finalLevelCompletionDoesNotOverflowCampaignMaximum() = runTest {
-        val progress = CampaignProgress(highestUnlockedLevel = CampaignLevelDefinition.MAX_LEVELS)
+    fun lastImplementedBossLevelDoesNotUnlockIncompleteBossContent() = runTest {
+        val lastImplementedLevel = CampaignLevelDefinition.LAST_COMPLETE_CAMPAIGN_LEVEL
+        val progress = CampaignProgress(highestUnlockedLevel = lastImplementedLevel)
         val system = CampaignSystem(FakeRepository(progress))
 
         val result = assertIs<CampaignCompletionResult.Completed>(
-            system.completeLevel(CampaignLevelDefinition.MAX_LEVELS, finished(MatchOutcome.BLUE_WIN)),
+            system.completeLevel(lastImplementedLevel, finished(MatchOutcome.BLUE_WIN)),
         )
 
-        assertEquals(CampaignLevelDefinition.MAX_LEVELS, result.progress.highestUnlockedLevel)
-        assertEquals(setOf(CampaignLevelDefinition.MAX_LEVELS), result.progress.completedLevels)
+        assertEquals(lastImplementedLevel, result.progress.highestUnlockedLevel)
+        assertEquals(setOf(lastImplementedLevel), result.progress.completedLevels)
+        listOf(55, 60, CampaignLevelDefinition.MAX_LEVELS).forEach { unavailableLevel ->
+            assertEquals(
+                CampaignLevelSelection.Rejected(CampaignSelectionRejection.LEVEL_LOCKED),
+                system.selectLevel(unavailableLevel),
+            )
+        }
     }
 
     @Test

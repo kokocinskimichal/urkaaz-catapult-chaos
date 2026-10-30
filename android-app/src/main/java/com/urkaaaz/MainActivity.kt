@@ -1,6 +1,7 @@
 package com.urkaaaz
 
 import android.os.Bundle
+import android.util.Log
 import androidx.activity.ComponentActivity
 import androidx.activity.OnBackPressedCallback
 import androidx.core.view.WindowCompat
@@ -10,6 +11,9 @@ import com.urkaaaz.application.campaign.CampaignSystem
 import com.urkaaaz.application.loadout.LoadoutUseCases
 import com.urkaaaz.application.progression.CampaignAwareLoadoutProgressionPort
 import com.urkaaaz.application.progression.PlayerProgressionUseCases
+import com.urkaaaz.application.progression.DeveloperProgressPresetApply
+import com.urkaaaz.application.progression.DeveloperProgressPresetRepository
+import com.urkaaaz.application.progression.DeveloperProgressPresetUseCase
 import com.urkaaaz.application.progression.DemoLoadoutProgressionPort
 import com.urkaaaz.navigation.AppNavigator
 import com.urkaaaz.navigation.AppScreen
@@ -18,6 +22,7 @@ import com.urkaaaz.persistence.DataStoreCampaignProgressRepository
 import com.urkaaaz.persistence.DataStoreLoadoutRepository
 import com.urkaaaz.persistence.DataStorePlayerProgressionRepository
 import com.urkaaaz.persistence.DataStorePlayerProgressResetRepository
+import com.urkaaaz.persistence.DataStoreDeveloperProgressPresetAdapter
 import com.urkaaaz.persistence.DataStoreRewardSettlementAdapter
 import com.urkaaaz.persistence.LoadoutStorageScope
 import com.urkaaaz.persistence.urkaazPreferencesDataStore
@@ -31,11 +36,17 @@ import com.urkaaaz.screens.match.MatchScreen
 import com.urkaaaz.screens.result.ResultScreen
 import com.urkaaaz.screens.shop.ShopScreen
 import com.urkaaaz.screens.start.StartScreen
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.cancel
+import kotlinx.coroutines.launch
 
 class MainActivity : ComponentActivity() {
     private lateinit var screenHost: ScreenHost
     private lateinit var navigator: AppNavigator
     private var activityResumed = false
+    private val startupScope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
     private val campaignCompletionPresenter by lazy {
         CampaignCompletionPresenter(this, campaignSystem)
     }
@@ -56,6 +67,15 @@ class MainActivity : ComponentActivity() {
     }
     private val preferencesDataStore by lazy {
         applicationContext.urkaazPreferencesDataStore
+    }
+    private val developerProgressPresetAdapter by lazy {
+        DataStoreDeveloperProgressPresetAdapter(preferencesDataStore)
+    }
+    private val developerProgressPreset by lazy {
+        DeveloperProgressPresetUseCase(
+            repository = DeveloperProgressPresetRepository.bundled,
+            port = developerProgressPresetAdapter,
+        )
     }
     private val playerProgressResetRepository by lazy {
         DataStorePlayerProgressResetRepository(preferencesDataStore)
@@ -102,7 +122,22 @@ class MainActivity : ComponentActivity() {
             }
         })
         setContentView(screenHost)
-        navigator.start(AppScreen.Start)
+        if ((applicationInfo.flags and android.content.pm.ApplicationInfo.FLAG_DEBUGGABLE) != 0) {
+            startupScope.launch {
+                when (val result = developerProgressPreset.applyBundled()) {
+                    DeveloperProgressPresetApply.Applied ->
+                        Log.i("MainActivity", "Applied developer progress preset")
+                    is DeveloperProgressPresetApply.Failure ->
+                        Log.e("MainActivity", "Developer progress preset failed: ${result.reason}")
+                    DeveloperProgressPresetApply.AlreadyApplied,
+                    DeveloperProgressPresetApply.NotRequested,
+                    -> Unit
+                }
+                navigator.start(AppScreen.Start)
+            }
+        } else {
+            navigator.start(AppScreen.Start)
+        }
     }
 
     override fun onResume() {
@@ -118,6 +153,7 @@ class MainActivity : ComponentActivity() {
     }
 
     override fun onDestroy() {
+        startupScope.cancel()
         if (::screenHost.isInitialized) {
             screenHost.pauseActiveScreen()
         }
@@ -140,6 +176,7 @@ class MainActivity : ComponentActivity() {
                 onCampaign = { navigator.navigate(AppScreen.Campaign) },
                 onShop = { navigator.navigate(AppScreen.Shop) },
                 onResetProgress = { playerProgressResetRepository.reset() },
+                loadProgress = { developerProgressPreset.current() },
             )
             AppScreen.Campaign -> CampaignScreen(
                 context = this,

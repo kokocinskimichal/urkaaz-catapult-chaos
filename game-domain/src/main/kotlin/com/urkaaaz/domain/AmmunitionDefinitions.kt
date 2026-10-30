@@ -6,6 +6,7 @@ enum class AmmunitionHitLayer {
     TERRAIN,
     UNIT,
     FORTRESS,
+    BOSS,
     OUT_OF_BOUNDS,
 }
 

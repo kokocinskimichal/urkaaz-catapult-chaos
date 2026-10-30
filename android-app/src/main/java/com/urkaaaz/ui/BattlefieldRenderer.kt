@@ -194,6 +194,12 @@ class BattlefieldRenderer(
             viewportWidth = viewportWidth,
             viewportHeight = viewportHeight,
         )
+        drawBoss(
+            canvas = canvas,
+            boss = state.boss,
+            viewportWidth = viewportWidth,
+            viewportHeight = viewportHeight,
+        )
         drawDeformedCap(
             canvas = canvas,
             bitmap = theme.cap,
@@ -491,6 +497,7 @@ class BattlefieldRenderer(
                 assets.runicBastionCreationFrames.getOrNull(creationFrameIndex)
                     ?: error("Runic Bastion creation frame $creationFrameIndex is unavailable")
             }
+
             drawRunicBastionFrame(
                 canvas = canvas,
                 bastion = bastion,
@@ -513,6 +520,32 @@ class BattlefieldRenderer(
                 visibleArtBounds = RunicBastionPresentation.DESTRUCTION_VISIBLE_ART_BOUNDS,
             )
         }
+    }
+
+    private fun drawBoss(
+        canvas: Canvas,
+        boss: BossRenderState?,
+        viewportWidth: Float,
+        viewportHeight: Float,
+    ) {
+        if (boss == null || boss.health <= 0) return
+        val bitmap = assets.bossSprite(boss.presentationKey, boss.phase)
+        val centerX = worldToViewX(boss.x, viewportWidth)
+        val baselineY = worldToViewY(boss.groundY, viewportHeight)
+        val hitboxWidth = worldToViewWidth(boss.collisionWidth, viewportWidth)
+        val hitboxHeight = worldToViewHeight(boss.collisionHeight, viewportHeight)
+        val sourceAspect = bitmap.width.toFloat() / bitmap.height.coerceAtLeast(1)
+        val hitboxAspect = hitboxWidth / hitboxHeight
+        val visualWidth: Float
+        val visualHeight: Float
+        if (sourceAspect >= hitboxAspect) {
+            visualWidth = hitboxWidth
+            visualHeight = hitboxWidth / sourceAspect
+        } else {
+            visualHeight = hitboxHeight
+            visualWidth = hitboxHeight * sourceAspect
+        }
+        drawTextureAtWorldSize(canvas, bitmap, centerX, baselineY, visualWidth, visualHeight)
     }
 
     private fun drawRunicBastionFrame(
@@ -1467,6 +1500,21 @@ class BattlefieldRenderer(
                     hitboxPaint,
                 )
             }
+        }
+
+        state.boss?.takeIf { it.health > 0 }?.let { boss ->
+            val centerX = worldToViewX(boss.x, viewportWidth)
+            val centerY = worldToViewY(
+                boss.groundY - boss.collisionHeight / 2f,
+                viewportHeight,
+            )
+            canvas.drawRect(
+                centerX - worldToViewWidth(boss.collisionWidth, viewportWidth) / 2f,
+                centerY - worldToViewHeight(boss.collisionHeight, viewportHeight) / 2f,
+                centerX + worldToViewWidth(boss.collisionWidth, viewportWidth) / 2f,
+                centerY + worldToViewHeight(boss.collisionHeight, viewportHeight) / 2f,
+                hitboxPaint,
+            )
         }
 
         state.projectiles.forEach { projectile ->

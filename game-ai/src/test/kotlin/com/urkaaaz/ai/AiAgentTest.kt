@@ -3,6 +3,9 @@ package com.urkaaaz.ai
 import com.urkaaaz.contracts.AiProfileId
 import com.urkaaaz.contracts.AiProfileSelection
 import com.urkaaaz.contracts.CatapultSnapshot
+import com.urkaaaz.contracts.BossArchetype
+import com.urkaaaz.contracts.BossPhase
+import com.urkaaaz.contracts.BossSnapshot
 import com.urkaaaz.contracts.CommandId
 import com.urkaaaz.contracts.EntityId
 import com.urkaaaz.contracts.MatchCommand
@@ -74,6 +77,48 @@ class AiAgentTest {
         ).decide(snapshot, includeUnitActions = false)
 
         assertEquals(commands(), commands())
+    }
+
+    @Test
+    fun aiTargetsTheCentralObjectiveWhenOneIsActive() {
+        val commands = AiAgent(
+            AiConfiguration(
+                playerId = PlayerId("ai-player"),
+                team = Team.RED,
+                profile = AiProfileSelection(AiProfileId.VETERAN),
+                randomSeed = 42L,
+            ),
+        ).decide(
+            snapshot.copy(
+                boss = BossSnapshot(
+                    entityId = EntityId("boss-oak"),
+                    profileId = "boss.central-oak.level-05",
+                    presentationKey = "ancient_war_oak",
+                    archetype = BossArchetype.CENTRAL_OBJECTIVE,
+                    phase = BossPhase.IDLE,
+                    x = 500f,
+                    groundY = 350f,
+                    collisionWidth = 100f,
+                    collisionHeight = 200f,
+                    health = 10_000,
+                    maxHealth = 12_000,
+                ),
+            ),
+            includeUnitActions = false,
+        )
+        val aim = commands.filterIsInstance<MatchCommand.Aim>().single()
+        val normalAim = AiAgent(
+            AiConfiguration(
+                playerId = PlayerId("ai-player"),
+                team = Team.RED,
+                profile = AiProfileSelection(AiProfileId.VETERAN),
+                randomSeed = 42L,
+            ),
+        ).decide(snapshot, includeUnitActions = false)
+            .filterIsInstance<MatchCommand.Aim>()
+            .single()
+
+        assertNotEquals(normalAim.directionDegrees, aim.directionDegrees)
     }
 
     @Test

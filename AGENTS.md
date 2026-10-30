@@ -65,6 +65,7 @@ do bieżącego zadania według [indeksu dokumentów kontekstu](docs/agent-contex
 
 - [Projekt systemu amunicji](docs/systems/ammunition-design.md)
 - [Projekt systemu walki](docs/systems/combat-design.md)
+- [BossSystem](docs/systems/boss-system.md)
 - [System kampanii](docs/systems/campaign-system.md)
 - [Plan kamieni milowych kampanii](docs/systems/campaign-milestones-plan.md)
 - [Prompt kamieni milowych kampanii](docs/systems/campaign-milestones-implementation-prompt.md)

@@ -52,6 +52,6 @@ class AnimationAssetNamingTest {
 
     private companion object {
         val CANONICAL_FRAME_NAME =
-            Regex("^(anim_(?:character|spell|ammunition)_[a-z0-9_]+)_(\\d{3})\\.png$")
+            Regex("^(anim_(?:character|spell|ammunition|boss)_[a-z0-9_]+)_(\\d{3})\\.png$")
     }
 }

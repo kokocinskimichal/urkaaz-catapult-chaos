@@ -3,6 +3,7 @@ package com.urkaaaz.simulation
 import com.urkaaaz.contracts.CatapultSnapshot
 import com.urkaaaz.contracts.CatapultPresentationContract
 import com.urkaaaz.contracts.ActiveSpellSnapshot
+import com.urkaaaz.contracts.BossArchetype
 import com.urkaaaz.contracts.EntityId
 import com.urkaaaz.contracts.EventId
 import com.urkaaaz.contracts.FortressHitboxProfile
@@ -87,9 +88,13 @@ class DeterministicMatchSimulation(
     private var activeTeam = Team.BLUE
     private var finalOutcome: MatchOutcome? = null
     private var simulationTimeMilliseconds = 0L
-    private var remainingMatchTimeMilliseconds = config.matchDurationMilliseconds
+    private var remainingMatchTimeMilliseconds = if (config.bossEncounter != null) {
+        config.bossEncounterMatchDurationMilliseconds
+    } else {
+        config.matchDurationMilliseconds
+    }
     private var sequence = 0L
-    private var terrain = config.mapDefinition?.let(TerrainState::fromMapDefinition)
+    private var terrain = (config.mapDefinition?.let(TerrainState::fromMapDefinition)
         ?: TerrainState.legacyProfile(
             baselineHeight = config.bounds.height * 0.78f,
             worldWidth = config.bounds.width,
@@ -104,7 +109,32 @@ class DeterministicMatchSimulation(
             .protectRange(
                 config.bounds.width - fortressCenterMargin,
                 FORTRESS_FLAT_HALF_WIDTH,
-            )
+            )).let { battlefieldTerrain ->
+        val encounter = config.bossEncounter
+        val profile = config.bossProfile
+        if (
+            encounter != null &&
+            profile?.archetype == BossArchetype.CENTRAL_OBJECTIVE
+        ) {
+            val centerX = config.bounds.width * encounter.spawnXRatio
+            val halfWidth = profile.collision.width * 0.58f
+            val foundationY = battlefieldTerrain.heightAt(centerX)
+            battlefieldTerrain
+                .flattenFoundation(centerX, halfWidth, foundationY)
+                .protectRange(centerX, halfWidth)
+        } else {
+            battlefieldTerrain
+        }
+    }
+    private val bossSystem = config.bossEncounter?.let { encounter ->
+        BossSystem(
+            profile = requireNotNull(config.bossProfile),
+            encounter = encounter,
+            worldWidth = config.bounds.width,
+            unitCollisionRadius = config.unitCollisionRadius,
+            groundHeightAt = terrain::heightAt,
+        )
+    }
     private var projectiles = emptyList<Projectile>()
     private var currentBlueFortress = blueFortress
     private var currentRedFortress = redFortress
@@ -157,7 +187,23 @@ class DeterministicMatchSimulation(
                 matchId,
                 simulationTimeMilliseconds,
                 config.combatRandomSeed,
+                config.balanceRevision,
+                config.balanceContentHash,
             )
+        }
+        bossSystem?.snapshot()?.let { boss ->
+            emit {
+                MatchEvent.BossSpawned(
+                    eventId = it,
+                    matchId = matchId,
+                    simulationTimeMilliseconds = simulationTimeMilliseconds,
+                    bossId = boss.entityId,
+                    profileId = boss.profileId,
+                    archetype = boss.archetype,
+                    x = boss.x,
+                    groundY = boss.groundY,
+                )
+            }
         }
         emit { MatchEvent.TurnChanged(it, matchId, simulationTimeMilliseconds, activeTeam) }
         logCombatState("match-started")
@@ -590,12 +636,14 @@ class DeterministicMatchSimulation(
             defeated.copy(remainingSeconds = defeated.remainingSeconds - deltaSeconds)
                 .takeIf { it.remainingSeconds > 0f }
         }
+        val bossTick = advanceBoss(deltaSeconds)
         advanceUnits(deltaSeconds, deltaMilliseconds)
         // Keep each blocker active for the whole movement step; deaths in the
         // interaction and projectile phases below start with the full duration.
         advanceRunicBastionDestructionBlockers(deltaMilliseconds)
         advanceHasteTimers(deltaMilliseconds)
         resolveUnitInteractions(deltaSeconds)
+        applyBossTick(bossTick)
         finishIfFortressDestroyed()
         val resolved = mutableListOf<Projectile>()
         projectiles.forEach { projectile ->
@@ -1023,7 +1071,158 @@ class DeterministicMatchSimulation(
                 )
             }
         },
+        boss = bossSystem?.snapshot(),
+        balanceRevision = config.balanceRevision,
+        balanceContentHash = config.balanceContentHash,
     )
+
+    private fun advanceBoss(deltaSeconds: Float): BossTickResult {
+        val boss = bossSystem ?: return BossTickResult()
+        val result = boss.advance(
+            deltaSeconds = deltaSeconds,
+            units = units,
+            movingTeams = movingTeams,
+            blueGateX = currentBlueFortress.center.x,
+            random = combatRandom,
+        )
+        if (result.phaseChanged) {
+            emit {
+                MatchEvent.BossPhaseChanged(
+                    eventId = it,
+                    matchId = matchId,
+                    simulationTimeMilliseconds = simulationTimeMilliseconds,
+                    bossId = boss.entityId,
+                    phase = boss.snapshot().phase,
+                )
+            }
+        }
+        return result
+    }
+
+    private fun canUnitAttackBoss(unit: Unit, candidates: List<Unit>): Boolean {
+        val boss = bossSystem ?: return false
+        val formationOffset =
+            boss.formationRank(unit, candidates, movingTeams) * ATTACK_FORMATION_SPACING
+        return boss.canUnitAttack(unit, movingTeams, formationOffset.toFloat())
+    }
+
+    private fun applyBossTick(result: BossTickResult) {
+        if (status != MatchStatus.RUNNING) return
+        val boss = bossSystem ?: return
+        val current = units.toMutableList()
+        result.unitDamage.entries.sortedBy { it.key.value }.forEach { (unitId, damage) ->
+            val target = current.firstOrNull { it.id == unitId && it.isAlive }
+                ?: return@forEach
+            replaceUnit(current, unitId, target.withDamage(damage))
+            emit {
+                MatchEvent.BossAttackHit(
+                    eventId = it,
+                    matchId = matchId,
+                    simulationTimeMilliseconds = simulationTimeMilliseconds,
+                    bossId = boss.entityId,
+                    targetId = unitId,
+                    amount = damage,
+                )
+            }
+            emitDamage(
+                targetId = unitId,
+                amount = damage,
+                position = target.position,
+                targetLayer = com.urkaaaz.domain.AmmunitionHitLayer.UNIT,
+            )
+        }
+        defeatedUnits += current.filterNot { it.isAlive }.map { unit ->
+            DefeatedUnit(
+                unit = unit.copy(
+                    combatState = unit.combatState.copy(
+                        action = UnitActionState.DEAD,
+                        targetId = null,
+                    ),
+                ),
+                remainingSeconds = DEATH_ANIMATION_SECONDS,
+            )
+        }
+        units = current.filter { it.isAlive }
+
+        if (result.fortressDamage > 0 && currentBlueFortress.isAlive) {
+            currentBlueFortress = currentBlueFortress.withDamage(result.fortressDamage)
+            emitDamage(
+                targetId = currentBlueFortress.id,
+                amount = result.fortressDamage,
+                position = currentBlueFortress.center,
+                targetLayer = com.urkaaaz.domain.AmmunitionHitLayer.FORTRESS,
+            )
+        }
+        finishIfFortressDestroyed()
+    }
+
+    private fun applyBossDamage(
+        amount: Int,
+        sourceTeam: Team,
+        sourceId: EntityId?,
+        sourceAmmunition: String? = null,
+    ) {
+        val boss = bossSystem ?: return
+        val result = boss.applyDamage(
+            amount = amount,
+            sourceTeam = sourceTeam,
+            ammunitionType = sourceAmmunition,
+        ) ?: return
+        emitBossDamage(result, sourceTeam, sourceId)
+    }
+
+    private fun emitBossDamage(
+        result: BossDamageResult,
+        sourceTeam: Team,
+        sourceId: EntityId?,
+    ) {
+        val boss = requireNotNull(bossSystem)
+        val hitPosition = WorldPosition(result.x, result.y)
+        emitDamage(
+            targetId = boss.entityId,
+            amount = result.amount,
+            position = hitPosition,
+            targetLayer = com.urkaaaz.domain.AmmunitionHitLayer.BOSS,
+        )
+        emit {
+            MatchEvent.BossDamaged(
+                eventId = it,
+                matchId = matchId,
+                simulationTimeMilliseconds = simulationTimeMilliseconds,
+                bossId = boss.entityId,
+                sourceId = sourceId,
+                sourceTeam = sourceTeam,
+                amount = result.amount,
+                remainingHealth = result.remainingHealth,
+                x = result.x,
+                y = result.y,
+            )
+        }
+        if (result.phaseChanged) {
+            emit {
+                MatchEvent.BossPhaseChanged(
+                    eventId = it,
+                    matchId = matchId,
+                    simulationTimeMilliseconds = simulationTimeMilliseconds,
+                    bossId = boss.entityId,
+                    phase = boss.snapshot().phase,
+                )
+            }
+        }
+        if (result.defeated) {
+            val winner = requireNotNull(result.winner)
+            emit {
+                MatchEvent.BossDefeated(
+                    eventId = it,
+                    matchId = matchId,
+                    simulationTimeMilliseconds = simulationTimeMilliseconds,
+                    bossId = boss.entityId,
+                    winner = winner,
+                )
+            }
+            finish(winner)
+        }
+    }
 
     private fun attackProgress(unit: Unit): Float {
         val cooldown = unit.combatState.attackCooldownRemainingSeconds
@@ -1275,6 +1474,11 @@ class DeterministicMatchSimulation(
                             direction * (MELEE_ATTACK_STANDOFF_DISTANCE + formationOffset)
                 }
             }
+            val bossStopX = if (waveMoving && combatTarget == null) {
+                bossSystem?.approachX(unit, movingTeams)
+            } else {
+                null
+            }
             val formationRank = combatTarget?.let { target ->
                 units
                     .filter {
@@ -1337,6 +1541,7 @@ class DeterministicMatchSimulation(
                 combatStopX,
                 alliedStopX,
                 bastionStopX,
+                bossStopX,
                 sapperFortressStopX,
                 demolisherFortressStopX,
             )
@@ -1647,6 +1852,42 @@ class DeterministicMatchSimulation(
                     else ->
                         AttackIntent(attacker.id, bastionAhead.id, AttackType.SIEGE_MISSION)
                 }
+            } else if (canUnitAttackBoss(attacker, current)) {
+                val boss = requireNotNull(bossSystem)
+                if (attacker.combatState.targetId != boss.entityId) {
+                    emit {
+                        MatchEvent.TargetAcquired(
+                            it,
+                            matchId,
+                            simulationTimeMilliseconds,
+                            attacker.id,
+                            boss.entityId,
+                        )
+                    }
+                }
+                val groupId = if (
+                    attacker.type.participatesInMeleeSynergy &&
+                    !attacker.type.attacksFromRange
+                ) {
+                    AttackGroupId("melee-${boss.entityId.value}")
+                } else {
+                    null
+                }
+                current[index] = attacker.copy(
+                    combatState = attacker.combatState.copy(
+                        action = UnitActionState.SEEKING_TARGET,
+                        targetId = boss.entityId,
+                        attackGroupId = groupId,
+                    ),
+                )
+                attackIntent = when {
+                    attacker.type.detonatesOnContact ->
+                        AttackIntent(attacker.id, boss.entityId, AttackType.CONTACT_EXPLOSIVE)
+                    attacker.type.attacksFromRange ->
+                        AttackIntent(attacker.id, boss.entityId, AttackType.RANGED)
+                    else ->
+                        AttackIntent(attacker.id, boss.entityId, AttackType.MELEE)
+                }
             } else {
                 val enemyFortress = fortress(opposingTeam(attacker.team))
                 val contactedEnemyFortress =
@@ -1809,6 +2050,77 @@ class DeterministicMatchSimulation(
                         ),
                     )
                 }
+                return@forEach
+            }
+            val bossTarget = bossSystem?.takeIf { it.entityId == intent.targetId }
+            if (bossTarget != null) {
+                if (intent.type == AttackType.CONTACT_EXPLOSIVE) {
+                    if (bossTarget.isAlive && canUnitAttackBoss(attacker, current)) {
+                        startDemolisherThrow(current, attackerIndex, attacker, intent.targetId)
+                    } else {
+                        current[attackerIndex] = attacker.copy(
+                            combatState = attacker.combatState.copy(
+                                action = UnitActionState.SEEKING_TARGET,
+                                targetId = null,
+                                attackProgress = 0f,
+                            ),
+                        )
+                    }
+                    return@forEach
+                }
+                if (!bossTarget.isAlive ||
+                    !canUnitAttackBoss(attacker, current) ||
+                    intent.type !in setOf(AttackType.MELEE, AttackType.RANGED)
+                ) {
+                    current[attackerIndex] = attacker.copy(
+                        combatState = attacker.combatState.copy(
+                            action = UnitActionState.SEEKING_TARGET,
+                            targetId = null,
+                            attackProgress = 0f,
+                        ),
+                    )
+                    return@forEach
+                }
+                val roll = rollUnitDamage(attacker, attacker.type.attackDamage)
+                val members = if (intent.type == AttackType.MELEE) {
+                    current.filter { member ->
+                        member.isAlive &&
+                            member.team == attacker.team &&
+                            member.type.participatesInMeleeSynergy &&
+                            member.combatState.targetId == bossTarget.entityId &&
+                            canUnitAttackBoss(member, current)
+                    }
+                } else {
+                    emptyList()
+                }
+                val synergy = if (intent.type == AttackType.MELEE) {
+                    min(1f + (members.size - 1).coerceAtLeast(0) * 0.35f, 2f)
+                } else {
+                    1f
+                }
+                val finalDamage = (roll * synergy).toInt()
+                    .coerceAtMost(bossTarget.snapshot().health)
+                emit {
+                    MatchEvent.AttackHit(
+                        it,
+                        matchId,
+                        simulationTimeMilliseconds,
+                        attacker.id,
+                        bossTarget.entityId,
+                        intent.type.name,
+                        attacker.combatState.attackCycleId,
+                        attacker.type.attackDamage,
+                        roll,
+                        members.size,
+                        synergy,
+                        finalDamage,
+                    )
+                }
+                applyBossDamage(
+                    amount = (roll * synergy).toInt(),
+                    sourceTeam = attacker.team,
+                    sourceId = attacker.id,
+                )
                 return@forEach
             }
             val target = attackSnapshot.firstOrNull { it.id == intent.targetId }
@@ -2466,6 +2778,7 @@ class DeterministicMatchSimulation(
                     radius = definition.damage.fortressRadius,
                     damage = applyDamageVariance(definition.damage.fortressDamage, damageFactor),
                     sourceTeam = projectile.firedBy,
+                    sourceAmmunitionType = projectile.ammunition.name,
                     unitDamage = unitDamagePerTick,
                     status = behavior.status,
                     statusDurationSeconds = behavior.durationSeconds,
@@ -2510,6 +2823,7 @@ class DeterministicMatchSimulation(
                     radius = behavior.radius,
                     damage = fortressDamage,
                     sourceTeam = projectile.firedBy,
+                    sourceAmmunitionType = projectile.ammunition.name,
                     unitDamage = applyDamageVariance(definition.damage.unitDamage, damageFactor),
                     hitLayer = hitLayer,
                     sourceProjectileId = projectile.id,
@@ -2523,6 +2837,7 @@ class DeterministicMatchSimulation(
                     radius = definition.damage.fortressRadius,
                     damage = applyDamageVariance(definition.damage.fortressDamage, damageFactor),
                     sourceTeam = projectile.firedBy,
+                    sourceAmmunitionType = projectile.ammunition.name,
                     unitDamage = applyDamageVariance(definition.damage.unitDamage, damageFactor),
                     hitLayer = hitLayer,
                     sourceProjectileId = projectile.id,
@@ -2544,10 +2859,31 @@ class DeterministicMatchSimulation(
         statusDurationSeconds: Float = 3f,
         hitLayer: com.urkaaaz.domain.AmmunitionHitLayer? = null,
         sourceProjectileId: EntityId? = null,
+        sourceAmmunitionType: String? = null,
         minimumDamage: Int = 0,
         friendlyFire: FriendlyFirePolicy = FriendlyFirePolicy.ENEMY_ONLY,
         unitFriendlyFire: FriendlyFirePolicy? = null,
     ) {
+        if (damage > 0 &&
+            sourceTeam != null &&
+            hitLayer != com.urkaaaz.domain.AmmunitionHitLayer.UNIT
+        ) {
+            val bossResult = bossSystem?.applyDamageAt(
+                positionX = position.x,
+                positionY = position.y,
+                radius = radius,
+                amount = damage,
+                sourceTeam = sourceTeam,
+                ammunitionType = sourceAmmunitionType ?: "UNKNOWN",
+            )
+            if (bossResult != null) {
+                emitBossDamage(
+                    result = bossResult,
+                    sourceTeam = sourceTeam,
+                    sourceId = sourceProjectileId,
+                )
+            }
+        }
         if (damage > 0 &&
             currentBlueFortress.intersects(position, radius) &&
             canHitFortress(sourceTeam, Team.BLUE, friendlyFire)
@@ -2661,6 +2997,7 @@ class DeterministicMatchSimulation(
                     radius = effect.radius,
                     damage = effect.fortressDamagePerTick,
                     sourceTeam = effect.sourceTeam,
+                    sourceAmmunitionType = effect.ammunition.name,
                     unitDamage = effect.unitDamagePerTick,
                     status = behavior.status,
                     statusDurationSeconds = behavior.durationSeconds,
@@ -2781,6 +3118,28 @@ class DeterministicMatchSimulation(
         }
         if (com.urkaaaz.domain.AmmunitionHitLayer.FORTRESS !in definition.collision.hitLayers) {
             return null
+        }
+        val bossTarget = bossSystem?.takeIf { boss ->
+            val snapshot = boss.snapshot()
+            val radiusX = snapshot.collisionWidth / 2f + definition.collision.hitRadius
+            val radiusY = snapshot.collisionHeight / 2f + definition.collision.hitRadius
+            boss.isAlive &&
+                kotlin.math.hypot(
+                    (snapshot.x - projectile.position.x) / radiusX,
+                    (
+                        snapshot.groundY - snapshot.collisionHeight / 2f -
+                            projectile.position.y
+                        ) / radiusY,
+                ) <= 1f
+        }
+        if (bossTarget != null) {
+            return EntityTarget(
+                id = bossTarget.entityId,
+                layer = com.urkaaaz.domain.AmmunitionHitLayer.BOSS,
+                stopsProjectile = true,
+                team = null,
+                kind = ProjectileTargetKind.BOSS,
+            )
         }
         val bastionTarget = listOfNotNull(bastion(Team.BLUE), bastion(Team.RED))
             .filter { target ->
@@ -2932,6 +3291,8 @@ class DeterministicMatchSimulation(
             ?.let { return it.team to ProjectileTargetKind.BASTION }
         units.firstOrNull { it.id == targetId }
             ?.let { return it.team to ProjectileTargetKind.UNIT }
+        bossSystem?.takeIf { it.entityId == targetId }
+            ?.let { return null to ProjectileTargetKind.BOSS }
         return null to null
     }
 
@@ -3019,7 +3380,7 @@ class DeterministicMatchSimulation(
         val id: EntityId,
         val layer: com.urkaaaz.domain.AmmunitionHitLayer,
         val stopsProjectile: Boolean,
-        val team: Team,
+        val team: Team?,
         val kind: ProjectileTargetKind,
     )
 

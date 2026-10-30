@@ -22,6 +22,9 @@ data class MatchSnapshot(
     val mapDefinition: MapDefinition? = null,
     val activeSpells: List<ActiveSpellSnapshot> = emptyList(),
     val runicBastions: List<RunicBastionSnapshot> = emptyList(),
+    val boss: BossSnapshot? = null,
+    val balanceRevision: String? = null,
+    val balanceContentHash: String? = null,
 ) {
     init {
         require(status != MatchStatus.FINISHED || outcome != null) {
