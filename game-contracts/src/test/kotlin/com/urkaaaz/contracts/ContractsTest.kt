@@ -203,4 +203,29 @@ class ContractsTest {
         assertEquals(253.96875f, rectangle.right, 0.001f)
         assertEquals(191.953125f, rectangle.bottom, 0.001f)
     }
+
+    @Test
+    fun unitHitboxesCoverEightyPercentOfTheirVisibleBodyBounds() {
+        val expectedVisibleBounds = mapOf(
+            "DEFENDER" to (190f to 228f),
+            "SAPPER" to (137f to 220f),
+            "DEMOLISHER" to (180f to 172f),
+            "RAGING_BOAR" to (189f to 183f),
+            "SLINGMASTER" to (127f to 127f),
+        )
+
+        expectedVisibleBounds.forEach { (unitType, visibleBounds) ->
+            val hitbox = UnitHitboxProfile.forUnitType(unitType)
+            assertEquals(
+                visibleBounds.first * UnitHitboxProfile.VISIBLE_BODY_RATIO,
+                hitbox.width,
+                0.001f,
+            )
+            assertEquals(
+                visibleBounds.second * UnitHitboxProfile.VISIBLE_BODY_RATIO,
+                hitbox.height,
+                0.001f,
+            )
+        }
+    }
 }

@@ -14,6 +14,9 @@
 
 - Reduced the Ancient War Oak collision box to 432×576 world units and adjusted
   presentation scale to preserve the visible tree size.
+- Replaced the shared unit collision radius with type-specific rectangular
+  hitboxes sized to about 80% of measured visible body bounds. Simulation
+  contact checks and the `Show hitboxes` overlay now use the same profiles.
 
 ### Fixed
 

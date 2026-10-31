@@ -696,14 +696,14 @@ projectile sprites use a smaller world-space render size and therefore scale
 with the battlefield camera zoom.
 
 The match screen exposes a `Show hitboxes` checkbox directly over the
-battlefield. It renders the terrain surface, fortress target rectangles, unit
-collision circles using `WorldScale.UNIT_COLLISION_RADIUS`, Runic Bastion and
-boss rectangles, and projectile collision circles using the ammunition
-`collision.hitRadius` copied into the immutable projectile snapshot. The
-`DEBUG` panel retains `SNAPSHOT`, which hides the HUD and ammunition controls
-and shows the complete normalized battlefield. Legacy AI-unit toggles are
-intentionally not copied because the new match does not yet expose runtime
-unit deployment or AI-unit commands.
+battlefield. It renders the terrain surface, fortress target rectangles,
+type-specific unit hitbox rectangles that cover 80% of measured visible body
+bounds, Runic Bastion and boss rectangles, and projectile collision circles
+using the ammunition `collision.hitRadius` copied into the immutable projectile
+snapshot. The `DEBUG` panel retains `SNAPSHOT`, which hides the HUD and
+ammunition controls and shows the complete normalized battlefield. Legacy
+AI-unit toggles are intentionally not copied because the new match does not
+yet expose runtime unit deployment or AI-unit commands.
 The overlay also draws the rendered canvas bounds of terrain trees, rocks,
 props and relics. These are asset bounds, not gameplay collision shapes:
 transparent padding inside a bitmap can make the visible pixels appear offset

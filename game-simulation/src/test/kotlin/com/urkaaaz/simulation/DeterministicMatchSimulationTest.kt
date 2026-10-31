@@ -12,6 +12,7 @@ import com.urkaaaz.contracts.MatchStatus
 import com.urkaaaz.contracts.RunicBastionAnimationTiming
 import com.urkaaaz.contracts.RunicBastionGeometry
 import com.urkaaaz.contracts.Team
+import com.urkaaaz.contracts.UnitHitboxProfile
 import com.urkaaaz.contracts.PlayerId
 import com.urkaaaz.contracts.WorldDimensions
 import com.urkaaaz.contracts.WorldScale
@@ -557,13 +558,13 @@ class DeterministicMatchSimulationTest {
                 fortressCenterX + frontFaceOffset - requireNotNull(throwStartX)
                 ) * direction
             assertEquals(
-                WorldScale.UNIT_COLLISION_RADIUS,
+                UnitHitboxProfile.forUnitType("DEMOLISHER").halfWidth,
                 throwStartDistanceToFront,
                 1f,
                 "$team Demolisher should begin throwing at the fortress front face",
             )
             assertTrue(
-                distanceToFront < WorldScale.UNIT_COLLISION_RADIUS,
+                distanceToFront < UnitHitboxProfile.forUnitType("DEMOLISHER").halfWidth,
                 "$team Demolisher should start at the fortress face and lunge forward",
             )
             assertTrue(
@@ -1187,9 +1188,11 @@ class DeterministicMatchSimulationTest {
         assertTrue(
             groupedAttackers.any { attacker ->
                 attacker.attackCycleId > 0 &&
-                    kotlin.math.abs(
-                        units.first { target -> target.entityId == attacker.targetId }.x - attacker.x,
-                    ) > config.unitCollisionRadius
+                    units.first { target -> target.entityId == attacker.targetId }.let { target ->
+                        kotlin.math.abs(target.x - attacker.x) >
+                            UnitHitboxProfile.forUnitType(attacker.unitType).halfWidth +
+                            UnitHitboxProfile.forUnitType(target.unitType).halfWidth
+                    }
             },
             "no rear group member attacked from a formation slot: $groupedAttackers",
         )

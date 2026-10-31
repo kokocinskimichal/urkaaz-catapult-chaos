@@ -12,6 +12,7 @@ import android.graphics.Typeface
 import com.urkaaaz.contracts.FortressHitboxProfile
 import com.urkaaaz.contracts.FortressShieldGeometry
 import com.urkaaaz.contracts.RunicBastionGeometry
+import com.urkaaaz.contracts.UnitHitboxProfile
 import com.urkaaaz.contracts.WorldDimensions
 import com.urkaaaz.contracts.WorldScale
 
@@ -1579,21 +1580,16 @@ class BattlefieldRenderer(
 
         state.units.forEach { unit ->
             val centerX = worldToViewX(unit.x, viewportWidth)
-            val centerY = worldToViewY(unit.y, viewportHeight)
-            val radiusX = worldToViewWidth(
-                WorldScale.UNIT_COLLISION_RADIUS,
-                viewportWidth,
-            )
-            val radiusY = worldToViewHeight(
-                WorldScale.UNIT_COLLISION_RADIUS,
-                viewportHeight,
-            )
-            canvas.drawOval(
+            val hitbox = UnitHitboxProfile.forUnitType(unit.unitType)
+            val halfWidth = worldToViewWidth(hitbox.halfWidth, viewportWidth)
+            val top = worldToViewY(unit.y - hitbox.height, viewportHeight)
+            val bottom = worldToViewY(unit.y, viewportHeight)
+            canvas.drawRect(
                 RectF(
-                    centerX - radiusX,
-                    centerY - radiusY,
-                    centerX + radiusX,
-                    centerY + radiusY,
+                    centerX - halfWidth,
+                    top,
+                    centerX + halfWidth,
+                    bottom,
                 ),
                 hitboxPaint,
             )

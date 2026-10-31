@@ -6,7 +6,6 @@ import com.urkaaaz.contracts.BossArchetype
 import com.urkaaaz.contracts.BossVictoryRule
 import com.urkaaaz.contracts.PlayerLoadoutConfig
 import com.urkaaaz.domain.BossBalanceProfile
-import com.urkaaaz.contracts.WorldScale
 import com.urkaaaz.domain.ManaConfiguration
 import com.urkaaaz.domain.WorldBounds
 
@@ -18,7 +17,6 @@ data class SimulationConfig(
     val windAccelerationX: Float = 0f,
     val windAccelerationScale: Float = 390f,
     val fortressCollisionRadius: Float = 23f,
-    val unitCollisionRadius: Float = WorldScale.UNIT_COLLISION_RADIUS,
     val defaultCatapultHeightRatio: Float = 0.72f,
     val blueFortressMaxHealth: Int = 500,
     val redFortressMaxHealth: Int = 500,

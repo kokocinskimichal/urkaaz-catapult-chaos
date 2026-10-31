@@ -51,8 +51,8 @@ kampanię, AI oraz działający match screen. Gałąź robocza: `develop`.
   nie jest jeszcze konsumowana ani regenerowana przez mechanikę gry.
 - Rekrutacja, supply, garrison, przesuwanie jednostek, fale i ruch w symulacji.
 - Wspólny standard rozmiarów meczu: fortece mają 70% poprzedniej szerokości i
-  hitboxu, a jednostki mają 3x poprzedni rozmiar prezentacji; mechanika
-  separacji i kolizji jednostek pozostaje stabilna.
+  hitboxu, a jednostki mają 3x poprzedni rozmiar prezentacji. Jednostki używają
+  typowanych prostokątnych hitboxów obejmujących około 80% widocznego ciała.
 - Ruch jednostek w marszu i podczas przegrupowania garnizonu używa globalnego
   mnożnika `2.0`.
 - Interakcje jednostek: melee, ataki dystansowe i eksplozje Demolishera.
@@ -70,8 +70,8 @@ kampanię, AI oraz działający match screen. Gałąź robocza: `develop`.
 - Legacy-style sprite'y, animacje idle/walk, HP bary jednostek, cache assetów
   i zakotwiczenie stóp do wspólnej linii terenu.
 - Dostępny bezpośrednio na ekranie meczu checkbox `Show hitboxes`; pokazuje
-  obrysy terenu i kolizji jednostek, fortec, bastionów runicznych, bossów oraz
-  pocisków. Panel `DEBUG` nadal udostępnia tryb `SNAPSHOT`.
+  prostokątne hitboxy jednostek oraz obrysy terenu, fortec, bastionów runicznych,
+  bossów i pocisków. Panel `DEBUG` nadal udostępnia tryb `SNAPSHOT`.
 - Hitbox fortecy jako wspólny profil prostokątów dla trafień bezpośrednich i
   obrażeń obszarowych; katapulty nie są celami obrażeń.
 - Testy jednostkowe i integracyjne dla kontraktów, domeny, symulacji,

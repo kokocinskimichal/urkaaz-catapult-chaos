@@ -432,7 +432,6 @@ class BossSystemTest {
             },
         ),
         worldWidth = worldWidth,
-        unitCollisionRadius = 24f,
         groundHeightAt = { 200f },
     )
 

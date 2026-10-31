@@ -7,6 +7,7 @@ import com.urkaaaz.contracts.BossSnapshot
 import com.urkaaaz.contracts.EntityId
 import com.urkaaaz.contracts.MatchOutcome
 import com.urkaaaz.contracts.Team
+import com.urkaaaz.contracts.UnitHitboxProfile
 import com.urkaaaz.domain.BossAttackBalance
 import com.urkaaaz.domain.BossAttackTarget
 import com.urkaaaz.domain.BossBalanceProfile
@@ -39,7 +40,6 @@ class BossSystem(
     val profile: BossBalanceProfile,
     encounter: BossEncounterConfig,
     private val worldWidth: Float,
-    private val unitCollisionRadius: Float,
     private val groundHeightAt: (Float) -> Float,
 ) {
     val entityId = EntityId("boss-${profile.id}")
@@ -326,7 +326,8 @@ class BossSystem(
             !unit.returningToGarrison
 
     private fun unitAttackRange(unit: Unit): Float = when {
-        unit.type.detonatesOnContact -> unitCollisionRadius
+        unit.type.detonatesOnContact ->
+            UnitHitboxProfile.forUnitType(unit.type.id).halfWidth
         unit.type.attacksFromRange -> unit.type.attackRange
         else -> 82f
     }

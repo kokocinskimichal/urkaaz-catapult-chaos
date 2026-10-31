@@ -26,6 +26,7 @@ import com.urkaaaz.contracts.ProjectileTargetKind
 import com.urkaaaz.contracts.ResourceSnapshot
 import com.urkaaaz.contracts.EffectSnapshot
 import com.urkaaaz.contracts.Team
+import com.urkaaaz.contracts.UnitHitboxProfile
 import com.urkaaaz.contracts.WorldScale
 import com.urkaaaz.contracts.TerrainSnapshot
 import com.urkaaaz.contracts.WindSnapshot
@@ -46,6 +47,7 @@ import com.urkaaaz.domain.SpellEffectDefinition
 import com.urkaaaz.domain.SpellType
 import com.urkaaaz.domain.SupplyConfiguration
 import com.urkaaaz.domain.Unit
+import com.urkaaaz.domain.UnitConfigurations
 import com.urkaaaz.domain.DemolisherUnit
 import com.urkaaaz.domain.SapperUnit
 import com.urkaaaz.domain.UnitDefinition
@@ -131,7 +133,6 @@ class DeterministicMatchSimulation(
             profile = requireNotNull(config.bossProfile),
             encounter = encounter,
             worldWidth = config.bounds.width,
-            unitCollisionRadius = config.unitCollisionRadius,
             groundHeightAt = terrain::heightAt,
         )
     }
@@ -1417,7 +1418,7 @@ class DeterministicMatchSimulation(
                 it -
                     direction * (
                         RunicBastionGeometry.WIDTH / 2f +
-                            config.unitCollisionRadius
+                            UnitHitboxProfile.forUnitType(unit.type.id).halfWidth
                         )
             }
             val combatTarget = if (waveMoving) {
@@ -1477,7 +1478,7 @@ class DeterministicMatchSimulation(
                     target.type is SapperUnit && !unit.type.attacksFromRange -> null
                     unit.type.detonatesOnContact ->
                         target.position.x -
-                            direction * config.unitCollisionRadius
+                            direction * unitContactDistance(unit, target)
                     unit.type.attacksFromRange ->
                         target.position.x -
                             direction * (unit.type.attackRange + formationOffset)
@@ -1578,8 +1579,7 @@ class DeterministicMatchSimulation(
                         other.isAlive &&
                         !other.returningToGarrison &&
                         !other.type.attacksFromRange &&
-                        kotlin.math.abs(other.position.x - unit.position.x) <=
-                            config.unitCollisionRadius
+                        unitHitboxesIntersect(unit, other)
                 }
             ) {
                 SAPPER_CONTACT_SPEED_MULTIPLIER
@@ -2377,10 +2377,13 @@ class DeterministicMatchSimulation(
     }
 
     private fun contactedBastion(attacker: Unit, target: RunicBastion): Boolean =
-        (
-            kotlin.math.abs(target.center.x - attacker.position.x) -
-                RunicBastionGeometry.WIDTH / 2f
-            ).coerceAtLeast(0f) <= config.unitCollisionRadius
+        unitIntersectsRectangle(
+            unit = attacker,
+            left = target.center.x - RunicBastionGeometry.WIDTH / 2f,
+            top = target.center.y - RunicBastionGeometry.HEIGHT / 2f,
+            right = target.center.x + RunicBastionGeometry.WIDTH / 2f,
+            bottom = target.center.y + RunicBastionGeometry.HEIGHT / 2f,
+        )
 
     private fun Unit.isAttacking(): Boolean =
         combatState.action == UnitActionState.WINDING_UP ||
@@ -2553,7 +2556,34 @@ class DeterministicMatchSimulation(
         if (baseDamage <= 0) 0 else (baseDamage * factor).toInt().coerceAtLeast(1)
 
     private fun contacted(first: Unit, second: Unit): Boolean =
-        kotlin.math.abs(first.position.x - second.position.x) <= config.unitCollisionRadius
+        unitHitboxesIntersect(first, second)
+
+    private fun unitContactDistance(first: Unit, second: Unit): Float =
+        UnitHitboxProfile.forUnitType(first.type.id).halfWidth +
+            UnitHitboxProfile.forUnitType(second.type.id).halfWidth
+
+    private fun unitHitboxesIntersect(first: Unit, second: Unit): Boolean {
+        val firstHitbox = UnitHitboxProfile.forUnitType(first.type.id)
+        val secondHitbox = UnitHitboxProfile.forUnitType(second.type.id)
+        return kotlin.math.abs(first.position.x - second.position.x) <=
+            firstHitbox.halfWidth + secondHitbox.halfWidth &&
+            first.position.y - firstHitbox.height <= second.position.y &&
+            second.position.y - secondHitbox.height <= first.position.y
+    }
+
+    private fun unitIntersectsRectangle(
+        unit: Unit,
+        left: Float,
+        top: Float,
+        right: Float,
+        bottom: Float,
+    ): Boolean {
+        val hitbox = UnitHitboxProfile.forUnitType(unit.type.id)
+        return unit.position.x - hitbox.halfWidth <= right &&
+            unit.position.x + hitbox.halfWidth >= left &&
+            unit.position.y - hitbox.height <= bottom &&
+            unit.position.y >= top
+    }
 
     private fun replaceUnit(
         current: MutableList<Unit>,
@@ -2674,15 +2704,19 @@ class DeterministicMatchSimulation(
         val direction = if (team == Team.BLUE) 1f else -1f
         val frontFaceOffset = fortressFrontFaceOffset(team)
         return fortress(opposingTeam(team)).center.x + frontFaceOffset -
-            direction * config.unitCollisionRadius
+            direction * UnitHitboxProfile.forUnitType(UnitConfigurations.DEMOLISHER.id).halfWidth
     }
 
     private fun contactedFortress(attacker: Unit, target: Fortress): Boolean {
-        val direction = if (attacker.team == Team.BLUE) 1f else -1f
-        val distanceToFront =
-            (target.center.x + fortressFrontFaceOffset(attacker.team) - attacker.position.x) *
-                direction
-        return distanceToFront <= config.unitCollisionRadius
+        return FortressHitboxProfile.rectangles.any { rectangle ->
+            unitIntersectsRectangle(
+                unit = attacker,
+                left = target.center.x + rectangle.left,
+                top = target.center.y + rectangle.top,
+                right = target.center.x + rectangle.right,
+                bottom = target.center.y + rectangle.bottom,
+            )
+        }
     }
 
     private fun fortressFrontFaceOffset(attackingTeam: Team): Float =
