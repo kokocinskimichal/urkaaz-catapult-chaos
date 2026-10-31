@@ -1,6 +1,11 @@
 import React, { useEffect, useRef, useState } from "react";
+import type { CampaignChapterCatalogEntry } from "@studio/contracts/campaign";
 import { decode, encode } from "./format/codec";
 import { paletteAssetsForBiome, parseAssetIndex } from "./domain/assets";
+import {
+  campaignMapIdForSelection,
+  campaignMapSelectionFromId,
+} from "./domain/campaignMap";
 import {
   defaultMap,
   MAP_BIOMES,
@@ -26,7 +31,14 @@ import {
   transformFromCornerDrag,
   worldToScreen,
 } from "./rendering/transform";
-import { ApiError, fetchMap, fetchMaps, fetchTerrainAssetIndex, saveMap } from "../../shared/api";
+import {
+  ApiError,
+  fetchCampaignChapters,
+  fetchMap,
+  fetchMaps,
+  fetchTerrainAssetIndex,
+  saveMap,
+} from "../../shared/api";
 import "./ui/styles.css";
 
 const AUTOSAVE = "urkaaz-map-editor-autosave";
@@ -151,7 +163,7 @@ function findTransformHandleAt(
 export function MapsTab() {
   const [registeredAssetKeys, setRegisteredAssetKeys] = useState<ReadonlySet<string>>();
   const [assetCatalogError, setAssetCatalogError] = useState<string>();
-  const { state, operation, undo, redo, load } = useEditorStore(registeredAssetKeys);
+  const { state, operation, undo, redo, load, setMapId } = useEditorStore(registeredAssetKeys);
   const canvas = useRef<HTMLCanvasElement>(null);
   const [view, setView] = useState({ zoom: 1, panX: 0, panY: 0 });
   const [issues, setIssues] = useState(validate(state.present));
@@ -165,14 +177,27 @@ export function MapsTab() {
   const [status, setStatus] = useState("Unsaved");
   const [maps, setMaps] = useState<Awaited<ReturnType<typeof fetchMaps>>["maps"]>([]);
   const [mapCatalogError, setMapCatalogError] = useState<string>();
+  const [campaignChapters, setCampaignChapters] = useState<CampaignChapterCatalogEntry[]>([]);
+  const [campaignChapterError, setCampaignChapterError] = useState<string>();
   const [editorReady, setEditorReady] = useState(false);
   const [selectedMapId, setSelectedMapId] = useState(state.present.map.mapId);
   const [savedHash, setSavedHash] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
+  const [saveDialogOpen, setSaveDialogOpen] = useState(false);
+  const [saveChapterId, setSaveChapterId] = useState("");
+  const [saveLevel, setSaveLevel] = useState<number | null>(null);
   const nextObjectId = useRef(0);
   const lastSavedContent = useRef<string | null>(null);
   const presentRef = useRef(state.present);
   presentRef.current = state.present;
+  const selectedSaveChapter = campaignChapters.find(chapter => chapter.id === saveChapterId);
+  const saveMapId = selectedSaveChapter && saveLevel !== null
+    ? campaignMapIdForSelection(campaignChapters, {
+      chapterId: selectedSaveChapter.id,
+      level: saveLevel,
+    })
+    : null;
+  const saveTargetExists = saveMapId !== null && maps.some(map => map.id === saveMapId);
 
   useEffect(() => {
     let cancelled = false;
@@ -184,6 +209,22 @@ export function MapsTab() {
       .catch(error => {
         if (!cancelled) {
           setAssetCatalogError(error instanceof Error ? error.message : String(error));
+        }
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  useEffect(() => {
+    let cancelled = false;
+    fetchCampaignChapters()
+      .then(result => {
+        if (!cancelled) setCampaignChapters(result.chapters);
+      })
+      .catch(error => {
+        if (!cancelled) {
+          setCampaignChapterError(error instanceof Error ? error.message : String(error));
         }
       });
     return () => {
@@ -313,6 +354,7 @@ export function MapsTab() {
         setControlDrag(null);
         setObjectDrag(null);
         setCornerDrag(null);
+        setSaveDialogOpen(false);
       }
     };
     window.addEventListener("keydown", key);
@@ -354,28 +396,72 @@ export function MapsTab() {
     }
   };
 
-  const saveToRepository = async () => {
-    const currentIssues = validate(state.present, registeredAssetKeys);
+  const openSaveDialog = () => {
+    if (campaignChapters.length === 0) {
+      setStatus(campaignChapterError ?? "Campaign chapters are still loading");
+      return;
+    }
+    const savedSelection = campaignMapSelectionFromId(
+      state.present.map.mapId,
+      campaignChapters,
+    );
+    const chapter = savedSelection
+      ? campaignChapters.find(item => item.id === savedSelection.chapterId)
+      : campaignChapters[0];
+    if (!chapter) {
+      setStatus("Campaign chapter list is empty");
+      return;
+    }
+    setSaveChapterId(chapter.id);
+    setSaveLevel(
+      savedSelection?.chapterId === chapter.id
+        ? savedSelection.level
+        : chapter.firstLevel,
+    );
+    setSaveDialogOpen(true);
+  };
+
+  const saveToCampaignLevel = async () => {
+    if (!selectedSaveChapter || saveLevel === null || saveMapId === null) return;
+    const targetDocument = {
+      ...state.present,
+      map: { ...state.present.map, mapId: saveMapId },
+    };
+    const currentIssues = validate(targetDocument, registeredAssetKeys);
     if (currentIssues.some(issue => issue.severity === "error")) {
       setStatus("Fix validation errors before export");
       return;
     }
-    const content = encode(state.present);
+    const content = encode(targetDocument);
     setSaving(true);
-    setStatus(`Saving ${state.present.map.mapId}…`);
+    setStatus(`Saving Chapter ${campaignChapters.indexOf(selectedSaveChapter) + 1}, Level ${saveLevel}…`);
     try {
-      const saved = await saveMap(state.present.map.mapId, { content, expectedHash: savedHash });
+      let expectedHash: string | null;
+      try {
+        expectedHash = (await fetchMap(saveMapId)).hash;
+      } catch (error) {
+        if (error instanceof ApiError && error.status === 404) expectedHash = null;
+        else throw error;
+      }
+      const saved = await saveMap(saveMapId, { content, expectedHash });
       lastSavedContent.current = content;
       setSavedHash(saved.hash);
+      setSelectedMapId(saved.id);
+      setMapId(saved.id);
       setMaps(current => {
         const entry = { id: saved.id, biome: state.present.map.biome, synchronized: saved.synchronized };
         return current.some(map => map.id === saved.id)
           ? current.map(map => map.id === saved.id ? entry : map)
           : [...current, entry].sort((a, b) => a.id.localeCompare(b.id));
       });
-      setStatus(encode(presentRef.current) === content
+      const latestContent = encode({
+        ...presentRef.current,
+        map: { ...presentRef.current.map, mapId: saved.id },
+      });
+      setStatus(latestContent === content
         ? "Saved to both repository map files"
         : "Saved; newer edits are still unsaved");
+      setSaveDialogOpen(false);
     } catch (error) {
       const details = error instanceof ApiError && error.details.length > 0
         ? `: ${error.details.join("; ")}`
@@ -672,6 +758,7 @@ export function MapsTab() {
         <select
           aria-label="Repository map"
           value={selectedMapId}
+          disabled={saving}
           onChange={event => setSelectedMapId(event.currentTarget.value)}
         >
           {!maps.some(map => map.id === selectedMapId) && (
@@ -683,10 +770,13 @@ export function MapsTab() {
             </option>
           ))}
         </select>
-        <button onClick={openSelectedMap} disabled={!maps.some(map => map.id === selectedMapId)}>Open</button>
-        <button onClick={newMap}>New map</button>
-        <button onClick={resetMap}>Reset</button>
-        <button onClick={saveToRepository} disabled={saving || issues.some(issue => issue.severity === "error")}>
+        <button onClick={openSelectedMap} disabled={saving || !maps.some(map => map.id === selectedMapId)}>Open</button>
+        <button onClick={newMap} disabled={saving}>New map</button>
+        <button onClick={resetMap} disabled={saving}>Reset</button>
+        <button
+          onClick={openSaveDialog}
+          disabled={saving || campaignChapters.length === 0 || issues.some(issue => issue.severity === "error")}
+        >
           {saving ? "Saving…" : "Save to repository"}
         </button>
         <button onClick={undo}>Undo</button>
@@ -694,7 +784,80 @@ export function MapsTab() {
         <button onClick={() => setView({ zoom: 1, panX: 0, panY: 0 })}>Fit</button>
         <span className="status">{status}</span>
       </div>
+      {campaignChapterError && (
+        <p className="map-catalog-error">Campaign chapters unavailable: {campaignChapterError}</p>
+      )}
       {mapCatalogError && <p className="map-catalog-error">Map list unavailable: {mapCatalogError}</p>}
+      {saveDialogOpen && selectedSaveChapter && saveLevel !== null && saveMapId && (
+        <div className="map-save-dialog-backdrop">
+          <section
+            className="map-save-dialog"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="map-save-title"
+            aria-describedby="map-save-description"
+          >
+            <h2 id="map-save-title">Save campaign map</h2>
+            <p id="map-save-description">
+              Choose the campaign chapter and global level that should use this map.
+              The game picks up the saved map after rebuild and restart.
+            </p>
+            <label>
+              Chapter
+              <select
+                aria-label="Save chapter"
+                value={saveChapterId}
+                onChange={event => {
+                  const chapter = campaignChapters.find(item => item.id === event.currentTarget.value);
+                  if (chapter) {
+                    setSaveChapterId(chapter.id);
+                    setSaveLevel(chapter.firstLevel);
+                  }
+                }}
+              >
+                {campaignChapters.map((chapter, index) => (
+                  <option key={chapter.id} value={chapter.id}>
+                    Chapter {index + 1} · {chapter.title}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label>
+              Level
+              <select
+                aria-label="Save level"
+                value={saveLevel}
+                onChange={event => setSaveLevel(Number(event.currentTarget.value))}
+              >
+                {Array.from(
+                  { length: selectedSaveChapter.lastLevel - selectedSaveChapter.firstLevel + 1 },
+                  (_, index) => selectedSaveChapter.firstLevel + index,
+                ).map(level => (
+                  <option key={level} value={level}>Level {level}</option>
+                ))}
+              </select>
+            </label>
+            <p className="map-save-target">Target map ID: {saveMapId}</p>
+            {saveTargetExists && (
+              <p className="map-save-warning" role="status">
+                This campaign map already exists and will be updated on both repository copies.
+              </p>
+            )}
+            <div className="map-save-dialog-actions">
+              <button type="button" onClick={() => setSaveDialogOpen(false)} disabled={saving}>
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={() => void saveToCampaignLevel()}
+                disabled={saving || issues.some(issue => issue.severity === "error")}
+              >
+                {saving ? "Saving…" : "Save campaign map"}
+              </button>
+            </div>
+          </section>
+        </div>
+      )}
       <section className="map-editor-layout">
         <aside>
           <h3>Biome</h3>

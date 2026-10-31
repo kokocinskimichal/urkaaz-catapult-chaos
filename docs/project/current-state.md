@@ -99,6 +99,10 @@ kampanię, AI oraz działający match screen. Gałąź robocza: `develop`.
   wszystkie 10 poziomów ma jawne profile, fundamenty, fortece, katapulty oraz
   dekoracje drzew, skał i propsów zakotwiczone do terenu. Profile są
   walidowane przed zapisaniem, a przejścia nie przekraczają 200 world units.
+- Zapis mapy kampanii w Studio Maps wybiera Chapter i globalny numer Level,
+  zapisuje identyfikator `chapterN-levelX` w obu kopiach JSON, a kampania
+  ładuje mapę danego poziomu, gdy plik istnieje; brakujące mapy nadal używają
+  tymczasowego `demo-map`.
 
 ## Ustalony kierunek dalszego rozwoju
 

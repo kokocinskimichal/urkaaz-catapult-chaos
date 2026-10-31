@@ -290,6 +290,65 @@
   background: #713f45;
 }
 
+.map-save-dialog-backdrop {
+  position: fixed;
+  z-index: 20;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  background: #000a;
+}
+
+.maps-editor .map-save-dialog {
+  width: min(460px, calc(100vw - 32px));
+  padding: 20px;
+  border: 1px solid #60748a;
+  border-radius: 8px;
+  background: #1b2939;
+  box-shadow: 0 16px 48px #0009;
+}
+
+.map-save-dialog h2 {
+  margin: 0 0 10px;
+  font-size: 17px;
+}
+
+.map-save-dialog p {
+  color: #c8d6e3;
+  font-size: 13px;
+  line-height: 1.45;
+}
+
+.maps-editor .map-save-dialog label {
+  display: block;
+  margin: 14px 0;
+  color: #c5d6e5;
+  font-size: 12px;
+}
+
+.maps-editor .map-save-dialog select {
+  display: block;
+  width: 100%;
+  margin-top: 5px;
+}
+
+.map-save-dialog .map-save-target {
+  color: #98b4c8;
+  font: 12px monospace;
+  overflow-wrap: anywhere;
+}
+
+.map-save-dialog .map-save-warning {
+  color: #f2ca72;
+}
+
+.map-save-dialog-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 18px;
+}
+
 @media (max-width: 900px) {
   .map-editor-layout {
     grid-template-columns: 180px minmax(0, 1fr) 240px;

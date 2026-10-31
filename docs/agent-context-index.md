@@ -35,6 +35,7 @@ zadanie obejmuje kilka obszarów, wczytaj dokumenty dla każdego z nich.
 | Urkaaaz Studio (narzędzie lokalne, wizualizator animacji, migracja edytora) | `docs/architecture/studio-architecture.md` i `studio/README.md`; dla zakładki map dołącz `docs/map-editor/web/README.md`. |
 | Systemy gameplayowe lub prezentacyjne | Wczytaj dokładny projekt systemu z `docs/systems/` oraz jego prompt implementacyjny, jeśli istnieje. Dla interakcji jednostek użyj `docs/systems/units/interactions.md`; dla runtime'owej tekstury stroju użyj `docs/systems/team-color-animation-plan.md`; dla nagród kampanii użyj `docs/systems/reward-system.md` i `docs/systems/reward-system-implementation-plan.md`; pomysły na jednostki czytaj tylko przy pracy nad propozycjami jednostek. |
 | UI meczu, HUD lub ekran wyniku | `docs/ui/mechanics-gap-analysis.md` oraz odpowiedni dokument planu/promptu z `docs/systems/`, np. plan redesignu HUD-u albo popupu wyniku. |
+| Migracja balansu do JSON | `docs/migration/game-balance-json-expansion-plan.md`. |
 | Migracja architektury lub etap migracji | `docs/migration/README.md`, `docs/migration/roadmap.md` i dokumenty tylko tego etapu (`mN-*.md`); raport etapu czytaj, gdy potrzebny jest jego wynik lub uzasadnienie. |
 | Historia zmian lub stan refaktoryzacji | `docs/project/CHANGELOG.md` albo `docs/project/refactor-progress.md`, odpowiednio do pytania. |
 | Zapis lub przegląd pomysłów | `docs/project/idea-inbox.md`; dla pomysłów przekrojowych również `docs/project/ideas.md`. |

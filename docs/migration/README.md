@@ -30,6 +30,7 @@ projektu znajduje się w automatycznie wczytywanym pliku [`AGENTS.md`](../../AGE
 | [`m11-report.md`](m11-report.md) | raport implementacji i walidacji M11 | gotowy do odbioru |
 | [`../campaign/map-json-migration-plan.md`](../campaign/map-json-migration-plan.md) | plan zastąpienia Kotlinowych map kampanii plikami JSON | zaakceptowany plan |
 | [`../campaign/map-json-implementation-prompt.md`](../campaign/map-json-implementation-prompt.md) | prompt do pełnej implementacji migracji kampanii na JSON | gotowy |
+| [`game-balance-json-expansion-plan.md`](game-balance-json-expansion-plan.md) | plan przeniesienia balansu jednostek, amunicji i czarów do wspólnego JSON-u | plan implementacji |
 
 ## Zasady
 

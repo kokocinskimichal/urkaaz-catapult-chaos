@@ -4,6 +4,9 @@
 
 ### Added
 
+- Added Chapter and Level dropdowns to the Studio Maps save dialog. Saving
+  writes a `chapterN-levelX` map to both repository copies, and campaign levels
+  load that map when present while retaining `demo-map` for missing levels.
 - Added the Ancient War Oak's 75-frame idle and approved 60-frame rightward
   branch-hand slam. The match screen plays the attack from a simulation event,
   and Studio loads only the explicitly registered runtime sequence.

@@ -1,0 +1,784 @@
+{
+  "schemaVersion": 1,
+  "mapId": "chapter1-level5",
+  "biome": "green_frontier",
+  "initialCameraAnchor": "PLAYER_FORTRESS",
+  "initialCameraZoom": 1,
+  "world": {
+    "width": 7200,
+    "height": 4800
+  },
+  "terrain": {
+    "sampleStep": 40,
+    "heightSamples": [
+      {
+        "x": 0,
+        "height": 3180
+      },
+      {
+        "x": 40,
+        "height": 3180
+      },
+      {
+        "x": 80,
+        "height": 3180
+      },
+      {
+        "x": 120,
+        "height": 3180
+      },
+      {
+        "x": 160,
+        "height": 3180
+      },
+      {
+        "x": 200,
+        "height": 3180
+      },
+      {
+        "x": 240,
+        "height": 3180
+      },
+      {
+        "x": 280,
+        "height": 3180
+      },
+      {
+        "x": 320,
+        "height": 3180
+      },
+      {
+        "x": 360,
+        "height": 3180
+      },
+      {
+        "x": 400,
+        "height": 3180
+      },
+      {
+        "x": 440,
+        "height": 3180
+      },
+      {
+        "x": 480,
+        "height": 3180
+      },
+      {
+        "x": 520,
+        "height": 3180
+      },
+      {
+        "x": 560,
+        "height": 3180
+      },
+      {
+        "x": 600,
+        "height": 3180
+      },
+      {
+        "x": 640,
+        "height": 3180
+      },
+      {
+        "x": 680,
+        "height": 3180
+      },
+      {
+        "x": 720,
+        "height": 3180
+      },
+      {
+        "x": 760,
+        "height": 3180
+      },
+      {
+        "x": 800,
+        "height": 3180
+      },
+      {
+        "x": 840,
+        "height": 3180
+      },
+      {
+        "x": 880,
+        "height": 3180
+      },
+      {
+        "x": 920,
+        "height": 3180
+      },
+      {
+        "x": 960,
+        "height": 3180
+      },
+      {
+        "x": 1000,
+        "height": 3180
+      },
+      {
+        "x": 1040,
+        "height": 3180
+      },
+      {
+        "x": 1080,
+        "height": 3180
+      },
+      {
+        "x": 1120,
+        "height": 3180
+      },
+      {
+        "x": 1160,
+        "height": 3180
+      },
+      {
+        "x": 1200,
+        "height": 3180
+      },
+      {
+        "x": 1240,
+        "height": 3180
+      },
+      {
+        "x": 1280,
+        "height": 3180
+      },
+      {
+        "x": 1320,
+        "height": 3180
+      },
+      {
+        "x": 1360,
+        "height": 3180
+      },
+      {
+        "x": 1400,
+        "height": 3180
+      },
+      {
+        "x": 1440,
+        "height": 3180
+      },
+      {
+        "x": 1480,
+        "height": 3180
+      },
+      {
+        "x": 1520,
+        "height": 3180
+      },
+      {
+        "x": 1560,
+        "height": 3180
+      },
+      {
+        "x": 1600,
+        "height": 3180
+      },
+      {
+        "x": 1640,
+        "height": 3180
+      },
+      {
+        "x": 1680,
+        "height": 3180
+      },
+      {
+        "x": 1720,
+        "height": 3180
+      },
+      {
+        "x": 1760,
+        "height": 3180
+      },
+      {
+        "x": 1800,
+        "height": 3180
+      },
+      {
+        "x": 1840,
+        "height": 3180
+      },
+      {
+        "x": 1880,
+        "height": 3180
+      },
+      {
+        "x": 1920,
+        "height": 3180
+      },
+      {
+        "x": 1960,
+        "height": 3180
+      },
+      {
+        "x": 2000,
+        "height": 3180
+      },
+      {
+        "x": 2040,
+        "height": 3180
+      },
+      {
+        "x": 2080,
+        "height": 3180
+      },
+      {
+        "x": 2120,
+        "height": 3180
+      },
+      {
+        "x": 2160,
+        "height": 3180
+      },
+      {
+        "x": 2200,
+        "height": 3180
+      },
+      {
+        "x": 2240,
+        "height": 3180
+      },
+      {
+        "x": 2280,
+        "height": 3180
+      },
+      {
+        "x": 2320,
+        "height": 3180
+      },
+      {
+        "x": 2360,
+        "height": 3180
+      },
+      {
+        "x": 2400,
+        "height": 3180
+      },
+      {
+        "x": 2440,
+        "height": 3180
+      },
+      {
+        "x": 2480,
+        "height": 3180
+      },
+      {
+        "x": 2520,
+        "height": 3180
+      },
+      {
+        "x": 2560,
+        "height": 3180
+      },
+      {
+        "x": 2600,
+        "height": 3180
+      },
+      {
+        "x": 2640,
+        "height": 3180
+      },
+      {
+        "x": 2680,
+        "height": 3180
+      },
+      {
+        "x": 2720,
+        "height": 3180
+      },
+      {
+        "x": 2760,
+        "height": 3180
+      },
+      {
+        "x": 2800,
+        "height": 3180
+      },
+      {
+        "x": 2840,
+        "height": 3180
+      },
+      {
+        "x": 2880,
+        "height": 3180
+      },
+      {
+        "x": 2920,
+        "height": 3180
+      },
+      {
+        "x": 2960,
+        "height": 3180
+      },
+      {
+        "x": 3000,
+        "height": 3180
+      },
+      {
+        "x": 3040,
+        "height": 3180
+      },
+      {
+        "x": 3080,
+        "height": 3180
+      },
+      {
+        "x": 3120,
+        "height": 3180
+      },
+      {
+        "x": 3160,
+        "height": 3180
+      },
+      {
+        "x": 3200,
+        "height": 3180
+      },
+      {
+        "x": 3240,
+        "height": 3180
+      },
+      {
+        "x": 3280,
+        "height": 3180
+      },
+      {
+        "x": 3320,
+        "height": 3180
+      },
+      {
+        "x": 3360,
+        "height": 3180
+      },
+      {
+        "x": 3400,
+        "height": 3180
+      },
+      {
+        "x": 3440,
+        "height": 3180
+      },
+      {
+        "x": 3480,
+        "height": 3180
+      },
+      {
+        "x": 3520,
+        "height": 3180
+      },
+      {
+        "x": 3560,
+        "height": 3180
+      },
+      {
+        "x": 3600,
+        "height": 3180
+      },
+      {
+        "x": 3640,
+        "height": 3180
+      },
+      {
+        "x": 3680,
+        "height": 3180
+      },
+      {
+        "x": 3720,
+        "height": 3180
+      },
+      {
+        "x": 3760,
+        "height": 3180
+      },
+      {
+        "x": 3800,
+        "height": 3180
+      },
+      {
+        "x": 3840,
+        "height": 3180
+      },
+      {
+        "x": 3880,
+        "height": 3180
+      },
+      {
+        "x": 3920,
+        "height": 3180
+      },
+      {
+        "x": 3960,
+        "height": 3180
+      },
+      {
+        "x": 4000,
+        "height": 3180
+      },
+      {
+        "x": 4040,
+        "height": 3180
+      },
+      {
+        "x": 4080,
+        "height": 3180
+      },
+      {
+        "x": 4120,
+        "height": 3180
+      },
+      {
+        "x": 4160,
+        "height": 3180
+      },
+      {
+        "x": 4200,
+        "height": 3180
+      },
+      {
+        "x": 4240,
+        "height": 3180
+      },
+      {
+        "x": 4280,
+        "height": 3180
+      },
+      {
+        "x": 4320,
+        "height": 3180
+      },
+      {
+        "x": 4360,
+        "height": 3180
+      },
+      {
+        "x": 4400,
+        "height": 3180
+      },
+      {
+        "x": 4440,
+        "height": 3180
+      },
+      {
+        "x": 4480,
+        "height": 3180
+      },
+      {
+        "x": 4520,
+        "height": 3180
+      },
+      {
+        "x": 4560,
+        "height": 3180
+      },
+      {
+        "x": 4600,
+        "height": 3180
+      },
+      {
+        "x": 4640,
+        "height": 3180
+      },
+      {
+        "x": 4680,
+        "height": 3180
+      },
+      {
+        "x": 4720,
+        "height": 3180
+      },
+      {
+        "x": 4760,
+        "height": 3180
+      },
+      {
+        "x": 4800,
+        "height": 3180
+      },
+      {
+        "x": 4840,
+        "height": 3180
+      },
+      {
+        "x": 4880,
+        "height": 3180
+      },
+      {
+        "x": 4920,
+        "height": 3180
+      },
+      {
+        "x": 4960,
+        "height": 3180
+      },
+      {
+        "x": 5000,
+        "height": 3180
+      },
+      {
+        "x": 5040,
+        "height": 3180
+      },
+      {
+        "x": 5080,
+        "height": 3180
+      },
+      {
+        "x": 5120,
+        "height": 3180
+      },
+      {
+        "x": 5160,
+        "height": 3180
+      },
+      {
+        "x": 5200,
+        "height": 3180
+      },
+      {
+        "x": 5240,
+        "height": 3180
+      },
+      {
+        "x": 5280,
+        "height": 3180
+      },
+      {
+        "x": 5320,
+        "height": 3180
+      },
+      {
+        "x": 5360,
+        "height": 3180
+      },
+      {
+        "x": 5400,
+        "height": 3180
+      },
+      {
+        "x": 5440,
+        "height": 3180
+      },
+      {
+        "x": 5480,
+        "height": 3180
+      },
+      {
+        "x": 5520,
+        "height": 3180
+      },
+      {
+        "x": 5560,
+        "height": 3180
+      },
+      {
+        "x": 5600,
+        "height": 3180
+      },
+      {
+        "x": 5640,
+        "height": 3180
+      },
+      {
+        "x": 5680,
+        "height": 3180
+      },
+      {
+        "x": 5720,
+        "height": 3180
+      },
+      {
+        "x": 5760,
+        "height": 3180
+      },
+      {
+        "x": 5800,
+        "height": 3180
+      },
+      {
+        "x": 5840,
+        "height": 3180
+      },
+      {
+        "x": 5880,
+        "height": 3180
+      },
+      {
+        "x": 5920,
+        "height": 3180
+      },
+      {
+        "x": 5960,
+        "height": 3180
+      },
+      {
+        "x": 6000,
+        "height": 3180
+      },
+      {
+        "x": 6040,
+        "height": 3180
+      },
+      {
+        "x": 6080,
+        "height": 3180
+      },
+      {
+        "x": 6120,
+        "height": 3180
+      },
+      {
+        "x": 6160,
+        "height": 3180
+      },
+      {
+        "x": 6200,
+        "height": 3180
+      },
+      {
+        "x": 6240,
+        "height": 3180
+      },
+      {
+        "x": 6280,
+        "height": 3180
+      },
+      {
+        "x": 6320,
+        "height": 3180
+      },
+      {
+        "x": 6360,
+        "height": 3180
+      },
+      {
+        "x": 6400,
+        "height": 3180
+      },
+      {
+        "x": 6440,
+        "height": 3180
+      },
+      {
+        "x": 6480,
+        "height": 3180
+      },
+      {
+        "x": 6520,
+        "height": 3180
+      },
+      {
+        "x": 6560,
+        "height": 3180
+      },
+      {
+        "x": 6600,
+        "height": 3180
+      },
+      {
+        "x": 6640,
+        "height": 3180
+      },
+      {
+        "x": 6680,
+        "height": 3180
+      },
+      {
+        "x": 6720,
+        "height": 3180
+      },
+      {
+        "x": 6760,
+        "height": 3180
+      },
+      {
+        "x": 6800,
+        "height": 3180
+      },
+      {
+        "x": 6840,
+        "height": 3180
+      },
+      {
+        "x": 6880,
+        "height": 3180
+      },
+      {
+        "x": 6920,
+        "height": 3180
+      },
+      {
+        "x": 6960,
+        "height": 3180
+      },
+      {
+        "x": 7000,
+        "height": 3180
+      },
+      {
+        "x": 7040,
+        "height": 3180
+      },
+      {
+        "x": 7080,
+        "height": 3180
+      },
+      {
+        "x": 7120,
+        "height": 3180
+      },
+      {
+        "x": 7160,
+        "height": 3180
+      },
+      {
+        "x": 7200,
+        "height": 3180
+      }
+    ]
+  },
+  "protectedZones": [
+    {
+      "id": "blue-foundation",
+      "minX": 0,
+      "maxX": 1080,
+      "minHeight": 3180,
+      "maxHeight": 3180,
+      "craterPolicy": "PRESERVE_FOUNDATION"
+    },
+    {
+      "id": "red-foundation",
+      "minX": 6120,
+      "maxX": 7200,
+      "minHeight": 3180,
+      "maxHeight": 3180,
+      "craterPolicy": "PRESERVE_FOUNDATION"
+    }
+  ],
+  "fortresses": [
+    {
+      "owner": "BLUE",
+      "x": 490,
+      "foundationHeight": 3180,
+      "halfWidth": 240,
+      "assetKey": "fortress.blue",
+      "hitboxProfile": "fortress.default",
+      "protectedZoneId": "blue-foundation"
+    },
+    {
+      "owner": "RED",
+      "x": 6710,
+      "foundationHeight": 3180,
+      "halfWidth": 240,
+      "assetKey": "fortress.red",
+      "hitboxProfile": "fortress.default",
+      "protectedZoneId": "red-foundation"
+    }
+  ],
+  "decorations": [],
+  "generationMetadata": {
+    "seed": 1,
+    "generatorVersion": "studio",
+    "authoringVersion": "urkaaz-studio/0.1.0"
+  }
+}

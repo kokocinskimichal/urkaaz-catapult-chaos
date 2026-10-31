@@ -18,6 +18,11 @@ i serwera, sprawdza hash obu kopii oraz aktualizuje
 `game-campaign/src/main/resources/maps/` i `android-app/src/main/assets/maps/`.
 Konflikt plików zwraca `409` i nie nadpisuje zewnętrznych zmian. Autosave
 pozostaje lokalny w `localStorage` i nie zapisuje po cichu pliku repozytorium.
+Akcja Save otwiera dialog z dropdownami Chapter i globalnego Level. Wybrany
+poziom zapisuje mapę pod ID `chapter<ordinal>-level<level>`; nadpisanie
+istniejącej mapy korzysta z jej bieżącego hash pair. Kampania wybiera mapę o
+tym ID, gdy jest dostępna w zasobach, a w przeciwnym razie zachowuje
+tymczasowy `demo-map`.
 
 Indeks i obrazy assetów są udostępniane bez kopiowania przez Studio API,
 bezpośrednio z `game-assets` i wybranych drawable Androida. Import i eksport

@@ -45,6 +45,7 @@ do bieżącego zadania według [indeksu dokumentów kontekstu](docs/agent-contex
 - [M9 — UI](docs/migration/m9-ui.md) · [raport](docs/migration/m9-report.md)
 - [M10 — integracja lokalna](docs/migration/m10-local-integration.md) · [raport](docs/migration/m10-report.md)
 - [M11 — porównanie](docs/migration/m11-comparison.md) · [raport](docs/migration/m11-report.md)
+- [Plan migracji balansu do JSON](docs/migration/game-balance-json-expansion-plan.md)
 
 ### Kampania i mapy
 

@@ -186,8 +186,8 @@ class MapDefinitionValidatorTest {
 
         assertEquals("chapter1-level3", levels[2].mapDefinition.mapId)
         assertEquals("chapter1-level4", levels[3].mapDefinition.mapId)
-        assertTrue(levels.filterIndexed { index, _ -> index != 2 && index != 3 }
-            .all { it.mapDefinition.mapId == "demo-map" })
+        assertEquals("demo-map", levels[0].mapDefinition.mapId)
+        assertEquals("demo-map", levels[1].mapDefinition.mapId)
         assertNotEquals(levels[0].availableUnits, levels[99].availableUnits)
         assertEquals(levels[0].mapDefinition.terrain.samples, levels[1].mapDefinition.terrain.samples)
         assertNotEquals(levels[0].mapDefinition.terrain.samples, levels[2].mapDefinition.terrain.samples)

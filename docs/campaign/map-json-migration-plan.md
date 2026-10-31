@@ -6,10 +6,13 @@ Migracja została zaimplementowana. Znormalizowany
 `game-campaign/src/main/resources/maps/demo-map.json` pochodzi z
 `~/Downloads/web-map.json`; oryginalny plik pozostaje nietknięty. Android
 dołącza tę samą mapę offline w
-`android-app/src/main/assets/maps/demo-map.json`. Wszystkie poziomy poza
-Chapter 1, Levels 3 i 4 mają jawne, tymczasowe przypisanie do `demo-map`;
-poziomy 3 i 4 używają swoich importowanych map w obu lokalizacjach zasobów.
-Konfiguracja gameplayowa kampanii pozostaje w Kotlinie. Stare Kotlinowe
+`android-app/src/main/assets/maps/demo-map.json`. Dedykowane JSON-y mają
+obecnie Chapter 1, Levels 3 i 4; dla pozostałych poziomów brakujący plik
+oznacza przejściowy fallback do `demo-map`. Studio Maps zapisuje kampanijną
+mapę przez wybór Chapter i globalnego Level; ID `chapterN-levelX` jest
+zapisywane atomowo w obu lokalizacjach. Runtime wybiera mapę poziomu o takim
+ID, jeśli plik istnieje. Konfiguracja gameplayowa kampanii pozostaje w Kotlinie.
+Stare Kotlinowe
 geometrie kampanii zostały usunięte.
 
 Jeden kontrakt `MapDefinition`, ścisły `MapDefinitionRepository` i

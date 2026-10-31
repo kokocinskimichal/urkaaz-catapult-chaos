@@ -27,6 +27,11 @@ class MapDefinitionRepository(
     fun load(mapId: String): MapLoadResult =
         cache.computeIfAbsent(mapId) { loadUncached(it) }
 
+    fun contains(mapId: String): Boolean {
+        if (!MAP_ID.matches(mapId)) return false
+        return openResource("maps/$mapId.json")?.use { true } ?: false
+    }
+
     private fun loadUncached(mapId: String): MapLoadResult {
         if (!MAP_ID.matches(mapId)) return MapLoadResult.Failure(mapId, "invalid map id")
         return try {

@@ -288,13 +288,17 @@ may be placed at any height within the map and on slopes.
 The normalized `game-campaign/src/main/resources/maps/demo-map.json` came from
 the supplied `~/Downloads/web-map.json`; the source file was not modified.
 Android also bundles the same file at
-`android-app/src/main/assets/maps/demo-map.json` for offline loading. All 100
-campaign levels used `demo-map` temporarily while retaining their Kotlin
-gameplay configuration. Chapter 1, Levels 3 and 4 use their imported maps in
-both resource locations; other levels continue to use `demo-map`. Level 4
+`android-app/src/main/assets/maps/demo-map.json` for offline loading.
+`CampaignLevelDefinition` looks for `chapter<ordinal>-level<globalLevel>` and
+uses the bundled map when it exists; missing level maps still use the
+intentional `demo-map` transition fallback. The tracked Chapter 1, Levels 3
+and 4 maps are imported in both resource locations; other levels without a
+dedicated JSON currently use `demo-map`. The Studio Maps save dialog selects
+the campaign chapter and global level, derives this stable map ID, and saves
+through the paired-map hash guard into both resource locations. Level 4
 preserves the authored 2870/3390 foundation heights and has three relics moved
 to validated, non-overlapping soil placements. This is a transition mapping,
-not the final one-map-per-level arrangement. The former Kotlin campaign map
+not yet a complete one-map-per-level campaign. The former Kotlin campaign map
 definitions and map authoring builder have been removed.
 Chapter II levels 11–20 currently keep the `demo-map` geometry but override
 its biome to Frostbound for visual theme only; no additional gameplay

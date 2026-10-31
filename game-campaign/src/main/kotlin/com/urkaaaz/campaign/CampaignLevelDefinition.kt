@@ -114,16 +114,14 @@ data class CampaignLevelDefinition(
             mapRepository: MapDefinitionRepository = MapDefinitionRepository.bundled,
         ): CampaignLevelDefinition {
             val safeLevel = level.coerceIn(1, MAX_LEVELS)
-            val mapId = when (safeLevel) {
-                CHAPTER_ONE_LEVEL_THREE -> CHAPTER_ONE_LEVEL_THREE_MAP_ID
-                CHAPTER_ONE_LEVEL_FOUR -> CHAPTER_ONE_LEVEL_FOUR_MAP_ID
-                else -> "demo-map"
-            }
+            val chapterRegistry = CampaignChapterRegistry.default()
+            val chapter = chapterRegistry.chapterForLevel(safeLevel)
+            val chapterNumber =
+                chapterRegistry.chapters.indexOfFirst { it.id == chapter.id } + 1
+            val campaignMapId = "chapter$chapterNumber-level$safeLevel"
+            val mapId = if (mapRepository.contains(campaignMapId)) campaignMapId else "demo-map"
             val baseMapDefinition = mapRepository.require(mapId)
-            val chapterBiome = CampaignChapterRegistry.default()
-                .chapterForLevel(safeLevel)
-                .biome
-                .mapId
+            val chapterBiome = chapter.biome.mapId
             val mapDefinition = if (baseMapDefinition.biome == chapterBiome) {
                 baseMapDefinition
             } else {
@@ -188,9 +186,5 @@ data class CampaignLevelDefinition(
             )
         }
 
-        private const val CHAPTER_ONE_LEVEL_THREE = 3
-        private const val CHAPTER_ONE_LEVEL_THREE_MAP_ID = "chapter1-level3"
-        private const val CHAPTER_ONE_LEVEL_FOUR = 4
-        private const val CHAPTER_ONE_LEVEL_FOUR_MAP_ID = "chapter1-level4"
     }
 }

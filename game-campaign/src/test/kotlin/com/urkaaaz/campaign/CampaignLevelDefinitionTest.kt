@@ -6,6 +6,7 @@ import com.urkaaaz.contracts.AiProfileId
 import com.urkaaaz.domain.AmmunitionType
 import com.urkaaaz.domain.SpellType
 import com.urkaaaz.domain.UnitFactory
+import java.io.ByteArrayInputStream
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
@@ -85,6 +86,35 @@ class CampaignLevelDefinitionTest {
         assertEquals(-1f, level.initialWind.direction)
         assertEquals(0.7f, level.initialWind.strength, 0.0001f)
         assertFalse(level.tutorial.enabled)
+    }
+
+    @Test
+    fun campaignUsesAnAuthoredChapterLevelMapAndKeepsDemoMapForMissingLevels() {
+        fun resourceText(name: String): String =
+            requireNotNull(javaClass.classLoader?.getResourceAsStream(name)) {
+                "Missing test map resource: $name"
+            }.bufferedReader().use { it.readText() }
+
+        val chapterOneMap = resourceText("maps/chapter1-level3.json")
+        val chapterTwoMap = chapterOneMap.replace(
+            "\"mapId\": \"chapter1-level3\"",
+            "\"mapId\": \"chapter2-level11\"",
+        )
+        val demoMap = resourceText("maps/demo-map.json")
+        val repository = MapDefinitionRepository { path ->
+            when (path) {
+                "maps/chapter2-level11.json" -> ByteArrayInputStream(chapterTwoMap.toByteArray())
+                "maps/demo-map.json" -> ByteArrayInputStream(demoMap.toByteArray())
+                else -> null
+            }
+        }
+
+        val authoredLevel = CampaignLevelDefinition.forLevel(11, repository)
+        val missingLevel = CampaignLevelDefinition.forLevel(12, repository)
+
+        assertEquals("chapter2-level11", authoredLevel.mapDefinition.mapId)
+        assertEquals("frostbound", authoredLevel.mapDefinition.biome)
+        assertEquals("demo-map", missingLevel.mapDefinition.mapId)
     }
 
     @Test
