@@ -4,11 +4,16 @@
 
 The project is a modular Android game with a deterministic local match
 simulation. The application opens into `StartScreen`, which reproduces the
-legacy start menu. Its Play button opens the legacy-style `DashboardScreen`;
-the dashboard Campaign button opens `CampaignScreen`, and selecting a level
-opens the loadout screen. The test mode button still opens `MatchScreen` with
-`DEMO_LEVEL`. The loadout core, local player profile and per-level loadout
-persistence are implemented with AndroidX DataStore. Campaign matches start
+legacy start menu. Its Play button opens the redesigned `DashboardScreen`,
+which uses the approved screen reference and its own background asset. Its
+Campaign button opens `CampaignScreen`, and selecting a level opens the loadout
+screen. A globe button opens a compact list of PL/UK/ES flags, but the flags do
+not change the language until LocalizationSystem is implemented. The dashboard
+keeps `AD REWARD` visible but inert. Two hidden side anchors are reserved for
+future game-event icons; there is no Dashboard event feed yet. The test mode button still opens
+`MatchScreen` with `DEMO_LEVEL`. The loadout core, local player profile and
+per-level loadout persistence are implemented with AndroidX DataStore.
+Campaign matches start
 only after the profile and saved loadout are read, validated and committed.
 Shop and result screens remain placeholders.
 `MainActivity` hides Android status and navigation bars for immersive
@@ -277,7 +282,14 @@ The Dashboard's confirmed **RESET** action uses
 `PlayerProgressResetRepository` to clear the shared local Preferences DataStore
 in one update. This resets campaign progress, profile gold/unlocks/stocks,
 saved loadouts, and reward receipts; storage failures remain explicit and do
-not produce a success message.
+not produce a success message. The screen uses the approved background at
+`android-app/src/main/res/drawable-nodpi/dashboard_background_approved.png`,
+preserving the previous `dashboard_background.png`. Its source and accepted
+screen reference are under `assets_src/dashboard/`. The title uses
+`loadout_header_frame.png`; the profile uses
+`match_hud_universal_frame.9.png` over an opaque rounded dark fill because the
+NinePatch center is transparent. The avatar uses
+`dashboard_hud_portrait_frame.png`.
 
 Campaign maps use one immutable JSON contract in `game-contracts`:
 `MapDefinition` contains a map ID and biome, fixed world dimensions,
@@ -781,7 +793,8 @@ must go through commands and domain/application boundaries.
 | `android-app/.../navigation/AppNavigator.kt` | Navigation and back stack |
 | `android-app/.../navigation/ScreenHost.kt` | Active screen container |
 | `android-app/.../screens/start/StartScreen.kt` | Legacy-style start menu |
-| `android-app/.../screens/dashboard/DashboardScreen.kt` | Dashboard navigation and confirmed player-progress reset |
+| `android-app/.../screens/dashboard/DashboardScreen.kt` | Dashboard layout, profile summary, navigation, reset and static language icons |
+| `docs/systems/dashboard-screen.md` and `docs/systems/dashboard-screen-implementation-prompt.md` | Dashboard presentation boundaries, approved assets and implementation requirements |
 | `android-app/.../screens/campaign/CampaignScreen.kt` | Chapter campaign map, chapter selector, and Start Level flow |
 | `android-app/.../screens/campaign/CampaignChapterProgressMapper.kt` | Campaign progress to visible chapter and marker states |
 | `game-campaign/.../campaign/CampaignChapterCatalogRepository.kt` | Shared JSON chapter metadata loading |
@@ -999,6 +1012,13 @@ must go through commands and domain/application boundaries.
   approved AnimGen world-space visual is integrated into Android and rendered
   behind moving HASTED units.
 - Shop and result screens remain placeholders.
+- The Shop visual-concept brief is `docs/systems/shop-screen-mockup.agp`; its
+  exact 1671 × 941 background reference, including the seller, is
+  `assets_src/shop/screen-concepts/shop_background_reference.png`. This is a
+  concept reference only, not an Android runtime asset. The legacy shop layout
+  has SPELLS/AMMUNITION tabs, an item grid and a detail panel; its background
+  contains a different embedded seller and must not be combined with the saved
+  reference.
 - `ResultScreen` remains a placeholder; match results are still shown by the
   existing match presentation. Campaign progress is local-only and has no
   cloud synchronization or legacy-install migration.

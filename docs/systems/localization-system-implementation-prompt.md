@@ -33,11 +33,13 @@ wymagający decyzji użytkownika.
 - Języki: polski (`pl`), angielski (`en`) i hiszpański (`es`, wariant
   neutralny, jeden katalog `values-es`; bez `es-ES`/`es-419`). Domyślny przy
   braku zapisu: **angielski**; język systemu nie jest brany pod uwagę.
-- Język zmienia się **tylko na Dashboardzie**: jeden panel w stylu HUD
-  (`HudPanelStyle`, `UiTypography`) z trzema segmentami `PL | EN | ES`
-  i podświetlonym aktywnym językiem; dotknięcie innego segmentu zmienia język
-  od razu. Minimalny cel dotyku `48 dp` na segment, `contentDescription`
-  każdego segmentu.
+- Język zmienia się **tylko na Dashboardzie**: przycisk z neutralną ikoną
+  globusa w nagłówku otwiera kompaktowy panel HUD (`HudPanelStyle`,
+  `UiTypography`) z flagami Polski (`PL`), Wielkiej Brytanii (`EN`) i
+  Hiszpanii (`ES`). Aktywna flaga jest podświetlona; dotknięcie innej zmienia
+  język od razu. Każda flaga ma cel dotyku co najmniej `48 dp` i
+  `contentDescription` z nazwą języka. Panel zamyka się po wyborze,
+  dotknięciu poza nim lub systemowym Back.
 - Dashboard RESET **nie** czyści języka. Język jest w osobnym pliku DataStore
   (nazwa `language_settings`, klucze `language.code`, `language.schema_version`),
   nie w głównym Preferences DataStore czyszczonym przez
@@ -133,16 +135,22 @@ Pakiet `com.urkaaaz.application.language`:
   IO, `LocalizedContext.getString` dla `PL` i `EN`, język przetrwa Dashboard
   RESET.
 
-### Etap 3 — przełącznik na Dashboardzie
+### Etap 3 — selektor flag na Dashboardzie
 
 - `DashboardUiAction.SelectLanguage`, stan UI z aktywnym językiem, wywołanie
   `SetLanguage` w `DashboardViewModel`;
-- osobny widok przełącznika w `screens/dashboard/`; położenie na Dashboardzie
-  jest dowolne i tymczasowe (Dashboard zostanie przebudowany), ale widoczne,
-  dotykalne i niezasłaniające przycisków;
+- przycisk globusa w nagłówku otwiera osobny, kompaktowy panel z trzema
+  flagowymi przyciskami: Polska (`PL`), Wielka Brytania (`EN`) i Hiszpania
+  (`ES`); aktywna flaga jest podświetlona, a każdy cel dotyku ma co najmniej
+  `48 dp` i poprawny `contentDescription`;
+- panel nie zasłania głównych przycisków i zamyka się po wyborze, dotknięciu
+  poza nim lub systemowym Back;
+- dodaj małe drawable dla ikony globusa i trzech flag; w obecnych zasobach nie
+  ma dedykowanych ikon języka ani flag;
 - `Saved` → `recreate()` z odtworzeniem Dashboardu; `Unchanged` i `Failure` →
   bez `recreate()`, błąd jawnie widoczny;
-- testy `DashboardViewModel` dla trzech wyników i odtworzenia Dashboardu.
+- testy `DashboardViewModel` dla trzech wyników i odtworzenia Dashboardu oraz
+  mapowania flag na języki, stanu aktywnej flagi i zamykania panelu.
 
 ### Etap 4 — tytuły rozdziałów
 

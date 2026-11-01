@@ -1,8 +1,9 @@
 package com.urkaaaz.screens.dashboard
 
+import com.urkaaaz.application.progression.DeveloperProgressSummary
+
 data class DashboardUiState(
-    val isLoading: Boolean = false,
-    val currentLevel: Int = 1,
-    val lives: Int = 5,
-    val gold: Int = 0,
+    val progressSummary: DeveloperProgressSummary? = null,
+    val isLoading: Boolean = true,
+    val hasProgressError: Boolean = false,
 )

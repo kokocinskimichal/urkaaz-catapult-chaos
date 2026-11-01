@@ -3,6 +3,8 @@ package com.urkaaaz.screens.dashboard
 import android.app.AlertDialog
 import android.content.Context
 import android.graphics.Color
+import android.graphics.drawable.ColorDrawable
+import android.graphics.drawable.GradientDrawable
 import android.util.Log
 import android.view.Gravity
 import android.view.View
@@ -11,13 +13,15 @@ import android.widget.FrameLayout
 import android.widget.ImageButton
 import android.widget.ImageView
 import android.widget.LinearLayout
+import android.widget.PopupWindow
 import android.widget.Space
 import android.widget.TextView
 import android.widget.Toast
 import com.urkaaaz.android.R
-import com.urkaaaz.application.progression.PlayerProgressResetResult
 import com.urkaaaz.application.progression.DeveloperProgressSummary
+import com.urkaaaz.application.progression.PlayerProgressResetResult
 import com.urkaaaz.navigation.ScreenContent
+import com.urkaaaz.ui.ScreenChromeMetrics
 import com.urkaaaz.ui.UiTypography
 import java.io.IOException
 import kotlinx.coroutines.CoroutineScope
@@ -36,52 +40,91 @@ class DashboardScreen(
 ) : ScreenContent {
     private val viewModel = DashboardViewModel()
     private var screenScope: CoroutineScope? = null
-    private val livesValue = label("5", 16f)
-    private val currentLevelValue = label(context.getString(R.string.dashboard_current_level, 1), 10f)
-    private val goldValue = label("0", 16f)
+    private var isResetInProgress = false
+
+    private val livesValue = label(R.string.dashboard_progress_placeholder, 14f)
+    private val currentLevelValue = label(R.string.dashboard_progress_placeholder, 12f)
+    private val goldValue = label(R.string.dashboard_progress_placeholder, 14f)
+    private val regenerationValue =
+        label(R.string.dashboard_life_regeneration_unavailable, 11f)
+    private val progressStatusMessage = label("", 12f)
+    private val progressRetryButton = Button(context).apply {
+        text = context.getString(R.string.dashboard_progress_retry)
+        UiTypography.applyButtonTypeface(this)
+        textSize = 10f
+        setTextColor(Color.WHITE)
+        setPadding(dp(8), dp(3), dp(8), dp(3))
+        minHeight = 0
+        minWidth = 0
+        background = context.getDrawable(R.drawable.ui_button_dark_s)
+        setOnClickListener { loadProgressSummary() }
+    }
+    private val progressStatusPanel = LinearLayout(context).apply {
+        orientation = LinearLayout.HORIZONTAL
+        gravity = Gravity.CENTER_VERTICAL
+        setPadding(dp(10), dp(6), dp(8), dp(6))
+        background = context.getDrawable(R.drawable.bg_hud_panel)
+        visibility = View.GONE
+        addView(progressStatusMessage, LinearLayout.LayoutParams(0, -2, 1f))
+        addView(progressRetryButton, LinearLayout.LayoutParams(dp(76), dp(36)).apply {
+            marginStart = dp(8)
+        })
+    }
     private val resetProgressButton = Button(context).apply {
         text = context.getString(R.string.dashboard_reset_progress)
         UiTypography.applyButtonTypeface(this)
         textSize = 11f
         setTextColor(Color.WHITE)
-        setPadding(dp(12), dp(6), dp(12), dp(6))
+        setPadding(dp(8), dp(4), dp(8), dp(4))
         minHeight = 0
         minWidth = 0
-        background = context.getDrawable(R.drawable.bg_hud_panel)
+        compoundDrawablePadding = dp(5)
+        setCompoundDrawablesWithIntrinsicBounds(R.drawable.ic_dashboard_reset, 0, 0, 0)
+        background = context.getDrawable(R.drawable.ui_button_dark_m)
         setOnClickListener { showResetConfirmation() }
     }
+    private val livesIcon = image(R.drawable.icon_lives_heart, 24, 22)
+    private val goldIcon = image(R.drawable.icon_orcoins, 28, 22)
+    private val regenerationIcon = image(R.drawable.ic_dashboard_life_regeneration, 24, 22)
+    private val avatarFrame = avatarFrame()
+    private val profilePanel = profilePanel()
+    private var languagePopup: PopupWindow? = null
+    private val languageButton = languageButton()
+    private val leftEventSlot = eventSlot()
+    private val rightEventSlot = eventSlot()
+    private val campaignArea = campaignArea()
 
     override val view = FrameLayout(context).apply {
+        clipChildren = false
         addView(ImageView(context).apply {
             contentDescription = null
             scaleType = ImageView.ScaleType.CENTER_CROP
-            setImageResource(R.drawable.dashboard_background)
+            setImageResource(R.drawable.dashboard_background_approved)
         }, FrameLayout.LayoutParams(-1, -1))
 
-        addView(topHud(), FrameLayout.LayoutParams(-1, dp(86)).apply {
-            gravity = Gravity.TOP
-        })
-
-        addView(ImageButton(context).apply {
-            background = null
-            contentDescription = "Player avatar"
-            foreground = context.getDrawable(R.drawable.dashboard_hud_portrait_frame)
-            setPadding(dp(6), dp(6), dp(6), dp(6))
-            scaleType = ImageView.ScaleType.CENTER_INSIDE
-            setImageResource(R.drawable.player_avatar_01)
-        }, FrameLayout.LayoutParams(dp(91), dp(91)).apply {
-            gravity = Gravity.TOP or Gravity.START
-            marginStart = dp(24)
-        })
-
-        addView(resetProgressButton, FrameLayout.LayoutParams(-2, -2).apply {
-            gravity = Gravity.TOP or Gravity.END
-            topMargin = dp(96)
-            marginEnd = dp(16)
-        })
-
-        addView(bottomActions(), FrameLayout.LayoutParams(-1, dp(104)).apply {
+        addView(campaignArea, FrameLayout.LayoutParams(-1, dp(150)).apply {
             gravity = Gravity.BOTTOM
+            bottomMargin = dp(54)
+        })
+
+        addView(bottomActions(), FrameLayout.LayoutParams(-1, dp(62)).apply {
+            gravity = Gravity.BOTTOM
+            bottomMargin = dp(12)
+        })
+
+        addView(resetProgressButton, FrameLayout.LayoutParams(dp(126), dp(48)).apply {
+            gravity = Gravity.BOTTOM or Gravity.END
+            marginEnd = dp(12)
+            bottomMargin = dp(14)
+        })
+
+        addView(progressStatusPanel, FrameLayout.LayoutParams(dp(360), -2).apply {
+            gravity = Gravity.TOP or Gravity.CENTER_HORIZONTAL
+            topMargin = dp(98)
+        })
+
+        addView(topHeader(), FrameLayout.LayoutParams(-1, dp(92)).apply {
+            gravity = Gravity.TOP
         })
     }
 
@@ -89,126 +132,364 @@ class DashboardScreen(
         if (screenScope != null) return
         screenScope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
         resetProgressButton.isEnabled = true
-        screenScope?.launch {
-            try {
-                renderProgress(viewModel.updateProgress(loadProgress()))
-            } catch (error: IOException) {
-                Log.e("DashboardScreen", "Could not load player progress summary", error)
-            } catch (error: IllegalArgumentException) {
-                Log.e("DashboardScreen", "Could not load player progress summary", error)
-            }
-        }
+        loadProgressSummary()
     }
 
     override fun onPause() {
         val scope = screenScope
         screenScope = null
         resetProgressButton.isEnabled = false
+        progressRetryButton.isEnabled = false
+        languagePopup?.dismiss()
+        languagePopup = null
         scope?.cancel()
     }
 
-    private fun topHud(): View = LinearLayout(context).apply {
-        orientation = LinearLayout.HORIZONTAL
-        gravity = Gravity.CENTER_VERTICAL
-        setBackgroundResource(R.drawable.dashboard_hud_top_panel)
-        setPadding(dp(132), 0, dp(8), 0)
-        addView(LinearLayout(context).apply {
-            orientation = LinearLayout.HORIZONTAL
-            gravity = Gravity.CENTER
-            addView(image(R.drawable.icon_lives_heart, 42, 42))
-            addView(livesValue, LinearLayout.LayoutParams(-2, -2).apply {
-                marginStart = dp(6)
-            })
-            addView(currentLevelValue, LinearLayout.LayoutParams(-2, -2).apply {
-                marginStart = dp(8)
-            })
-            addView(Button(context).apply {
-                text = "RESET"
-                UiTypography.applyButtonTypeface(this)
-                textSize = 9f
-                setTextColor(Color.WHITE)
-                setPadding(dp(7), dp(3), dp(7), dp(3))
-                minHeight = 0
-                minWidth = 0
-                background = context.getDrawable(R.drawable.bg_hud_panel)
-            }, LinearLayout.LayoutParams(-2, -2).apply {
-                marginStart = dp(6)
-            })
-        })
-        addView(Space(context), LinearLayout.LayoutParams(0, 1, 1f))
-        addView(LinearLayout(context).apply {
-            orientation = LinearLayout.HORIZONTAL
-            gravity = Gravity.CENTER
-            addView(image(R.drawable.icon_next_life_hourglass, 36, 36))
-            addView(label(context.getString(R.string.dashboard_life_regeneration_unavailable), 13f), LinearLayout.LayoutParams(-2, -2).apply {
-                marginStart = dp(6)
-            })
-        })
-        addView(Space(context), LinearLayout.LayoutParams(0, 1, 1f))
-        addView(LinearLayout(context).apply {
-            orientation = LinearLayout.HORIZONTAL
-            gravity = Gravity.CENTER
-            addView(image(R.drawable.icon_orcoins, 50, 42))
-            addView(goldValue, LinearLayout.LayoutParams(-2, -2).apply {
-                marginStart = dp(6)
-            })
-        })
-        addView(Space(context), LinearLayout.LayoutParams(0, 1, 1f))
+    override fun onBackPressed(): Boolean {
+        val popup = languagePopup ?: return false
+        if (!popup.isShowing) return false
+        popup.dismiss()
+        languagePopup = null
+        return true
     }
 
-    private fun bottomActions(): View = FrameLayout(context).apply {
+    private fun topHeader(): View = LinearLayout(context).apply {
+        orientation = LinearLayout.HORIZONTAL
+        gravity = Gravity.CENTER_VERTICAL
+        setPadding(
+            dp(ScreenChromeMetrics.EDGE_INSET_DP),
+            dp(4),
+            dp(ScreenChromeMetrics.EDGE_INSET_DP),
+            dp(4),
+        )
+
+        addView(backButton(), LinearLayout.LayoutParams(dp(112), dp(48)))
+
+        addView(titlePanel(), LinearLayout.LayoutParams(0, dp(76), 1.25f).apply {
+            marginStart = dp(4)
+            marginEnd = dp(4)
+        })
+
+        addView(profilePanel, LinearLayout.LayoutParams(0, dp(66), 1.9f))
+        addView(Space(context), LinearLayout.LayoutParams(0, 1, 0.1f))
+        addView(languageButton, LinearLayout.LayoutParams(dp(44), dp(44)).apply {
+            marginStart = dp(4)
+        })
+    }
+
+    private fun backButton(): Button = Button(context).apply {
+        text = context.getString(R.string.dashboard_back_action)
+        contentDescription = context.getString(R.string.dashboard_back_accessibility)
+        UiTypography.applyButtonTypeface(this)
+        textSize = 14f
+        setTextColor(Color.rgb(57, 34, 20))
+        setPadding(dp(5), 0, dp(5), 0)
+        minHeight = 0
+        minWidth = 0
+        background = context.getDrawable(R.drawable.loadout_start_match_button_xs_short)
+        setOnClickListener { onBack() }
+    }
+
+    private fun titlePanel(): View = FrameLayout(context).apply {
         addView(ImageView(context).apply {
-            alpha = 0.38f
+            contentDescription = null
             scaleType = ImageView.ScaleType.FIT_XY
-            setImageResource(R.drawable.dashboard_background)
+            setImageResource(R.drawable.loadout_header_frame)
         }, FrameLayout.LayoutParams(-1, -1))
+        addView(label(R.string.dashboard_title, 25f).apply {
+            setTextColor(Color.rgb(244, 207, 123))
+            setShadowLayer(1.5f, 0f, dp(1).toFloat(), Color.BLACK)
+        }, FrameLayout.LayoutParams(-1, dp(28), Gravity.TOP).apply {
+            topMargin = dp(22)
+        })
+    }
+
+    private fun profilePanel(): View = FrameLayout(context).apply {
+        clipChildren = false
+        addView(View(context).apply {
+            background = GradientDrawable().apply {
+                setColor(Color.rgb(27, 24, 22))
+                cornerRadius = dp(14).toFloat()
+            }
+        }, FrameLayout.LayoutParams(-1, -1))
+
         addView(LinearLayout(context).apply {
             orientation = LinearLayout.HORIZONTAL
             gravity = Gravity.CENTER_VERTICAL
-            setPadding(dp(18), 0, dp(18), 0)
-            addView(actionButton(R.drawable.dashboard_back_button, "Back", onBack), weightParams())
-            addView(actionButton(R.drawable.dashboard_shop_button, "Shop", onShop), weightParams(dp(10)))
-            addView(actionButton(R.drawable.dashboard_campaign_button, "Campaign", onCampaign), weightParams(dp(12), 78))
-            addView(actionButton(R.drawable.dashboard_ad_reward_button, "Watch ad", {}), weightParams(dp(12)))
+            setPadding(dp(62), 0, dp(7), 0)
+            addView(currentLevelValue, LinearLayout.LayoutParams(-2, -2))
+            addView(statDivider(), dividerParams())
+            addView(stat(livesIcon, livesValue))
+            addView(statDivider(), dividerParams())
+            addView(stat(goldIcon, goldValue), LinearLayout.LayoutParams(-2, -2).apply {
+                marginStart = dp(7)
+            })
+            addView(statDivider(), dividerParams())
+            addView(stat(regenerationIcon, regenerationValue), LinearLayout.LayoutParams(-2, -2).apply {
+                marginStart = dp(7)
+            })
+        }, FrameLayout.LayoutParams(-1, -1))
+
+        addView(avatarFrame, FrameLayout.LayoutParams(dp(56), dp(56)).apply {
+            gravity = Gravity.START or Gravity.CENTER_VERTICAL
+            marginStart = dp(3)
+        })
+
+        addView(View(context).apply {
+            background = context.getDrawable(R.drawable.match_hud_universal_frame)
+            importantForAccessibility = View.IMPORTANT_FOR_ACCESSIBILITY_NO
         }, FrameLayout.LayoutParams(-1, -1))
     }
 
-    private fun actionButton(resource: Int, description: String, action: () -> Unit): ImageButton =
-        ImageButton(context).apply {
-            background = null
-            contentDescription = description
-            scaleType = ImageView.ScaleType.FIT_CENTER
-            setImageResource(resource)
-            setOnClickListener { action() }
+    private fun avatarFrame(): View = FrameLayout(context).apply {
+        contentDescription = context.getString(R.string.dashboard_avatar_accessibility)
+        importantForAccessibility = View.IMPORTANT_FOR_ACCESSIBILITY_YES
+        addView(ImageView(context).apply {
+            contentDescription = null
+            scaleType = ImageView.ScaleType.CENTER_CROP
+            setImageResource(R.drawable.player_avatar_01)
+        }, FrameLayout.LayoutParams(dp(48), dp(48), Gravity.CENTER))
+        foreground = context.getDrawable(R.drawable.dashboard_hud_portrait_frame)
+    }
+
+    private fun stat(icon: ImageView, value: TextView): View =
+        LinearLayout(context).apply {
+            orientation = LinearLayout.HORIZONTAL
+            gravity = Gravity.CENTER_VERTICAL
+            addView(icon)
+            addView(value, LinearLayout.LayoutParams(-2, -2).apply {
+                marginStart = dp(3)
+            })
         }
 
-    private fun weightParams(marginStart: Int = 0, height: Int = 64): LinearLayout.LayoutParams =
-        LinearLayout.LayoutParams(0, dp(height), 1f).apply {
+    private fun statDivider(): View = View(context).apply {
+        setBackgroundColor(Color.rgb(145, 117, 75))
+        alpha = 0.75f
+    }
+
+    private fun dividerParams(): LinearLayout.LayoutParams =
+        LinearLayout.LayoutParams(dp(1), dp(28)).apply {
+            marginStart = dp(6)
+            marginEnd = dp(6)
+        }
+
+    private fun languageButton(): ImageButton = ImageButton(context).apply {
+        background = context.getDrawable(R.drawable.ui_button_dark_xs_normal)
+        contentDescription =
+            context.getString(R.string.dashboard_open_language_icons_accessibility)
+        scaleType = ImageView.ScaleType.CENTER_INSIDE
+        setPadding(dp(5), dp(5), dp(5), dp(5))
+        setImageResource(R.drawable.ic_dashboard_language_globe)
+        setOnClickListener { showLanguageIcons(this) }
+    }
+
+    private fun showLanguageIcons(anchor: View) {
+        languagePopup?.let { popup ->
+            if (popup.isShowing) {
+                popup.dismiss()
+                languagePopup = null
+                return
+            }
+        }
+
+        val content = LinearLayout(context).apply {
+            orientation = LinearLayout.HORIZONTAL
+            gravity = Gravity.CENTER
+            setPadding(dp(8), dp(7), dp(8), dp(7))
+            setBackgroundResource(R.drawable.bg_hud_panel)
+            addView(
+                languageFlag(
+                    R.drawable.ic_dashboard_language_flag_poland,
+                    R.string.dashboard_language_flag_poland_accessibility,
+                ),
+                languageFlagParams(),
+            )
+            addView(
+                languageFlag(
+                    R.drawable.ic_dashboard_language_flag_uk,
+                    R.string.dashboard_language_flag_uk_accessibility,
+                ),
+                languageFlagParams(dp(5)),
+            )
+            addView(
+                languageFlag(
+                    R.drawable.ic_dashboard_language_flag_spain,
+                    R.string.dashboard_language_flag_spain_accessibility,
+                ),
+                languageFlagParams(dp(5)),
+            )
+        }
+        val popup = PopupWindow(
+            content,
+            dp(116),
+            -2,
+            true,
+        ).apply {
+            setBackgroundDrawable(ColorDrawable(Color.TRANSPARENT))
+            isOutsideTouchable = true
+            elevation = dp(8).toFloat()
+            setOnDismissListener {
+                if (languagePopup === this) languagePopup = null
+            }
+        }
+        languagePopup = popup
+        popup.showAsDropDown(anchor, 0, dp(4), Gravity.END)
+    }
+
+    private fun languageFlag(resource: Int, description: Int): ImageView =
+        ImageView(context).apply {
+            contentDescription = context.getString(description)
+            importantForAccessibility = View.IMPORTANT_FOR_ACCESSIBILITY_YES
+            scaleType = ImageView.ScaleType.FIT_CENTER
+            setImageResource(resource)
+        }
+
+    private fun languageFlagParams(marginStart: Int = 0): LinearLayout.LayoutParams =
+        LinearLayout.LayoutParams(dp(24), dp(16)).apply {
             if (marginStart > 0) this.marginStart = marginStart
         }
 
-    private fun image(resource: Int, width: Int, height: Int) = ImageView(context).apply {
-        contentDescription = null
-        scaleType = ImageView.ScaleType.FIT_CENTER
-        setImageResource(resource)
-        layoutParams = LinearLayout.LayoutParams(dp(width), dp(height))
+    private fun campaignArea(): View = FrameLayout(context).apply {
+        clipChildren = false
+        addView(leftEventSlot, FrameLayout.LayoutParams(dp(72), dp(72)).apply {
+            gravity = Gravity.START or Gravity.CENTER_VERTICAL
+            marginStart = dp(12)
+        })
+        addView(rightEventSlot, FrameLayout.LayoutParams(dp(72), dp(72)).apply {
+            gravity = Gravity.END or Gravity.CENTER_VERTICAL
+            marginEnd = dp(12)
+        })
+        val buttonWidth = minOf(
+            dp(480),
+            (context.resources.displayMetrics.widthPixels * 0.52f).toInt(),
+        )
+        val buttonHeight = (buttonWidth * 0.21f).toInt()
+        addView(campaignButton(), FrameLayout.LayoutParams(buttonWidth, buttonHeight, Gravity.CENTER))
     }
 
-    private fun label(value: String, size: Float) = TextView(context).apply {
+    private fun eventSlot(): FrameLayout = FrameLayout(context).apply {
+        visibility = View.GONE
+        isClickable = false
+        isFocusable = false
+        importantForAccessibility = View.IMPORTANT_FOR_ACCESSIBILITY_NO
+    }
+
+    private fun bottomActions(): View = LinearLayout(context).apply {
+        orientation = LinearLayout.HORIZONTAL
+        gravity = Gravity.CENTER
+        addView(
+            darkActionButton(
+                labelResource = R.string.dashboard_shop_action,
+                iconResource = R.drawable.icon_orcoins,
+                descriptionResource = R.string.dashboard_shop_accessibility,
+                action = onShop,
+            ),
+            LinearLayout.LayoutParams(dp(210), dp(52)),
+        )
+        addView(
+            darkActionButton(
+                labelResource = R.string.dashboard_ad_reward_action,
+                iconResource = R.drawable.ic_dashboard_ad_reward,
+                descriptionResource = R.string.dashboard_ad_reward_accessibility,
+                action = null,
+            ),
+            LinearLayout.LayoutParams(dp(220), dp(55)).apply {
+                marginStart = dp(12)
+            },
+        )
+    }
+
+    private fun campaignButton(): Button = Button(context).apply {
+        text = context.getString(R.string.dashboard_campaign_action)
+        contentDescription = context.getString(R.string.dashboard_campaign_accessibility)
+        UiTypography.applyButtonTypeface(this)
+        textSize = 30f
+        setTextColor(Color.rgb(59, 35, 18))
+        setPadding(dp(12), 0, dp(12), 0)
+        minHeight = 0
+        minWidth = 0
+        background = context.getDrawable(R.drawable.loadout_start_match_button)
+        setOnClickListener { onCampaign() }
+    }
+
+    private fun darkActionButton(
+        labelResource: Int,
+        iconResource: Int,
+        descriptionResource: Int,
+        action: (() -> Unit)?,
+    ): View = LinearLayout(context).apply {
+        orientation = LinearLayout.HORIZONTAL
+        gravity = Gravity.CENTER
+        setPadding(dp(8), dp(4), dp(8), dp(4))
+        setBackgroundResource(R.drawable.ui_button_dark_m)
+        contentDescription = context.getString(descriptionResource)
+        importantForAccessibility = View.IMPORTANT_FOR_ACCESSIBILITY_YES
+        isClickable = action != null
+        isFocusable = action != null
+        if (action != null) {
+            setOnClickListener { action() }
+        }
+        addView(image(iconResource, 28, 26))
+        addView(label(context.getString(labelResource), 14f), LinearLayout.LayoutParams(-2, -2).apply {
+            marginStart = dp(7)
+        })
+    }
+
+    private fun image(resource: Int, width: Int, height: Int): ImageView =
+        ImageView(context).apply {
+            contentDescription = null
+            importantForAccessibility = View.IMPORTANT_FOR_ACCESSIBILITY_NO
+            scaleType = ImageView.ScaleType.FIT_CENTER
+            setImageResource(resource)
+            layoutParams = LinearLayout.LayoutParams(dp(width), dp(height))
+        }
+
+    private fun label(value: String, size: Float): TextView = TextView(context).apply {
         text = value
         textSize = size
         gravity = Gravity.CENTER
         includeFontPadding = false
         setTextColor(Color.WHITE)
+        UiTypography.applyButtonTypeface(this)
     }
 
+    private fun label(stringResource: Int, size: Float): TextView =
+        label(context.getString(stringResource), size)
+
     private fun renderProgress(state: DashboardUiState) {
-        livesValue.text = state.lives.toString()
-        currentLevelValue.text = context.getString(
-            R.string.dashboard_current_level,
-            state.currentLevel,
-        )
-        goldValue.text = state.gold.toString()
+        val summary = state.progressSummary
+        val placeholder = context.getString(R.string.dashboard_progress_placeholder)
+        currentLevelValue.text = summary?.let {
+            context.getString(R.string.dashboard_current_level, it.currentLevel)
+        } ?: placeholder
+        livesValue.text = summary?.lives?.toString() ?: placeholder
+        goldValue.text = summary?.gold?.toString() ?: placeholder
+
+        progressStatusMessage.text = when {
+            state.isLoading -> context.getString(R.string.dashboard_progress_loading)
+            state.hasProgressError -> context.getString(R.string.dashboard_progress_unavailable)
+            else -> ""
+        }
+        progressStatusPanel.visibility =
+            if (state.isLoading || state.hasProgressError) View.VISIBLE else View.GONE
+        progressRetryButton.visibility = if (state.hasProgressError) View.VISIBLE else View.GONE
+        progressRetryButton.isEnabled = state.hasProgressError && screenScope != null
+    }
+
+    private fun loadProgressSummary() {
+        val scope = screenScope ?: return
+        renderProgress(viewModel.beginProgressLoad())
+        scope.launch {
+            try {
+                renderProgress(viewModel.updateProgress(loadProgress()))
+            } catch (error: IOException) {
+                Log.e("DashboardScreen", "Could not load player progress summary", error)
+                renderProgress(viewModel.failProgressLoad())
+            } catch (error: IllegalArgumentException) {
+                Log.e("DashboardScreen", "Could not load player progress summary", error)
+                renderProgress(viewModel.failProgressLoad())
+            }
+        }
     }
 
     private fun showResetConfirmation() {
@@ -224,6 +505,8 @@ class DashboardScreen(
 
     private fun resetPlayerProgress() {
         val scope = screenScope ?: return
+        if (isResetInProgress) return
+        isResetInProgress = true
         resetProgressButton.isEnabled = false
         scope.launch {
             try {
@@ -235,7 +518,7 @@ class DashboardScreen(
                         R.string.dashboard_reset_progress_failure
                 }
                 if (result == PlayerProgressResetResult.Reset) {
-                    renderProgress(viewModel.updateProgress(loadProgress()))
+                    loadProgressSummary()
                 }
                 Toast.makeText(context, message, Toast.LENGTH_LONG).show()
             } catch (error: IOException) {
@@ -253,6 +536,7 @@ class DashboardScreen(
                     Toast.LENGTH_LONG,
                 ).show()
             } finally {
+                isResetInProgress = false
                 resetProgressButton.isEnabled = screenScope != null
             }
         }

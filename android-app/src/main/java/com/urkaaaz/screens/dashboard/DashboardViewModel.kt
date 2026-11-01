@@ -6,6 +6,11 @@ class DashboardViewModel {
     var state: DashboardUiState = DashboardUiState()
         private set
 
+    fun beginProgressLoad(): DashboardUiState {
+        state = DashboardUiState(isLoading = true)
+        return state
+    }
+
     fun dispatch(action: DashboardUiAction): DashboardUiState {
         state = when (action) {
             DashboardUiAction.OpenCampaign,
@@ -17,10 +22,17 @@ class DashboardViewModel {
     }
 
     fun updateProgress(summary: DeveloperProgressSummary): DashboardUiState {
-        state = state.copy(
-            currentLevel = summary.currentLevel,
-            lives = summary.lives,
-            gold = summary.gold,
+        state = DashboardUiState(
+            progressSummary = summary,
+            isLoading = false,
+        )
+        return state
+    }
+
+    fun failProgressLoad(): DashboardUiState {
+        state = DashboardUiState(
+            isLoading = false,
+            hasProgressError = true,
         )
         return state
     }

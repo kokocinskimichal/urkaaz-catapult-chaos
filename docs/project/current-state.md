@@ -24,6 +24,10 @@ kampanię, AI oraz działający match screen. Gałąź robocza: `develop`.
   wewnętrzny padding.
 - Dashboard udostępnia potwierdzony reset lokalnego postępu gracza: kampanii,
   złota, odblokowań, stocków, zapisanych loadoutów i paragonów nagród.
+- Dashboard używa zaakceptowanego układu, osobnego tła i istniejących assetów
+  przycisków/ramki. Globus otwiera krótką listę flag PL/UK/ES; flagi nie
+  zmieniają jeszcze języka. `AD REWARD` pozostaje nieaktywny, a dwa boczne
+  sloty eventów są ukryte i nie mają jeszcze źródła danych.
 - Lokalny przepływ:
   `MatchUiAction → MatchViewModel → LocalMatchGateway → MatchSession →
   simulation → MatchSnapshot`.

@@ -1,0 +1,152 @@
+Create one high-fidelity visual concept for the Urkaaaz Android Shop screen.
+This is a screen-design study only; do not edit production code, add shop
+functionality, or generate a production background or runtime asset.
+
+## Reference inputs
+
+- The user will attach screenshots of the current Loadout screen, Campaign
+  screen, and newly designed Dashboard. Treat all three as equal references
+  for the shared Urkaaaz UI style: painterly fantasy scenery, dark translucent
+  panels, carved wood/iron details, restrained warm-gold trim, pale readable
+  text, and consistent framed buttons.
+- Use `assets_src/shop/screen-concepts/shop_background_reference.png` as the
+  exact background layer. The supplied seller is already part of that image;
+  preserve his identity, clothing, colors, proportions, and placement. Do not
+  repaint the background, replace the seller, clone him, or hide him behind
+  UI panels.
+- Use the screenshots for style, not as layouts to copy. The Shop must feel
+  like the same game as the references while having its own market composition.
+- The legacy Shop background at
+  `~/workspace/orc-catapult/app/src/main/res/drawable-nodpi/shop_background.png`
+  contains a different embedded shopkeeper and composition. Do not use it as
+  the background or combine it with the saved reference image.
+- The saved background is 1671 × 941. Scale it proportionally to the required
+  1920 × 1080 canvas; only crop the negligible edge difference needed to fill
+  the canvas. Never stretch or regenerate it.
+- The legacy Shop information architecture is a useful content reference:
+  SPELLS and AMMUNITION tabs, a gold balance panel, an item grid and an item
+  details view. Do not copy its complete layout or use its outdated visual
+  theme.
+- Prefer existing approved game item names and icons where available. Do not
+  invent new items, prices, ownership rules, stock counts, mechanics, or
+  effects. If exact values are not provided as inputs, use neutral live-text
+  placeholders such as `—`; do not bake changeable values into artwork.
+
+## Output
+
+- Generate exactly one PNG: `shop_screen_concept_01.png`.
+- Save it under `assets_src/shop/screen-concepts/`.
+- Canvas: exactly 1920 × 1080 pixels, landscape 16:9.
+- Show the complete Android screen edge-to-edge. No phone frame, device
+  mockup, presentation board, annotations, alternate screens, watermark, or
+  signature.
+- This is a visual concept for review. Keep scenery, seller, panels, controls,
+  icons, and text visually separable so the screen can be rebuilt with native
+  Android views and individual assets. Do not flatten the interface into one
+  production background.
+
+## Shop content and hierarchy
+
+- Make the seller clearly visible and recognizable as the shopkeeper. Position
+  him on the left or center-left, naturally behind or beside a market counter,
+  facing toward the offer panel. Keep his face and most of his silhouette
+  unobstructed.
+- Place a compact top header with a `BACK` control and a clear `SHOP` title.
+  Back returns to the preceding Dashboard; do not add a direct match or
+  Loadout route.
+- Include a compact `ORCOINS` balance panel in the header or near the offer
+  area. Keep the amount as live UI text, separate from the art. Do not invent
+  a profile balance.
+- Place the main catalog panel on the right or center-right, leaving enough
+  space for the attached seller. Keep its silhouette and the main action
+  readable at landscape mobile size.
+- Provide exactly two top-level catalog tabs: `SPELLS` and `AMMUNITION`.
+  Do not label ammunition as `ARTIFACTS`.
+- Show a concise grid of existing catalog items with each item's icon, name,
+  and a distinct live price/owned/stock area. Use item names and iconography
+  from the game catalog when supplied; do not use deprecated `FIRE_FLASK` or
+  `CLUSTER_BOMB` names.
+- Show only the items for the selected tab. Do not mix spell cards and
+  ammunition cards in one simultaneous grid.
+- Show one selected item's details in a clearly separated panel: live item
+  name, a short description/features area, price or owned/stock status, and a
+  single visible `BUY`/stock action treatment. This is a proposed visual
+  affordance only, not a claim that purchases currently work in Urkaaaz.
+- Keep any selected-item treatment and category highlight restrained; reserve
+  the brightest gold for the selected tab or primary item action, not every
+  card.
+- Include no RESET utility, language selector, dashboard profile summary, or
+  unrelated navigation controls on this screen.
+
+## Layout direction
+
+- Use a full-bleed, painterly fantasy market/shop atmosphere that complements
+  the three attached screen references. Maintain good contrast behind controls.
+- Preserve the seller already visible in the exact background. Keep his face
+  and defining accessories unobstructed by foreground UI.
+- Use a strong left-to-right composition: seller and counter on the left,
+  catalog and item details on the right. Keep all essential controls within
+  generous screen-edge safe margins.
+- Keep the offer area organized and scan-friendly: tabs above item cards,
+  consistent card sizes, readable names, and a clearly selected item. Avoid
+  dense decoration behind small text.
+- Use the game's Cinzel SemiBold-style typography for headings and prominent
+  labels, with compact, high-contrast supporting text.
+- Keep item icons, prices, stock/ownership labels, descriptions, and buttons
+  visually separable and suitable for live UI. Do not bake readable UI text
+  into the scenery.
+
+## Shared component treatment
+
+- Match the shared appearance of Loadout, Campaign, and the new Dashboard:
+  painterly scenery; charcoal/dark-iron panels; carved wood accents;
+  restrained bronze/gold edging; and pale, high-contrast typography.
+- Match their header/frame proportions, corner treatments, border thickness,
+  button depth, selected/highlight gold, and level of ornament.
+- Reuse existing approved UI button/frame/icon assets when available to the
+  generation tool. If the required files are not accessible, keep the concept
+  layers separable; do not draw replacements that conflict with attached
+  references.
+- Treat the complete background image as one fixed source layer and keep all
+  shop panels, controls, item cards, and text as separate foreground UI layers.
+  Do not add a second seller or a generated portrait in place of him.
+- Maintain a clear distinction between catalog items and the selected-item
+  detail area. Do not make every card equally prominent.
+
+## Negative requirements
+
+- No different visual theme from the attached Loadout, Campaign, and Dashboard
+  references.
+- No duplicate or hidden seller; no use of the different legacy Shop
+  background.
+- No copied Campaign map, chapter selector, level markers, route, or
+  `START LEVEL` control.
+- No copied Loadout carousels, spell/unit/ammunition selection panels, or
+  `START MATCH` control.
+- No invented items, prices, stocks, gold balances, rewards, ownership states,
+  purchase rules, or gameplay effects.
+- No claim that Shop purchases or inventory settlement are implemented in the
+  current Urkaaaz app; this output is a design concept only.
+- No advertising, reward-video, social, login, online, or account controls.
+- No Dashboard RESET or language-change controls.
+- No gibberish, pseudo-text, tiny unreadable labels, unrelated battle UI,
+  clutter, device bezel, watermark, or signature.
+
+## Review checklist
+
+- Confirm the result is one complete 1920 × 1080 landscape Shop concept with
+  no device frame.
+- Confirm its visual language is coherent with all three attached screen
+  references without copying their full layouts.
+- Confirm the exact saved background is used without stretching or repainting,
+  and that its embedded seller remains prominent, recognizable, and
+  unobstructed.
+- Confirm `SPELLS` and `AMMUNITION` are the two catalog tabs.
+- Confirm the gold balance, prices, stock and item details are separate live
+  UI elements, not baked into the background.
+- Confirm the selected-item details and one proposed purchase action are clear
+  without implying that shop mechanics are already implemented.
+- Confirm the composition includes no fake item, price, balance, ownership
+  status, or unimplemented feature.
+- Use the result for visual review only; do not import it as a single runtime
+  screen background.

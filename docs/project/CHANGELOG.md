@@ -7,12 +7,17 @@
 - Added TutorialSystem and LocalizationSystem architecture documents with
   implementation prompts; localization is designed for Polish, English and
   Spanish, but neither system has runtime implementation yet.
-- Added a Dashboard visual-concept brief at
-  `docs/systems/dashboard-screen-mockup.agp`; it is a design prompt only, not a
-  runtime asset or screen implementation.
+- Added a Shop screen visual-concept brief at
+  `docs/systems/shop-screen-mockup.agp` and saved its supplied shop background
+  with embedded seller at `assets_src/shop/screen-concepts/shop_background_reference.png`.
+  The brief uses the existing spells/ammunition catalog structure and does not
+  implement shop purchases or runtime UI.
 
 ### Changed
 
+- Redesigned the Android Dashboard to the approved composition with a live
+  profile summary, a static PL/UK/ES flag popup, hidden future event anchors
+  and the existing confirmed progress reset; `AD REWARD` remains inert.
 - Expanded the shared balance source and Studio Balance editor to schema 3,
   covering unit, ammunition, spell, mana and shared runtime profiles without
   changing the established balance values. Match simulation, AI, loadout,
@@ -29,6 +34,11 @@
 
 - Studio balance validation now rejects fields required by the runtime loader,
   preventing accepted edits that would fail when the game loads the balance.
+
+### Removed
+
+- Removed the obsolete Dashboard visual-concept AGP after the approved
+  screenshot became the Dashboard design reference.
 
 ## 2026-10-31
 

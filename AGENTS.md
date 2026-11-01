@@ -98,7 +98,9 @@ do bieżącego zadania według [indeksu dokumentów kontekstu](docs/agent-contex
 ### UI i prompty
 
 - [Analiza brakujących mechanik UI](docs/ui/mechanics-gap-analysis.md)
-- [Brief koncepcji wizualnej Dashboardu](docs/systems/dashboard-screen-mockup.agp)
+- [Architektura Dashboardu](docs/systems/dashboard-screen.md) ·
+  [prompt implementacyjny](docs/systems/dashboard-screen-implementation-prompt.md)
+- [Brief koncepcji wizualnej Shop](docs/systems/shop-screen-mockup.agp)
 - [Prompt systemu definicji poziomów](docs/prompts/IMPLEMENT_LEVEL_DEFINITION_SYSTEM.md)
 - [Prompt systemu reliktów](docs/prompts/IMPLEMENT_RELIC_SYSTEM.md)
 

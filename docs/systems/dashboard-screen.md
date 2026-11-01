@@ -1,0 +1,320 @@
+# DashboardScreen — architektura i plan przebudowy
+
+## Status i cel
+
+Przebudowa istniejącego ekranu według zaakceptowanego przez użytkownika
+screenshotu jest zaimplementowana. Globus w nagłówku otwiera krótką listę flag;
+flagi pozostają nieaktywne, dopóki nie powstanie LocalizationSystem. Eventy gry
+także pozostają odłożone. Ten dokument opisuje granice istniejącego ekranu, a
+nie drugi Dashboard, nowy moduł Gradle ani system gameplayowy.
+
+Cel: odtworzyć zaakceptowaną kompozycję Dashboardu, zachować istniejące
+przepływy profilu, kampanii, sklepu i resetu, otwierać krótką listę flag po
+dotknięciu globusa bez zmiany języka oraz pozostawić dwa niewidoczne punkty
+rozszerzenia dla przyszłych ikon eventów gry.
+
+Typ: system prezentacyjny Androida. Nie wpływa na symulację, kampanię ani
+balans.
+
+## Zakres
+
+- Przebudowa istniejącego `DashboardScreen` według zaakceptowanego przez
+  użytkownika pełnoekranowego screenshotu i osobno dostarczonego obrazu tła.
+- Zachowanie live summary profilu: poziom, życia, złoto i status regeneracji
+  `N/A`; wartości zawsze pochodzą z danych aplikacji, nie ze screenshotu.
+- Zachowanie Back, Campaign, Shop i potwierdzanego RESET.
+- Zachowanie widocznego przycisku `AD REWARD` wyłącznie jako elementu
+  prezentacji; nie dodawać integracji reklam ani nagród.
+- Dodanie przycisku globusa w nagłówku. Dotknięcie otwiera krótki panel flag
+  PL/UK/ES; flagi nie zmieniają języka. Pełny LocalizationSystem pozostaje
+  osobnym zadaniem.
+- Utworzenie dwóch pustych, ukrytych anchorów na przyszłe ikony eventów:
+  symetrycznie po lewej i prawej stronie głównego przycisku Campaign.
+- Użycie istniejących assetów Dashboardu i wspólnych helperów Android UI.
+
+## Poza zakresem
+
+- Implementacja systemu reklam, pobierania nagród za reklamy ani zakupów.
+- Implementacja katalogu sklepu lub zakupów. Shop pozostaje istniejącym
+  placeholderem nawigacyjnym.
+- Implementacja systemu eventów gry, harmonogramu eventów, ich ikon,
+  dostępności, limitów, backendu ani persystencji.
+- Wprowadzanie eventów do `MatchEvent` albo do runtime state symulacji.
+- Implementacja pełnego LocalizationSystem w ramach zadania Dashboardu.
+- Zmiana trybu nawigacji, migracja do Compose lub dodawanie modułu Gradle.
+- Zmiana reguł progresji, resetu, życia lub nagród.
+
+## Zaakceptowany kierunek wizualny
+
+Źródłem prawdy dla układu jest screenshot Dashboardu zaakceptowany przez
+użytkownika. Osobno dostarczone tło jest właściwą warstwą sceny. Oba obrazy
+zachowano w `assets_src/dashboard/`; nie należy ich odtwarzać z pamięci ani
+zastępować nową grafiką.
+
+Hierarchia ekranu:
+
+1. Nagłówek: Back, branding Urkaaaz, portret gracza, poziom/życia/złoto/status
+   regeneracji i globus; po jego dotknięciu pojawia się krótka lista trzech flag.
+2. Główny, centralny przycisk Campaign.
+3. Niżej drugorzędne przyciski Shop i Ad Reward.
+4. Mały przycisk RESET w prawym dolnym rejonie, oddzielony od głównej
+   nawigacji.
+5. Dwa puste, niewidoczne sloty eventów po bokach przycisku Campaign.
+
+Profil i status pozostają tekstem UI aktualizowanym z danych. Grafika tła,
+przyciski i ramki są osobnymi assetami, nie jednym spłaszczonym screenshotem.
+
+## Właściciel i kierunek zależności
+
+Właścicielem ekranu jest `android-app`:
+
+| Odpowiedzialność | Właściciel |
+|---|---|
+| Składanie Dashboardu, widoki, lifecycle ekranu | `DashboardScreen` / `ScreenContent` |
+| Stan prezentacyjny Dashboardu i mapowanie akcji | `DashboardViewModel`, `DashboardUiState`, `DashboardUiAction` |
+| Przekazanie callbacków nawigacji, profilu i resetu | `MainActivity` |
+| Bieżący ekran i stos Back | `AppNavigator` / `ScreenHost` |
+| Odczyt summary profilu | istniejący `DeveloperProgressSummary` i jego właściciel aplikacyjny |
+| Atomowy reset postępu | istniejący `PlayerProgressResetRepository` i adapter Androida |
+| Trwały język, wybór języka i zastosowanie Locale | LocalizationSystem; poza zakresem implementacji Dashboardu |
+
+`MainActivity` pozostaje cienkim composition root. Ekran nie importuje ani nie
+wywołuje domeny czy symulacji. Dashboard nie staje się właścicielem profilu,
+persistencji ani języka.
+
+## Istniejące rozwiązania i ryzyko duplikacji
+
+- `DashboardScreen`, `DashboardViewModel`, `DashboardUiState` i
+  `DashboardUiAction` już istnieją. Przebudowa rozszerza je i usuwa
+  nieużywaną prezentację, zamiast tworzyć `DashboardScreenV2`.
+- `AppScreen.Dashboard`, `AppNavigator` i `ScreenHost` już obsługują lifecycle
+  i nawigację. Nie tworzyć równoległego routera ani nowego kontraktu ekranu.
+- Odczyt profilu i reset są już podłączone przez `MainActivity`. Nie dodawać
+  drugiego repozytorium ani lokalnej kopii postępu.
+- `localization-system.md` i jego prompt opisują przyszły system języka, ale
+  system nie jest jeszcze zaimplementowany. W tym zadaniu Dashboard otwiera
+  jedynie lokalny popup flag; nie dodaje selekcji języka ani własnego DataStore,
+  Locale czy use case'ów.
+- W kodzie i zasobach nie znaleziono systemu eventów Dashboardu. Dwa ukryte
+  sloty są wyłącznie przyszłymi punktami montażowymi, a nie nowym systemem
+  eventowym.
+
+Rekomendacja: rozbudować istniejący ekran i korzystać z istniejących granic
+aplikacji. To zachowuje nawigację i pojedynczego właściciela profilu, a zarazem
+nie łączy przyszłych eventów ani lokalizacji z DashboardViewModel bardziej,
+niż wymaga tego prezentacja.
+
+## Wejścia i wyjścia
+
+### Wejścia
+
+- `DeveloperProgressSummary` ładowany przez istniejący callback
+  `loadProgress`.
+- Wynik istniejącego `PlayerProgressResetRepository.reset()` przekazany przez
+  `onResetProgress`.
+- Callbacki nawigacyjne Back, Campaign i Shop.
+- Akcje dotykowe widoków ekranu.
+
+Dashboard nie otrzymuje obecnie języka aplikacji, listy eventów, definicji
+eventu ani eventowego runtime state. Widoczność popupu i ukryte sloty są
+prezentacyjne i nie konsumują danych z innych systemów.
+
+### Wyjścia
+
+- Back → istniejący stos `AppNavigator`.
+- Campaign → istniejący `CampaignScreen`; wybranie poziomu prowadzi dalej do
+  Loadout.
+- Shop → istniejący ekran-placeholder.
+- RESET → dialog potwierdzenia, a dopiero po akceptacji wywołanie istniejącego
+  resetu postępu.
+- Globus → otwarcie lub zamknięcie popupu flag; dotknięcie flag nie wywołuje
+  żadnej akcji językowej.
+- `AD REWARD` pozostaje widoczny, ale nie uruchamia reklamy, nagrody ani nowego
+  use case'u.
+
+Nie emituje komend gameplayowych, `MatchEvent` ani snapshotów silnika.
+
+## Kontrakty, stan i lifecycle
+
+Ekran zachowuje obecne screen-owned `DashboardUiState` i `DashboardUiAction`.
+Stan ekranu ogranicza się do danych prezentacyjnych i bieżących operacji:
+
+- stan odczytu summary: ładowanie, gotowe dane albo jawny błąd;
+- aktualne `currentLevel`, `lives` i `gold` po udanym odczycie;
+- stan resetu, aby blokować wielokrotne wywołanie podczas zapisu;
+- widoczność popupu flag jako tymczasowy stan należący do `DashboardScreen`;
+
+Przy wejściu/wznowieniu ekranu summary jest odczytywane asynchronicznie.
+`onPause()` anuluje pracę należącą do ekranu. Błąd odczytu nie może wyglądać
+jak poprawny profil domyślny: pokaż jawny stan błędu i pozwól ponowić odczyt.
+Po udanym resecie profil jest odczytywany ponownie; błąd resetu pozostaje jawny.
+RESET czyści wyłącznie postęp gracza; Dashboard nie przechowuje ustawienia
+języka.
+
+### Popup flag
+
+- Globus w nagłówku przełącza widoczność krótkiego popupu z trzema flagami:
+  Polski (`PL`), Wielkiej Brytanii (`EN`) i Hiszpanii (`ES`).
+- Flagi są nieklikalnymi obrazami bez stanu aktywnego ani połączenia z
+  LocalizationSystem. Ich wybór nie zmienia języka.
+- Popup zamyka się po ponownym dotknięciu globusa, dotknięciu poza panelem,
+  systemowym Back lub opuszczeniu Dashboardu.
+- Nie pokazuj fałszywego sukcesu ani tekstu sugerującego, że język został
+  zmieniony. Późniejsze zadanie LocalizationSystem może podłączyć akcje do
+  tych samych ikon.
+
+## Ukryte sloty przyszłych eventów
+
+Dashboard zawiera dwa stabilne, puste anchory overlay po obu stronach głównego
+przycisku Campaign. Mają stałe pozycje względem ekranu/CTA i są ukryte przez
+`GONE` albo równoważny stan bez widocznego renderowania. Nie wpływają na
+pozycjonowanie ani rozmiar istniejących elementów.
+
+W bieżącym zadaniu sloty:
+
+- nie mają ikony, ramki, tekstu, badge'a ani placeholderowej grafiki;
+- nie są klikalne i nie mają accessibility labeli;
+- nie otrzymują fałszywych ani przykładowych eventów;
+- nie definiują kontraktu, harmonogramu, źródła danych ani właściciela
+  przyszłego systemu eventów.
+
+Ich jedynym celem jest zachowanie symetrycznych punktów integracji dla
+przyszłych okazjonalnych ikon eventów bez zmiany obecnego wyglądu.
+
+## Assety i wspólne komponenty
+
+Najpierw użyć istniejących zasobów Androida bez przerysowywania:
+
+- `dashboard_background_approved.png`, którego źródłem jest
+  `assets_src/dashboard/dashboard_background_approved.png`;
+- zaakceptowany screenshot referencyjny:
+  `assets_src/dashboard/screen-concepts/dashboard_screen_approved_reference.png`;
+- `loadout_header_frame.png` for the `URKAAAZ` title frame;
+- `match_hud_universal_frame.9.png` for the player-summary panel, layered over
+  an opaque dark rounded fill so its transparent center does not expose the
+  scene background;
+- `dashboard_hud_portrait_frame.png` for the avatar;
+- `loadout_start_match_button` dla głównego, złotego przycisku Campaign i
+  `loadout_start_match_button_xs_short` dla Back; ich tekst jest żywym UI;
+- `ui_button_dark_m` dla Shop i Ad Reward oraz istniejąca rodzina
+  `ui_button_dark_*` dla resetu;
+- `icon_lives_heart.png`, `icon_orcoins.png` i `player_avatar_01`.
+
+Wszystkie powyższe istniejące assety drawable znajdują się w
+`android-app/src/main/res/drawable-nodpi/`, z wyjątkiem selektorów XML
+przycisków w `res/drawable/`. Poprzedni `dashboard_background.png` pozostaje
+bez zmian; zaakceptowany obraz tła jest używany przez nowy
+`dashboard_background_approved.png`. Screenshot jest wyłącznie referencją
+koncepcyjną, nie runtime assetem.
+
+Assety `dashboard_hud_top_panel.png`, `dashboard_back_button.png`,
+`dashboard_campaign_button.png`,
+`dashboard_shop_button.png`, `dashboard_ad_reward_button.png` i
+`logo_main_menu.png` nie są używane w nowym układzie, ponieważ ich tekst,
+ilustracje lub kompozycja nie odpowiadają zaakceptowanemu screenowi. Zamiast
+nich ekrany składają etykiety na wspólnych tłach przycisków; `CAMPAIGN` używa
+złotego tła, a `SHOP` i `AD REWARD` ciemnych teł.
+
+Wspólne helpery:
+
+- `ScreenChromeMetrics` dla bezpiecznych marginesów i wspólnych wymiarów
+  przycisku Back;
+- `UiTypography` dla Cinzel SemiBold w żywym tekście UI;
+- istniejący `ScreenContent`, `AppNavigator` i `ScreenHost`.
+- `MainActivity` pozostaje właścicielem immersive landscape i pozwala tłu
+  wypełniać short-edge display cutouts; kontrolki pozostają odsunięte od
+  wycięć ekranu.
+
+W katalogu drawable nie ma dedykowanych flag, globusa, ikony resetu, ikony
+reklamy ani serca regeneracji. Dodano małe wektorowe drawable UI dla globusa,
+flag PL/UK/ES, resetu, clapperboardu i serca z plusem. Nie dodawać nowych
+bitmap przycisków ani ramek.
+
+## Obsługa błędów
+
+- Błąd odczytu `DeveloperProgressSummary`: nie pokazywać liczb 1/5/0 jako
+  odczytanych danych; zaprezentować jawny stan błędu i ponowienie.
+- `PlayerProgressResetResult.Failure` lub znany błąd IO/argumentu: nie pokazywać
+  sukcesu; zachować możliwość ponowienia zgodnie z bieżącym wzorcem.
+- Popup flag jest wyłącznie prezentacyjny; ekran nie zapisuje ani nie zmienia
+  języka.
+- Nie używać szerokich `catch`, cichych fallbacków ani drugiej kopii profilu.
+- Brak eventów nie jest błędem: sloty pozostają ukryte.
+
+## Plan testów i kryteria akceptacji
+
+### Testy Android
+
+- Mapowanie `DeveloperProgressSummary` na poziom, życia i złoto.
+- Stan ładowania i jawny błąd odczytu bez podstawiania przykładowych wartości.
+- Back, Campaign i Shop wywołują właściwe callbacki.
+- RESET wymaga potwierdzenia, blokuje duplikat podczas operacji, pokazuje
+  wynik i odświeża summary po sukcesie.
+- `AD REWARD` pozostaje widoczny i nie uruchamia ad callbacku ani nagrody.
+- Globus otwiera popup flag, a flagi pozostają nieklikalne i nie zmieniają
+  języka.
+- Dwa sloty eventów są niewidoczne/puste, bez kliknięć i bez przesunięcia
+  istniejącej kompozycji.
+- Ekran respektuje lifecycle `ScreenContent`; nie dodaje nawigacji ani
+  zależności Android UI do modułów core.
+
+`DashboardViewModelTest` pokrywa stan początkowy, poprawny odczyt summary i
+błąd bez wartości domyślnych. Kompozycja widoków i widoczność ukrytych anchorów
+pozostają kryteriami przeglądu UI; nie dodano osobnego testu instrumentation.
+
+### Kryteria akceptacji
+
+1. Dashboard odtwarza zaakceptowaną kompozycję i używa istniejącego tła,
+   logo, przycisków, ramek oraz ikon profilu.
+2. Poziom, życia, złoto i `N/A` pochodzą z aktualnego stanu aplikacji.
+3. Campaign, Shop, Back i RESET zachowują opisane przepływy; reset jest
+   potwierdzany i nie zmienia ustawień języka.
+4. `AD REWARD` jest widoczny, ale nie implementuje reklam ani nagród.
+5. Globus otwiera krótki popup z flagami Polski, Wielkiej Brytanii i Hiszpanii;
+   wybór flagi nie zmienia języka.
+6. Oba punkty eventowe są całkowicie niewidoczne i nie zmieniają layoutu.
+7. Nie powstaje drugi ekran, nowy moduł, źródło prawdy dla języka ani system
+   eventów.
+
+## Pliki implementacji
+
+- `android-app/src/main/java/com/urkaaaz/screens/dashboard/DashboardScreen.kt`
+- `android-app/src/main/java/com/urkaaaz/screens/dashboard/DashboardViewModel.kt`
+- `android-app/src/main/java/com/urkaaaz/screens/dashboard/DashboardUiState.kt`
+- `android-app/src/main/java/com/urkaaaz/screens/dashboard/DashboardUiAction.kt`
+- `android-app/src/main/res/drawable-nodpi/dashboard_background_approved.png`
+- `assets_src/dashboard/dashboard_background_approved.png`
+- `assets_src/dashboard/screen-concepts/dashboard_screen_approved_reference.png`
+- `android-app/src/main/res/drawable/ic_dashboard_language_globe.xml`
+- `android-app/src/main/res/drawable/ic_dashboard_language_flag_poland.xml`
+- `android-app/src/main/res/drawable/ic_dashboard_language_flag_uk.xml`
+- `android-app/src/main/res/drawable/ic_dashboard_language_flag_spain.xml`
+- `android-app/src/main/res/drawable/ic_dashboard_ad_reward.xml`
+- `android-app/src/main/res/drawable/ic_dashboard_life_regeneration.xml`
+- `android-app/src/main/res/drawable/ic_dashboard_reset.xml`
+- `android-app/src/test/java/com/urkaaaz/screens/dashboard/DashboardViewModelTest.kt`
+- `android-app/src/main/res/values/strings.xml`
+- `docs/systems/localization-system.md` i
+  `docs/systems/localization-system-implementation-prompt.md` dla zgodnej
+  specyfikacji przyszłego, funkcjonalnego selektora flag.
+
+Nie zmieniać `AppScreen` ani tworzyć nowego modułu, chyba że implementacja
+wykaże konkretną, wcześniej nieznaną granicę odpowiedzialności.
+
+## Rozważone warianty
+
+| Wariant | Czytelność | Testowalność | Koszt integracji | Decyzja |
+|---|---|---|---|---|
+| Przebudować istniejący Dashboard w `android-app/screens/dashboard` | Wysoka | Wysoka | Niski | Rekomendowany: reuse nawigacji, profilu, resetu, helperów i assetów. |
+| Dodać Dashboard v2/nowy moduł lub przejść na Compose | Niska dla obecnej architektury | Średnia | Wysoki | Odrzucony: duplikowałby istniejący ekran i nie rozwiązuje nowego problemu granic. |
+| Dodać system eventów gry razem z placeholderami | Niska, nadmierny zakres | Niska bez określenia kontraktu | Wysoki | Odrzucony: użytkownik chce teraz tylko niewidoczne anchory. |
+| Zaimplementować język niezależnie w DashboardViewModel | Niska | Niska | Średni | Odrzucony: duplikowałby planowany LocalizationSystem. |
+
+## Odłożony zakres
+
+- Pełny LocalizationSystem pozostaje osobnym zadaniem. Dashboard otwiera
+  statyczną listę flag, ale nie implementuje wyboru języka, persistencji,
+  wrappera `Context` ani tłumaczeń.
+- Okazjonalne eventy gry nie mają jeszcze właściciela, definicji ani źródła
+  danych; sloty pozostają puste i ukryte.
+- Specyfikacja przyszłych eventów i ich źródło pozostają poza tym zakresem.

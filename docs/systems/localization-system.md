@@ -28,7 +28,7 @@ Legacy zachowuje język przy resecie postępu. Kodu legacy nie kopiuję.
 | Zakres v1 | UI Androida plus teksty z danych kampanii (tytuły rozdziałów). Studio nie dostaje edytorów tłumaczeń. |
 | Języki | Polski (`pl`), angielski (`en`) i hiszpański (`es`, wariant neutralny, jeden katalog `values-es`; bez `es-ES`/`es-419`). |
 | Język domyślny | **Angielski**, gdy brak zapisanego wyboru. Język systemu nie jest brany pod uwagę. |
-| Miejsce zmiany | Tylko Dashboard, jeden panel w stylu HUD z trzema segmentami `PL | EN | ES` (aktywny podświetlony); dotknięcie innego segmentu zmienia język od razu. Położenie na Dashboardzie jest dowolne i tymczasowe, bo Dashboard zostanie w całości przebudowany; przełącznik jest wtedy przenoszony razem z nim. |
+| Miejsce zmiany | Tylko Dashboard: przycisk z neutralną ikoną globusa w nagłówku otwiera kompaktowy panel HUD z flagami Polski (`pl`), Wielkiej Brytanii (`en`) i Hiszpanii (`es`). Aktywna flaga jest podświetlona; dotknięcie innej natychmiast wybiera język. Każda opcja ma `contentDescription` i cel dotyku co najmniej 48 dp. |
 | RESET | Dashboard RESET **nie** czyści języka. |
 | Zastosowanie języka | Własny wrapper `Context` w `attachBaseContext` (`Configuration.setLocale`) plus `recreate()`. Działa od API 24 bez zmiany `Activity` i motywu. |
 | Właściciel języka | Osobny DataStore, odczytany raz synchronicznie przy starcie. Własny wpis w systemowych ustawieniach języka aplikacji nie jest deklarowany, więc nie ma drugiego źródła prawdy. |
@@ -197,10 +197,15 @@ polsku i hiszpańsku z przecinkiem. Wymaga akceptacji, bo zmienia dziś stały `
 
 ### Dashboard
 
-Dodaje panel `PL | EN | ES` (trzy segmenty, komponent w stylu HUD, `HudPanelStyle`,
-`UiTypography`) oraz akcję `SelectLanguage`. Pozostałe elementy Dashboardu bez
-zmian. Dla tutoriala Dashboardu przełącznik może być celem w katalogu
-tutoriali (`targetId` do uzgodnienia w fazie treści tutoriali).
+Dodaje przycisk globusa w nagłówku, który otwiera kompaktowy panel w stylu HUD
+(`HudPanelStyle`, `UiTypography`) z trzema flagowymi przyciskami: Polska =
+`PL`, Wielka Brytania = `EN`, Hiszpania = `ES`. Panel pokazuje aktywny język
+przez podświetlenie flagi; dotknięcie innej flagi wysyła `SelectLanguage` i
+natychmiast stosuje zmianę zgodnie z kontraktem poniżej. Widoczne są flagi bez
+tekstowych skrótów; nazwy języków pozostają w opisach dostępności. Pozostałe
+elementy Dashboardu nie są częścią LocalizationSystem. Dla tutoriala
+Dashboardu przełącznik może być celem w katalogu tutoriali (`targetId` do
+uzgodnienia w fazie treści tutoriali).
 
 ### Campaign
 
@@ -262,9 +267,9 @@ Błędy są jawne i typowane; brak szerokich `catch` i cichych fallbacków.
 - Odczyt startowy w `MainActivity.attachBaseContext`; `MainActivity` nie
   dostaje innej logiki języka (tylko wywołanie wrappera i `recreate()` na
   żądanie hosta).
-- Przełącznik `PL | EN | ES` na Dashboardzie jako osobny widok, z
-  `contentDescription` każdego segmentu i minimalnym rozmiarem celu dotyku
-  `48 dp` na segment.
+- Przycisk globusa w nagłówku Dashboardu otwiera osobny, kompaktowy widok z
+  flagami Polski, Wielkiej Brytanii i Hiszpanii. Każda flaga ma opis
+  dostępności, stan aktywny jest widoczny, a cel dotyku ma co najmniej 48 dp.
 - Katalog prezentacji rozdziałów.
 - Konfiguracja `Locale` jest ustawiana wyłącznie przez wrapper; kod UI nie
   wywołuje `Locale.setDefault`.
@@ -287,16 +292,18 @@ Błędy są jawne i typowane; brak szerokich `catch` i cichych fallbacków.
 4. Polskie i hiszpańskie teksty są zwykle dłuższe niż angielskie. Panele o stałym rozmiarze
    (kafle Loadoutu, HUD, przyciski) muszą zawijać lub obcinać tekst bez
    zmiany wymiarów; wymaga to przeglądu wizualnego wszystkich trzech języków.
-5. Położenie przełącznika na Dashboardzie jest dowolne i tymczasowe (decyzja
-   użytkownika: Dashboard zostanie w całości przebudowany). Wymaganie
-   minimalne: przełącznik jest widoczny, dotykalny (`48 dp` na segment) i nie
-   blokuje przycisków Dashboardu; bez osobnego przeglądu wizualnego położenia.
+5. Przycisk globusa jest widoczny w nagłówku Dashboardu; otwiera panel flag
+   położony przy nim, który nie zasłania głównych przycisków. Każda flaga ma
+   cel dotyku co najmniej 48 dp; panel zamyka się po wyborze, dotknięciu poza
+   nim lub systemowym Back.
 
 ### Assety
 
-Pierwsza wersja nie dodaje assetów graficznych; przełącznik jest rysowany
-stylem HUD w kodzie. Ewentualne flagi lub ikony wymagają osobnej specyfikacji
-AGP i akceptacji.
+Pierwsza wersja dodaje niewielkie assety UI: neutralną ikonę globusa oraz
+flagowe ikony Polski, Wielkiej Brytanii i Hiszpanii. W istniejącym katalogu
+zasobów nie ma dedykowanych ikon języka ani flag. Użyj lekkich,
+samodzielnych drawable Androida dopasowanych do rozmiaru przycisku HUD; nie
+twórz pełnoekranowej grafiki ani nie umieszczaj tekstowych skrótów w obrazach.
 
 ### Tłumaczenia
 
@@ -330,6 +337,9 @@ legacy są źródłem do ręcznego przeniesienia, nie są kopiowane automatyczni
   argumenty formatowania (`%1$d` itd.) i zgodne `<plurals>`;
 - `DashboardViewModel`: `SelectLanguage` → wywołanie use case; `Unchanged` bez
   `recreate()`; `Failure` bez `recreate()`;
+- selektor Dashboardu: poprawne mapowanie flag PL/UK/ES na `AppLanguage`,
+  opis dostępności każdej opcji, podświetlenie aktywnej flagi i minimalny cel
+  dotyku 48 dp; zamknięcie panelu po wyborze, poza nim i przez systemowy Back;
 - katalog prezentacji rozdziałów: każdy `id` z `campaign-chapters.json` ma
   wpis i oba tłumaczenia;
 - brak odwołań do `chapter.title` oraz do `applicationContext.getString` dla
@@ -345,8 +355,9 @@ legacy są źródłem do ręcznego przeniesienia, nie są kopiowane automatyczni
 ### Kryteria akceptacji
 
 1. Pierwsze uruchomienie pokazuje angielski UI.
-2. Dotknięcie `PL` albo `ES` na Dashboardzie przełącza cały UI na wybrany język
-   i zostaje na Dashboardzie; ponowne uruchomienie zachowuje wybór.
+2. Dotknięcie flagi Polski, Wielkiej Brytanii albo Hiszpanii w selektorze
+   Dashboardu przełącza cały UI odpowiednio na PL, EN albo ES i zostaje na
+   Dashboardzie; ponowne uruchomienie zachowuje wybór.
 3. Dashboard RESET nie zmienia języka.
 4. Tytuły rozdziałów w Kampanii są w wybranym języku.
 5. `values/`, `values-pl/` i `values-es/` mają ten sam zestaw kluczy; listy
