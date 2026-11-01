@@ -1,5 +1,6 @@
 package com.urkaaaz.application
 
+import com.urkaaaz.domain.GameBalanceFixtures
 import com.urkaaaz.contracts.AiProfileId
 import com.urkaaaz.contracts.AiProfileSelection
 import com.urkaaaz.contracts.BattlefieldConfig
@@ -53,7 +54,7 @@ class AiMatchCoordinatorTest {
     @Test
     fun firstDecisionIncludesCombatAndRecruitmentAndUsesTheProfileCadence() {
         val coordinator = AiMatchCoordinator(scenario)
-        coordinator.start(randomSeed = 12L)
+        coordinator.start(randomSeed = 12L, balance = GameBalanceFixtures.balance)
 
         val first = coordinator.decide(snapshot, elapsedMilliseconds = 33)
         val beforeCadence = coordinator.decide(snapshot, elapsedMilliseconds = 1_099)
@@ -69,7 +70,7 @@ class AiMatchCoordinatorTest {
     @Test
     fun cadetRecruitmentWaitsEightSecondsWhileCombatDecisionsContinue() {
         val coordinator = AiMatchCoordinator(scenario)
-        coordinator.start(randomSeed = 15L)
+        coordinator.start(randomSeed = 15L, balance = GameBalanceFixtures.balance)
         var elapsed = 0L
         val recruitmentTimes = mutableListOf<Long>()
         var combatDecisionDuringCooldown = false
@@ -96,7 +97,7 @@ class AiMatchCoordinatorTest {
     fun unitAutomationCanBeDisabledWithoutDisablingCatapultDecisions() {
         val coordinator = AiMatchCoordinator(scenario)
         coordinator.setUnitAutomationEnabled(false)
-        coordinator.start(randomSeed = 13L)
+        coordinator.start(randomSeed = 13L, balance = GameBalanceFixtures.balance)
 
         val commands = coordinator.decide(snapshot, elapsedMilliseconds = 33)
 
@@ -110,7 +111,7 @@ class AiMatchCoordinatorTest {
             scenario.copy(availableAmmunition = listOf("SIEGE_BOMB")),
         )
         coordinator.setUnitAutomationEnabled(false)
-        coordinator.start(randomSeed = 16L)
+        coordinator.start(randomSeed = 16L, balance = GameBalanceFixtures.balance)
 
         val previousAmmunitionReloading = snapshot.copy(
             reloadRemainingSecondsByAmmunition = mapOf(
@@ -152,7 +153,7 @@ class AiMatchCoordinatorTest {
     @Test
     fun pausedAndStoppedMatchesDoNotProduceAiCommands() {
         val coordinator = AiMatchCoordinator(scenario)
-        coordinator.start(randomSeed = 14L)
+        coordinator.start(randomSeed = 14L, balance = GameBalanceFixtures.balance)
         coordinator.pause()
 
         assertTrue(coordinator.decide(snapshot, elapsedMilliseconds = 5_000).isEmpty())

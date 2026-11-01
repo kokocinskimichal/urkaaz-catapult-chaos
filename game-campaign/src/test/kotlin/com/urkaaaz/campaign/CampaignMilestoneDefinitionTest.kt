@@ -1,5 +1,6 @@
 package com.urkaaaz.campaign
 
+import com.urkaaaz.domain.GameBalanceFixtures
 import com.urkaaaz.domain.SpellType
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -53,13 +54,17 @@ class CampaignMilestoneDefinitionTest {
             )
         }
         assertFailsWith<IllegalArgumentException> {
-            CampaignMilestoneDefinition(
-                id = "special_spell",
-                completedLevel = 5,
-                availableFromLevel = 6,
-                spellType = SpellType.CATAPULT_LOCK,
-                preferInNewDefaultLoadout = false,
-            )
+            CampaignMilestoneRegistry(
+                listOf(
+                    CampaignMilestoneDefinition(
+                        id = "special_spell",
+                        completedLevel = 5,
+                        availableFromLevel = 6,
+                        spellType = SpellType.CATAPULT_LOCK,
+                        preferInNewDefaultLoadout = false,
+                    ),
+                ),
+            ).validate(GameBalanceFixtures.balance.spells)
         }
     }
 

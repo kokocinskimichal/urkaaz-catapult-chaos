@@ -19,6 +19,7 @@ import com.urkaaaz.screens.loadout.LoadoutItemReference
 class SpellPanelView(
     context: Context,
     spellTypes: List<String>,
+    private val loadoutCatalog: LoadoutCatalog,
 ) : LinearLayout(context) {
     private val slots = spellTypes.take(MAX_VISIBLE_SPELLS).mapNotNull(::createSlot)
     private val manaOrb = ManaOrbView(context)
@@ -68,7 +69,7 @@ class SpellPanelView(
     }
 
     fun render(state: RenderState) {
-        manaOrb.render(state.playerMana, LoadoutCatalog.maximumMana)
+        manaOrb.render(state.playerMana, loadoutCatalog.maximumMana)
         slots.forEach { slot ->
             val active = slot.type in state.activeSpellTypes
             val enoughMana = state.playerMana >= slot.manaCost
@@ -157,7 +158,7 @@ class SpellPanelView(
     }
 
     private fun createSlot(type: String): SpellSlot? {
-        val spell = LoadoutCatalog.findSpell(type) ?: return null
+        val spell = loadoutCatalog.findSpell(type) ?: return null
         val (nameResource, shortNameResource) = spellNameResources(type) ?: return null
         val artwork = LoadoutAssetCatalog.illustration(LoadoutItemReference.Spell(type))
         val iconResource = (artwork as? LoadoutAssetLookup.Found)?.drawableId

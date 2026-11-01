@@ -1,5 +1,7 @@
 package com.urkaaaz.domain
 
+import com.urkaaaz.domain.UnitIds
+
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
@@ -8,27 +10,27 @@ import kotlin.test.assertTrue
 class AmmunitionDefinitionsTest {
     @Test
     fun catalogContainsOneExplicitDefinitionForEveryAmmunitionType() {
-        assertEquals(AmmunitionType.entries.toSet(), AmmunitionCatalog.all.map { it.type }.toSet())
-        assertEquals(AmmunitionType.entries.size, AmmunitionCatalog.all.size)
+        assertEquals(AmmunitionType.entries.toSet(), GameBalanceFixtures.balance.ammunition.all.map { it.type }.toSet())
+        assertEquals(AmmunitionType.entries.size, GameBalanceFixtures.balance.ammunition.all.size)
     }
 
     @Test
     fun definitionsExposeIndependentReloadAndFlightProfiles() {
         assertTrue(
-            AmmunitionCatalog.definition(AmmunitionType.PLAGUE_CAULDRON)
+            GameBalanceFixtures.balance.ammunition.definition(AmmunitionType.PLAGUE_CAULDRON)
                 .reloadSeconds >
-                AmmunitionCatalog.definition(AmmunitionType.ROCK).reloadSeconds,
+                GameBalanceFixtures.balance.ammunition.definition(AmmunitionType.ROCK).reloadSeconds,
         )
         assertTrue(
-            AmmunitionCatalog.definition(AmmunitionType.PLAGUE_CAULDRON)
+            GameBalanceFixtures.balance.ammunition.definition(AmmunitionType.PLAGUE_CAULDRON)
                 .flight.mass >
-                AmmunitionCatalog.definition(AmmunitionType.ROCK).flight.mass,
+                GameBalanceFixtures.balance.ammunition.definition(AmmunitionType.ROCK).flight.mass,
         )
     }
 
     @Test
     fun fireRainUsesStandardSpeedAndConfiguredApexFragmentationProfile() {
-        val fireRain = AmmunitionCatalog.definition(AmmunitionType.FIRE_RAIN)
+        val fireRain = GameBalanceFixtures.balance.ammunition.definition(AmmunitionType.FIRE_RAIN)
         val profile = requireNotNull(
             fireRain.flight.apexFragmentation,
         )
@@ -41,14 +43,14 @@ class AmmunitionDefinitionsTest {
         assertEquals(0.025f, profile.downwardSpreadPerStep)
         assertEquals(
             null,
-            AmmunitionCatalog.definition(AmmunitionType.ROCK)
+            GameBalanceFixtures.balance.ammunition.definition(AmmunitionType.ROCK)
                 .flight.apexFragmentation,
         )
     }
 
     @Test
     fun rockDamagesUnitsAndFortressesAndCanCollideWithUnits() {
-        val rock = AmmunitionCatalog.definition(AmmunitionType.ROCK)
+        val rock = GameBalanceFixtures.balance.ammunition.definition(AmmunitionType.ROCK)
 
         assertEquals(14f, rock.collision.hitRadius)
         assertEquals(50, rock.damage.unitDamage)
@@ -61,8 +63,8 @@ class AmmunitionDefinitionsTest {
 
     @Test
     fun lingeringAmmunitionCarriesExplicitStatusAndWindPolicy() {
-        val fireRain = AmmunitionCatalog.definition(AmmunitionType.FIRE_RAIN)
-        val plague = AmmunitionCatalog.definition(AmmunitionType.PLAGUE_CAULDRON)
+        val fireRain = GameBalanceFixtures.balance.ammunition.definition(AmmunitionType.FIRE_RAIN)
+        val plague = GameBalanceFixtures.balance.ammunition.definition(AmmunitionType.PLAGUE_CAULDRON)
         val fireBehavior = fireRain.behavior as AmmunitionImpactBehavior.LingeringArea
         val plagueBehavior = plague.behavior as AmmunitionImpactBehavior.LingeringArea
 
@@ -85,7 +87,11 @@ class AmmunitionDefinitionsTest {
         assertEquals(0.75f, plagueBehavior.windDriftMultiplier)
         assertTrue(plagueBehavior.followsTerrain)
         assertEquals(8, plagueBehavior.damagePerTick)
-        assertEquals(300f, AmmunitionType.PLAGUE_CAULDRON.damageRadius)
+        assertEquals(
+            300f,
+            GameBalanceFixtures.balance.ammunition
+                .definition(AmmunitionType.PLAGUE_CAULDRON).damage.unitRadius,
+        )
         assertEquals(300f, plague.damage.unitRadius)
         assertEquals(300f, plague.damage.fortressRadius)
         assertEquals(300f, plagueBehavior.radius)
@@ -96,7 +102,7 @@ class AmmunitionDefinitionsTest {
 
     @Test
     fun approvedAmmunitionBalanceIsExplicitInDefinitions() {
-        val siegeBomb = AmmunitionCatalog.definition(AmmunitionType.SIEGE_BOMB)
+        val siegeBomb = GameBalanceFixtures.balance.ammunition.definition(AmmunitionType.SIEGE_BOMB)
 
         assertEquals(72, siegeBomb.damage.unitDamage)
         assertEquals(100, siegeBomb.damage.fortressDamage)
@@ -104,7 +110,7 @@ class AmmunitionDefinitionsTest {
 
     @Test
     fun powderBarrelHasLargeBlastAndFriendlyFire() {
-        val powderBarrel = AmmunitionCatalog.definition(AmmunitionType.POWDER_BARREL)
+        val powderBarrel = GameBalanceFixtures.balance.ammunition.definition(AmmunitionType.POWDER_BARREL)
         val explosion = powderBarrel.behavior as AmmunitionImpactBehavior.Explosion
 
         assertEquals(FriendlyFirePolicy.ALL_UNITS, powderBarrel.collision.friendlyFire)
@@ -131,7 +137,7 @@ class AmmunitionDefinitionsTest {
         expectedHitRadii.forEach { (type, expectedRadius) ->
             assertEquals(
                 expectedRadius,
-                AmmunitionCatalog.definition(type).collision.hitRadius,
+                GameBalanceFixtures.balance.ammunition.definition(type).collision.hitRadius,
                 0.001f,
                 "$type hit radius",
             )

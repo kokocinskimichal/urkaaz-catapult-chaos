@@ -32,7 +32,6 @@ import com.urkaaaz.contracts.TerrainSnapshot
 import com.urkaaaz.contracts.WindSnapshot
 import com.urkaaaz.domain.Aim
 import com.urkaaaz.domain.AmmunitionType
-import com.urkaaaz.domain.AmmunitionCatalog
 import com.urkaaaz.domain.AmmunitionImpactBehavior
 import com.urkaaaz.domain.Catapult
 import com.urkaaaz.domain.Fortress
@@ -42,12 +41,10 @@ import com.urkaaaz.domain.Velocity
 import com.urkaaaz.domain.WorldBounds
 import com.urkaaaz.domain.WorldPosition
 import com.urkaaaz.domain.ResourceWallet
-import com.urkaaaz.domain.SpellCatalog
 import com.urkaaaz.domain.SpellEffectDefinition
 import com.urkaaaz.domain.SpellType
-import com.urkaaaz.domain.SupplyConfiguration
 import com.urkaaaz.domain.Unit
-import com.urkaaaz.domain.UnitConfigurations
+import com.urkaaaz.domain.UnitIds
 import com.urkaaaz.domain.DemolisherUnit
 import com.urkaaaz.domain.SapperUnit
 import com.urkaaaz.domain.UnitDefinition
@@ -84,7 +81,7 @@ class DeterministicMatchSimulation(
 ) {
     private val fortressCenterMargin = fortressMarginFor(config.bounds.width)
     private val worldPhysicsScale =
-        (config.bounds.width / BASE_PHYSICS_WORLD_WIDTH).coerceAtLeast(1f)
+        (config.bounds.width / WorldScale.PHYSICS_REFERENCE_WORLD_WIDTH).coerceAtLeast(1f)
     private var status = MatchStatus.NOT_STARTED
     private var phase = MatchPhase.CREATED
     private var activeTeam = Team.BLUE
@@ -132,6 +129,8 @@ class DeterministicMatchSimulation(
         BossSystem(
             profile = requireNotNull(config.bossProfile),
             encounter = encounter,
+            combatBalance = config.balance.runtime.combat,
+            bossCombatBalance = config.balance.runtime.bossCombat,
             worldWidth = config.bounds.width,
             groundHeightAt = terrain::heightAt,
         )
@@ -161,6 +160,7 @@ class DeterministicMatchSimulation(
     )
     private val wind = WindSystem(
         initialAccelerationX = config.windAccelerationX,
+        balance = config.balance.runtime.wind,
         accelerationScale = config.windAccelerationScale,
     )
     private val resources = mutableMapOf(
@@ -170,7 +170,7 @@ class DeterministicMatchSimulation(
     private val reloadRemainingSecondsByAmmunition =
         mutableMapOf<Team, MutableMap<AmmunitionType, Float>>().apply {
             Team.entries.forEach { team ->
-                this[team] = AmmunitionCatalog.all.associate { it.type to 0f }.toMutableMap()
+                this[team] = config.balance.ammunition.all.associate { it.type to 0f }.toMutableMap()
             }
         }
     private val pendingEvents = mutableListOf<MatchEvent>()
@@ -283,7 +283,7 @@ class DeterministicMatchSimulation(
 
     private fun resolveShieldImpact(projectile: Projectile, target: Fortress) {
         phase = MatchPhase.RESOLVING_IMPACT
-        val damage = AmmunitionCatalog.definition(projectile.ammunition).damage.fortressDamage
+        val damage = config.balance.ammunition.definition(projectile.ammunition).damage.fortressDamage
         val remainingHealth = (requireNotNull(target.shield).health.current - damage)
             .coerceAtLeast(0)
         setFortress(target.withShieldDamage(damage))
@@ -329,7 +329,7 @@ class DeterministicMatchSimulation(
     ): List<MatchEvent> {
         check(status == MatchStatus.RUNNING) { "match is not running" }
         val catapult = catapult(catapultId)
-        val ammunitionDefinition = AmmunitionCatalog.definition(ammunition)
+        val ammunitionDefinition = config.balance.ammunition.definition(ammunition)
         check(
             reloadRemainingSecondsByAmmunition
                 .getValue(catapult.team)
@@ -338,7 +338,7 @@ class DeterministicMatchSimulation(
             "catapult is reloading"
         }
         val availableResources = resources.getValue(catapult.team)
-        check(availableResources.canUse(ammunition)) {
+        check(availableResources.canUse(ammunitionDefinition)) {
             "ammunition is unavailable: ${ammunition.name}"
         }
         check(projectiles.none { it.firedBy == catapult.team }) {
@@ -366,7 +366,7 @@ class DeterministicMatchSimulation(
             apexFragmentation = ammunitionDefinition.flight.apexFragmentation,
         )
         projectiles = projectiles + projectile
-        resources[catapult.team] = availableResources.consume(ammunition)
+        resources[catapult.team] = availableResources.consume(ammunitionDefinition)
         logAmmunition(
             reason = "inventory-consumed",
             projectile = projectile,
@@ -403,7 +403,7 @@ class DeterministicMatchSimulation(
     fun beginAmmunitionReload(team: Team, ammunition: AmmunitionType) {
         check(status == MatchStatus.RUNNING) { "match is not running" }
         reloadRemainingSecondsByAmmunition
-            .getValue(team)[ammunition] = AmmunitionCatalog.definition(ammunition).reloadSeconds
+            .getValue(team)[ammunition] = config.balance.ammunition.definition(ammunition).reloadSeconds
     }
 
     fun aim(catapultId: EntityId, directionDegrees: Float, power: Float) {
@@ -499,7 +499,7 @@ class DeterministicMatchSimulation(
             MatchStatus.FINISHED -> return MatchError.ALREADY_FINISHED
             else -> return MatchError.MATCH_NOT_RUNNING
         }
-        val definition = SpellCatalog.definition(SpellType.FORTRESS_SHIELD)
+        val definition = config.balance.spells.definition(SpellType.FORTRESS_SHIELD)
         val effect = definition.effect as? SpellEffectDefinition.FortressShield
             ?: return MatchError.SPELL_NOT_IMPLEMENTED
         val targetFortress = fortress(team)
@@ -537,7 +537,7 @@ class DeterministicMatchSimulation(
             MatchStatus.FINISHED -> return MatchError.ALREADY_FINISHED
             else -> return MatchError.MATCH_NOT_RUNNING
         }
-        val definition = SpellCatalog.definition(SpellType.RUNIC_BASTION)
+        val definition = config.balance.spells.definition(SpellType.RUNIC_BASTION)
         val effect = definition.effect as? SpellEffectDefinition.RunicBastion
             ?: return MatchError.SPELL_NOT_IMPLEMENTED
         if (targetId != null) return MatchError.INVALID_SPELL_TARGET
@@ -584,7 +584,7 @@ class DeterministicMatchSimulation(
             MatchStatus.FINISHED -> return MatchError.ALREADY_FINISHED
             else -> return MatchError.MATCH_NOT_RUNNING
         }
-        val definition = SpellCatalog.definition(SpellType.HASTE)
+        val definition = config.balance.spells.definition(SpellType.HASTE)
         val effect = definition.effect as? SpellEffectDefinition.Haste
             ?: return MatchError.SPELL_NOT_IMPLEMENTED
         if (targetId != null) return MatchError.INVALID_SPELL_TARGET
@@ -766,7 +766,7 @@ class DeterministicMatchSimulation(
                 emitProjectileResolved(projectile.id, ProjectileResolution.OUT_OF_BOUNDS)
                 null
             }
-            advanced.ageSeconds >= AmmunitionCatalog
+            advanced.ageSeconds >= config.balance.ammunition
                 .definition(advanced.ammunition)
                 .flight
                 .maximumLifetimeSeconds -> {
@@ -958,7 +958,7 @@ class DeterministicMatchSimulation(
                 }
                 .let { unitStatusDetails ->
                     if (hasteRemaining != null) {
-                        val effect = SpellCatalog.definition(SpellType.HASTE).effect
+                        val effect = config.balance.spells.definition(SpellType.HASTE).effect
                             as SpellEffectDefinition.Haste
                         unitStatusDetails + (
                             UnitStatus.HASTED.name to
@@ -1007,7 +1007,7 @@ class DeterministicMatchSimulation(
                 windResponse = it.windResponse,
                 gravityResponse = it.gravityResponse,
                 drag = it.drag,
-                collisionRadius = AmmunitionCatalog.definition(it.ammunition).collision.hitRadius,
+                collisionRadius = config.balance.ammunition.definition(it.ammunition).collision.hitRadius,
             )
         },
         terrain = TerrainSnapshot(
@@ -1104,7 +1104,8 @@ class DeterministicMatchSimulation(
     private fun canUnitAttackBoss(unit: Unit, candidates: List<Unit>): Boolean {
         val boss = bossSystem ?: return false
         val formationOffset =
-            boss.formationRank(unit, candidates, movingTeams) * ATTACK_FORMATION_SPACING
+            boss.formationRank(unit, candidates, movingTeams) *
+                config.balance.runtime.combat.attackFormationSpacing
         return boss.canUnitAttack(unit, movingTeams, formationOffset.toFloat())
     }
 
@@ -1240,7 +1241,7 @@ class DeterministicMatchSimulation(
     private fun attackProgress(unit: Unit): Float {
         val cooldown = unit.combatState.attackCooldownRemainingSeconds
         val duration = if (unit.isDemolisherThrowing()) {
-            DEMOLISHER_THROW_DURATION_SECONDS
+            config.balance.runtime.combat.demolisher.throwDurationSeconds
         } else {
             unit.type.attackCooldownSeconds
         }
@@ -1287,7 +1288,7 @@ class DeterministicMatchSimulation(
 
     private fun resolveTerrainImpact(projectile: Projectile) {
         phase = MatchPhase.RESOLVING_IMPACT
-        val definition = AmmunitionCatalog.definition(projectile.ammunition)
+        val definition = config.balance.ammunition.definition(projectile.ammunition)
         if (definition.terrain.deformsTerrain) {
             terrain = terrain.deform(
                 projectile.position,
@@ -1343,7 +1344,8 @@ class DeterministicMatchSimulation(
                 )
             }
             if (unit.isDemolisherThrowing()) {
-                val duration = DEMOLISHER_THROW_DURATION_SECONDS
+                val demolisherBalance = config.balance.runtime.combat.demolisher
+                val duration = demolisherBalance.throwDurationSeconds
                 val remaining = unit.combatState.attackCooldownRemainingSeconds
                     .coerceIn(0f, duration)
                 val elapsed = duration - remaining
@@ -1351,7 +1353,7 @@ class DeterministicMatchSimulation(
                 val movementFraction = (nextElapsed - elapsed) / duration
                 val direction = if (unit.team == Team.BLUE) 1f else -1f
                 val nextX = unit.position.x +
-                    direction * DEMOLISHER_THROW_FORWARD_DISTANCE * movementFraction
+                    direction * demolisherBalance.throwForwardDistance * movementFraction
                 return@map statusAdvanced.copy(
                     position = WorldPosition(nextX, terrain.heightAt(nextX)),
                     moving = movementFraction > 0f,
@@ -1453,7 +1455,7 @@ class DeterministicMatchSimulation(
                             !it.returningToGarrison &&
                             (it.position.x - unit.position.x) * direction >= 0f &&
                             kotlin.math.abs(it.position.x - unit.position.x) <=
-                                UNIT_INTERACTION_RANGE
+                                config.balance.runtime.combat.unitInteractionRange
                     }
                     .minByOrNull { kotlin.math.abs(it.position.x - unit.position.x) }
             } else {
@@ -1472,7 +1474,8 @@ class DeterministicMatchSimulation(
                 val formationRank = sameTargetAttackers
                     .indexOfFirst { it.id == unit.id }
                     .coerceAtLeast(0)
-                val formationOffset = formationRank * ATTACK_FORMATION_SPACING
+                val formationOffset =
+                    formationRank * config.balance.runtime.combat.attackFormationSpacing
                 when {
                     unit.type is SapperUnit -> null
                     target.type is SapperUnit && !unit.type.attacksFromRange -> null
@@ -1484,7 +1487,10 @@ class DeterministicMatchSimulation(
                             direction * (unit.type.attackRange + formationOffset)
                     else ->
                         target.position.x -
-                            direction * (MELEE_ATTACK_STANDOFF_DISTANCE + formationOffset)
+                            direction * (
+                                config.balance.runtime.combat.meleeAttackStandoffDistance +
+                                    formationOffset
+                                )
                 }
             }
             val bossStopX = if (waveMoving && combatTarget == null) {
@@ -1564,14 +1570,16 @@ class DeterministicMatchSimulation(
                 movementTargets.maxOrNull() ?: targetX
             }
             val hasteMultiplier = hasteMovementMultiplier(unit, deltaMilliseconds)
+            val movementSpeed = config.balance.runtime.combat
+            val movementScale = if (waveMoving) {
+                movementSpeed.unitMovementSpeedScale * movementSpeed.unitMovementSpeedMultiplier
+            } else {
+                movementSpeed.garrisonMovementSpeedScale * movementSpeed.unitMovementSpeedMultiplier
+            }
             val step = unit.type.speed * UnitMovementSpeed.statusMultiplier(
                 statuses = statusAdvanced.statuses,
                 hasteMultiplier = hasteMultiplier,
-            ) * if (waveMoving) {
-                UNIT_MOVEMENT_SPEED_SCALE
-            } else {
-                GARRISON_MOVEMENT_SPEED_SCALE
-            } * if (
+            ) * movementScale * if (
                 waveMoving &&
                 unit.type is SapperUnit &&
                 units.any { other ->
@@ -1582,7 +1590,7 @@ class DeterministicMatchSimulation(
                         unitHitboxesIntersect(unit, other)
                 }
             ) {
-                SAPPER_CONTACT_SPEED_MULTIPLIER
+                unit.type.configuration.contactMovementSpeedMultiplier
             } else {
                 1f
             } * deltaSeconds
@@ -1626,7 +1634,7 @@ class DeterministicMatchSimulation(
         if (unit.inGarrison || deltaMilliseconds <= 0L) return 1f
         val remainingMilliseconds = hasteRemainingMillisecondsByTeam[unit.team] ?: return 1f
         if (remainingMilliseconds <= 0L) return 1f
-        val effect = SpellCatalog.definition(SpellType.HASTE).effect
+        val effect = config.balance.spells.definition(SpellType.HASTE).effect
             as? SpellEffectDefinition.Haste
             ?: error("active HASTE is missing its effect definition")
         val activeFraction = minOf(remainingMilliseconds, deltaMilliseconds).toFloat() /
@@ -1682,7 +1690,7 @@ class DeterministicMatchSimulation(
             if (attacker.isDemolisherThrowing()) {
                 val progress = 1f -
                     attacker.combatState.attackCooldownRemainingSeconds /
-                    DEMOLISHER_THROW_DURATION_SECONDS
+                    config.balance.runtime.combat.demolisher.throwDurationSeconds
                 current[index] = attacker.copy(
                     moving = attacker.combatState.attackCooldownRemainingSeconds > 0f,
                     combatState = attacker.combatState.copy(
@@ -1975,7 +1983,7 @@ class DeterministicMatchSimulation(
         if (remainingDelay == null) {
             val delay = combatRandom.nextFloat() *
                 attacker.type.attackCooldownSeconds *
-                MAX_INITIAL_ATTACK_DELAY_RATIO
+                config.balance.runtime.combat.maximumInitialAttackDelayRatio
             current[unitIndex] = attacker.copy(
                 combatState = attacker.combatState.copy(
                     firstAttackDelayRemainingSeconds = delay,
@@ -2005,13 +2013,15 @@ class DeterministicMatchSimulation(
                     !it.returningToGarrison &&
                     (
                         attacker.combatState.attackGroupId != null ||
-                            kotlin.math.abs(it.position.x - attacker.position.x) <= UNIT_INTERACTION_RANGE
+                        kotlin.math.abs(it.position.x - attacker.position.x) <=
+                            config.balance.runtime.combat.unitInteractionRange
                         )
             }
         }
         return locked ?: candidates.filter {
             it.team != attacker.team && it.isAlive && !it.returningToGarrison &&
-                kotlin.math.abs(it.position.x - attacker.position.x) <= UNIT_INTERACTION_RANGE
+                kotlin.math.abs(it.position.x - attacker.position.x) <=
+                    config.balance.runtime.combat.unitInteractionRange
         }.minWithOrNull(compareBy({ kotlin.math.abs(it.position.x - attacker.position.x) }, { it.id.value }))
     }
 
@@ -2105,8 +2115,13 @@ class DeterministicMatchSimulation(
                 } else {
                     emptyList()
                 }
+                val combatBalance = config.balance.runtime.combat
                 val synergy = if (intent.type == AttackType.MELEE) {
-                    min(1f + (members.size - 1).coerceAtLeast(0) * 0.35f, 2f)
+                    min(
+                        1f + (members.size - 1).coerceAtLeast(0) *
+                            combatBalance.meleeSynergyDamagePerAdditionalUnit,
+                        combatBalance.maximumMeleeSynergyMultiplier,
+                    )
                 } else {
                     1f
                 }
@@ -2151,8 +2166,13 @@ class DeterministicMatchSimulation(
                 AttackType.MELEE, AttackType.RANGED -> {
                     val roll = rollUnitDamage(attacker, attacker.type.attackDamage)
                     val members = meleeMembersForTarget(current, target.id)
+                    val combatBalance = config.balance.runtime.combat
                     val synergy = if (intent.type == AttackType.MELEE) {
-                        min(1f + (members.size - 1) * 0.35f, 2f)
+                        min(
+                            1f + (members.size - 1) *
+                                combatBalance.meleeSynergyDamagePerAdditionalUnit,
+                            combatBalance.maximumMeleeSynergyMultiplier,
+                        )
                     } else {
                         1f
                     }
@@ -2312,7 +2332,8 @@ class DeterministicMatchSimulation(
         val formationRank = sameTargetMembers.indexOfFirst { it.id == attacker.id }
         if (formationRank < 0) return false
         val formationReach =
-            MELEE_ATTACK_STANDOFF_DISTANCE + formationRank * ATTACK_FORMATION_SPACING
+            config.balance.runtime.combat.meleeAttackStandoffDistance +
+                formationRank * config.balance.runtime.combat.attackFormationSpacing
         return kotlin.math.abs(target.position.x - attacker.position.x) <= formationReach
     }
 
@@ -2331,7 +2352,7 @@ class DeterministicMatchSimulation(
             val distanceToFront = (
                 target.center.x + faceOffset - attacker.position.x
                 ) * direction
-            return distanceToFront <= SAPPER_FORTRESS_STANDOFF_DISTANCE
+            return distanceToFront <= config.balance.runtime.combat.sapperFortressStandoffDistance
         }
         val formationRank = current
             .filter {
@@ -2344,7 +2365,8 @@ class DeterministicMatchSimulation(
             .sortedBy { it.id.value }
             .indexOfFirst { it.id == attacker.id }
             .coerceAtLeast(0)
-        val formationReach = FORTRESS_ATTACK_RANGE + formationRank * ATTACK_FORMATION_SPACING
+        val formationReach = config.balance.runtime.combat.fortressAttackRange +
+            formationRank * config.balance.runtime.combat.attackFormationSpacing
         return kotlin.math.abs(target.center.x - attacker.position.x) <= formationReach
     }
 
@@ -2368,7 +2390,8 @@ class DeterministicMatchSimulation(
             .sortedBy { it.id.value }
             .indexOfFirst { it.id == attacker.id }
             .coerceAtLeast(0)
-        val formationReach = FORTRESS_ATTACK_RANGE + formationRank * ATTACK_FORMATION_SPACING
+        val formationReach = config.balance.runtime.combat.fortressAttackRange +
+            formationRank * config.balance.runtime.combat.attackFormationSpacing
         val distanceToFace = (
             kotlin.math.abs(target.center.x - attacker.position.x) -
                 RunicBastionGeometry.WIDTH / 2f
@@ -2410,7 +2433,8 @@ class DeterministicMatchSimulation(
                 action = UnitActionState.THROWING,
                 targetId = targetId,
                 attackProgress = 0f,
-                attackCooldownRemainingSeconds = DEMOLISHER_THROW_DURATION_SECONDS,
+                attackCooldownRemainingSeconds =
+                    config.balance.runtime.combat.demolisher.throwDurationSeconds,
                 attackGroupId = null,
             ),
         )
@@ -2471,7 +2495,9 @@ class DeterministicMatchSimulation(
         teamLuckBias: Float = 0f,
     ): Int {
         val unitBias = combatLuckByUnit.getOrPut(attacker.id) {
-            (combatRandom.nextFloat() * 0.08f) - 0.04f
+            val maximumMagnitude =
+                config.balance.runtime.combat.unitLuckBiasMaximumMagnitude
+            (combatRandom.nextFloat() * maximumMagnitude * 2f) - maximumMagnitude
         }
         return applyDamageVariance(baseDamage, damageVarianceFactor(unitBias + teamLuckBias))
     }
@@ -2483,7 +2509,8 @@ class DeterministicMatchSimulation(
         attackerIndex: Int,
         attacker: Unit,
     ) {
-        val explosionDamage = rollUnitDamage(attacker, DEMOLISHER_DAMAGE)
+        val demolisherBalance = config.balance.runtime.combat.demolisher
+        val explosionDamage = rollUnitDamage(attacker, demolisherBalance.explosionDamage)
         emit {
             MatchEvent.ExplosionTriggered(
                 it,
@@ -2492,7 +2519,7 @@ class DeterministicMatchSimulation(
                 attacker.id,
                 attacker.position.x,
                 attacker.position.y,
-                DEMOLISHER_BLAST_RADIUS,
+                demolisherBalance.blastRadius,
                 explosionDamage,
             )
         }
@@ -2500,8 +2527,8 @@ class DeterministicMatchSimulation(
             val target = current[index]
             if (target.isAlive) {
                 val distance = target.position.distanceTo(attacker.position)
-                if (distance <= DEMOLISHER_BLAST_RADIUS) {
-                    val falloff = 1f - distance / DEMOLISHER_BLAST_RADIUS
+                if (distance <= demolisherBalance.blastRadius) {
+                    val falloff = 1f - distance / demolisherBalance.blastRadius
                     val damage = (explosionDamage * falloff).toInt().coerceAtLeast(1)
                     emitDamage(target.id, damage)
                     replaceUnit(
@@ -2516,10 +2543,10 @@ class DeterministicMatchSimulation(
         val enemyFortress = fortress(opposingTeam(attacker.team))
         val enemyBastion = bastion(opposingTeam(attacker.team))
         if (enemyBastion != null &&
-            enemyBastion.intersects(attacker.position, DEMOLISHER_BLAST_RADIUS)
+            enemyBastion.intersects(attacker.position, demolisherBalance.blastRadius)
         ) {
             val distance = attacker.position.distanceTo(enemyBastion.center)
-            val falloff = (1f - distance / DEMOLISHER_BLAST_RADIUS).coerceAtLeast(0f)
+            val falloff = (1f - distance / demolisherBalance.blastRadius).coerceAtLeast(0f)
             damageBastion(
                 enemyBastion,
                 (explosionDamage * falloff).toInt().coerceAtLeast(1),
@@ -2527,14 +2554,14 @@ class DeterministicMatchSimulation(
                 sourceUnitId = attacker.id,
             )
         }
-        if (enemyFortress.intersects(attacker.position, DEMOLISHER_BLAST_RADIUS)) {
+        if (enemyFortress.intersects(attacker.position, demolisherBalance.blastRadius)) {
             val distance = FortressHitboxProfile.rectangles.minOf {
                 it.distanceTo(
                     attacker.position.x - enemyFortress.center.x,
                     attacker.position.y - enemyFortress.center.y,
                 )
             }
-            val falloff = (1f - distance / DEMOLISHER_BLAST_RADIUS).coerceAtLeast(0f)
+            val falloff = (1f - distance / demolisherBalance.blastRadius).coerceAtLeast(0f)
             damageFortress(enemyFortress, (explosionDamage * falloff).toInt().coerceAtLeast(1))
         }
         replaceUnit(
@@ -2546,11 +2573,17 @@ class DeterministicMatchSimulation(
     }
 
     private fun damageVarianceFactor(teamLuckBias: Float = 0f): Float =
-        (MIN_DAMAGE_VARIANCE_FACTOR +
+        (config.balance.runtime.combat.minimumDamageVarianceFactor +
             combatRandom.nextFloat() *
-            (MAX_DAMAGE_VARIANCE_FACTOR - MIN_DAMAGE_VARIANCE_FACTOR) +
+            (
+                config.balance.runtime.combat.maximumDamageVarianceFactor -
+                    config.balance.runtime.combat.minimumDamageVarianceFactor
+                ) +
             teamLuckBias)
-            .coerceIn(MIN_DAMAGE_VARIANCE_FACTOR, MAX_DAMAGE_VARIANCE_FACTOR)
+            .coerceIn(
+                config.balance.runtime.combat.minimumDamageVarianceFactor,
+                config.balance.runtime.combat.maximumDamageVarianceFactor,
+            )
 
     private fun applyDamageVariance(baseDamage: Int, factor: Float): Int =
         if (baseDamage <= 0) 0 else (baseDamage * factor).toInt().coerceAtLeast(1)
@@ -2697,14 +2730,14 @@ class DeterministicMatchSimulation(
         val direction = if (team == Team.BLUE) 1f else -1f
         val frontFaceOffset = fortressFrontFaceOffset(team)
         return fortress(opposingTeam(team)).center.x + frontFaceOffset -
-            direction * SAPPER_FORTRESS_STANDOFF_DISTANCE
+            direction * config.balance.runtime.combat.sapperFortressStandoffDistance
     }
 
     private fun demolisherFortressStopX(team: Team): Float {
         val direction = if (team == Team.BLUE) 1f else -1f
         val frontFaceOffset = fortressFrontFaceOffset(team)
         return fortress(opposingTeam(team)).center.x + frontFaceOffset -
-            direction * UnitHitboxProfile.forUnitType(UnitConfigurations.DEMOLISHER.id).halfWidth
+            direction * UnitHitboxProfile.forUnitType(UnitIds.DEMOLISHER).halfWidth
     }
 
     private fun contactedFortress(attacker: Unit, target: Fortress): Boolean {
@@ -2733,18 +2766,19 @@ class DeterministicMatchSimulation(
         if (deltaSeconds <= 0f) return
         Team.entries.forEach { team ->
             val wallet = resources.getValue(team)
-            if (wallet.supply >= SupplyConfiguration.MAXIMUM_SUPPLY) {
+            val economy = config.balance.runtime.economy
+            if (wallet.supply >= economy.maximumSupply) {
                 supplyRegenProgressSeconds[team] = 0f
                 return@forEach
             }
             val progress = supplyRegenProgressSeconds.getValue(team) + deltaSeconds
-            val replenished = (progress / SUPPLY_REGEN_INTERVAL_SECONDS).toInt()
+            val replenished = (progress / economy.supplyRegenerationIntervalSeconds).toInt()
             supplyRegenProgressSeconds[team] =
-                progress - replenished * SUPPLY_REGEN_INTERVAL_SECONDS
+                progress - replenished * economy.supplyRegenerationIntervalSeconds
             if (replenished > 0) {
                 resources[team] = wallet.copy(
                     supply = (wallet.supply + replenished)
-                        .coerceAtMost(SupplyConfiguration.MAXIMUM_SUPPLY),
+                        .coerceAtMost(economy.maximumSupply),
                 )
             }
         }
@@ -2754,26 +2788,27 @@ class DeterministicMatchSimulation(
         if (deltaMilliseconds <= 0L) return
         Team.entries.forEach { team ->
             val wallet = resources.getValue(team)
-            if (wallet.mana >= config.maximumMana) {
+            val mana = config.balance.mana
+            if (wallet.mana >= mana.maximumMana) {
                 manaRegenProgressMilliseconds[team] = 0L
                 return@forEach
             }
             val progress = manaRegenProgressMilliseconds.getValue(team) + deltaMilliseconds
-            val intervals = progress / config.manaRegenerationIntervalMilliseconds
-            var remainingProgress = progress % config.manaRegenerationIntervalMilliseconds
+            val intervals = progress / mana.regenerationIntervalMilliseconds
+            var remainingProgress = progress % mana.regenerationIntervalMilliseconds
             if (intervals > 0L) {
-                val manaMissing = config.maximumMana - wallet.mana
+                val manaMissing = mana.maximumMana - wallet.mana
                 val intervalsToFull =
-                    (manaMissing.toLong() + config.manaRegenerationAmount - 1) /
-                        config.manaRegenerationAmount
+                    (manaMissing.toLong() + mana.regenerationAmount - 1) /
+                        mana.regenerationAmount
                 val restored = if (intervals >= intervalsToFull) {
                     manaMissing
                 } else {
-                    (intervals * config.manaRegenerationAmount).toInt()
+                    (intervals * mana.regenerationAmount).toInt()
                 }
-                val updatedWallet = wallet.restoreMana(restored, config.maximumMana)
+                val updatedWallet = wallet.restoreMana(restored, mana.maximumMana)
                 resources[team] = updatedWallet
-                if (updatedWallet.mana >= config.maximumMana) remainingProgress = 0L
+                if (updatedWallet.mana >= mana.maximumMana) remainingProgress = 0L
             }
             manaRegenProgressMilliseconds[team] = remainingProgress
         }
@@ -2804,7 +2839,7 @@ class DeterministicMatchSimulation(
         projectile: Projectile,
         hitLayer: com.urkaaaz.domain.AmmunitionHitLayer? = null,
     ) {
-        val definition = AmmunitionCatalog.definition(projectile.ammunition)
+        val definition = config.balance.ammunition.definition(projectile.ammunition)
         val damageFactor = damageVarianceFactor(teamLuckBias = 0f)
         when (val behavior = definition.behavior) {
             is com.urkaaaz.domain.AmmunitionImpactBehavior.LingeringArea -> {
@@ -3032,7 +3067,7 @@ class DeterministicMatchSimulation(
         if (lingeringEffects.isEmpty()) return
         val updated = mutableListOf<LingeringEffect>()
         lingeringEffects.forEach { effect ->
-            val definition = AmmunitionCatalog.definition(effect.ammunition)
+            val definition = config.balance.ammunition.definition(effect.ammunition)
             val behavior = definition.behavior as? AmmunitionImpactBehavior.LingeringArea
                 ?: error("lingering effect has a non-lingering ammunition definition")
             var remaining = effect.remainingSeconds - deltaSeconds
@@ -3122,7 +3157,7 @@ class DeterministicMatchSimulation(
         targetTeam != sourceTeam
 
     private fun targetHitBy(projectile: Projectile): EntityTarget? {
-        val definition = AmmunitionCatalog.definition(projectile.ammunition)
+        val definition = config.balance.ammunition.definition(projectile.ammunition)
         val targetUnit = if (com.urkaaaz.domain.AmmunitionHitLayer.UNIT in definition.collision.hitLayers) {
             if (definition.collision.mode ==
                 com.urkaaaz.domain.AmmunitionCollisionMode.IGNORE_UNITS
@@ -3388,16 +3423,16 @@ class DeterministicMatchSimulation(
     }
 
     private fun initialWallet(): ResourceWallet = ResourceWallet(
-        gold = 100,
-        supply = SupplyConfiguration.MAXIMUM_SUPPLY,
-        mana = config.startingMana,
-        ammunition = AmmunitionType.entries
+        gold = config.balance.runtime.economy.startingGold,
+        supply = config.balance.runtime.economy.startingSupply,
+        mana = config.balance.mana.startingMana,
+        ammunition = config.balance.ammunition.all
             .filter {
                 !it.unlimited &&
                     (config.availableAmmunitionTypes.isEmpty() ||
-                        it.name in config.availableAmmunitionTypes)
+                        it.type.name in config.availableAmmunitionTypes)
             }
-            .associateWith { config.startingLimitedAmmunition },
+            .associate { it.type to it.inventory.startingCount },
     )
 
     private data class LingeringEffect(
@@ -3436,33 +3471,15 @@ class DeterministicMatchSimulation(
     )
 
     companion object {
-        private const val SUPPLY_REGEN_INTERVAL_SECONDS = 3f
-        private const val MIN_DAMAGE_VARIANCE_FACTOR = 0.80f
-        private const val MAX_DAMAGE_VARIANCE_FACTOR = 1.20f
-        private const val MAX_INITIAL_ATTACK_DELAY_RATIO = 0.5f
-        private const val UNIT_MOVEMENT_SPEED_MULTIPLIER = 2f
-        private const val UNIT_MOVEMENT_SPEED_SCALE = 0.45f * UNIT_MOVEMENT_SPEED_MULTIPLIER
-        private const val GARRISON_MOVEMENT_SPEED_SCALE = 0.22f * UNIT_MOVEMENT_SPEED_MULTIPLIER
         private const val GARRISON_FIRST_SLOT_FROM_SCREEN_EDGE = 690f
         private const val GARRISON_SPACING = 70f
         private const val NEW_UNIT_REAR_OFFSET = 20f
-        private const val UNIT_INTERACTION_RANGE = 260f
-        private const val FORTRESS_ATTACK_RANGE = 82f
-        internal const val SAPPER_FORTRESS_STANDOFF_DISTANCE = 200f
-        private const val DEMOLISHER_THROW_DURATION_SECONDS = 0.5f
-        private const val DEMOLISHER_THROW_FORWARD_DISTANCE = 90f
-        private const val DEMOLISHER_BLAST_RADIUS = 260f
-        private const val DEMOLISHER_DAMAGE = 300
         private const val DEATH_ANIMATION_SECONDS = 0.8f
-        private const val SAPPER_CONTACT_SPEED_MULTIPLIER = 0.45f
         private const val ALLIED_UNIT_MIN_SEPARATION = 16f
-        private const val MELEE_ATTACK_STANDOFF_DISTANCE = 150f
-        private const val ATTACK_FORMATION_SPACING = 55f
         private const val FORTRESS_CENTER_MARGIN = 490f
         private const val CATAPULT_CENTER_MARGIN = 450f
         // Keep default foundations wide enough for the scaled fortress footprint.
         private val FORTRESS_FLAT_HALF_WIDTH = WorldScale.FORTRESS_HALF_WIDTH
-        private const val BASE_PHYSICS_WORLD_WIDTH = 1_600f
         private const val APEX_TIME_SEARCH_ITERATIONS = 16
         private const val TERRAIN_COLLISION_SEARCH_ITERATIONS = 12
         private const val TERRAIN_COLLISION_SAMPLE_SECONDS = 1f / 60f
@@ -3526,7 +3543,10 @@ class DeterministicMatchSimulation(
                     x = anchorX,
                     y = anchorY,
                 ),
-                aim = Aim(directionDegrees = 45f, power = 50f),
+                aim = Aim(
+                    directionDegrees = config.balance.runtime.catapult.initialAimDirectionDegrees,
+                    power = config.balance.runtime.catapult.initialAimPower,
+                ),
             )
         }
 

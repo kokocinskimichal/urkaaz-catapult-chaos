@@ -1,8 +1,8 @@
 package com.urkaaaz.application.loadout
 
+import com.urkaaaz.domain.GameBalanceFixtures
 import com.urkaaaz.contracts.PlayerId
 import com.urkaaaz.domain.AmmunitionType
-import com.urkaaaz.domain.UnitConfigurations
 import kotlinx.coroutines.runBlocking
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -60,10 +60,11 @@ class LoadoutUseCasesTest {
         val defaults = MatchLoadout.defaults(
             availability,
             snapshot(ammoStock = mapOf("POWDER_BARREL" to 2)),
+            GameBalanceFixtures.balance,
         )
 
         assertEquals(
-            UnitConfigurations.all.take(3).map { it.id },
+            GameBalanceFixtures.balance.units.all.take(3).map { it.id },
             defaults.unitTypes,
         )
         assertEquals(listOf("ROCK", "SIEGE_BOMB", "POWDER_BARREL"), defaults.ammunitionSlots)
@@ -74,7 +75,7 @@ class LoadoutUseCasesTest {
     fun campaignPreferredSpellsComeFirstOnlyInGeneratedDefaults() {
         val progression = snapshot().copy(defaultSpellTypes = setOf("HASTE", "HEAL"))
 
-        val defaults = MatchLoadout.defaults(availability, progression)
+        val defaults = MatchLoadout.defaults(availability, progression, GameBalanceFixtures.balance)
 
         assertEquals(listOf("HASTE", "HEAL", "ICE_TRAP"), defaults.spellTypes)
     }

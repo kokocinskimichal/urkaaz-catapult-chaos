@@ -18,7 +18,16 @@ export const BALANCE_FILE = [
 
 const PROFILE_ID = /^boss\.[a-z0-9-]+\.level-\d{2}$/;
 const PRESENTATION_KEY = /^[a-z][a-z0-9_]*$/;
-const AMMUNITION_ID = /^[A-Z][A-Z0-9_]*$/;
+const UNIT_IDS = new Set(["SAPPER", "DEFENDER", "DEMOLISHER", "RAGING_BOAR", "SLINGMASTER"]);
+const AMMUNITION_TYPES = new Set([
+  "ROCK", "SIEGE_BOMB", "POWDER_BARREL", "FIRE_RAIN", "PLAGUE_CAULDRON",
+]);
+const SPELL_TYPES = new Set([
+  "ICE_TRAP", "RUNIC_BASTION", "HASTE", "HEAL", "FORTRESS_SHIELD",
+  "CATAPULT_LOCK", "SLOWING_FIELD", "VAMPIRIC_BANNER", "STONE_SKIN",
+  "SIEGE_FRENZY", "BERSERKER",
+]);
+const AI_PROFILE_IDS = new Set(["CADET", "VETERAN", "ELITE"]);
 let writeQueue: Promise<void> = Promise.resolve();
 
 export class BalanceConflictError extends Error {
@@ -63,9 +72,17 @@ export function validateBalanceContent(content: string): BalanceValidationRespon
   const issues: BalanceValidationIssue[] = [];
   const root = asRecord(value);
   if (!root) return invalid("gameBalance", "must be a JSON object");
-  checkKeys(root, "gameBalance", ["schemaVersion", "balanceRevision", "bosses"], issues);
-  if (root.schemaVersion !== 1) {
-    issues.push(issue("schemaVersion", "must be the supported schema version 1"));
+  checkKeys(
+    root,
+    "gameBalance",
+    [
+      "schemaVersion", "balanceRevision", "bosses", "units", "ammunition",
+      "spells", "mana", "runtime",
+    ],
+    issues,
+  );
+  if (root.schemaVersion !== 3) {
+    issues.push(issue("schemaVersion", "must be the supported schema version 3"));
   }
   if (typeof root.balanceRevision !== "string" || root.balanceRevision.trim() === "") {
     issues.push(issue("balanceRevision", "must be a non-empty string"));
@@ -88,6 +105,11 @@ export function validateBalanceContent(content: string): BalanceValidationRespon
       }
     });
   }
+  validateUnits(root.units, issues);
+  validateAmmunition(root.ammunition, issues);
+  validateSpells(root.spells, issues);
+  validateMana(root.mana, issues);
+  validateRuntime(root.runtime, issues);
   return { valid: issues.length === 0, issues };
 }
 
@@ -126,6 +148,1086 @@ export async function saveBalance(
   });
   writeQueue = queued.then(() => undefined, () => undefined);
   return queued;
+}
+
+function validateUnits(value: unknown, issues: BalanceValidationIssue[]): void {
+  const path = "units";
+  if (!Array.isArray(value)) {
+    issues.push(issue(path, "must be an array"));
+    return;
+  }
+  if (value.length !== UNIT_IDS.size) {
+    issues.push(issue(path, "must define every stable unit ID exactly once"));
+  }
+  const ids = new Set<string>();
+  value.forEach((value, index) => {
+    const itemPath = `${path}[${index}]`;
+    const unit = asRecord(value);
+    if (!unit) {
+      issues.push(issue(itemPath, "must be a JSON object"));
+      return;
+    }
+    checkKeys(
+      unit,
+      itemPath,
+      [
+        "id", "supplyCost", "maxHealth", "speed", "attackDamage",
+        "attackCooldownSeconds", "attackRange", "fortressDamage",
+        "incomingDamageMultiplier", "contactMovementSpeedMultiplier",
+      ],
+      issues,
+    );
+    if (typeof unit.id !== "string" || !UNIT_IDS.has(unit.id)) {
+      issues.push(issue(`${itemPath}.id`, "must be a stable unit ID"));
+    } else if (ids.has(unit.id)) {
+      issues.push(issue(`${itemPath}.id`, "must be unique"));
+    } else {
+      ids.add(unit.id);
+    }
+    if (!nonNegativeInteger(unit.supplyCost)) {
+      issues.push(issue(`${itemPath}.supplyCost`, "must be a non-negative integer"));
+    }
+    if (!positiveInteger(unit.maxHealth)) {
+      issues.push(issue(`${itemPath}.maxHealth`, "must be a positive integer"));
+    }
+    if (!nonNegativeNumber(unit.speed)) {
+      issues.push(issue(`${itemPath}.speed`, "must be non-negative"));
+    }
+    if (!nonNegativeInteger(unit.attackDamage)) {
+      issues.push(issue(`${itemPath}.attackDamage`, "must be a non-negative integer"));
+    }
+    if (!positiveNumber(unit.attackCooldownSeconds)) {
+      issues.push(issue(`${itemPath}.attackCooldownSeconds`, "must be positive"));
+    }
+    if (!nonNegativeNumber(unit.attackRange)) {
+      issues.push(issue(`${itemPath}.attackRange`, "must be non-negative"));
+    }
+    if (!nonNegativeInteger(unit.fortressDamage)) {
+      issues.push(issue(`${itemPath}.fortressDamage`, "must be a non-negative integer"));
+    }
+    if (!positiveNumber(unit.incomingDamageMultiplier)) {
+      issues.push(issue(`${itemPath}.incomingDamageMultiplier`, "must be positive"));
+    }
+    if (!fraction(unit.contactMovementSpeedMultiplier)) {
+      issues.push(issue(`${itemPath}.contactMovementSpeedMultiplier`, "must be between 0 and 1"));
+    }
+  });
+  if (ids.size === UNIT_IDS.size && [...UNIT_IDS].some(id => !ids.has(id))) {
+    issues.push(issue(path, "must define every stable unit ID exactly once"));
+  }
+}
+
+function validateAmmunition(value: unknown, issues: BalanceValidationIssue[]): void {
+  const path = "ammunition";
+  if (!Array.isArray(value)) {
+    issues.push(issue(path, "must be an array"));
+    return;
+  }
+  if (value.length !== AMMUNITION_TYPES.size) {
+    issues.push(issue(path, "must define every stable ammunition ID exactly once"));
+  }
+  const ids = new Set<string>();
+  value.forEach((value, index) => {
+    const itemPath = `${path}[${index}]`;
+    const ammunition = asRecord(value);
+    if (!ammunition) {
+      issues.push(issue(itemPath, "must be a JSON object"));
+      return;
+    }
+    checkKeys(
+      ammunition,
+      itemPath,
+      [
+        "type", "effect", "reload", "inventory", "flight", "collision",
+        "damage", "terrain", "behavior", "availableLayers",
+      ],
+      issues,
+    );
+    if (typeof ammunition.type !== "string" || !AMMUNITION_TYPES.has(ammunition.type)) {
+      issues.push(issue(`${itemPath}.type`, "must be a stable ammunition ID"));
+    } else if (ids.has(ammunition.type)) {
+      issues.push(issue(`${itemPath}.type`, "must be unique"));
+    } else {
+      ids.add(ammunition.type);
+    }
+    if (!oneOf(ammunition.effect, ["DIRECT", "EXPLOSIVE", "INCENDIARY", "PLAGUE"])) {
+      issues.push(issue(`${itemPath}.effect`, "is not a supported ammunition effect"));
+    }
+    validateReload(ammunition.reload, `${itemPath}.reload`, issues);
+    validateInventory(ammunition.inventory, `${itemPath}.inventory`, issues);
+    validateFlight(ammunition.flight, `${itemPath}.flight`, issues);
+    validateCollision(ammunition.collision, `${itemPath}.collision`, issues);
+    validateDamage(ammunition.damage, `${itemPath}.damage`, issues);
+    validateTerrain(ammunition.terrain, `${itemPath}.terrain`, issues);
+    validateAmmunitionBehavior(ammunition.behavior, `${itemPath}.behavior`, issues);
+    validateEnumArray(
+      ammunition.availableLayers,
+      `${itemPath}.availableLayers`,
+      ["TERRAIN", "UNIT", "FORTRESS", "BOSS", "OUT_OF_BOUNDS"],
+      issues,
+      true,
+    );
+  });
+  if (ids.size === AMMUNITION_TYPES.size && [...AMMUNITION_TYPES].some(id => !ids.has(id))) {
+    issues.push(issue(path, "must define every stable ammunition ID exactly once"));
+  }
+}
+
+function validateReload(value: unknown, path: string, issues: BalanceValidationIssue[]): void {
+  const reload = asRecord(value);
+  if (!reload) {
+    issues.push(issue(path, "must be a JSON object"));
+    return;
+  }
+  checkKeys(reload, path, ["reloadSeconds"], issues);
+  if (!nonNegativeNumber(reload.reloadSeconds)) {
+    issues.push(issue(`${path}.reloadSeconds`, "must be non-negative"));
+  }
+}
+
+function validateInventory(value: unknown, path: string, issues: BalanceValidationIssue[]): void {
+  const inventory = asRecord(value);
+  if (!inventory) {
+    issues.push(issue(path, "must be a JSON object"));
+    return;
+  }
+  checkKeys(inventory, path, ["unlimited", "startingCount"], issues);
+  if (typeof inventory.unlimited !== "boolean") {
+    issues.push(issue(`${path}.unlimited`, "must be a boolean"));
+  }
+  if (inventory.startingCount !== undefined && !nonNegativeInteger(inventory.startingCount)) {
+    issues.push(issue(`${path}.startingCount`, "must be a non-negative integer"));
+  }
+}
+
+function validateFlight(value: unknown, path: string, issues: BalanceValidationIssue[]): void {
+  const flight = asRecord(value);
+  if (!flight) {
+    issues.push(issue(path, "must be a JSON object"));
+    return;
+  }
+  checkKeys(
+    flight,
+    path,
+    [
+      "mass", "windResponse", "gravityResponse", "drag", "initialSpeedMultiplier",
+      "maximumLifetimeSeconds", "apexFragmentation",
+    ],
+    issues,
+  );
+  if (!positiveNumber(flight.mass)) issues.push(issue(`${path}.mass`, "must be positive"));
+  if (!nonNegativeNumber(flight.windResponse)) {
+    issues.push(issue(`${path}.windResponse`, "must be non-negative"));
+  }
+  if (flight.gravityResponse !== undefined && !nonNegativeNumber(flight.gravityResponse)) {
+    issues.push(issue(`${path}.gravityResponse`, "must be non-negative"));
+  }
+  if (flight.drag !== undefined && !nonNegativeNumber(flight.drag)) {
+    issues.push(issue(`${path}.drag`, "must be non-negative"));
+  }
+  if (flight.initialSpeedMultiplier !== undefined && !positiveNumber(flight.initialSpeedMultiplier)) {
+    issues.push(issue(`${path}.initialSpeedMultiplier`, "must be positive"));
+  }
+  if (flight.maximumLifetimeSeconds !== undefined && !positiveNumber(flight.maximumLifetimeSeconds)) {
+    issues.push(issue(`${path}.maximumLifetimeSeconds`, "must be positive"));
+  }
+  if (flight.apexFragmentation !== undefined && flight.apexFragmentation !== null) {
+    const apex = asRecord(flight.apexFragmentation);
+    const apexPath = `${path}.apexFragmentation`;
+    if (!apex) {
+      issues.push(issue(apexPath, "must be a JSON object or null"));
+      return;
+    }
+    checkKeys(
+      apex,
+      apexPath,
+      [
+        "fragmentsPerSide", "minimumReferenceSpeed", "horizontalSpreadPerStep",
+        "initialDownwardSpeed", "downwardSpreadPerStep",
+      ],
+      issues,
+    );
+    if (!positiveInteger(apex.fragmentsPerSide)) {
+      issues.push(issue(`${apexPath}.fragmentsPerSide`, "must be a positive integer"));
+    }
+    if (!positiveNumber(apex.minimumReferenceSpeed)) {
+      issues.push(issue(`${apexPath}.minimumReferenceSpeed`, "must be positive"));
+    }
+    for (const key of ["horizontalSpreadPerStep", "initialDownwardSpeed", "downwardSpreadPerStep"]) {
+      if (!nonNegativeNumber(apex[key])) issues.push(issue(`${apexPath}.${key}`, "must be non-negative"));
+    }
+  }
+}
+
+function validateCollision(value: unknown, path: string, issues: BalanceValidationIssue[]): void {
+  const collision = asRecord(value);
+  if (!collision) {
+    issues.push(issue(path, "must be a JSON object"));
+    return;
+  }
+  checkKeys(collision, path, ["hitLayers", "mode", "hitRadius", "friendlyFire"], issues);
+  validateEnumArray(
+    collision.hitLayers,
+    `${path}.hitLayers`,
+    ["TERRAIN", "UNIT", "FORTRESS", "BOSS", "OUT_OF_BOUNDS"],
+    issues,
+    true,
+  );
+  if (!oneOf(collision.mode, ["STOP_ON_FIRST_TARGET", "PIERCE_UNITS", "IGNORE_UNITS", "IMPACT_ON_TERRAIN"])) {
+    issues.push(issue(`${path}.mode`, "is not a supported collision mode"));
+  }
+  if (!nonNegativeNumber(collision.hitRadius)) {
+    issues.push(issue(`${path}.hitRadius`, "must be non-negative"));
+  }
+  if (
+    collision.friendlyFire !== undefined &&
+    !oneOf(collision.friendlyFire, ["ENEMY_ONLY", "ALL_UNITS", "ALL_TARGETS"])
+  ) {
+    issues.push(issue(`${path}.friendlyFire`, "is not a supported friendly-fire policy"));
+  }
+}
+
+function validateDamage(value: unknown, path: string, issues: BalanceValidationIssue[]): void {
+  const damage = asRecord(value);
+  if (!damage) {
+    issues.push(issue(path, "must be a JSON object"));
+    return;
+  }
+  checkKeys(
+    damage,
+    path,
+    ["unitDamage", "fortressDamage", "unitRadius", "fortressRadius", "falloff", "minimumDamage"],
+    issues,
+  );
+  for (const key of ["unitDamage", "fortressDamage"]) {
+    if (!nonNegativeInteger(damage[key])) {
+      issues.push(issue(`${path}.${key}`, "must be a non-negative integer"));
+    }
+  }
+  for (const key of ["unitRadius", "fortressRadius"]) {
+    if (!nonNegativeNumber(damage[key])) issues.push(issue(`${path}.${key}`, "must be non-negative"));
+  }
+  if (damage.falloff !== undefined && !oneOf(damage.falloff, ["NONE", "LINEAR"])) {
+    issues.push(issue(`${path}.falloff`, "must be NONE or LINEAR"));
+  }
+  if (damage.minimumDamage !== undefined && !nonNegativeInteger(damage.minimumDamage)) {
+    issues.push(issue(`${path}.minimumDamage`, "must be a non-negative integer"));
+  }
+}
+
+function validateTerrain(value: unknown, path: string, issues: BalanceValidationIssue[]): void {
+  const terrain = asRecord(value);
+  if (!terrain) {
+    issues.push(issue(path, "must be a JSON object"));
+    return;
+  }
+  checkKeys(terrain, path, ["deformsTerrain", "craterRadius", "craterDepth"], issues);
+  if (typeof terrain.deformsTerrain !== "boolean") {
+    issues.push(issue(`${path}.deformsTerrain`, "must be a boolean"));
+  }
+  if (!nonNegativeNumber(terrain.craterRadius)) {
+    issues.push(issue(`${path}.craterRadius`, "must be non-negative"));
+  }
+  if (!nonNegativeNumber(terrain.craterDepth)) {
+    issues.push(issue(`${path}.craterDepth`, "must be non-negative"));
+  }
+  if (
+    terrain.deformsTerrain === false &&
+    (terrain.craterRadius !== 0 || terrain.craterDepth !== 0)
+  ) {
+    issues.push(issue(path, "disabled terrain deformation must have zero crater values"));
+  }
+}
+
+function validateAmmunitionBehavior(
+  value: unknown,
+  path: string,
+  issues: BalanceValidationIssue[],
+): void {
+  const behavior = asRecord(value);
+  if (!behavior) {
+    issues.push(issue(path, "must be a JSON object"));
+    return;
+  }
+  if (behavior.kind === "DIRECT_IMPACT") {
+    checkKeys(behavior, path, ["kind"], issues);
+    return;
+  }
+  if (behavior.kind === "EXPLOSION") {
+    checkKeys(behavior, path, ["kind", "radius", "lifetimeSeconds"], issues);
+    if (!nonNegativeNumber(behavior.radius)) issues.push(issue(`${path}.radius`, "must be non-negative"));
+    if (!positiveNumber(behavior.lifetimeSeconds)) {
+      issues.push(issue(`${path}.lifetimeSeconds`, "must be positive"));
+    }
+    return;
+  }
+  if (behavior.kind === "LINGERING_AREA") {
+    checkKeys(
+      behavior,
+      path,
+      [
+        "kind", "radius", "durationSeconds", "tickIntervalSeconds", "damagePerTick",
+        "fortressDamagePerTick", "driftsWithWind", "windDriftMultiplier", "followsTerrain",
+        "unitFriendlyFire",
+      ],
+      issues,
+      ["status"],
+    );
+    if (!nonNegativeNumber(behavior.radius)) issues.push(issue(`${path}.radius`, "must be non-negative"));
+    if (!positiveNumber(behavior.durationSeconds)) {
+      issues.push(issue(`${path}.durationSeconds`, "must be positive"));
+    }
+    if (!positiveNumber(behavior.tickIntervalSeconds)) {
+      issues.push(issue(`${path}.tickIntervalSeconds`, "must be positive"));
+    }
+    for (const key of ["damagePerTick", "fortressDamagePerTick"]) {
+      if (!nonNegativeInteger(behavior[key])) {
+        issues.push(issue(`${path}.${key}`, "must be a non-negative integer"));
+      }
+    }
+    if (typeof behavior.driftsWithWind !== "boolean") {
+      issues.push(issue(`${path}.driftsWithWind`, "must be a boolean"));
+    }
+    if (behavior.windDriftMultiplier !== undefined && !nonNegativeNumber(behavior.windDriftMultiplier)) {
+      issues.push(issue(`${path}.windDriftMultiplier`, "must be non-negative"));
+    }
+    if (behavior.followsTerrain !== undefined && typeof behavior.followsTerrain !== "boolean") {
+      issues.push(issue(`${path}.followsTerrain`, "must be a boolean"));
+    }
+    if (behavior.status !== undefined && behavior.status !== null &&
+        !oneOf(behavior.status, ["BURNING", "POISONED", "SLOWED", "STUNNED", "HASTED"])) {
+      issues.push(issue(`${path}.status`, "is not a supported unit status"));
+    }
+    if (
+      behavior.unitFriendlyFire !== undefined &&
+      !oneOf(behavior.unitFriendlyFire, ["ENEMY_ONLY", "ALL_UNITS", "ALL_TARGETS"])
+    ) {
+      issues.push(issue(`${path}.unitFriendlyFire`, "is not a supported friendly-fire policy"));
+    }
+    return;
+  }
+  issues.push(issue(`${path}.kind`, "is not a supported ammunition behavior"));
+}
+
+function validateSpells(value: unknown, issues: BalanceValidationIssue[]): void {
+  const path = "spells";
+  if (!Array.isArray(value)) {
+    issues.push(issue(path, "must be an array"));
+    return;
+  }
+  if (value.length !== SPELL_TYPES.size) {
+    issues.push(issue(path, "must define every stable spell ID exactly once"));
+  }
+  const ids = new Set<string>();
+  value.forEach((value, index) => {
+    const itemPath = `${path}[${index}]`;
+    const spell = asRecord(value);
+    if (!spell) {
+      issues.push(issue(itemPath, "must be a JSON object"));
+      return;
+    }
+    checkKeys(
+      spell,
+      itemPath,
+      [
+        "type", "goldCost", "category", "targetCategory", "special", "manaCost",
+        "effect", "recastableWhileActive",
+      ],
+      issues,
+    );
+    if (typeof spell.type !== "string" || !SPELL_TYPES.has(spell.type)) {
+      issues.push(issue(`${itemPath}.type`, "must be a stable spell ID"));
+    } else if (ids.has(spell.type)) {
+      issues.push(issue(`${itemPath}.type`, "must be unique"));
+    } else {
+      ids.add(spell.type);
+    }
+    if (!nonNegativeInteger(spell.goldCost)) {
+      issues.push(issue(`${itemPath}.goldCost`, "must be a non-negative integer"));
+    }
+    if (!oneOf(spell.category, ["OFFENSIVE", "DEFENSIVE", "BATTLEFIELD_CONTROL", "SUPPORT", "SIEGE"])) {
+      issues.push(issue(`${itemPath}.category`, "is not a supported spell category"));
+    }
+    if (!oneOf(spell.targetCategory, [
+      "ALLIED_FORCE", "ALLIED_UNIT", "ENEMY_FORCE", "ENEMY_SIEGE_ENGINE", "OWN_FORTRESS", "OWN_GATE",
+    ])) {
+      issues.push(issue(`${itemPath}.targetCategory`, "is not a supported spell target"));
+    }
+    if (typeof spell.special !== "boolean") issues.push(issue(`${itemPath}.special`, "must be a boolean"));
+    if (!positiveInteger(spell.manaCost)) {
+      issues.push(issue(`${itemPath}.manaCost`, "must be a positive integer"));
+    }
+    if (
+      spell.recastableWhileActive !== undefined &&
+      typeof spell.recastableWhileActive !== "boolean"
+    ) {
+      issues.push(issue(`${itemPath}.recastableWhileActive`, "must be a boolean"));
+    }
+    if (spell.type === "HASTE" || spell.type === "HEAL") {
+      if (spell.special !== false) {
+        issues.push(issue(`${itemPath}.special`, "campaign milestone spells must not be special"));
+      }
+    }
+    validateSpellEffect(spell.effect, `${itemPath}.effect`, issues);
+    const expectedEffect = spell.type === "HASTE"
+      ? "HASTE"
+      : spell.type === "FORTRESS_SHIELD"
+        ? "FORTRESS_SHIELD"
+        : spell.type === "RUNIC_BASTION"
+          ? "RUNIC_BASTION"
+          : null;
+    const actualEffect = asRecord(spell.effect)?.kind;
+    if (
+      expectedEffect === null
+        ? spell.effect !== undefined && spell.effect !== null
+        : actualEffect !== expectedEffect
+    ) {
+      issues.push(issue(`${itemPath}.effect`, "does not match the spell's implemented effect"));
+    }
+  });
+  if (ids.size === SPELL_TYPES.size && [...SPELL_TYPES].some(id => !ids.has(id))) {
+    issues.push(issue(path, "must define every stable spell ID exactly once"));
+  }
+}
+
+function validateSpellEffect(value: unknown, path: string, issues: BalanceValidationIssue[]): void {
+  if (value === undefined || value === null) return;
+  const effect = asRecord(value);
+  if (!effect) {
+    issues.push(issue(path, "must be a JSON object or null"));
+    return;
+  }
+  if (effect.kind === "HASTE") {
+    checkKeys(effect, path, ["kind", "durationMilliseconds", "movementSpeedMultiplier"], issues);
+    if (!positiveInteger(effect.durationMilliseconds)) {
+      issues.push(issue(`${path}.durationMilliseconds`, "must be a positive integer"));
+    }
+    if (!numberAtLeast(effect.movementSpeedMultiplier, Number.MIN_VALUE) ||
+        typeof effect.movementSpeedMultiplier === "number" && effect.movementSpeedMultiplier <= 1) {
+      issues.push(issue(`${path}.movementSpeedMultiplier`, "must be greater than 1"));
+    }
+    return;
+  }
+  if (effect.kind === "FORTRESS_SHIELD" || effect.kind === "RUNIC_BASTION") {
+    checkKeys(effect, path, ["kind", "hitPoints"], issues);
+    if (!positiveInteger(effect.hitPoints)) {
+      issues.push(issue(`${path}.hitPoints`, "must be a positive integer"));
+    }
+    return;
+  }
+  issues.push(issue(`${path}.kind`, "is not a supported spell effect"));
+}
+
+function validateMana(value: unknown, issues: BalanceValidationIssue[]): void {
+  const path = "mana";
+  const mana = asRecord(value);
+  if (!mana) {
+    issues.push(issue(path, "must be a JSON object"));
+    return;
+  }
+  checkKeys(
+    mana,
+    path,
+    ["startingMana", "maximumMana", "regenerationAmount", "regenerationIntervalMilliseconds"],
+    issues,
+  );
+  if (!nonNegativeInteger(mana.startingMana)) {
+    issues.push(issue(`${path}.startingMana`, "must be a non-negative integer"));
+  }
+  if (!positiveInteger(mana.maximumMana)) {
+    issues.push(issue(`${path}.maximumMana`, "must be a positive integer"));
+  }
+  if (
+    typeof mana.startingMana === "number" &&
+    typeof mana.maximumMana === "number" &&
+    mana.startingMana > mana.maximumMana
+  ) {
+    issues.push(issue(`${path}.startingMana`, "must not exceed maximumMana"));
+  }
+  if (!positiveInteger(mana.regenerationAmount)) {
+    issues.push(issue(`${path}.regenerationAmount`, "must be a positive integer"));
+  }
+  if (!positiveInteger(mana.regenerationIntervalMilliseconds)) {
+    issues.push(issue(`${path}.regenerationIntervalMilliseconds`, "must be a positive integer"));
+  }
+}
+
+function validateRuntime(value: unknown, issues: BalanceValidationIssue[]): void {
+  const runtime = requiredRecord(
+    value,
+    "runtime",
+    [
+      "economy", "fortresses", "catapult", "match", "physics", "wind", "combat",
+      "bossCombat", "aiProfiles", "aiStrategy", "rewards", "campaign",
+    ],
+    issues,
+  );
+  if (!runtime) return;
+
+  const economy = requiredRecord(
+    runtime.economy,
+    "runtime.economy",
+    ["startingGold", "startingSupply", "maximumSupply", "supplyRegenerationIntervalSeconds"],
+    issues,
+  );
+  if (economy) {
+    if (!nonNegativeInteger(economy.startingGold)) {
+      issues.push(issue("runtime.economy.startingGold", "must be a non-negative integer"));
+    }
+    if (!nonNegativeInteger(economy.startingSupply)) {
+      issues.push(issue("runtime.economy.startingSupply", "must be a non-negative integer"));
+    }
+    if (!positiveInteger(economy.maximumSupply)) {
+      issues.push(issue("runtime.economy.maximumSupply", "must be a positive integer"));
+    }
+    if (
+      typeof economy.startingSupply === "number" &&
+      typeof economy.maximumSupply === "number" &&
+      economy.startingSupply > economy.maximumSupply
+    ) {
+      issues.push(issue("runtime.economy.startingSupply", "must not exceed maximumSupply"));
+    }
+    if (!positiveNumber(economy.supplyRegenerationIntervalSeconds)) {
+      issues.push(issue(
+        "runtime.economy.supplyRegenerationIntervalSeconds",
+        "must be positive",
+      ));
+    }
+  }
+
+  const fortresses = requiredRecord(
+    runtime.fortresses,
+    "runtime.fortresses",
+    ["standardMaximumHealth", "demoBlueMaximumHealth"],
+    issues,
+  );
+  if (fortresses) {
+    for (const key of ["standardMaximumHealth", "demoBlueMaximumHealth"]) {
+      if (!positiveInteger(fortresses[key])) {
+        issues.push(issue(`runtime.fortresses.${key}`, "must be a positive integer"));
+      }
+    }
+  }
+
+  const catapult = requiredRecord(
+    runtime.catapult,
+    "runtime.catapult",
+    ["initialAimDirectionDegrees", "initialAimPower"],
+    issues,
+  );
+  if (catapult) {
+    if (
+      typeof catapult.initialAimDirectionDegrees !== "number" ||
+      !Number.isFinite(catapult.initialAimDirectionDegrees) ||
+      catapult.initialAimDirectionDegrees < 0 ||
+      catapult.initialAimDirectionDegrees > 180
+    ) {
+      issues.push(issue(
+        "runtime.catapult.initialAimDirectionDegrees",
+        "must be between 0 and 180 degrees",
+      ));
+    }
+    if (
+      typeof catapult.initialAimPower !== "number" ||
+      !Number.isFinite(catapult.initialAimPower) ||
+      catapult.initialAimPower < 0 ||
+      catapult.initialAimPower > 100
+    ) {
+      issues.push(issue("runtime.catapult.initialAimPower", "must be between 0 and 100"));
+    }
+  }
+
+  const match = requiredRecord(
+    runtime.match,
+    "runtime.match",
+    ["durationMilliseconds", "bossEncounterDurationMilliseconds"],
+    issues,
+  );
+  if (match) {
+    for (const key of ["durationMilliseconds", "bossEncounterDurationMilliseconds"]) {
+      if (!positiveInteger(match[key])) {
+        issues.push(issue(`runtime.match.${key}`, "must be a positive integer"));
+      }
+    }
+  }
+
+  const physics = requiredRecord(
+    runtime.physics,
+    "runtime.physics",
+    ["gravityAccelerationY", "windAccelerationScale"],
+    issues,
+  );
+  if (physics) {
+    if (!nonNegativeNumber(physics.gravityAccelerationY)) {
+      issues.push(issue("runtime.physics.gravityAccelerationY", "must be non-negative"));
+    }
+    if (!positiveNumber(physics.windAccelerationScale)) {
+      issues.push(issue("runtime.physics.windAccelerationScale", "must be positive"));
+    }
+  }
+
+  const wind = requiredRecord(
+    runtime.wind,
+    "runtime.wind",
+    [
+      "initialDelaySeconds", "transitionSeconds", "minimumChangeIntervalSeconds",
+      "maximumChangeIntervalSeconds", "minimumStrength", "maximumStrength",
+    ],
+    issues,
+  );
+  if (wind) {
+    if (!nonNegativeNumber(wind.initialDelaySeconds)) {
+      issues.push(issue("runtime.wind.initialDelaySeconds", "must be non-negative"));
+    }
+    if (!positiveNumber(wind.transitionSeconds)) {
+      issues.push(issue("runtime.wind.transitionSeconds", "must be positive"));
+    }
+    if (!positiveNumber(wind.minimumChangeIntervalSeconds)) {
+      issues.push(issue("runtime.wind.minimumChangeIntervalSeconds", "must be positive"));
+    }
+    if (!positiveNumber(wind.maximumChangeIntervalSeconds)) {
+      issues.push(issue("runtime.wind.maximumChangeIntervalSeconds", "must be positive"));
+    }
+    if (
+      typeof wind.minimumChangeIntervalSeconds === "number" &&
+      typeof wind.maximumChangeIntervalSeconds === "number" &&
+      wind.maximumChangeIntervalSeconds < wind.minimumChangeIntervalSeconds
+    ) {
+      issues.push(issue(
+        "runtime.wind.maximumChangeIntervalSeconds",
+        "must not be less than minimumChangeIntervalSeconds",
+      ));
+    }
+    if (!nonNegativeNumber(wind.minimumStrength)) {
+      issues.push(issue("runtime.wind.minimumStrength", "must be non-negative"));
+    }
+    if (!nonNegativeNumber(wind.maximumStrength)) {
+      issues.push(issue("runtime.wind.maximumStrength", "must be non-negative"));
+    }
+    if (
+      typeof wind.minimumStrength === "number" &&
+      typeof wind.maximumStrength === "number" &&
+      wind.maximumStrength < wind.minimumStrength
+    ) {
+      issues.push(issue("runtime.wind.maximumStrength", "must not be less than minimumStrength"));
+    }
+  }
+
+  const combat = requiredRecord(
+    runtime.combat,
+    "runtime.combat",
+    [
+      "minimumDamageVarianceFactor", "maximumDamageVarianceFactor",
+      "unitLuckBiasMaximumMagnitude", "maximumInitialAttackDelayRatio", "unitMovementSpeedMultiplier",
+      "unitMovementSpeedScale", "garrisonMovementSpeedScale", "unitInteractionRange",
+      "fortressAttackRange", "sapperFortressStandoffDistance",
+      "sapperContactSpeedMultiplier", "meleeAttackStandoffDistance",
+      "attackFormationSpacing", "meleeSynergyDamagePerAdditionalUnit",
+      "maximumMeleeSynergyMultiplier", "demolisher",
+    ],
+    issues,
+  );
+  if (combat) {
+    if (!positiveNumber(combat.minimumDamageVarianceFactor)) {
+      issues.push(issue("runtime.combat.minimumDamageVarianceFactor", "must be positive"));
+    }
+    if (!positiveNumber(combat.maximumDamageVarianceFactor)) {
+      issues.push(issue("runtime.combat.maximumDamageVarianceFactor", "must be positive"));
+    }
+    if (
+      typeof combat.minimumDamageVarianceFactor === "number" &&
+      typeof combat.maximumDamageVarianceFactor === "number" &&
+      combat.maximumDamageVarianceFactor < combat.minimumDamageVarianceFactor
+    ) {
+      issues.push(issue(
+        "runtime.combat.maximumDamageVarianceFactor",
+        "must not be less than minimumDamageVarianceFactor",
+      ));
+    }
+    if (!nonNegativeNumber(combat.unitLuckBiasMaximumMagnitude)) {
+      issues.push(issue("runtime.combat.unitLuckBiasMaximumMagnitude", "must be non-negative"));
+    }
+    if (!fraction(combat.maximumInitialAttackDelayRatio)) {
+      issues.push(issue(
+        "runtime.combat.maximumInitialAttackDelayRatio",
+        "must be between 0 and 1",
+      ));
+    }
+    if (!positiveNumber(combat.unitMovementSpeedMultiplier)) {
+      issues.push(issue("runtime.combat.unitMovementSpeedMultiplier", "must be positive"));
+    }
+    for (const key of [
+      "unitMovementSpeedScale", "garrisonMovementSpeedScale", "unitInteractionRange",
+      "fortressAttackRange", "sapperFortressStandoffDistance",
+      "meleeAttackStandoffDistance", "attackFormationSpacing",
+      "meleeSynergyDamagePerAdditionalUnit",
+    ]) {
+      if (!nonNegativeNumber(combat[key])) {
+        issues.push(issue(`runtime.combat.${key}`, "must be non-negative"));
+      }
+    }
+    if (!fraction(combat.sapperContactSpeedMultiplier)) {
+      issues.push(issue(
+        "runtime.combat.sapperContactSpeedMultiplier",
+        "must be between 0 and 1",
+      ));
+    }
+    if (!numberAtLeast(combat.maximumMeleeSynergyMultiplier, 1)) {
+      issues.push(issue(
+        "runtime.combat.maximumMeleeSynergyMultiplier",
+        "must be at least 1",
+      ));
+    }
+
+    const demolisher = requiredRecord(
+      combat.demolisher,
+      "runtime.combat.demolisher",
+      ["explosionDamage", "blastRadius", "throwDurationSeconds", "throwForwardDistance"],
+      issues,
+    );
+    if (demolisher) {
+      if (!positiveInteger(demolisher.explosionDamage)) {
+        issues.push(issue("runtime.combat.demolisher.explosionDamage", "must be a positive integer"));
+      }
+      if (!positiveNumber(demolisher.blastRadius)) {
+        issues.push(issue("runtime.combat.demolisher.blastRadius", "must be positive"));
+      }
+      if (!positiveNumber(demolisher.throwDurationSeconds)) {
+        issues.push(issue("runtime.combat.demolisher.throwDurationSeconds", "must be positive"));
+      }
+      if (!nonNegativeNumber(demolisher.throwForwardDistance)) {
+        issues.push(issue(
+          "runtime.combat.demolisher.throwForwardDistance",
+          "must be non-negative",
+        ));
+      }
+    }
+  }
+
+  const bossCombat = requiredRecord(
+    runtime.bossCombat,
+    "runtime.bossCombat",
+    ["largerGroupTargetChance", "maximumDistanceFalloff"],
+    issues,
+  );
+  if (bossCombat) {
+    for (const key of ["largerGroupTargetChance", "maximumDistanceFalloff"]) {
+      if (!fraction(bossCombat[key])) {
+        issues.push(issue(`runtime.bossCombat.${key}`, "must be between 0 and 1"));
+      }
+    }
+  }
+
+  validateAiProfiles(runtime.aiProfiles, issues);
+  validateAiStrategy(runtime.aiStrategy, issues);
+
+  const rewards = requiredRecord(
+    runtime.rewards,
+    "runtime.rewards",
+    [
+      "winGold", "directEnemyUnitHitGold", "fastWinGold",
+      "fastWinThresholdMilliseconds", "untouchedFortressGold",
+      "fortressHitStreakGoldPerHitBeyondFirst", "fortressHitStreakStartHits",
+    ],
+    issues,
+  );
+  if (rewards) {
+    for (const key of [
+      "winGold", "directEnemyUnitHitGold", "fastWinGold", "untouchedFortressGold",
+      "fortressHitStreakGoldPerHitBeyondFirst",
+    ]) {
+      if (!nonNegativeInteger(rewards[key])) {
+        issues.push(issue(`runtime.rewards.${key}`, "must be a non-negative integer"));
+      }
+    }
+    if (!positiveInteger(rewards.fastWinThresholdMilliseconds)) {
+      issues.push(issue("runtime.rewards.fastWinThresholdMilliseconds", "must be a positive integer"));
+    }
+    if (
+      !positiveInteger(rewards.fortressHitStreakStartHits) ||
+      typeof rewards.fortressHitStreakStartHits === "number" &&
+        rewards.fortressHitStreakStartHits < 2
+    ) {
+      issues.push(issue("runtime.rewards.fortressHitStreakStartHits", "must be at least 2"));
+    }
+  }
+
+  validateCampaignBalance(runtime.campaign, issues);
+}
+
+function validateAiProfiles(value: unknown, issues: BalanceValidationIssue[]): void {
+  const path = "runtime.aiProfiles";
+  if (!Array.isArray(value)) {
+    issues.push(issue(path, "must be an array"));
+    return;
+  }
+  if (value.length !== AI_PROFILE_IDS.size) {
+    issues.push(issue(path, "must define every standard AI profile exactly once"));
+  }
+  const ids = new Set<string>();
+  value.forEach((value, index) => {
+    const itemPath = `${path}[${index}]`;
+    const profile = requiredRecord(
+      value,
+      itemPath,
+      [
+        "profileId", "angleErrorDegrees", "powerError", "reactionIntervalMilliseconds",
+        "unitRecruitmentIntervalMilliseconds", "progressionErrorReduction",
+        "progressionReactionReduction",
+      ],
+      issues,
+    );
+    if (!profile) return;
+    if (typeof profile.profileId !== "string" || !AI_PROFILE_IDS.has(profile.profileId)) {
+      issues.push(issue(`${itemPath}.profileId`, "must be a standard AI profile ID"));
+    } else if (ids.has(profile.profileId)) {
+      issues.push(issue(`${itemPath}.profileId`, "must be unique"));
+    } else {
+      ids.add(profile.profileId);
+    }
+    if (!nonNegativeNumber(profile.angleErrorDegrees)) {
+      issues.push(issue(`${itemPath}.angleErrorDegrees`, "must be non-negative"));
+    }
+    if (!nonNegativeNumber(profile.powerError)) {
+      issues.push(issue(`${itemPath}.powerError`, "must be non-negative"));
+    }
+    if (!positiveInteger(profile.reactionIntervalMilliseconds)) {
+      issues.push(issue(`${itemPath}.reactionIntervalMilliseconds`, "must be a positive integer"));
+    }
+    if (!nonNegativeInteger(profile.unitRecruitmentIntervalMilliseconds)) {
+      issues.push(issue(`${itemPath}.unitRecruitmentIntervalMilliseconds`, "must be non-negative"));
+    }
+    if (!fraction(profile.progressionErrorReduction)) {
+      issues.push(issue(`${itemPath}.progressionErrorReduction`, "must be between 0 and 1"));
+    }
+    if (!fraction(profile.progressionReactionReduction)) {
+      issues.push(issue(`${itemPath}.progressionReactionReduction`, "must be between 0 and 1"));
+    }
+  });
+  if (ids.size === AI_PROFILE_IDS.size && [...AI_PROFILE_IDS].some(id => !ids.has(id))) {
+    issues.push(issue(path, "must define every standard AI profile exactly once"));
+  }
+}
+
+function validateCampaignBalance(value: unknown, issues: BalanceValidationIssue[]): void {
+  const campaign = requiredRecord(
+    value,
+    "runtime.campaign",
+    [
+      "initialWindStrength", "initialWindStrengthStep", "initialWindStrengthBands",
+      "demoInitialWindStrength", "aiDifficultyBands",
+    ],
+    issues,
+  );
+  if (!campaign) return;
+  for (const key of ["initialWindStrength", "initialWindStrengthStep", "demoInitialWindStrength"]) {
+    if (!nonNegativeNumber(campaign[key])) {
+      issues.push(issue(`runtime.campaign.${key}`, "must be non-negative"));
+    }
+  }
+  if (!positiveInteger(campaign.initialWindStrengthBands)) {
+    issues.push(issue("runtime.campaign.initialWindStrengthBands", "must be a positive integer"));
+  }
+  if (!Array.isArray(campaign.aiDifficultyBands) || campaign.aiDifficultyBands.length === 0) {
+    issues.push(issue("runtime.campaign.aiDifficultyBands", "must contain at least one band"));
+    return;
+  }
+
+  const bands: { firstLevel: number; lastLevel: number }[] = [];
+  campaign.aiDifficultyBands.forEach((value, index) => {
+    const path = `runtime.campaign.aiDifficultyBands[${index}]`;
+    const band = requiredRecord(
+      value,
+      path,
+      [
+        "firstLevel", "lastLevel", "profileId",
+        "progressionStartPercent", "progressionEndPercent",
+      ],
+      issues,
+    );
+    if (!band) return;
+    if (!positiveInteger(band.firstLevel)) {
+      issues.push(issue(`${path}.firstLevel`, "must be a positive integer"));
+    }
+    if (!positiveInteger(band.lastLevel)) {
+      issues.push(issue(`${path}.lastLevel`, "must be a positive integer"));
+    }
+    if (
+      positiveInteger(band.firstLevel) &&
+      positiveInteger(band.lastLevel) &&
+      band.lastLevel < band.firstLevel
+    ) {
+      issues.push(issue(`${path}.lastLevel`, "must not precede firstLevel"));
+    }
+    if (typeof band.profileId !== "string" || !AI_PROFILE_IDS.has(band.profileId)) {
+      issues.push(issue(`${path}.profileId`, "must be a standard AI profile ID"));
+    }
+    for (const key of ["progressionStartPercent", "progressionEndPercent"]) {
+      if (!nonNegativeInteger(band[key]) || typeof band[key] === "number" && band[key] > 100) {
+        issues.push(issue(`${path}.${key}`, "must be an integer between 0 and 100"));
+      }
+    }
+    if (positiveInteger(band.firstLevel) && positiveInteger(band.lastLevel)) {
+      bands.push({ firstLevel: band.firstLevel, lastLevel: band.lastLevel });
+    }
+  });
+  if (bands.length > 0) {
+    if (bands[0].firstLevel !== 1) {
+      issues.push(issue("runtime.campaign.aiDifficultyBands[0].firstLevel", "must start at level 1"));
+    }
+    for (let index = 1; index < bands.length; index += 1) {
+      if (bands[index - 1].lastLevel + 1 !== bands[index].firstLevel) {
+        issues.push(issue(
+          `runtime.campaign.aiDifficultyBands[${index}].firstLevel`,
+          "bands must be ordered, contiguous, and non-overlapping",
+        ));
+      }
+    }
+    if (bands[bands.length - 1].lastLevel !== 100) {
+      issues.push(issue(
+        `runtime.campaign.aiDifficultyBands[${bands.length - 1}].lastLevel`,
+        "must cover the final campaign level 100",
+      ));
+    }
+  }
+}
+
+function validateAiStrategy(value: unknown, issues: BalanceValidationIssue[]): void {
+  const strategy = requiredRecord(
+    value,
+    "runtime.aiStrategy",
+    [
+      "aimAngleOffsetDegrees", "horizontalDistancePerPowerPercent",
+      "ammunitionScoring", "unitScoring", "waveDispatch",
+    ],
+    issues,
+  );
+  if (!strategy) return;
+  if (typeof strategy.aimAngleOffsetDegrees !== "number" ||
+      !Number.isFinite(strategy.aimAngleOffsetDegrees)) {
+    issues.push(issue("runtime.aiStrategy.aimAngleOffsetDegrees", "must be finite"));
+  }
+  if (!positiveNumber(strategy.horizontalDistancePerPowerPercent)) {
+    issues.push(issue(
+      "runtime.aiStrategy.horizontalDistancePerPowerPercent",
+      "must be positive",
+    ));
+  }
+
+  const ammunitionScoring = requiredRecord(
+    strategy.ammunitionScoring,
+    "runtime.aiStrategy.ammunitionScoring",
+    [
+      "situationalFortressDamageWeight", "situationalUnitDamageWeight",
+      "situationalFortressRadiusWeight", "situationalUnitRadiusWeight",
+      "counterplayUnitDamageWeight", "counterplayUnitRadiusWeight",
+      "counterplayFortressDamageWeight", "counterplayFortressRadiusWeight",
+    ],
+    issues,
+  );
+  if (ammunitionScoring) {
+    for (const key of [
+      "situationalFortressDamageWeight", "situationalUnitDamageWeight",
+      "situationalFortressRadiusWeight", "situationalUnitRadiusWeight",
+      "counterplayUnitDamageWeight", "counterplayUnitRadiusWeight",
+      "counterplayFortressDamageWeight", "counterplayFortressRadiusWeight",
+    ]) {
+      if (!nonNegativeNumber(ammunitionScoring[key])) {
+        issues.push(issue(`runtime.aiStrategy.ammunitionScoring.${key}`, "must be non-negative"));
+      }
+    }
+  }
+
+  const unitScoring = requiredRecord(
+    strategy.unitScoring,
+    "runtime.aiStrategy.unitScoring",
+    [
+      "sapperPriorityScore", "demolisherPriorityScore", "attackDamageWeight",
+      "speedWeight", "defenderVsSapperRoleBonus", "rangedVsRangedRoleBonus",
+      "rangedVsMeleeRoleBonus", "supplyCostPenaltyWeight",
+    ],
+    issues,
+  );
+  if (unitScoring) {
+    for (const key of [
+      "sapperPriorityScore", "demolisherPriorityScore", "attackDamageWeight",
+      "speedWeight", "defenderVsSapperRoleBonus", "rangedVsRangedRoleBonus",
+      "rangedVsMeleeRoleBonus", "supplyCostPenaltyWeight",
+    ]) {
+      if (!nonNegativeNumber(unitScoring[key])) {
+        issues.push(issue(`runtime.aiStrategy.unitScoring.${key}`, "must be non-negative"));
+      }
+    }
+  }
+
+  const waveDispatch = requiredRecord(
+    strategy.waveDispatch,
+    "runtime.aiStrategy.waveDispatch",
+    [
+      "situationalMinimumReadyUnits", "counterplayMinimumReadyUnits",
+      "counterplayMinimumReadyUnitsAgainstMovingEnemies", "lowFortressHealthFraction",
+    ],
+    issues,
+  );
+  if (waveDispatch) {
+    for (const key of [
+      "situationalMinimumReadyUnits", "counterplayMinimumReadyUnits",
+      "counterplayMinimumReadyUnitsAgainstMovingEnemies",
+    ]) {
+      if (!positiveInteger(waveDispatch[key])) {
+        issues.push(issue(`runtime.aiStrategy.waveDispatch.${key}`, "must be a positive integer"));
+      }
+    }
+    if (!fraction(waveDispatch.lowFortressHealthFraction)) {
+      issues.push(issue(
+        "runtime.aiStrategy.waveDispatch.lowFortressHealthFraction",
+        "must be between 0 and 1",
+      ));
+    }
+  }
+}
+
+function requiredRecord(
+  value: unknown,
+  path: string,
+  keys: readonly string[],
+  issues: BalanceValidationIssue[],
+): Record<string, unknown> | null {
+  const record = asRecord(value);
+  if (!record) {
+    issues.push(issue(path, "must be a JSON object"));
+    return null;
+  }
+  checkKeys(record, path, keys, issues);
+  return record;
+}
+
+function validateEnumArray(
+  value: unknown,
+  path: string,
+  allowed: readonly string[],
+  issues: BalanceValidationIssue[],
+  nonEmpty: boolean,
+): void {
+  if (!Array.isArray(value)) {
+    issues.push(issue(path, "must be an array"));
+    return;
+  }
+  if (nonEmpty && value.length === 0) issues.push(issue(path, "must not be empty"));
+  const seen = new Set<string>();
+  value.forEach((item, index) => {
+    if (typeof item !== "string" || !allowed.includes(item)) {
+      issues.push(issue(`${path}[${index}]`, "contains an unsupported value"));
+    } else if (seen.has(item)) {
+      issues.push(issue(`${path}[${index}]`, "must be unique"));
+    } else {
+      seen.add(item);
+    }
+  });
+}
+
+function oneOf(value: unknown, allowed: readonly string[]): boolean {
+  return typeof value === "string" && allowed.includes(value);
 }
 
 function validateProfile(
@@ -207,9 +1309,9 @@ function validateProfile(
           "rangeWorldUnits",
           "cooldownSeconds",
           "initialCooldownSeconds",
+          "windupSeconds",
         ],
         issues,
-        ["windupSeconds"],
       );
       if (attack.target !== "UNIT" && attack.target !== "FORTRESS_GATE") {
         issues.push(issue(`${attackPath}.target`, "is not a supported attack target"));
@@ -236,10 +1338,10 @@ function validateProfile(
       if (!nonNegativeNumber(attack.initialCooldownSeconds)) {
         issues.push(issue(`${attackPath}.initialCooldownSeconds`, "must be non-negative"));
       }
-      if (attack.windupSeconds !== undefined && !nonNegativeNumber(attack.windupSeconds)) {
+      if (!nonNegativeNumber(attack.windupSeconds)) {
         issues.push(issue(`${attackPath}.windupSeconds`, "must be non-negative"));
       }
-      if (attack.windupSeconds !== undefined && attack.windupSeconds !== 0 && attack.target !== "UNIT") {
+      if (attack.windupSeconds !== 0 && attack.target !== "UNIT") {
         issues.push(issue(`${attackPath}.windupSeconds`, "is only supported for unit attacks"));
       }
     });
@@ -278,12 +1380,13 @@ function validateProfile(
     });
     if (enrages > 1) issues.push(issue(`${path}.specialAbilities`, "may contain at most one ENRAGE"));
   }
-  if (!Array.isArray(profile.immuneAmmunitionTypes)) {
+  const immuneAmmunitionTypes = profile.immuneAmmunitionTypes;
+  if (!Array.isArray(immuneAmmunitionTypes)) {
     issues.push(issue(`${path}.immuneAmmunitionTypes`, "must be an array"));
   } else {
     const immunities = new Set<string>();
-    profile.immuneAmmunitionTypes.forEach((value, index) => {
-      if (typeof value !== "string" || !AMMUNITION_ID.test(value)) {
+    immuneAmmunitionTypes.forEach((value, index) => {
+      if (typeof value !== "string" || !AMMUNITION_TYPES.has(value)) {
         issues.push(issue(`${path}.immuneAmmunitionTypes[${index}]`, "must be a stable ammunition ID"));
       } else if (immunities.has(value)) {
         issues.push(issue(`${path}.immuneAmmunitionTypes[${index}]`, "must be unique"));
@@ -355,6 +1458,9 @@ function parseRecord(content: string): Record<string, unknown> | null {
 
 const positiveInteger = (value: unknown): value is number =>
   typeof value === "number" && Number.isInteger(value) && value > 0;
+
+const nonNegativeInteger = (value: unknown): value is number =>
+  typeof value === "number" && Number.isInteger(value) && value >= 0;
 
 const positiveNumber = (value: unknown): value is number =>
   typeof value === "number" && Number.isFinite(value) && value > 0;

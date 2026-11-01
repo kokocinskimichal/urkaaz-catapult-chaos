@@ -57,18 +57,13 @@ podstawową prezentację oraz authoring balansu w Studio.
 Przed tym wdrożeniem repozytorium nie miało runtime bossów ani celu
 centralnego. Obecnie runtime należy do `BossSystem` w
 `game-simulation`, a kanoniczne definicje balansu bossów znajdują się w
-typowanym modelu `game-domain` oraz zasobie JSON. Wciąż istnieją także
-kanoniczne katalogi pozostałych systemów:
-
-- `UnitConfigurations`;
-- `AmmunitionCatalog`;
-- `SpellCatalog` i `ManaConfiguration`.
-
-Ich wartości są konsumowane przez symulację, AI, loadout i projekcje dla UI.
-Dodanie osobnego `BossBalanceCatalog` obok przyszłego wspólnego pliku balansu
-stworzyłoby kolejne źródło prawdy. Rekomendacja: rozszerzać jeden typowany
-model balansu i migrować istniejące katalogi do JSON-u etapami; nie utrzymywać
-tej samej wartości jednocześnie w JSON-ie i Kotlinie.
+typowanym modelu `game-domain` oraz zasobie JSON. Schema 3 zawiera również
+profile jednostek, amunicji, zaklęć i many. `UnitCatalog`,
+`AmmunitionCatalog` i `SpellCatalog` są typowanymi lookupami budowanymi z tego
+samego `GameBalanceConfig`; nie przechowują drugiej kopii wartości w Kotlinie.
+Symulacja, AI, loadout i Androidowe projekcje dostają wspólny, niemutowalny
+odczyt. Nie dodawać osobnych katalogów balansowych ani runtime I/O poza warstwą
+aplikacyjną.
 
 `CampaignChapterRegistry` i dane `bossPositions` opisują landmarki na mapie
 kampanii. Nie są identyfikatorami runtime bossa ani jego pozycją w świecie.
@@ -219,18 +214,11 @@ pozostają w Android resources, a `BossPresentationCatalog` mapuje stabilne
 
 ### Migracja istniejących katalogów
 
-Bosses są pierwszym konsumentem JSON-u. Następna migracja obejmuje po kolei:
-
-1. `UnitConfigurations` i konfiguracje jednostek;
-2. `AmmunitionCatalog` oraz profile reloadu, inventory, lotu, kolizji i
-   obrażeń;
-3. `SpellCatalog`, `ManaConfiguration` i parametry efektów;
-4. wspólne parametry meczu oraz poziomowe modyfikatory balansu, jeśli zostaną
-   zatwierdzone.
-
-Każdy etap ma wyeliminować duplikację pomiędzy JSON-em a Kotlinem. Wartości są
-przekazywane jako jeden niemutowalny katalog do symulacji, AI oraz projekcji
-loadoutu; AI i UI nie dostają własnych kopii liczb balansu.
+Migracja katalogów jednostek, amunicji, zaklęć i many jest opisana w
+`docs/migration/game-balance-json-expansion-plan.md` i została wdrożona w
+schema 3. Profile bossów i wspólne parametry walki runtime korzystają z tej
+samej walidowanej konfiguracji; nie należy kopiować ich do domyślnych wartości
+w Kotlinie.
 
 ## Kampania, scenariusz i wynik
 

@@ -20,9 +20,6 @@ data class CampaignMilestoneDefinition(
         require(availableFromLevel in (completedLevel + 1)..CampaignLevelDefinition.MAX_LEVELS) {
             "availableFromLevel must be after completion and within the campaign"
         }
-        require(!SpellCatalog.definition(spellType).special) {
-            "campaign milestones can only unlock regular spells"
-        }
     }
 }
 
@@ -48,6 +45,12 @@ class CampaignMilestoneRegistry(
         definitionsById.values
             .filter { it.availableFromLevel <= level }
             .sortedBy { it.id }
+
+    fun validate(spells: SpellCatalog) {
+        require(definitionsById.values.all { !spells.definition(it.spellType).special }) {
+            "campaign milestones can only unlock regular spells"
+        }
+    }
 
     companion object {
         private val DEFAULT_DEFINITIONS = listOf(

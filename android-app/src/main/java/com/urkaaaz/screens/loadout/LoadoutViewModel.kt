@@ -83,20 +83,21 @@ internal fun <T> availableOptionsFirst(
 class LoadoutViewModel(
     campaignLevel: Int,
     private val useCases: LoadoutUseCases,
+    private val loadoutCatalog: LoadoutCatalog = LoadoutCatalog.bundled(),
     demoMode: Boolean = false,
     definition: CampaignLevelDefinition? = null,
 ) {
     private val campaignDefinition = if (demoMode) {
         null
     } else {
-        definition ?: CampaignLevelDefinition.forLevel(campaignLevel)
+        definition ?: useCases.campaignLevelDefinition(campaignLevel)
     }
     private val availability = if (demoMode) {
         LoadoutAvailability(
             level = campaignLevel,
-            unitTypes = LoadoutCatalog.units.mapTo(mutableSetOf()) { it.id },
-            ammunitionTypes = LoadoutCatalog.ammunition.mapTo(mutableSetOf()) { it.id },
-            spellTypes = LoadoutCatalog.spells.mapTo(mutableSetOf()) { it.id },
+            unitTypes = loadoutCatalog.units.mapTo(mutableSetOf()) { it.id },
+            ammunitionTypes = loadoutCatalog.ammunition.mapTo(mutableSetOf()) { it.id },
+            spellTypes = loadoutCatalog.spells.mapTo(mutableSetOf()) { it.id },
         )
     } else {
         val definition = requireNotNull(campaignDefinition)
@@ -112,13 +113,13 @@ class LoadoutViewModel(
     var state = LoadoutUiState(
         level = campaignDefinition?.level ?: campaignLevel,
         demoMode = demoMode,
-        availableUnits = LoadoutCatalog.units
+        availableUnits = loadoutCatalog.units
             .map { it.id }
             .filter { it in availability.unitTypes },
-        availableAmmunition = LoadoutCatalog.ammunition
+        availableAmmunition = loadoutCatalog.ammunition
             .map { it.id }
             .filter { it in availability.ammunitionTypes },
-        availableSpells = LoadoutCatalog.spells
+        availableSpells = loadoutCatalog.spells
             .map { it.id }
             .filter { it in availability.spellTypes },
     )
@@ -190,14 +191,14 @@ class LoadoutViewModel(
         val progression = state.progression
         return when (item) {
             is LoadoutItemReference.Unit -> when {
-                LoadoutCatalog.findUnit(item.identifier) == null ->
+                loadoutCatalog.findUnit(item.identifier) == null ->
                     LoadoutOptionStatus.UNAVAILABLE
                 item.identifier in draft?.unitTypes.orEmpty() -> LoadoutOptionStatus.SELECTED
                 item.identifier !in availability.unitTypes -> LoadoutOptionStatus.UNAVAILABLE
                 else -> LoadoutOptionStatus.AVAILABLE
             }
             is LoadoutItemReference.Ammunition -> {
-                val ammunition = LoadoutCatalog.findAmmunition(item.identifier)
+                val ammunition = loadoutCatalog.findAmmunition(item.identifier)
                     ?: return LoadoutOptionStatus.UNAVAILABLE
                 when {
                     item.identifier == MatchLoadout.ROCK -> LoadoutOptionStatus.SELECTED
@@ -212,7 +213,7 @@ class LoadoutViewModel(
                 }
             }
             is LoadoutItemReference.Spell -> {
-                val spell = LoadoutCatalog.findSpell(item.identifier)
+                val spell = loadoutCatalog.findSpell(item.identifier)
                     ?: return LoadoutOptionStatus.UNAVAILABLE
                 when {
                     item.identifier in draft?.spellTypes.orEmpty() ->

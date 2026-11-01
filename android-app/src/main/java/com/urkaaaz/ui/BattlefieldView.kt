@@ -10,6 +10,7 @@ import android.view.View
 import android.view.MotionEvent
 import android.view.ScaleGestureDetector
 import com.urkaaaz.contracts.WorldDimensions
+import com.urkaaaz.contracts.WorldScale
 import java.util.Locale
 import kotlin.math.hypot
 
@@ -53,8 +54,8 @@ class BattlefieldView(context: Context) : View(context) {
         blueCatapultY = 648f,
         redCatapultX = 6750f,
         redCatapultY = 648f,
-        playerAngleDegrees = 45f,
-        playerPower = 50f,
+        playerAngleDegrees = 0f,
+        playerPower = 0f,
         blueFortressHealth = 0,
         blueFortressMaxHealth = 0,
         redFortressHealth = 0,
@@ -736,11 +737,14 @@ class BattlefieldView(context: Context) : View(context) {
         val angleRadians = Math.toRadians(aim.angleDegrees.toDouble())
         var x = physicsOriginX
         var y = physicsOriginY
+        val physicsWorldScale =
+            (state.terrainWorldWidth / WorldScale.PHYSICS_REFERENCE_WORLD_WIDTH).coerceAtLeast(1f)
         var velocityX = kotlin.math.cos(angleRadians).toFloat() *
-            aim.power * PROJECTILE_SPEED_SCALE * PHYSICS_WORLD_SCALE
+            aim.power * state.projectileInitialSpeedMultiplier * physicsWorldScale
         var velocityY = -kotlin.math.sin(angleRadians).toFloat() *
-            aim.power * PROJECTILE_SPEED_SCALE * PHYSICS_WORLD_SCALE
-        val windAccelerationX = state.windDirection * state.windStrength * WIND_ACCELERATION_SCALE
+            aim.power * state.projectileInitialSpeedMultiplier * physicsWorldScale
+        val windAccelerationX =
+            state.windDirection * state.windStrength * state.windAccelerationScale
         val previewPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
             style = Paint.Style.FILL
         }
@@ -748,8 +752,12 @@ class BattlefieldView(context: Context) : View(context) {
         drawTrajectoryPoint(canvas, physicsOriginX, physicsOriginY, 0f, previewPaint)
         for (index in 0 until TRAJECTORY_PREVIEW_POINTS) {
             val step = TRAJECTORY_PREVIEW_STEP_SECONDS
-            velocityX += windAccelerationX * step
-            velocityY += GRAVITY_ACCELERATION_Y * PHYSICS_WORLD_SCALE * step
+            val dragFactor = (1f - state.projectileDrag * step).coerceAtLeast(0f)
+            velocityX =
+                (velocityX + windAccelerationX * state.projectileWindResponse * step) * dragFactor
+            velocityY =
+                (velocityY + state.gravityAccelerationY * physicsWorldScale *
+                    state.projectileGravityResponse * step) * dragFactor
             x += velocityX * step
             y += velocityY * step
             if (x !in 0f..WORLD_WIDTH || y !in 0f..WORLD_HEIGHT) break
@@ -946,10 +954,6 @@ class BattlefieldView(context: Context) : View(context) {
         private const val RELOAD_INDICATOR_DURATION = 5.5f
         private const val FORTRESS_RENDER_WIDTH = 280f
         private const val FORTRESS_CENTER_MARGIN = 490f
-        private const val PROJECTILE_SPEED_SCALE = 8f
-        private const val GRAVITY_ACCELERATION_Y = 420f
-        private const val WIND_ACCELERATION_SCALE = 390f
-        private const val PHYSICS_WORLD_SCALE = 4.5f
         private const val AIM_CIRCLE_EDGE_MARGIN = 8f
         private const val MIN_VISUAL_PULL_RADIUS = 24f
         private const val TRAJECTORY_PREVIEW_POINTS = 42

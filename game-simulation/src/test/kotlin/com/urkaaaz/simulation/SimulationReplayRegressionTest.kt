@@ -1,5 +1,7 @@
 package com.urkaaaz.simulation
 
+import com.urkaaaz.domain.GameBalanceFixtures
+
 import com.urkaaaz.contracts.EntityId
 import com.urkaaaz.contracts.MatchEvent
 import com.urkaaaz.contracts.MatchId
@@ -45,8 +47,10 @@ class SimulationReplayRegressionTest {
         val simulation = DeterministicMatchSimulation(
             matchId = MatchId("ammo-match"),
             config = SimulationConfig(
+                balance = GameBalanceFixtures.withStartingLimitedAmmunition(
+                    2,
+                ),
                 bounds = WorldBounds(width = 1_000f, height = 600f),
-                startingLimitedAmmunition = 2,
             ),
         )
         simulation.start()
@@ -73,8 +77,10 @@ class SimulationReplayRegressionTest {
         val simulation = DeterministicMatchSimulation(
             matchId = MatchId("empty-ammo-match"),
             config = SimulationConfig(
+                balance = GameBalanceFixtures.withStartingLimitedAmmunition(
+                    0,
+                ),
                 bounds = WorldBounds(width = 2_000f, height = 600f),
-                startingLimitedAmmunition = 0,
             ),
         )
         simulation.start()
@@ -88,6 +94,7 @@ class SimulationReplayRegressionTest {
         val simulation = DeterministicMatchSimulation(
             matchId = MatchId("regression-match"),
             config = SimulationConfig(
+                balance = GameBalanceFixtures.balance,
                 bounds = WorldBounds(width = 7_200f, height = 600f),
                 gravityAccelerationY = 1_000f,
                 windAccelerationX = 2f,

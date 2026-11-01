@@ -3,14 +3,23 @@ package com.urkaaaz.application.loadout
 import com.urkaaaz.contracts.PlayerId
 import com.urkaaaz.contracts.PlayerLoadoutConfig
 import com.urkaaaz.domain.AmmunitionType
+import com.urkaaaz.domain.GameBalanceConfig
 import com.urkaaaz.domain.SpellType
-import com.urkaaaz.domain.SpellCatalog
-import com.urkaaaz.domain.UnitConfigurations
+import com.urkaaaz.application.balance.GameBalanceRepository
+import com.urkaaaz.campaign.CampaignLevelDefinition
+import com.urkaaaz.campaign.MapDefinitionRepository
 
 class LoadoutUseCases(
     private val progression: LoadoutProgressionPort,
     private val repository: LoadoutRepository,
+    private val balance: GameBalanceConfig = GameBalanceRepository.bundled.requireConfig(),
 ) {
+    fun campaignLevelDefinition(
+        level: Int,
+        mapRepository: MapDefinitionRepository = MapDefinitionRepository.bundled,
+    ): CampaignLevelDefinition =
+        CampaignLevelDefinition.forLevel(level, balance.runtime.campaign, mapRepository)
+
     suspend fun open(availability: LoadoutAvailability): LoadoutOpenResult {
         val snapshot = when (val read = progression.snapshot(availability.level)) {
             is LoadoutProgressionRead.Available -> read.snapshot
@@ -23,7 +32,7 @@ class LoadoutUseCases(
         }
         val (draft, corrections) =
             if (stored == null) {
-                MatchLoadout.defaults(availability, snapshot) to listOf(
+                MatchLoadout.defaults(availability, snapshot, balance) to listOf(
                     LoadoutCorrection(LoadoutCategory.UNIT, null, LoadoutCorrectionReason.DEFAULT_USED),
                     LoadoutCorrection(LoadoutCategory.AMMUNITION, null, LoadoutCorrectionReason.DEFAULT_USED),
                     LoadoutCorrection(LoadoutCategory.SPELL, null, LoadoutCorrectionReason.DEFAULT_USED),
@@ -43,7 +52,7 @@ class LoadoutUseCases(
         val updated = when (action) {
             is LoadoutEditAction.SelectUnit -> {
                 if (action.selected) {
-                    if (!UnitConfigurations.all.any { it.id == action.unitType }) {
+                    if (balance.units.find(action.unitType) == null) {
                         return rejected(draft, LoadoutError.UNKNOWN_UNIT)
                     }
                     if (action.unitType !in availability.unitTypes) {
@@ -81,7 +90,9 @@ class LoadoutUseCases(
                     ) {
                         return rejected(draft, LoadoutError.DUPLICATE_SELECTION)
                     }
-                    if (!ammunition.unlimited && snapshot.ammunitionStock(type) <= 0) {
+                    if (!balance.ammunition.definition(ammunition).unlimited &&
+                        snapshot.ammunitionStock(type) <= 0
+                    ) {
                         return rejected(draft, LoadoutError.AMMUNITION_OUT_OF_STOCK)
                     }
                 }
@@ -105,7 +116,7 @@ class LoadoutUseCases(
                     if (action.ammunitionType in draft.ammunitionSlots) {
                         return rejected(draft, LoadoutError.DUPLICATE_SELECTION)
                     }
-                    if (!ammunition.unlimited &&
+                    if (!balance.ammunition.definition(ammunition).unlimited &&
                         snapshot.ammunitionStock(action.ammunitionType) <= 0
                     ) {
                         return rejected(draft, LoadoutError.AMMUNITION_OUT_OF_STOCK)
@@ -130,7 +141,7 @@ class LoadoutUseCases(
             }
             is LoadoutEditAction.ToggleSpell -> {
                 if (action.selected) {
-                    val spell = SpellCatalog.find(action.spellType)
+                    val spell = balance.spells.find(action.spellType)
                         ?: return rejected(draft, LoadoutError.UNKNOWN_SPELL)
                     if (spell.special) {
                         if (snapshot.specialSpellStock(action.spellType) <= 0) {
@@ -166,7 +177,7 @@ class LoadoutUseCases(
         spellType: String,
         availability: LoadoutAvailability,
     ): LoadoutPurchaseOutcome {
-        val spell = SpellCatalog.find(spellType)
+        val spell = balance.spells.find(spellType)
             ?: return LoadoutPurchaseOutcome.Rejected(LoadoutError.UNKNOWN_SPELL)
         if (spell.special) {
             return LoadoutPurchaseOutcome.Rejected(LoadoutError.SPECIAL_SPELL_REQUIRES_SHOP)
@@ -231,7 +242,7 @@ class LoadoutUseCases(
         if (loadout.unitTypes.isEmpty()) return LoadoutError.EMPTY_UNIT_SELECTION
         if (loadout.spellTypes.isEmpty()) return LoadoutError.EMPTY_SPELL_SELECTION
         for (unitType in loadout.unitTypes) {
-            if (UnitConfigurations.all.none { it.id == unitType }) return LoadoutError.UNKNOWN_UNIT
+            if (balance.units.find(unitType) == null) return LoadoutError.UNKNOWN_UNIT
             if (unitType !in availability.unitTypes) return LoadoutError.UNIT_UNAVAILABLE
         }
         for (type in loadout.ammunitionSlots.filterNotNull().drop(1)) {
@@ -240,12 +251,14 @@ class LoadoutUseCases(
             if (type !in availability.ammunitionTypes) {
                 return LoadoutError.AMMUNITION_UNAVAILABLE
             }
-            if (!ammunition.unlimited && snapshot.ammunitionStock(type) <= 0) {
+            if (!balance.ammunition.definition(ammunition).unlimited &&
+                snapshot.ammunitionStock(type) <= 0
+            ) {
                 return LoadoutError.AMMUNITION_OUT_OF_STOCK
             }
         }
         for (spellType in loadout.spellTypes) {
-            val spell = SpellCatalog.find(spellType)
+            val spell = balance.spells.find(spellType)
                 ?: return LoadoutError.UNKNOWN_SPELL
             if (spell.special) {
                 if (snapshot.specialSpellStock(spellType) <= 0) {
@@ -273,7 +286,7 @@ class LoadoutUseCases(
             corrections += LoadoutCorrection(category, itemId, reason)
         }
 
-        val knownUnits = UnitConfigurations.all.mapTo(mutableSetOf()) { it.id }
+        val knownUnits = balance.units.all.mapTo(mutableSetOf()) { it.id }
         val units = mutableListOf<String>()
         for (id in stored.unitTypes) {
             when {
@@ -295,7 +308,7 @@ class LoadoutUseCases(
                 null,
                 LoadoutCorrectionReason.DEFAULT_USED,
             )
-            units += MatchLoadout.defaults(availability, progression).unitTypes
+            units += MatchLoadout.defaults(availability, progression, balance).unitTypes
         }
 
         val ammoSlots = mutableListOf<String?>(MatchLoadout.ROCK, null, null)
@@ -320,7 +333,8 @@ class LoadoutUseCases(
                     type,
                     LoadoutCorrectionReason.UNAVAILABLE,
                 )
-                !ammunition.unlimited && progression.ammunitionStock(type) <= 0 -> correct(
+                !balance.ammunition.definition(requireNotNull(ammunition)).unlimited &&
+                    progression.ammunitionStock(type) <= 0 -> correct(
                     LoadoutCategory.AMMUNITION,
                     type,
                     LoadoutCorrectionReason.OUT_OF_STOCK,
@@ -343,7 +357,8 @@ class LoadoutUseCases(
                 LoadoutCorrectionReason.INVALID_SLOT,
             )
             if (stored.ammunitionSlots.size < MatchLoadout.AMMUNITION_SLOT_COUNT) {
-                val defaults = MatchLoadout.defaults(availability, progression).ammunitionSlots
+                val defaults =
+                    MatchLoadout.defaults(availability, progression, balance).ammunitionSlots
                 for (index in 1..2) {
                     val default = defaults[index]
                     if (ammoSlots[index] == null && default != null && default !in ammoSlots) {
@@ -358,15 +373,15 @@ class LoadoutUseCases(
             }
         }
 
-        val knownSpells = SpellCatalog.all.mapTo(mutableSetOf()) { it.type.name }
+        val knownSpells = balance.spells.all.mapTo(mutableSetOf()) { it.type.name }
         val spells = mutableListOf<String>()
         for (id in stored.spellTypes) {
             when {
                 id !in knownSpells -> correct(LoadoutCategory.SPELL, id, LoadoutCorrectionReason.UNKNOWN)
-                !id.isAllowedSpell(availability, progression) -> correct(
+                !id.isAllowedSpell(availability, progression, balance) -> correct(
                     LoadoutCategory.SPELL,
                     id,
-                    if (SpellCatalog.find(id)?.special == true) LoadoutCorrectionReason.OUT_OF_STOCK
+                    if (balance.spells.find(id)?.special == true) LoadoutCorrectionReason.OUT_OF_STOCK
                     else if (id !in availability.spellTypes) LoadoutCorrectionReason.UNAVAILABLE
                     else LoadoutCorrectionReason.LOCKED,
                 )
@@ -386,7 +401,7 @@ class LoadoutUseCases(
                 null,
                 LoadoutCorrectionReason.DEFAULT_USED,
             )
-            spells += MatchLoadout.defaults(availability, progression).spellTypes
+            spells += MatchLoadout.defaults(availability, progression, balance).spellTypes
         }
 
         return MatchLoadout(units, ammoSlots, spells) to corrections

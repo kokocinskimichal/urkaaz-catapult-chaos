@@ -6,6 +6,7 @@ import com.urkaaaz.campaign.DemoLevelDefinitions
 import com.urkaaaz.campaign.MapDefinitionRepository
 import com.urkaaaz.application.LocalMatchGateway
 import com.urkaaaz.application.MatchReplay
+import com.urkaaaz.application.campaign.BundledCampaignBalance
 import com.urkaaaz.application.reward.LevelRewardResult
 import com.urkaaaz.application.reward.MatchEventObserver
 import com.urkaaaz.application.reward.RewardTracker
@@ -37,6 +38,7 @@ class MatchViewModel(
     private val campaignLevel: Int = 1,
     private val demoMode: Boolean = false,
     playerLoadout: PlayerLoadoutConfig? = null,
+    private val loadoutCatalog: LoadoutCatalog = LoadoutCatalog.bundled(),
     mapRepository: MapDefinitionRepository = MapDefinitionRepository.bundled,
     private val combatLogSink: CombatLogSink = NoOpCombatLogSink,
     private val ammunitionLogSink: AmmunitionLogSink = NoOpAmmunitionLogSink,
@@ -60,13 +62,10 @@ class MatchViewModel(
             mapRepository,
             playerLoadout,
             playerId,
+            loadoutCatalog,
         ),
-        blueFortressMaxHealth = if (demoMode) {
-            DEMO_BLUE_FORTRESS_MAX_HEALTH
-        } else {
-            DEFAULT_FORTRESS_MAX_HEALTH
-        },
-        redFortressMaxHealth = DEFAULT_FORTRESS_MAX_HEALTH,
+        blueFortressMaxHealth =
+            loadoutCatalog.demoBlueFortressMaximumHealth.takeIf { demoMode },
         combatLogSink = combatLogSink,
         ammunitionLogSink = ammunitionLogSink,
         eventObserver = rewardTracker ?: MatchEventObserver { },
@@ -78,6 +77,7 @@ class MatchViewModel(
         mapRepository,
         playerLoadout,
         playerId,
+        loadoutCatalog,
     )
 
     val selectableAmmunitionTypes: List<String> = campaignScenario?.let { scenario ->
@@ -94,7 +94,7 @@ class MatchViewModel(
         committedTypes
             .filter { it in scenario.availableUnits }
             .take(PlayerLoadoutConfig.MAX_UNITS)
-    } ?: LoadoutCatalog.units
+    } ?: loadoutCatalog.units
         .take(PlayerLoadoutConfig.MAX_UNITS)
         .map { it.id }
 
@@ -110,7 +110,7 @@ class MatchViewModel(
     private var selectedAmmunition = "ROCK"
     private val forwardedCampaignCompletions = mutableSetOf<Triple<Long, MatchId, EventId>>()
     private var spellFeedbackLabel: String? = null
-    var renderState: RenderState = RenderStateMapper.map(MatchSnapshot())
+    var renderState: RenderState = withProjectileBalance(RenderStateMapper.map(MatchSnapshot()))
         private set
 
     fun setAiAllowedUnitIds(unitIds: Set<String>) {
@@ -297,11 +297,33 @@ class MatchViewModel(
                 label = "+${notification.gold} OrCoins",
             )
         }
-        return mapped.copy(
+        return withProjectileBalance(mapped.copy(
             matchGeneration = matchGeneration,
             selectedAmmunitionType = selectedAmmunition,
             spellFeedbackLabel = spellFeedbackLabel,
             combatFeedback = mapped.combatFeedback + rewardFeedback,
+        ))
+    }
+
+    private fun withProjectileBalance(state: RenderState): RenderState {
+        val ammunition = loadoutCatalog.ammunition.single { it.id == selectedAmmunition }
+        return state.copy(
+            playerAngleDegrees = if (state.matchId == null) {
+                loadoutCatalog.initialAimDirectionDegrees
+            } else {
+                state.playerAngleDegrees
+            },
+            playerPower = if (state.matchId == null) {
+                loadoutCatalog.initialAimPower
+            } else {
+                state.playerPower
+            },
+            gravityAccelerationY = loadoutCatalog.gravityAccelerationY,
+            windAccelerationScale = loadoutCatalog.windAccelerationScale,
+            projectileInitialSpeedMultiplier = ammunition.initialSpeedMultiplier,
+            projectileWindResponse = ammunition.windResponse,
+            projectileGravityResponse = ammunition.gravityResponse,
+            projectileDrag = ammunition.drag,
         )
     }
 
@@ -352,10 +374,6 @@ class MatchViewModel(
     private fun selectedAmmunitionIsAvailable(): Boolean =
         renderState.playerAmmunition[selectedAmmunition]?.let { it > 0 } ?: true
 
-    private companion object {
-        const val DEFAULT_FORTRESS_MAX_HEALTH = 500
-        const val DEMO_BLUE_FORTRESS_MAX_HEALTH = DEFAULT_FORTRESS_MAX_HEALTH * 10
-    }
 }
 
 private fun loadSelectedDefinition(
@@ -364,9 +382,9 @@ private fun loadSelectedDefinition(
     repository: MapDefinitionRepository,
 ): DemoLevelDefinition =
     if (demoMode) {
-        DemoLevelDefinitions.fromRepository(repository)
+        BundledCampaignBalance.demoLevelDefinition(repository)
     } else {
-        val campaign = CampaignLevelDefinition.forLevel(campaignLevel, repository)
+        val campaign = BundledCampaignBalance.levelDefinition(campaignLevel, repository)
         DemoLevelDefinition(
             mapDefinition = campaign.mapDefinition,
             biome = TerrainBiome.fromMapId(campaign.mapDefinition.biome)
@@ -381,9 +399,10 @@ private fun loadSelectedScenario(
     repository: MapDefinitionRepository,
     playerLoadout: PlayerLoadoutConfig?,
     playerId: PlayerId,
+    loadoutCatalog: LoadoutCatalog,
 ): MatchScenario? {
     if (demoMode && playerLoadout == null) return null
-    val definition = CampaignLevelDefinition.forLevel(
+    val definition = BundledCampaignBalance.levelDefinition(
         if (demoMode) CampaignLevelDefinition.MAX_LEVELS else campaignLevel,
         repository,
     )
@@ -394,17 +413,12 @@ private fun loadSelectedScenario(
     )
     if (!demoMode) return scenario
 
-    val demo = DemoLevelDefinitions.fromRepository(repository)
+    val demo = BundledCampaignBalance.demoLevelDefinition(repository)
     return scenario.copy(
         scenarioId = "demo",
-        initialResources = scenario.initialResources.copy(
-            ammunition = LoadoutCatalog.ammunition.associate {
-                it.id to definition.startingAmmunition
-            },
-        ),
-        availableUnits = LoadoutCatalog.units.map { it.id }.sorted(),
-        availableAmmunition = LoadoutCatalog.ammunition.map { it.id }.sorted(),
-        availableSpells = LoadoutCatalog.spells.map { it.id }.sorted(),
+        availableUnits = loadoutCatalog.units.map { it.id }.sorted(),
+        availableAmmunition = loadoutCatalog.ammunition.map { it.id }.sorted(),
+        availableSpells = loadoutCatalog.spells.map { it.id }.sorted(),
         mapDefinition = demo.mapDefinition,
         wind = demo.initialWind,
     )

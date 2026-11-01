@@ -1,6 +1,7 @@
 package com.urkaaaz.application
 
 import com.urkaaaz.campaign.CampaignLevelDefinition
+import com.urkaaaz.domain.GameBalanceFixtures
 import com.urkaaaz.contracts.CommandId
 import com.urkaaaz.contracts.MatchCommand
 import com.urkaaaz.contracts.MatchEvent
@@ -14,7 +15,10 @@ import kotlin.test.assertTrue
 class BossMatchSessionTest {
     @Test
     fun campaignBossScenarioLoadsJsonProfileAndPinsBalanceIntoReplay() {
-        val scenario = CampaignLevelDefinition.forLevel(5).toMatchScenario()
+        val scenario = CampaignLevelDefinition.forLevel(
+            5,
+            GameBalanceFixtures.balance.runtime.campaign,
+        ).toMatchScenario()
         val session = MatchSession(scenario = scenario, randomSeedProvider = { 12L })
         val matchId = MatchId("boss-match")
         val snapshot = session.dispatch(
@@ -31,7 +35,7 @@ class BossMatchSessionTest {
         )
         assertEquals("ancient_war_oak", snapshot.boss?.presentationKey)
         assertEquals(scenario.mapDefinition, snapshot.mapDefinition)
-        assertEquals("boss-legacy-baseline-5", snapshot.balanceRevision)
+        assertEquals("game-balance-3", snapshot.balanceRevision)
         assertTrue(snapshot.balanceContentHash?.matches(Regex("[a-f0-9]{64}")) == true)
         assertTrue(session.consumeEvents().any { it is MatchEvent.BossSpawned })
 

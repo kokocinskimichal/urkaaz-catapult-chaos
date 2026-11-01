@@ -6,28 +6,24 @@ import com.urkaaaz.contracts.BossArchetype
 import com.urkaaaz.contracts.BossVictoryRule
 import com.urkaaaz.contracts.PlayerLoadoutConfig
 import com.urkaaaz.domain.BossBalanceProfile
-import com.urkaaaz.domain.ManaConfiguration
+import com.urkaaaz.domain.GameBalanceConfig
 import com.urkaaaz.domain.WorldBounds
 
 /** Tunable, host-independent constants for the deterministic simulation. */
 data class SimulationConfig(
     val bounds: WorldBounds,
+    val balance: GameBalanceConfig,
     val terrainBiome: String = "GREEN_FRONTIER",
-    val gravityAccelerationY: Float = 420f,
+    val gravityAccelerationY: Float = balance.runtime.physics.gravityAccelerationY,
     val windAccelerationX: Float = 0f,
-    val windAccelerationScale: Float = 390f,
+    val windAccelerationScale: Float = balance.runtime.physics.windAccelerationScale,
     val fortressCollisionRadius: Float = 23f,
     val defaultCatapultHeightRatio: Float = 0.72f,
-    val blueFortressMaxHealth: Int = 500,
-    val redFortressMaxHealth: Int = 500,
-    val startingLimitedAmmunition: Int = 3,
-    val startingMana: Int = ManaConfiguration.STARTING_MANA,
-    val maximumMana: Int = ManaConfiguration.MAXIMUM_MANA,
-    val manaRegenerationAmount: Int = ManaConfiguration.REGENERATION_AMOUNT,
-    val manaRegenerationIntervalMilliseconds: Long =
-        ManaConfiguration.REGENERATION_INTERVAL_MILLISECONDS,
-    val matchDurationMilliseconds: Long = DEFAULT_MATCH_DURATION_MILLISECONDS,
-    val bossEncounterMatchDurationMilliseconds: Long = matchDurationMilliseconds,
+    val blueFortressMaxHealth: Int = balance.runtime.fortresses.standardMaximumHealth,
+    val redFortressMaxHealth: Int = balance.runtime.fortresses.standardMaximumHealth,
+    val matchDurationMilliseconds: Long = balance.runtime.match.durationMilliseconds,
+    val bossEncounterMatchDurationMilliseconds: Long =
+        balance.runtime.match.bossEncounterDurationMilliseconds,
     val mapDefinition: MapDefinition? = null,
     val bossEncounter: BossEncounterConfig? = null,
     val bossProfile: BossBalanceProfile? = null,
@@ -51,19 +47,6 @@ data class SimulationConfig(
         require(redFortressMaxHealth > 0) {
             "red fortress max health must be positive"
         }
-        require(startingLimitedAmmunition >= 0) {
-            "starting limited ammunition must not be negative"
-        }
-        require(maximumMana > 0) { "maximum mana must be positive" }
-        require(startingMana in 0..maximumMana) {
-            "starting mana must be within mana bounds"
-        }
-        require(manaRegenerationAmount > 0) {
-            "mana regeneration amount must be positive"
-        }
-        require(manaRegenerationIntervalMilliseconds > 0) {
-            "mana regeneration interval must be positive"
-        }
         require(matchDurationMilliseconds > 0) {
             "match duration must be positive"
         }
@@ -86,7 +69,4 @@ data class SimulationConfig(
         }
     }
 
-    companion object {
-        const val DEFAULT_MATCH_DURATION_MILLISECONDS = 300_000L
-    }
 }

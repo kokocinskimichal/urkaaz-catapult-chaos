@@ -48,7 +48,7 @@ data class SpellDefinition(
     val special: Boolean,
     val manaCost: Int,
     val effect: SpellEffectDefinition?,
-    val recastableWhileActive: Boolean = false,
+    val recastableWhileActive: Boolean,
 ) {
     init {
         require(goldCost >= 0) { "spell gold cost must not be negative" }
@@ -59,120 +59,25 @@ data class SpellDefinition(
         get() = effect != null
 }
 
-/** Canonical spell balance and effect catalog, independent of UI and persistence. */
-object SpellCatalog {
-    val all: List<SpellDefinition> = listOf(
-        SpellDefinition(
-            type = SpellType.ICE_TRAP,
-            goldCost = 500,
-            category = SpellCategory.BATTLEFIELD_CONTROL,
-            targetCategory = SpellTargetCategory.ENEMY_FORCE,
-            special = false,
-            manaCost = 50,
-            effect = null,
-        ),
-        SpellDefinition(
-            type = SpellType.RUNIC_BASTION,
-            goldCost = 1_200,
-            category = SpellCategory.DEFENSIVE,
-            targetCategory = SpellTargetCategory.OWN_GATE,
-            special = false,
-            manaCost = 70,
-            effect = SpellEffectDefinition.RunicBastion(hitPoints = 360),
-        ),
-        SpellDefinition(
-            type = SpellType.HASTE,
-            goldCost = 900,
-            category = SpellCategory.SUPPORT,
-            targetCategory = SpellTargetCategory.ALLIED_FORCE,
-            special = false,
-            manaCost = 50,
-            effect = SpellEffectDefinition.Haste(
-                durationMilliseconds = 15_000L,
-                movementSpeedMultiplier = 2f,
-            ),
-            recastableWhileActive = true,
-        ),
-        SpellDefinition(
-            type = SpellType.HEAL,
-            goldCost = 900,
-            category = SpellCategory.SUPPORT,
-            targetCategory = SpellTargetCategory.ALLIED_FORCE,
-            special = false,
-            manaCost = 50,
-            effect = null,
-        ),
-        SpellDefinition(
-            type = SpellType.FORTRESS_SHIELD,
-            goldCost = 0,
-            category = SpellCategory.DEFENSIVE,
-            targetCategory = SpellTargetCategory.OWN_FORTRESS,
-            special = false,
-            manaCost = 80,
-            effect = SpellEffectDefinition.FortressShield(hitPoints = 150),
-        ),
-        SpellDefinition(
-            type = SpellType.CATAPULT_LOCK,
-            goldCost = 1_000,
-            category = SpellCategory.SIEGE,
-            targetCategory = SpellTargetCategory.ENEMY_SIEGE_ENGINE,
-            special = true,
-            manaCost = 60,
-            effect = null,
-        ),
-        SpellDefinition(
-            type = SpellType.SLOWING_FIELD,
-            goldCost = 1_000,
-            category = SpellCategory.BATTLEFIELD_CONTROL,
-            targetCategory = SpellTargetCategory.ENEMY_FORCE,
-            special = true,
-            manaCost = 50,
-            effect = null,
-        ),
-        SpellDefinition(
-            type = SpellType.VAMPIRIC_BANNER,
-            goldCost = 1_100,
-            category = SpellCategory.SUPPORT,
-            targetCategory = SpellTargetCategory.ALLIED_FORCE,
-            special = true,
-            manaCost = 60,
-            effect = null,
-        ),
-        SpellDefinition(
-            type = SpellType.STONE_SKIN,
-            goldCost = 1_100,
-            category = SpellCategory.DEFENSIVE,
-            targetCategory = SpellTargetCategory.ALLIED_FORCE,
-            special = true,
-            manaCost = 60,
-            effect = null,
-        ),
-        SpellDefinition(
-            type = SpellType.SIEGE_FRENZY,
-            goldCost = 1_200,
-            category = SpellCategory.OFFENSIVE,
-            targetCategory = SpellTargetCategory.ALLIED_FORCE,
-            special = true,
-            manaCost = 60,
-            effect = null,
-        ),
-        SpellDefinition(
-            type = SpellType.BERSERKER,
-            goldCost = 2_000,
-            category = SpellCategory.OFFENSIVE,
-            targetCategory = SpellTargetCategory.ALLIED_UNIT,
-            special = true,
-            manaCost = 100,
-            effect = null,
-        ),
-    )
-
-    private val definitionsByType = all.associateBy { it.type }
+/** Canonical spell balance and effect catalog, sourced from GameBalanceConfig. */
+class SpellCatalog(definitions: List<SpellDefinition>) {
+    val all: List<SpellDefinition> = definitions.toList()
+    private val definitionsByType = all.associateBy(SpellDefinition::type)
 
     init {
         require(definitionsByType.size == all.size) { "spell definitions must be unique" }
         require(definitionsByType.keys == SpellType.values().toSet()) {
             "every stable spell identifier must have a catalog definition"
+        }
+        require(all.all { spell ->
+            when (spell.type) {
+                SpellType.HASTE -> spell.effect is SpellEffectDefinition.Haste
+                SpellType.FORTRESS_SHIELD -> spell.effect is SpellEffectDefinition.FortressShield
+                SpellType.RUNIC_BASTION -> spell.effect is SpellEffectDefinition.RunicBastion
+                else -> spell.effect == null
+            }
+        }) {
+            "spell effect data must match the effects currently implemented by the simulation"
         }
     }
 
@@ -182,10 +87,18 @@ object SpellCatalog {
         SpellType.values().firstOrNull { it.name == id }?.let(::definition)
 }
 
-/** Match-runtime mana defaults, based on the legacy match rules. */
-object ManaConfiguration {
-    const val STARTING_MANA = 100
-    const val MAXIMUM_MANA = 100
-    const val REGENERATION_AMOUNT = 1
-    const val REGENERATION_INTERVAL_MILLISECONDS = 800L
+data class ManaConfiguration(
+    val startingMana: Int,
+    val maximumMana: Int,
+    val regenerationAmount: Int,
+    val regenerationIntervalMilliseconds: Long,
+) {
+    init {
+        require(maximumMana > 0) { "maximum mana must be positive" }
+        require(startingMana in 0..maximumMana) { "starting mana must be within mana bounds" }
+        require(regenerationAmount > 0) { "mana regeneration amount must be positive" }
+        require(regenerationIntervalMilliseconds > 0L) {
+            "mana regeneration interval must be positive"
+        }
+    }
 }

@@ -10,8 +10,6 @@ sealed interface UnitDefinition {
     val maxHealth: Int get() = configuration.maxHealth
     val speed: Float get() = configuration.speed
     val attackDamage: Int get() = configuration.attackDamage
-    val minimumAttackDamage: Int get() = configuration.minimumAttackDamage
-    val maximumAttackDamage: Int get() = configuration.maximumAttackDamage
     val attackCooldownSeconds: Float get() = configuration.attackCooldownSeconds
     val attackRange: Float get() = configuration.attackRange
     val fortressDamage: Int get() = configuration.fortressDamage
@@ -28,9 +26,7 @@ sealed interface UnitDefinition {
     fun incomingDamage(damage: Int): Int = damage
 }
 
-class DefenderUnit(
-    override val configuration: UnitConfiguration = UnitConfigurations.DEFENDER,
-) : UnitDefinition {
+class DefenderUnit(override val configuration: UnitConfiguration) : UnitDefinition {
     override val attackType = AttackType.MELEE
     override val attacksFromRange = false
     override val detonatesOnContact = false
@@ -38,9 +34,7 @@ class DefenderUnit(
     override val participatesInMeleeSynergy = true
 }
 
-class SapperUnit(
-    override val configuration: UnitConfiguration = UnitConfigurations.SAPPER,
-) : UnitDefinition {
+class SapperUnit(override val configuration: UnitConfiguration) : UnitDefinition {
     override val attackType = AttackType.SIEGE_MISSION
     override val attacksFromRange = false
     override val detonatesOnContact = false
@@ -48,12 +42,10 @@ class SapperUnit(
     override val participatesInMeleeSynergy = false
 
     override fun incomingDamage(damage: Int): Int =
-        (damage * 0.45f).toInt().coerceAtLeast(1)
+        (damage * configuration.incomingDamageMultiplier).toInt().coerceAtLeast(1)
 }
 
-class DemolisherUnit(
-    override val configuration: UnitConfiguration = UnitConfigurations.DEMOLISHER,
-) : UnitDefinition {
+class DemolisherUnit(override val configuration: UnitConfiguration) : UnitDefinition {
     override val attackType = AttackType.CONTACT_EXPLOSIVE
     override val attacksFromRange = false
     override val detonatesOnContact = true
@@ -61,9 +53,7 @@ class DemolisherUnit(
     override val participatesInMeleeSynergy = false
 }
 
-class RagingBoarUnit(
-    override val configuration: UnitConfiguration = UnitConfigurations.RAGING_BOAR,
-) : UnitDefinition {
+class RagingBoarUnit(override val configuration: UnitConfiguration) : UnitDefinition {
     override val attackType = AttackType.MELEE
     override val attacksFromRange = false
     override val detonatesOnContact = false
@@ -71,9 +61,7 @@ class RagingBoarUnit(
     override val participatesInMeleeSynergy = true
 }
 
-class SlingmasterUnit(
-    override val configuration: UnitConfiguration = UnitConfigurations.SLINGMASTER,
-) : UnitDefinition {
+class SlingmasterUnit(override val configuration: UnitConfiguration) : UnitDefinition {
     override val attackType = AttackType.RANGED
     override val attacksFromRange = true
     override val detonatesOnContact = false
@@ -83,25 +71,18 @@ class SlingmasterUnit(
 
 object UnitFactory {
     fun create(configuration: UnitConfiguration): UnitDefinition = when (configuration.id) {
-        UnitConfigurations.DEFENDER.id -> DefenderUnit(configuration)
-        UnitConfigurations.SAPPER.id -> SapperUnit(configuration)
-        UnitConfigurations.DEMOLISHER.id -> DemolisherUnit(configuration)
-        UnitConfigurations.RAGING_BOAR.id -> RagingBoarUnit(configuration)
-        UnitConfigurations.SLINGMASTER.id -> SlingmasterUnit(configuration)
+        UnitIds.DEFENDER -> DefenderUnit(configuration)
+        UnitIds.SAPPER -> SapperUnit(configuration)
+        UnitIds.DEMOLISHER -> DemolisherUnit(configuration)
+        UnitIds.RAGING_BOAR -> RagingBoarUnit(configuration)
+        UnitIds.SLINGMASTER -> SlingmasterUnit(configuration)
         else -> error("unknown unit configuration: ${configuration.id}")
     }
 
-    fun create(id: String): UnitDefinition =
-        UnitConfigurations.all.firstOrNull { it.id == id }?.let(::create)
-            ?: error("unknown unit definition: $id")
+    fun create(id: String, catalog: UnitCatalog): UnitDefinition =
+        create(catalog.configuration(id))
 
-    fun all(): Set<UnitDefinition> = UnitConfigurations.all.map(::create).toSet()
+    fun all(catalog: UnitCatalog): Set<UnitDefinition> = catalog.all.map(::create).toSet()
 
-    fun byId(id: String): UnitDefinition = create(id)
-
-    fun defender(): UnitDefinition = create(UnitConfigurations.DEFENDER)
-    fun sapper(): UnitDefinition = create(UnitConfigurations.SAPPER)
-    fun demolisher(): UnitDefinition = create(UnitConfigurations.DEMOLISHER)
-    fun ragingBoar(): UnitDefinition = create(UnitConfigurations.RAGING_BOAR)
-    fun slingmaster(): UnitDefinition = create(UnitConfigurations.SLINGMASTER)
+    fun byId(id: String, catalog: UnitCatalog): UnitDefinition = create(id, catalog)
 }

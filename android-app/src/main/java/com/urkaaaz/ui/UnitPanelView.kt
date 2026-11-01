@@ -16,11 +16,12 @@ import com.urkaaaz.application.loadout.LoadoutCatalog
 class UnitPanelView(
     context: Context,
     selectableUnitTypes: List<String>,
+    private val loadoutCatalog: LoadoutCatalog,
 ) : LinearLayout(context) {
     var onUnitSelected: ((String) -> Unit)? = null
     var onSendWave: (() -> Unit)? = null
 
-    private val supplyGauge = SupplyGaugeView(context)
+    private val supplyGauge = SupplyGaugeView(context, loadoutCatalog.maximumSupply)
     private val options = selectableUnitTypes.take(MAX_VISIBLE_UNITS).mapNotNull(::unitOption)
     private val buttons = options.associateWith { option ->
         ImageButton(context).apply {
@@ -180,7 +181,7 @@ class UnitPanelView(
         }
 
     private fun unitOption(type: String): UnitOption? {
-        val unit = LoadoutCatalog.findUnit(type) ?: return null
+        val unit = loadoutCatalog.findUnit(type) ?: return null
         val (icon, name, shortName) = when (type) {
             "SAPPER" -> Triple(
                 R.drawable.sapper_icon,

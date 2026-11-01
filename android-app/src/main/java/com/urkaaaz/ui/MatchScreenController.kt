@@ -26,12 +26,15 @@ import com.urkaaaz.application.reward.LevelRewardResult
 import com.urkaaaz.application.reward.RewardTracker
 import com.urkaaaz.campaign.CampaignRewardRegistry
 import com.urkaaaz.screens.match.CampaignCompletionPresentation
+import com.urkaaaz.application.loadout.LoadoutCatalog
+import com.urkaaaz.application.campaign.BundledCampaignBalance
 
 class MatchScreenController(
     private val activity: Activity,
     private val campaignLevel: Int,
-    rewardRegistry: CampaignRewardRegistry = CampaignRewardRegistry.default(),
+    rewardRegistry: CampaignRewardRegistry = BundledCampaignBalance.rewardRegistry(),
     playerLoadout: PlayerLoadoutConfig? = null,
+    private val loadoutCatalog: LoadoutCatalog = LoadoutCatalog.bundled(),
     private val demoMode: Boolean = false,
     private val onBackClicked: () -> Unit,
     private val openDebugOnStart: Boolean = false,
@@ -46,6 +49,7 @@ class MatchScreenController(
     private val viewModel = MatchViewModel(
         campaignLevel = campaignLevel,
         playerLoadout = playerLoadout,
+        loadoutCatalog = loadoutCatalog,
         demoMode = demoMode,
         mapRepository = MapDefinitionRepository { path -> activity.assets.open(path) },
         combatLogSink = AndroidCombatLogSink(),
@@ -82,8 +86,8 @@ class MatchScreenController(
     private var lastMatchReward: LevelRewardResult? = null
     private var lastRenderedState: RenderState? = null
 
-    private var aimAngle = 45f
-    private var aimPower = 50f
+    private var aimAngle = loadoutCatalog.initialAimDirectionDegrees
+    private var aimPower = loadoutCatalog.initialAimPower
 
     private val gameTick = object : Runnable {
         override fun run() {
@@ -117,6 +121,7 @@ class MatchScreenController(
         ammunitionPanel = AmmunitionPanelView(
             activity,
             viewModel.selectableAmmunitionTypes,
+            loadoutCatalog,
         ).apply {
             onAmmoSelected = { ammunitionType ->
                 render(viewModel.dispatch(MatchUiAction.SelectAmmo(ammunitionType)))
@@ -125,6 +130,7 @@ class MatchScreenController(
         unitPanel = UnitPanelView(
             activity,
             viewModel.selectableUnitTypes,
+            loadoutCatalog,
         ).apply {
             onUnitSelected = { unitType ->
                 render(viewModel.dispatch(MatchUiAction.DeployUnit(unitType)))
@@ -137,6 +143,7 @@ class MatchScreenController(
         spellPanel = SpellPanelView(
             activity,
             viewModel.selectableSpellTypes,
+            loadoutCatalog,
         ).apply {
             onSpellCast = { spellType ->
                 val state = viewModel.dispatch(MatchUiAction.CastSpell(spellType))
@@ -377,8 +384,8 @@ class MatchScreenController(
         campaignRewardResult = null
         lastMatchFinishedEvent = null
         lastMatchReward = null
-        aimAngle = 45f
-        aimPower = 50f
+        aimAngle = loadoutCatalog.initialAimDirectionDegrees
+        aimPower = loadoutCatalog.initialAimPower
         render(viewModel.dispatch(MatchUiAction.RestartMatch))
     }
 

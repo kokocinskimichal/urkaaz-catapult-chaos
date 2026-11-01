@@ -2,6 +2,7 @@ package com.urkaaaz
 
 import com.urkaaaz.contracts.PlayerId
 import com.urkaaaz.contracts.PlayerLoadoutConfig
+import com.urkaaaz.application.loadout.LoadoutCatalog
 import com.urkaaaz.ui.MatchUiAction
 import com.urkaaaz.ui.MatchViewModel
 import org.junit.Assert.assertEquals
@@ -10,6 +11,26 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class MatchViewModelCombatTest {
+    @Test
+    fun trajectoryPresentationUsesTheSelectedAmmunitionAndRuntimePhysicsBalance() {
+        val catalog = LoadoutCatalog.bundled()
+        val viewModel = MatchViewModel(demoMode = true, loadoutCatalog = catalog)
+
+        assertEquals(catalog.gravityAccelerationY, viewModel.renderState.gravityAccelerationY)
+        assertEquals(catalog.windAccelerationScale, viewModel.renderState.windAccelerationScale)
+        assertEquals(catalog.initialAimDirectionDegrees, viewModel.renderState.playerAngleDegrees)
+        assertEquals(catalog.initialAimPower, viewModel.renderState.playerPower)
+
+        viewModel.dispatch(MatchUiAction.StartMatch)
+        val selected = viewModel.dispatch(MatchUiAction.SelectAmmo("SIEGE_BOMB"))
+        val ammunition = requireNotNull(catalog.findAmmunition("SIEGE_BOMB"))
+
+        assertEquals(ammunition.initialSpeedMultiplier, selected.projectileInitialSpeedMultiplier)
+        assertEquals(ammunition.windResponse, selected.projectileWindResponse)
+        assertEquals(ammunition.gravityResponse, selected.projectileGravityResponse)
+        assertEquals(ammunition.drag, selected.projectileDrag)
+    }
+
     @Test
     fun matchViewModelExposesTheCurrentSeededReplay() {
         val viewModel = MatchViewModel()

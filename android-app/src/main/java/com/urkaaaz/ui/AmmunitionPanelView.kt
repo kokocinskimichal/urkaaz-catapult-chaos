@@ -20,6 +20,7 @@ import java.util.Locale
 class AmmunitionPanelView(
     context: Context,
     availableAmmunitionTypes: List<String>,
+    private val loadoutCatalog: LoadoutCatalog,
 ) : LinearLayout(context) {
     private val slots = availableAmmunitionTypes.take(MAX_VISIBLE_AMMUNITION)
         .mapNotNull(::createSlot)
@@ -212,7 +213,7 @@ class AmmunitionPanelView(
             addView(nameText, LayoutParams(-1, dp(11)))
         }
         val reloadDurationSeconds =
-            LoadoutCatalog.findAmmunition(type)?.reloadSeconds ?: 0f
+            loadoutCatalog.findAmmunition(type)?.reloadSeconds ?: 0f
         return AmmoSlot(
             type = type,
             nameResource = nameResource,

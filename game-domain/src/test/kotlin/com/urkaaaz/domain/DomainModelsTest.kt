@@ -1,5 +1,7 @@
 package com.urkaaaz.domain
 
+import com.urkaaaz.domain.UnitIds
+
 import com.urkaaaz.contracts.EntityId
 import com.urkaaaz.contracts.MatchId
 import com.urkaaaz.contracts.MatchOutcome
@@ -26,6 +28,10 @@ class DomainModelsTest {
             id = EntityId("catapult-1"),
             team = Team.BLUE,
             position = WorldPosition(100f, 300f),
+            aim = Aim(
+                directionDegrees = GameBalanceFixtures.balance.runtime.catapult.initialAimDirectionDegrees,
+                power = GameBalanceFixtures.balance.runtime.catapult.initialAimPower,
+            ),
         )
 
         assertEquals(300f, catapult.position.y)
@@ -39,13 +45,15 @@ class DomainModelsTest {
         val limited = ResourceWallet(
             ammunition = mapOf(AmmunitionType.POWDER_BARREL to 2),
         )
-        val afterUse = limited.consume(AmmunitionType.POWDER_BARREL)
+        val afterUse = limited.consume(
+            GameBalanceFixtures.balance.ammunition.definition(AmmunitionType.POWDER_BARREL),
+        )
 
-        assertEquals(1, afterUse.ammunitionCount(AmmunitionType.POWDER_BARREL))
-        assertTrue(afterUse.canUse(AmmunitionType.ROCK))
+        assertEquals(1, afterUse.ammunitionCount(GameBalanceFixtures.balance.ammunition.definition(AmmunitionType.POWDER_BARREL)))
+        assertTrue(afterUse.canUse(GameBalanceFixtures.balance.ammunition.definition(AmmunitionType.ROCK)))
         assertEquals(
             Int.MAX_VALUE,
-            afterUse.ammunitionCount(AmmunitionType.ROCK),
+            afterUse.ammunitionCount(GameBalanceFixtures.balance.ammunition.definition(AmmunitionType.ROCK)),
         )
     }
 
@@ -72,6 +80,7 @@ class DomainModelsTest {
             id = EntityId("fortress-1"),
             team = Team.RED,
             center = WorldPosition(500f, 400f),
+            maxHealth = GameBalanceFixtures.balance.runtime.fortresses.standardMaximumHealth,
         )
 
         assertTrue(fortress.contains(WorldPosition(500f, 340f)))
@@ -94,33 +103,33 @@ class DomainModelsTest {
 
     @Test
     fun unitFactoryBuildsDedicatedUnitsFromCentralConfiguration() {
-        val sapper = UnitFactory.sapper()
+        val sapper = GameBalanceFixtures.unit(UnitIds.SAPPER)
 
-        assertEquals(UnitConfigurations.SAPPER.id, sapper.id)
-        assertEquals(UnitConfigurations.SAPPER.maxHealth, sapper.maxHealth)
-        assertEquals(UnitConfigurations.SAPPER.attackDamage, sapper.attackDamage)
+        assertEquals(GameBalanceFixtures.balance.units.configuration(UnitIds.SAPPER).id, sapper.id)
+        assertEquals(GameBalanceFixtures.balance.units.configuration(UnitIds.SAPPER).maxHealth, sapper.maxHealth)
+        assertEquals(GameBalanceFixtures.balance.units.configuration(UnitIds.SAPPER).attackDamage, sapper.attackDamage)
         assertTrue(sapper is SapperUnit)
         val tuned = UnitFactory.create(
-            UnitConfigurations.SAPPER.copy(attackDamage = 240),
+            GameBalanceFixtures.balance.units.configuration(UnitIds.SAPPER).copy(attackDamage = 240),
         )
         assertEquals(240, tuned.attackDamage)
     }
 
     @Test
     fun unitConfigurationsUseRequestedHealthValues() {
-        assertEquals(50, UnitConfigurations.DEFENDER.maxHealth)
-        assertEquals(20, UnitConfigurations.SAPPER.maxHealth)
-        assertEquals(25, UnitConfigurations.DEMOLISHER.maxHealth)
-        assertEquals(80, UnitConfigurations.RAGING_BOAR.maxHealth)
-        assertEquals(25, UnitConfigurations.SLINGMASTER.maxHealth)
+        assertEquals(50, GameBalanceFixtures.balance.units.configuration(UnitIds.DEFENDER).maxHealth)
+        assertEquals(20, GameBalanceFixtures.balance.units.configuration(UnitIds.SAPPER).maxHealth)
+        assertEquals(25, GameBalanceFixtures.balance.units.configuration(UnitIds.DEMOLISHER).maxHealth)
+        assertEquals(80, GameBalanceFixtures.balance.units.configuration(UnitIds.RAGING_BOAR).maxHealth)
+        assertEquals(25, GameBalanceFixtures.balance.units.configuration(UnitIds.SLINGMASTER).maxHealth)
     }
 
     @Test
     fun unitFactoryAssignsAttackTypeToEveryUnit() {
-        assertEquals(AttackType.MELEE, UnitFactory.defender().attackType)
-        assertEquals(AttackType.SIEGE_MISSION, UnitFactory.sapper().attackType)
-        assertEquals(AttackType.CONTACT_EXPLOSIVE, UnitFactory.demolisher().attackType)
-        assertEquals(AttackType.MELEE, UnitFactory.ragingBoar().attackType)
-        assertEquals(AttackType.RANGED, UnitFactory.slingmaster().attackType)
+        assertEquals(AttackType.MELEE, GameBalanceFixtures.unit(UnitIds.DEFENDER).attackType)
+        assertEquals(AttackType.SIEGE_MISSION, GameBalanceFixtures.unit(UnitIds.SAPPER).attackType)
+        assertEquals(AttackType.CONTACT_EXPLOSIVE, GameBalanceFixtures.unit(UnitIds.DEMOLISHER).attackType)
+        assertEquals(AttackType.MELEE, GameBalanceFixtures.unit(UnitIds.RAGING_BOAR).attackType)
+        assertEquals(AttackType.RANGED, GameBalanceFixtures.unit(UnitIds.SLINGMASTER).attackType)
     }
 }

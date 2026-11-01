@@ -11,6 +11,8 @@ import com.urkaaaz.contracts.UnitHitboxProfile
 import com.urkaaaz.domain.BossAttackBalance
 import com.urkaaaz.domain.BossAttackTarget
 import com.urkaaaz.domain.BossBalanceProfile
+import com.urkaaaz.domain.CombatBalance
+import com.urkaaaz.domain.BossCombatBalance
 import com.urkaaaz.domain.SapperUnit
 import com.urkaaaz.domain.SlingmasterUnit
 import com.urkaaaz.domain.Unit
@@ -39,6 +41,8 @@ data class BossTickResult(
 class BossSystem(
     val profile: BossBalanceProfile,
     encounter: BossEncounterConfig,
+    private val combatBalance: CombatBalance,
+    private val bossCombatBalance: BossCombatBalance,
     private val worldWidth: Float,
     private val groundHeightAt: (Float) -> Float,
 ) {
@@ -329,7 +333,7 @@ class BossSystem(
         unit.type.detonatesOnContact ->
             UnitHitboxProfile.forUnitType(unit.type.id).halfWidth
         unit.type.attacksFromRange -> unit.type.attackRange
-        else -> 82f
+        else -> combatBalance.fortressAttackRange
     }
 
     private fun elapseCooldown(target: BossAttackTarget, deltaSeconds: Float) {
@@ -374,7 +378,7 @@ class BossSystem(
             left.size == right.size -> if (random.nextBoolean()) Team.BLUE else Team.RED
             else -> {
                 val larger = if (left.size > right.size) Team.BLUE else Team.RED
-                if (random.nextFloat() < 0.72f) {
+                if (random.nextFloat() < bossCombatBalance.largerGroupTargetChance) {
                     larger
                 } else if (larger == Team.BLUE) {
                     Team.RED
@@ -395,7 +399,10 @@ class BossSystem(
         val maximumDistance = selected.maxOf { abs(it.position.x - x) }.coerceAtLeast(1f)
         return selected.associate { unit ->
             val distanceRatio = (abs(unit.position.x - x) / maximumDistance).coerceIn(0f, 1f)
-            unit.id to (attack.damage * (1f - distanceRatio * 0.70f))
+            unit.id to (
+                attack.damage *
+                    (1f - distanceRatio * bossCombatBalance.maximumDistanceFalloff)
+                )
                 .toInt()
                 .coerceAtLeast(attack.minimumDamage)
         }

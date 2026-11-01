@@ -1,5 +1,6 @@
 package com.urkaaaz.campaign
 
+import com.urkaaaz.domain.GameBalanceFixtures
 import com.urkaaaz.contracts.InitialCameraAnchor
 import com.urkaaaz.contracts.MapDecoration
 import com.urkaaaz.contracts.MapWorldDimensions
@@ -13,9 +14,11 @@ import kotlin.test.assertNotEquals
 import kotlin.test.assertTrue
 
 class MapDefinitionValidatorTest {
+    private val campaignBalance = GameBalanceFixtures.balance.runtime.campaign
+
     @Test
     fun bundledDemoMapIsValidAndCoversTheFixedWorld() {
-        val definition = DemoLevelDefinitions.default.mapDefinition
+        val definition = DemoLevelDefinitions.default(campaignBalance).mapDefinition
 
         val result = MapDefinitionValidator.validate(definition)
 
@@ -79,7 +82,7 @@ class MapDefinitionValidatorTest {
 
     @Test
     fun groundedDecorationsMayBeOffsetFromTerrainAndPlacedOnSlopes() {
-        val source = DemoLevelDefinitions.default.mapDefinition
+        val source = DemoLevelDefinitions.default(campaignBalance).mapDefinition
         val terrain = source.terrain.copy(
             samples = source.terrain.samples.map { sample ->
                 if (sample.x == 3_560f) sample.copy(height = 2_880f) else sample
@@ -106,7 +109,7 @@ class MapDefinitionValidatorTest {
 
     @Test
     fun acceptsSharedMediumRelicsForAnyBiome() {
-        val source = DemoLevelDefinitions.default.mapDefinition
+        val source = DemoLevelDefinitions.default(campaignBalance).mapDefinition
         val definition = source.copy(
             biome = "frostbound",
             decorations = listOf(
@@ -129,7 +132,7 @@ class MapDefinitionValidatorTest {
 
     @Test
     fun rejectsWorldDimensionsThatDifferFromTheCanonicalWorld() {
-        val definition = DemoLevelDefinitions.default.mapDefinition
+        val definition = DemoLevelDefinitions.default(campaignBalance).mapDefinition
             .copy(world = MapWorldDimensions(width = 7_199, height = 4_800))
 
         val result = MapDefinitionValidator.validate(definition)
@@ -140,7 +143,7 @@ class MapDefinitionValidatorTest {
 
     @Test
     fun rejectsUnavailableCameraAnchorsAndUnsupportedZoom() {
-        val definition = DemoLevelDefinitions.default.mapDefinition
+        val definition = DemoLevelDefinitions.default(campaignBalance).mapDefinition
         val invalid = definition.copy(
             fortresses = definition.fortresses.filter { it.owner.name == "RED" },
             initialCameraAnchor = InitialCameraAnchor.PLAYER_FORTRESS,
@@ -158,7 +161,7 @@ class MapDefinitionValidatorTest {
 
     @Test
     fun strictDecoderRejectsUnknownFieldsAndEnums() {
-        val source = DemoLevelDefinitions.default.mapDefinition
+        val source = DemoLevelDefinitions.default(campaignBalance).mapDefinition
         val repository = MapDefinitionRepository {
             """{"schemaVersion":1,"mapId":"demo-map","biome":"unknown","world":{"width":7200,"height":4800},"terrain":{"sampleStep":40,"heightSamples":[]},"protectedZones":[],"fortresses":[],"decorations":[],"unexpected":true}"""
                 .byteInputStream()
@@ -181,7 +184,7 @@ class MapDefinitionValidatorTest {
 
     @Test
     fun chapterOneLevelsThreeAndFourUseTheirImportedMaps() {
-        val registry = CampaignLevelRegistry.default()
+        val registry = CampaignLevelRegistry.default(campaignBalance)
         val levels = (1..CampaignLevelDefinition.MAX_LEVELS).map(registry::level)
 
         assertEquals("chapter1-level3", levels[2].mapDefinition.mapId)

@@ -13,6 +13,8 @@ import com.urkaaaz.contracts.Team
 import com.urkaaaz.domain.AmmunitionType
 import com.urkaaaz.domain.UnitDefinition
 import com.urkaaaz.domain.UnitFactory
+import com.urkaaaz.domain.GameBalanceConfig
+import com.urkaaaz.domain.UnitIds
 
 class AiMatchCoordinator(
     private val scenario: MatchScenario? = null,
@@ -39,12 +41,12 @@ class AiMatchCoordinator(
     private var recruitmentCooldownRemainingMilliseconds = 0L
     private var selectedAmmunition = AmmunitionType.ROCK
 
-    fun start(randomSeed: Long) {
+    fun start(randomSeed: Long, balance: GameBalanceConfig) {
         val allowedUnits = allowedUnitIdsOverride
-            ?.map(UnitFactory::byId)
+            ?.map { UnitFactory.byId(it, balance.units) }
             ?.toSet()
-            ?: scenarioUnitIds?.map(UnitFactory::byId)?.toSet()
-            ?: UnitFactory.all()
+            ?: scenarioUnitIds?.map { UnitFactory.byId(it, balance.units) }?.toSet()
+            ?: UnitFactory.all(balance.units)
         val allowedAmmunition = allowedAmmunitionIdsOverride
             ?.map(::ammunitionById)
             ?.toSet()
@@ -54,6 +56,7 @@ class AiMatchCoordinator(
             configuration = AiConfiguration(
                 playerId = aiPlayerId,
                 team = Team.RED,
+                balance = balance,
                 profile = profile,
                 allowedUnits = allowedUnits,
                 randomSeed = randomSeed,
@@ -142,16 +145,16 @@ class AiMatchCoordinator(
 
     fun setAllowedUnitIds(ids: Set<String>) {
         require(ids.isNotEmpty()) { "AI must have at least one allowed unit" }
-        val units = ids.map(UnitFactory::byId).toSet()
-        allowedUnitIdsOverride = units.map(UnitDefinition::id).toSet()
-        agent?.setAllowedUnits(units)
+        require(ids.all { it in UnitIds.all }) { "AI unit IDs must be known" }
+        allowedUnitIdsOverride = ids.toSet()
+        agent?.setAllowedUnitIds(ids)
     }
 
     fun allowedUnitIds(): Set<String> =
         agent?.allowedUnitIds()
             ?: allowedUnitIdsOverride
             ?: scenarioUnitIds
-            ?: UnitFactory.all().map(UnitDefinition::id).toSet()
+            ?: UnitIds.all
 
     fun setAllowedAmmunitionIds(ids: Set<String>) {
         require(ids.isNotEmpty()) { "AI must have allowed ammunition" }

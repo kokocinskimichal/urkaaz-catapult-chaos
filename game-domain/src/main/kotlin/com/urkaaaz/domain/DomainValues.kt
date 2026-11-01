@@ -91,16 +91,17 @@ data class ResourceWallet(
         )
     }
 
-    fun ammunitionCount(type: AmmunitionType): Int =
-        if (type.unlimited) Int.MAX_VALUE else ammunition[type] ?: 0
+    fun ammunitionCount(definition: AmmunitionDefinition): Int =
+        if (definition.unlimited) Int.MAX_VALUE else ammunition[definition.type] ?: 0
 
-    fun canUse(type: AmmunitionType): Boolean =
-        type.unlimited || ammunitionCount(type) > 0
+    fun canUse(definition: AmmunitionDefinition): Boolean =
+        definition.unlimited || ammunitionCount(definition) > 0
 
-    fun consume(type: AmmunitionType): ResourceWallet {
-        require(canUse(type)) { "ammunition is unavailable" }
-        if (type.unlimited) return this
-        return copy(ammunition = ammunition + (type to ammunitionCount(type) - 1))
+    fun consume(definition: AmmunitionDefinition): ResourceWallet {
+        require(canUse(definition)) { "ammunition is unavailable" }
+        if (definition.unlimited) return this
+        val type = definition.type
+        return copy(ammunition = ammunition + (type to ammunitionCount(definition) - 1))
     }
 }
 

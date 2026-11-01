@@ -1,5 +1,7 @@
 package com.urkaaaz.simulation
 
+import com.urkaaaz.domain.GameBalanceFixtures
+
 import com.urkaaaz.contracts.MatchId
 import com.urkaaaz.contracts.MapDefinition
 import com.urkaaaz.contracts.MapGenerationMetadata
@@ -16,6 +18,7 @@ class MapDefinitionSimulationTest {
         val simulation = DeterministicMatchSimulation(
             matchId = MatchId("map-definition-test"),
             config = SimulationConfig(
+                balance = GameBalanceFixtures.balance,
                 bounds = WorldBounds(7_200f, 4_800f),
                 terrainBiome = "GREEN_FRONTIER",
                 mapDefinition = MapDefinition(

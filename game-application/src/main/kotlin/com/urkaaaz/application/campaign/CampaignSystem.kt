@@ -57,8 +57,8 @@ sealed interface CampaignLoadoutRewardsRead {
 
 class CampaignSystem(
     private val repository: CampaignProgressRepository,
-    private val levels: CampaignLevelRegistry = CampaignLevelRegistry.default(),
-    private val rewards: CampaignRewardRegistry = CampaignRewardRegistry.default(),
+    private val levels: CampaignLevelRegistry = BundledCampaignBalance.levelRegistry(),
+    private val rewards: CampaignRewardRegistry = BundledCampaignBalance.rewardRegistry(),
     private val rewardSettlement: RewardSettlementUseCase? = null,
 ) {
     suspend fun progress(): CampaignProgressRead =

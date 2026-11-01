@@ -12,6 +12,8 @@ import com.urkaaaz.contracts.Team
 import com.urkaaaz.domain.AmmunitionType
 import com.urkaaaz.domain.UnitDefinition
 import com.urkaaaz.domain.UnitFactory
+import com.urkaaaz.domain.GameBalanceConfig
+import com.urkaaaz.domain.AiProfileBalance
 import kotlin.random.Random
 
 @JvmInline
@@ -26,30 +28,7 @@ data class AiProfileDefinition(
     val catapultStrategy: AiStrategyId,
     val recruitmentStrategy: AiStrategyId,
     val waveStrategy: AiStrategyId,
-    val angleErrorDegrees: Float,
-    val powerError: Float,
-    val reactionIntervalMilliseconds: Long,
-    val unitRecruitmentIntervalMilliseconds: Long = 0L,
-    val progressionErrorReduction: Float = 0f,
-    val progressionReactionReduction: Float = 0f,
-) {
-    init {
-        require(angleErrorDegrees >= 0f) { "angle error must not be negative" }
-        require(powerError >= 0f) { "power error must not be negative" }
-        require(reactionIntervalMilliseconds > 0) {
-            "reaction interval must be positive"
-        }
-        require(unitRecruitmentIntervalMilliseconds >= 0) {
-            "unit recruitment interval must not be negative"
-        }
-        require(progressionErrorReduction in 0f..1f) {
-            "profile progression error reduction must be between 0 and 1"
-        }
-        require(progressionReactionReduction in 0f..1f) {
-            "profile progression reaction reduction must be between 0 and 1"
-        }
-    }
-}
+)
 
 data class AiProfileTuning(
     val catapultStrategy: AiStrategyId,
@@ -71,36 +50,40 @@ class AiProfileCatalog(definitions: List<AiProfileDefinition>) {
         }
     }
 
-    fun tuning(selection: AiProfileSelection): AiProfileTuning {
+    fun tuning(
+        selection: AiProfileSelection,
+        balanceProfiles: List<AiProfileBalance>,
+    ): AiProfileTuning {
         val definition = definitionsById[selection.profileId]
             ?: error("unknown AI profile '${selection.profileId.value}'")
+        val balance = balanceProfiles.singleOrNull { it.profileId == selection.profileId }
+            ?: error("AI balance profile is missing: ${selection.profileId.value}")
         require(
             selection.progressionPercent == 0 ||
-                definition.progressionErrorReduction > 0f ||
-                definition.progressionReactionReduction > 0f,
+                balance.progressionErrorReduction > 0f ||
+                balance.progressionReactionReduction > 0f,
         ) {
             "AI profile does not support campaign progression"
         }
         val progression = selection.progressionPercent / 100f
-        val errorScale = 1f - progression * definition.progressionErrorReduction
+        val errorScale = 1f - progression * balance.progressionErrorReduction
         val reactionReduction =
-            definition.reactionIntervalMilliseconds *
-                definition.progressionReactionReduction *
+            balance.reactionIntervalMilliseconds *
+                balance.progressionReactionReduction *
                 progression
 
         return AiProfileTuning(
             catapultStrategy = definition.catapultStrategy,
             recruitmentStrategy = definition.recruitmentStrategy,
             waveStrategy = definition.waveStrategy,
-            angleErrorDegrees = definition.angleErrorDegrees * errorScale,
-            powerError = definition.powerError * errorScale,
-            unitRecruitmentIntervalMilliseconds =
-                definition.unitRecruitmentIntervalMilliseconds,
+            angleErrorDegrees = balance.angleErrorDegrees * errorScale,
+            powerError = balance.powerError * errorScale,
+            unitRecruitmentIntervalMilliseconds = balance.unitRecruitmentIntervalMilliseconds,
             reactionIntervalMilliseconds = (
-                definition.reactionIntervalMilliseconds - reactionReduction
+                balance.reactionIntervalMilliseconds - reactionReduction
                 ).toLong().coerceAtLeast(
-                    (definition.reactionIntervalMilliseconds *
-                        (1f - definition.progressionReactionReduction))
+                    (balance.reactionIntervalMilliseconds *
+                        (1f - balance.progressionReactionReduction))
                         .toLong(),
                 ),
         )
@@ -114,30 +97,18 @@ class AiProfileCatalog(definitions: List<AiProfileDefinition>) {
                     catapultStrategy = AiStrategyId("simple"),
                     recruitmentStrategy = AiStrategyId("simple"),
                     waveStrategy = AiStrategyId("simple"),
-                    angleErrorDegrees = 28f,
-                    powerError = 45f,
-                    reactionIntervalMilliseconds = 1_100L,
-                    unitRecruitmentIntervalMilliseconds = 8_000L,
                 ),
                 AiProfileDefinition(
                     profileId = AiProfileId.VETERAN,
                     catapultStrategy = AiStrategyId("situational"),
                     recruitmentStrategy = AiStrategyId("situational"),
                     waveStrategy = AiStrategyId("situational"),
-                    angleErrorDegrees = 3f,
-                    powerError = 6f,
-                    reactionIntervalMilliseconds = 700L,
                 ),
                 AiProfileDefinition(
                     profileId = AiProfileId.ELITE,
                     catapultStrategy = AiStrategyId("counterplay"),
                     recruitmentStrategy = AiStrategyId("counterplay"),
                     waveStrategy = AiStrategyId("counterplay"),
-                    angleErrorDegrees = 1.25f,
-                    powerError = 2.5f,
-                    reactionIntervalMilliseconds = 400L,
-                    progressionErrorReduction = 0.5f,
-                    progressionReactionReduction = 0.5f,
                 ),
             ),
         )
@@ -147,8 +118,9 @@ class AiProfileCatalog(definitions: List<AiProfileDefinition>) {
 data class AiConfiguration(
     val playerId: PlayerId,
     val team: Team,
+    val balance: GameBalanceConfig,
     val profile: AiProfileSelection = AiProfileSelection(),
-    val allowedUnits: Set<UnitDefinition> = UnitFactory.all(),
+    val allowedUnits: Set<UnitDefinition> = UnitFactory.all(balance.units),
     val randomSeed: Long = 0L,
     val allowedAmmunition: Set<AmmunitionType> = AmmunitionType.entries.toSet(),
 ) {
@@ -164,7 +136,10 @@ class AiAgent(
 ) {
     private val random = Random(configuration.randomSeed)
     private var commandSequence = 0L
-    private val tuning = strategies.profiles.tuning(configuration.profile)
+    private val tuning = strategies.profiles.tuning(
+        configuration.profile,
+        configuration.balance.runtime.aiProfiles,
+    )
     private val catapultStrategy = strategies.catapult(tuning.catapultStrategy)
     private val recruitmentStrategy = strategies.recruitment(tuning.recruitmentStrategy)
     private val waveStrategy = strategies.wave(tuning.waveStrategy)
@@ -181,7 +156,7 @@ class AiAgent(
     }
 
     fun setAllowedUnitIds(allowedUnitIds: Set<String>) {
-        setAllowedUnits(allowedUnitIds.map(UnitFactory::byId).toSet())
+        setAllowedUnits(allowedUnitIds.map { UnitFactory.byId(it, configuration.balance.units) }.toSet())
     }
 
     fun allowedUnitIds(): Set<String> = configuration.allowedUnits.map { it.id }.toSet()
@@ -212,6 +187,7 @@ class AiAgent(
             team = configuration.team,
             allowedUnits = configuration.allowedUnits,
             allowedAmmunition = configuration.allowedAmmunition,
+            balance = configuration.balance,
             tuning = tuning,
             random = random,
             commandIdFactory = { action ->

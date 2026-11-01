@@ -1,49 +1,48 @@
 package com.urkaaaz.application.loadout
 
-import com.urkaaaz.domain.AmmunitionCatalog as DomainAmmunitionCatalog
-import com.urkaaaz.domain.AmmunitionType
+import com.urkaaaz.domain.GameBalanceFixtures
 import com.urkaaaz.domain.SpellType
-import com.urkaaaz.domain.SpellCatalog
-import com.urkaaaz.domain.UnitConfigurations
 import kotlin.test.Test
 import kotlin.test.assertEquals
 
 class LoadoutCatalogTest {
+    private val catalog = LoadoutCatalog(GameBalanceFixtures.balance)
+
     @Test
     fun presentationCatalogProjectsCanonicalDomainDefinitions() {
         assertEquals(
-            UnitConfigurations.all.map { it.id to it.supplyCost },
-            LoadoutCatalog.units.map { it.id to it.supplyCost },
+            GameBalanceFixtures.balance.units.all.map { it.id to it.supplyCost },
+            catalog.units.map { it.id to it.supplyCost },
         )
         assertEquals(
-            AmmunitionType.values().map { it.name to it.unlimited },
-            LoadoutCatalog.ammunition.map { it.id to it.unlimited },
+            GameBalanceFixtures.balance.ammunition.all.map { it.type.name to it.unlimited },
+            catalog.ammunition.map { it.id to it.unlimited },
         )
         assertEquals(
-            DomainAmmunitionCatalog.all.map {
+            GameBalanceFixtures.balance.ammunition.all.map {
                 Triple(it.type.name, it.damage.unitDamage, it.damage.fortressDamage)
             },
-            LoadoutCatalog.ammunition.map {
+            catalog.ammunition.map {
                 Triple(it.id, it.unitDamage, it.fortressDamage)
             },
         )
         assertEquals(
-            SpellCatalog.all.map { Triple(it.type.name, it.goldCost, it.special) },
-            LoadoutCatalog.spells.map { Triple(it.id, it.goldCost, it.special) },
+            GameBalanceFixtures.balance.spells.all.map { Triple(it.type.name, it.goldCost, it.special) },
+            catalog.spells.map { Triple(it.id, it.goldCost, it.special) },
         )
         assertEquals(
-            SpellCatalog.all.map { Triple(it.type.name, it.manaCost, it.isImplemented) },
-            LoadoutCatalog.spells.map { Triple(it.id, it.manaCost, it.implemented) },
+            GameBalanceFixtures.balance.spells.all.map { Triple(it.type.name, it.manaCost, it.isImplemented) },
+            catalog.spells.map { Triple(it.id, it.manaCost, it.implemented) },
         )
         assertEquals(
-            SpellCatalog.definition(SpellType.HASTE).recastableWhileActive,
-            LoadoutCatalog.findSpell(SpellType.HASTE.name)?.recastableWhileActive,
+            GameBalanceFixtures.balance.spells.definition(SpellType.HASTE).recastableWhileActive,
+            catalog.findSpell(SpellType.HASTE.name)?.recastableWhileActive,
         )
         assertEquals(
             15_000L,
-            LoadoutCatalog.findSpell(SpellType.HASTE.name)?.activeDurationMilliseconds,
+            catalog.findSpell(SpellType.HASTE.name)?.activeDurationMilliseconds,
         )
-        assertEquals(20, LoadoutCatalog.maximumSupply)
-        assertEquals(100, LoadoutCatalog.maximumMana)
+        assertEquals(20, catalog.maximumSupply)
+        assertEquals(100, catalog.maximumMana)
     }
 }

@@ -9,32 +9,10 @@ import {
 import { resolveRepoRoot } from "./repoRoot.ts";
 
 let repoRoot: string;
-
-const validBalance = JSON.stringify({
-  schemaVersion: 1,
-  balanceRevision: "test-1",
-  bosses: [{
-    id: "boss.central-oak.level-05",
-    presentationKey: "oak",
-    archetype: "CENTRAL_OBJECTIVE",
-    maxHealth: 12000,
-    collision: { width: 1440, height: 2016 },
-    movement: { kind: "STATIC", speedWorldUnitsPerSecond: 0 },
-    attacks: [{
-      target: "UNIT",
-      damage: 150,
-      minimumDamage: 35,
-      rangeWorldUnits: 780,
-      cooldownSeconds: 4,
-      initialCooldownSeconds: 2.5,
-      windupSeconds: 2.291,
-    }],
-    specialAbilities: [],
-    immuneAmmunitionTypes: ["PLAGUE_CAULDRON"],
-  }],
-});
+let validBalance: string;
 
 beforeEach(async () => {
+  validBalance = (await readBalance(await resolveRepoRoot())).content;
   repoRoot = await mkdtemp(join(tmpdir(), "studio-balance-"));
   const directory = join(repoRoot, "game-domain", "src", "main", "resources", "balance");
   await mkdir(directory, { recursive: true });
@@ -46,7 +24,7 @@ afterEach(async () => {
 });
 
 describe("game balance catalog", () => {
-  it("validates the supported boss profile schema", () => {
+  it("validates the supported schema 3 balance document", () => {
     expect(validateBalanceContent(validBalance)).toEqual({ valid: true, issues: [] });
   });
 
@@ -74,5 +52,134 @@ describe("game balance catalog", () => {
     const root = await resolveRepoRoot();
     const balance = await readBalance(root);
     expect(validateBalanceContent(balance.content)).toEqual({ valid: true, issues: [] });
+  });
+
+  it("rejects missing unit coverage and invalid ammunition, spell, and mana profiles", () => {
+    const missingUnit = JSON.parse(validBalance) as Record<string, unknown>;
+    (missingUnit.units as unknown[]).pop();
+    expect(validateBalanceContent(JSON.stringify(missingUnit)).valid).toBe(false);
+
+    const invalidAmmunition = JSON.parse(validBalance) as Record<string, unknown>;
+    const ammunition = (invalidAmmunition.ammunition as Record<string, unknown>[])[0];
+    ammunition.behavior = { kind: "SCRIPT" };
+    expect(validateBalanceContent(JSON.stringify(invalidAmmunition)).valid).toBe(false);
+
+    const invalidSpell = JSON.parse(validBalance) as Record<string, unknown>;
+    (invalidSpell.spells as Record<string, unknown>[])[0].manaCost = 0;
+    expect(validateBalanceContent(JSON.stringify(invalidSpell)).valid).toBe(false);
+
+    const invalidMana = JSON.parse(validBalance) as Record<string, unknown>;
+    (invalidMana.mana as Record<string, unknown>).startingMana = 101;
+    expect(validateBalanceContent(JSON.stringify(invalidMana)).valid).toBe(false);
+  });
+
+  it("rejects fields required by the runtime balance loader when omitted", () => {
+    const invalid = JSON.parse(validBalance) as Record<string, unknown>;
+    const boss = (invalid.bosses as Record<string, unknown>[])[0];
+    delete boss.immuneAmmunitionTypes;
+
+    const ammunition = invalid.ammunition as Record<string, unknown>[];
+    const rock = ammunition.find(profile => profile.type === "ROCK");
+    const fireRain = ammunition.find(profile => profile.type === "FIRE_RAIN");
+    expect(rock).toBeDefined();
+    expect(fireRain).toBeDefined();
+    const rockInventory = rock!.inventory as Record<string, unknown>;
+    const rockFlight = rock!.flight as Record<string, unknown>;
+    const rockCollision = rock!.collision as Record<string, unknown>;
+    const rockDamage = rock!.damage as Record<string, unknown>;
+    const fireBehavior = fireRain!.behavior as Record<string, unknown>;
+    delete rockInventory.startingCount;
+    delete rockFlight.gravityResponse;
+    delete rockFlight.drag;
+    delete rockFlight.initialSpeedMultiplier;
+    delete rockFlight.maximumLifetimeSeconds;
+    delete rockFlight.apexFragmentation;
+    delete rockCollision.friendlyFire;
+    delete rockDamage.falloff;
+    delete rockDamage.minimumDamage;
+    delete fireBehavior.windDriftMultiplier;
+    delete fireBehavior.followsTerrain;
+    delete fireBehavior.unitFriendlyFire;
+
+    const spell = (invalid.spells as Record<string, unknown>[])
+      .find(profile => profile.type === "ICE_TRAP");
+    expect(spell).toBeDefined();
+    delete spell!.effect;
+    delete spell!.recastableWhileActive;
+
+    const result = validateBalanceContent(JSON.stringify(invalid));
+    expect(result.issues).toEqual(expect.arrayContaining([
+      "bosses[0].immuneAmmunitionTypes",
+      "ammunition[0].inventory.startingCount",
+      "ammunition[0].flight.gravityResponse",
+      "ammunition[0].flight.drag",
+      "ammunition[0].flight.initialSpeedMultiplier",
+      "ammunition[0].flight.maximumLifetimeSeconds",
+      "ammunition[0].flight.apexFragmentation",
+      "ammunition[0].collision.friendlyFire",
+      "ammunition[0].damage.falloff",
+      "ammunition[0].damage.minimumDamage",
+      "ammunition[3].behavior.windDriftMultiplier",
+      "ammunition[3].behavior.followsTerrain",
+      "ammunition[3].behavior.unitFriendlyFire",
+      "spells[0].effect",
+      "spells[0].recastableWhileActive",
+    ].map(path => expect.objectContaining({ path }))));
+  });
+
+  it("requires valid runtime profiles and contiguous campaign difficulty bands", () => {
+    const missingRuntime = JSON.parse(validBalance) as Record<string, unknown>;
+    delete missingRuntime.runtime;
+    expect(validateBalanceContent(JSON.stringify(missingRuntime)).valid).toBe(false);
+
+    const invalidSupply = JSON.parse(validBalance) as Record<string, unknown>;
+    const supplyRuntime = (invalidSupply.runtime as Record<string, unknown>);
+    (supplyRuntime.economy as Record<string, unknown>).startingSupply = 21;
+    expect(validateBalanceContent(JSON.stringify(invalidSupply)).issues).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ path: "runtime.economy.startingSupply" }),
+      ]),
+    );
+
+    const invalidCombat = JSON.parse(validBalance) as Record<string, unknown>;
+    const combat = (invalidCombat.runtime as Record<string, unknown>)
+      .combat as Record<string, unknown>;
+    combat.maximumMeleeSynergyMultiplier = 0.5;
+    expect(validateBalanceContent(JSON.stringify(invalidCombat)).issues).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ path: "runtime.combat.maximumMeleeSynergyMultiplier" }),
+      ]),
+    );
+
+    const invalidCampaign = JSON.parse(validBalance) as Record<string, unknown>;
+    const campaign = (invalidCampaign.runtime as Record<string, unknown>)
+      .campaign as Record<string, unknown>;
+    const bands = campaign.aiDifficultyBands as Record<string, unknown>[];
+    bands[1].firstLevel = 12;
+    expect(validateBalanceContent(JSON.stringify(invalidCampaign)).issues).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ path: "runtime.campaign.aiDifficultyBands[1].firstLevel" }),
+      ]),
+    );
+
+    const invalidCatapult = JSON.parse(validBalance) as Record<string, unknown>;
+    const catapult = (invalidCatapult.runtime as Record<string, unknown>)
+      .catapult as Record<string, unknown>;
+    catapult.initialAimPower = 101;
+    expect(validateBalanceContent(JSON.stringify(invalidCatapult)).issues).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ path: "runtime.catapult.initialAimPower" }),
+      ]),
+    );
+
+    const invalidAiStrategy = JSON.parse(validBalance) as Record<string, unknown>;
+    const aiStrategy = (invalidAiStrategy.runtime as Record<string, unknown>)
+      .aiStrategy as Record<string, unknown>;
+    aiStrategy.horizontalDistancePerPowerPercent = 0;
+    expect(validateBalanceContent(JSON.stringify(invalidAiStrategy)).issues).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ path: "runtime.aiStrategy.horizontalDistancePerPowerPercent" }),
+      ]),
+    );
   });
 });

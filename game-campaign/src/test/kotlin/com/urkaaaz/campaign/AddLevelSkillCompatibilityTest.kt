@@ -1,13 +1,16 @@
 package com.urkaaaz.campaign
 
+import com.urkaaaz.domain.GameBalanceFixtures
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 
 class AddLevelSkillCompatibilityTest {
+    private val campaignBalance = GameBalanceFixtures.balance.runtime.campaign
+
     @Test
     fun registryUsesOnlyValidatedBundledJsonForCampaignLevels() {
-        val registry = CampaignLevelRegistry.default()
+        val registry = CampaignLevelRegistry.default(campaignBalance)
         val first = registry.mapDefinition(1)
         val levelThree = registry.mapDefinition(3)
         val levelFour = registry.mapDefinition(4)
@@ -25,7 +28,7 @@ class AddLevelSkillCompatibilityTest {
 
     @Test
     fun demoDefinitionComesFromTheBundledMapRepository() {
-        val demo = DemoLevelDefinitions.default
+        val demo = DemoLevelDefinitions.default(campaignBalance)
 
         assertEquals("demo-map", demo.mapDefinition.mapId)
         assertEquals("green_frontier", demo.mapDefinition.biome)

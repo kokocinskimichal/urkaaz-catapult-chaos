@@ -1,9 +1,8 @@
 package com.urkaaaz.application.loadout
 
 import com.urkaaaz.domain.AmmunitionType
+import com.urkaaaz.domain.GameBalanceConfig
 import com.urkaaaz.domain.SpellType
-import com.urkaaaz.domain.SpellCatalog
-import com.urkaaaz.domain.UnitConfigurations
 
 /** One canonical, immutable player selection. Empty unit/spell lists are valid drafts only. */
 data class MatchLoadout(
@@ -43,9 +42,13 @@ data class MatchLoadout(
         const val MAX_SPELLS = 3
         const val ROCK = "ROCK"
 
-        fun defaults(availability: LoadoutAvailability, progression: LoadoutProgressionSnapshot) =
+        fun defaults(
+            availability: LoadoutAvailability,
+            progression: LoadoutProgressionSnapshot,
+            balance: GameBalanceConfig,
+        ) =
             MatchLoadout(
-                unitTypes = UnitConfigurations.all.asSequence()
+                unitTypes = balance.units.all.asSequence()
                     .map { it.id }
                     .filter { it in availability.unitTypes }
                     .take(MAX_UNITS)
@@ -54,7 +57,10 @@ data class MatchLoadout(
                     .asSequence()
                     .map { it.name }
                     .filter { it != ROCK && it in availability.ammunitionTypes }
-                    .filter { it.isUnlimitedAmmunition() || progression.ammunitionStock(it) > 0 }
+                    .filter {
+                        balance.ammunition.definition(AmmunitionType.valueOf(it)).unlimited ||
+                            progression.ammunitionStock(it) > 0
+                    }
                     .take(AMMUNITION_SLOT_COUNT - 1)
                     .toList()
                     .let { it + List(AMMUNITION_SLOT_COUNT - 1 - it.size) { null } },
@@ -62,13 +68,13 @@ data class MatchLoadout(
                     .asSequence()
                     .map { it.name }
                     .filter { it in progression.defaultSpellTypes }
-                    .filter { it.isAllowedSpell(availability, progression) }
+                    .filter { it.isAllowedSpell(availability, progression, balance) }
                     .plus(
                         SpellType.values()
                             .asSequence()
                             .map { it.name }
                             .filter { it !in progression.defaultSpellTypes }
-                            .filter { it.isAllowedSpell(availability, progression) },
+                            .filter { it.isAllowedSpell(availability, progression, balance) },
                     )
                     .take(MAX_SPELLS)
                     .toList(),
@@ -76,14 +82,12 @@ data class MatchLoadout(
     }
 }
 
-private fun String.isUnlimitedAmmunition(): Boolean =
-    AmmunitionType.valueOf(this).unlimited
-
 internal fun String.isAllowedSpell(
     availability: LoadoutAvailability,
     progression: LoadoutProgressionSnapshot,
+    balance: GameBalanceConfig,
 ): Boolean {
-    val spell = SpellCatalog.find(this) ?: return false
+    val spell = balance.spells.find(this) ?: return false
     return if (spell.special) {
         progression.specialSpellStock(this) > 0
     } else {

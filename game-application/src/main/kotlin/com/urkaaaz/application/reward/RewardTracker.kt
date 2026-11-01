@@ -1,6 +1,7 @@
 package com.urkaaaz.application.reward
 
 import com.urkaaaz.campaign.CampaignRewardRegistry
+import com.urkaaaz.application.campaign.BundledCampaignBalance
 import com.urkaaaz.campaign.RewardCondition
 import com.urkaaaz.contracts.EntityId
 import com.urkaaaz.contracts.EventId
@@ -53,7 +54,7 @@ data class LevelRewardResult(
 
 class RewardTracker(
     private val level: Int,
-    private val registry: CampaignRewardRegistry = CampaignRewardRegistry.default(),
+    private val registry: CampaignRewardRegistry = BundledCampaignBalance.rewardRegistry(),
 ) : MatchEventObserver {
     private var trackedMatchId: MatchId? = null
     private val processedEvents = mutableSetOf<EventId>()

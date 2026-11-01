@@ -4,10 +4,10 @@ import com.urkaaaz.contracts.MapDefinition
 import com.urkaaaz.contracts.MatchScenario
 import com.urkaaaz.contracts.PlayerId
 import com.urkaaaz.contracts.PlayerLoadoutConfig
+import com.urkaaaz.domain.CampaignBalance
 
 class CampaignLevelRegistry(
-    private val levels: Map<Int, CampaignLevelDefinition> =
-        defaultLevels(MapDefinitionRepository.bundled),
+    private val levels: Map<Int, CampaignLevelDefinition>,
 ) {
     fun level(levelNumber: Int): CampaignLevelDefinition =
         levels[levelNumber] ?: error("unknown campaign level: $levelNumber")
@@ -25,14 +25,25 @@ class CampaignLevelRegistry(
     fun contains(levelNumber: Int): Boolean = levelNumber in levels
 
     companion object {
-        fun default(): CampaignLevelRegistry = CampaignLevelRegistry()
+        fun default(
+            campaignBalance: CampaignBalance,
+            repository: MapDefinitionRepository = MapDefinitionRepository.bundled,
+        ): CampaignLevelRegistry =
+            CampaignLevelRegistry(defaultLevels(campaignBalance, repository))
 
-        fun using(repository: MapDefinitionRepository): CampaignLevelRegistry =
-            CampaignLevelRegistry(defaultLevels(repository))
+        fun using(
+            campaignBalance: CampaignBalance,
+            repository: MapDefinitionRepository,
+        ): CampaignLevelRegistry = CampaignLevelRegistry(
+            defaultLevels(campaignBalance, repository),
+        )
 
-        private fun defaultLevels(repository: MapDefinitionRepository): Map<Int, CampaignLevelDefinition> =
+        private fun defaultLevels(
+            campaignBalance: CampaignBalance,
+            repository: MapDefinitionRepository,
+        ): Map<Int, CampaignLevelDefinition> =
             (1..CampaignLevelDefinition.MAX_LEVELS).associateWith { level ->
-                CampaignLevelDefinition.forLevel(level, repository).also {
+                CampaignLevelDefinition.forLevel(level, campaignBalance, repository).also {
                     MapDefinitionValidator.requireValid(it.mapDefinition)
                 }
             }

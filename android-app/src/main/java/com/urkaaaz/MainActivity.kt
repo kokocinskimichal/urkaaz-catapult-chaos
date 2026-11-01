@@ -8,7 +8,9 @@ import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.WindowInsetsControllerCompat
 import com.urkaaaz.application.campaign.CampaignSystem
+import com.urkaaaz.application.campaign.BundledCampaignBalance
 import com.urkaaaz.application.loadout.LoadoutUseCases
+import com.urkaaaz.application.loadout.LoadoutCatalog
 import com.urkaaaz.application.progression.CampaignAwareLoadoutProgressionPort
 import com.urkaaaz.application.progression.PlayerProgressionUseCases
 import com.urkaaaz.application.progression.DeveloperProgressPresetApply
@@ -31,7 +33,6 @@ import com.urkaaaz.screens.dashboard.DashboardScreen
 import com.urkaaaz.screens.loadout.LoadoutScreen
 import com.urkaaaz.screens.match.CampaignCompletionPresenter
 import com.urkaaaz.application.reward.RewardSettlementUseCase
-import com.urkaaaz.campaign.CampaignRewardRegistry
 import com.urkaaaz.screens.match.MatchScreen
 import com.urkaaaz.screens.result.ResultScreen
 import com.urkaaaz.screens.shop.ShopScreen
@@ -47,10 +48,11 @@ class MainActivity : ComponentActivity() {
     private lateinit var navigator: AppNavigator
     private var activityResumed = false
     private val startupScope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
+    private val loadoutCatalog by lazy { LoadoutCatalog.bundled() }
     private val campaignCompletionPresenter by lazy {
         CampaignCompletionPresenter(this, campaignSystem)
     }
-    private val campaignRewardRegistry by lazy { CampaignRewardRegistry.default() }
+    private val campaignRewardRegistry by lazy { BundledCampaignBalance.rewardRegistry() }
     private val campaignSystem by lazy {
         CampaignSystem(
             DataStoreCampaignProgressRepository(
@@ -96,7 +98,7 @@ class MainActivity : ComponentActivity() {
     }
     private val demoLoadoutUseCases by lazy {
         LoadoutUseCases(
-            progression = DemoLoadoutProgressionPort(),
+            progression = DemoLoadoutProgressionPort(loadoutCatalog),
             repository = DataStoreLoadoutRepository(
                 preferencesDataStore,
                 scope = LoadoutStorageScope.DEMO,
@@ -192,6 +194,7 @@ class MainActivity : ComponentActivity() {
                 context = this,
                 campaignLevel = screen.campaignLevel,
                 loadoutUseCases = if (screen.demoMode) demoLoadoutUseCases else loadoutUseCases,
+                loadoutCatalog = loadoutCatalog,
                 onBack = { navigator.back() },
                 demoMode = screen.demoMode,
                 onStart = { playerLoadout ->
@@ -214,6 +217,7 @@ class MainActivity : ComponentActivity() {
                 campaignLevel = screen.campaignLevel,
                 rewardRegistry = campaignRewardRegistry,
                 playerLoadout = screen.playerLoadout,
+                loadoutCatalog = loadoutCatalog,
                 demoMode = screen.levelId == "DEMO_LEVEL",
                 onBackClicked = {
                     if (!navigator.back()) {

@@ -1,5 +1,7 @@
 package com.urkaaaz.simulation
 
+import com.urkaaaz.domain.GameBalanceFixtures
+
 import com.urkaaaz.domain.WorldBounds
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -9,10 +11,12 @@ class WindSystemTest {
     @Test
     fun defaultSimulationScaleAppliesFiftyPercentMoreWindAcceleration() {
         val config = SimulationConfig(
+            balance = GameBalanceFixtures.balance,
             bounds = WorldBounds(width = 1_000f, height = 600f),
         )
         val wind = WindSystem(
             initialAccelerationX = 0.5f,
+            balance = GameBalanceFixtures.balance.runtime.wind,
             accelerationScale = config.windAccelerationScale,
         )
 
@@ -22,7 +26,10 @@ class WindSystemTest {
 
     @Test
     fun windRemainsStableBeforeInitialChangeDelay() {
-        val wind = WindSystem(initialAccelerationX = 0.5f)
+        val wind = WindSystem(
+            initialAccelerationX = 0.5f,
+            balance = GameBalanceFixtures.balance.runtime.wind,
+        )
 
         wind.update(7.9f)
 
@@ -31,8 +38,14 @@ class WindSystemTest {
 
     @Test
     fun windChangesDeterministicallyAfterDelayAndTransition() {
-        val first = WindSystem(initialAccelerationX = 0.5f)
-        val second = WindSystem(initialAccelerationX = 0.5f)
+        val first = WindSystem(
+            initialAccelerationX = 0.5f,
+            balance = GameBalanceFixtures.balance.runtime.wind,
+        )
+        val second = WindSystem(
+            initialAccelerationX = 0.5f,
+            balance = GameBalanceFixtures.balance.runtime.wind,
+        )
 
         repeat(110) {
             first.update(0.1f)

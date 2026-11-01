@@ -1,15 +1,10 @@
 package com.urkaaaz.application.loadout
 
-import com.urkaaaz.domain.AmmunitionCatalog as DomainAmmunitionCatalog
 import com.urkaaaz.domain.AmmunitionEffect
-import com.urkaaaz.domain.AmmunitionType
+import com.urkaaaz.domain.GameBalanceConfig
 import com.urkaaaz.domain.SpellCategory
-import com.urkaaaz.domain.SpellCatalog
 import com.urkaaaz.domain.SpellEffectDefinition
-import com.urkaaaz.domain.SpellType
-import com.urkaaaz.domain.ManaConfiguration
-import com.urkaaaz.domain.SupplyConfiguration
-import com.urkaaaz.domain.UnitConfigurations
+import com.urkaaaz.application.balance.GameBalanceRepository
 
 data class LoadoutUnitDefinition(
     val id: String,
@@ -32,6 +27,10 @@ data class LoadoutAmmunitionDefinition(
     val id: String,
     val effect: LoadoutAmmunitionEffect,
     val unlimited: Boolean,
+    val initialSpeedMultiplier: Float,
+    val windResponse: Float,
+    val gravityResponse: Float,
+    val drag: Float,
     val reloadSeconds: Float,
     val unitDamage: Int,
     val fortressDamage: Int,
@@ -61,11 +60,18 @@ data class LoadoutSpellDefinition(
  * Read-only projections for loadout presentation, sourced from the domain's
  * canonical balance definitions.
  */
-object LoadoutCatalog {
-    val maximumMana: Int = ManaConfiguration.MAXIMUM_MANA
-    val maximumSupply: Int = SupplyConfiguration.MAXIMUM_SUPPLY
+class LoadoutCatalog(private val balance: GameBalanceConfig) {
+    val maximumMana: Int = balance.mana.maximumMana
+    val maximumSupply: Int = balance.runtime.economy.maximumSupply
+    val demoBlueFortressMaximumHealth: Int =
+        balance.runtime.fortresses.demoBlueMaximumHealth
+    val initialAimDirectionDegrees: Float =
+        balance.runtime.catapult.initialAimDirectionDegrees
+    val initialAimPower: Float = balance.runtime.catapult.initialAimPower
+    val gravityAccelerationY: Float = balance.runtime.physics.gravityAccelerationY
+    val windAccelerationScale: Float = balance.runtime.physics.windAccelerationScale
 
-    val units: List<LoadoutUnitDefinition> = UnitConfigurations.all.map { unit ->
+    val units: List<LoadoutUnitDefinition> = balance.units.all.map { unit ->
         LoadoutUnitDefinition(
             id = unit.id,
             supplyCost = unit.supplyCost,
@@ -77,13 +83,15 @@ object LoadoutCatalog {
         )
     }
 
-    val ammunition: List<LoadoutAmmunitionDefinition> =
-        AmmunitionType.values().map { type ->
-            val definition = DomainAmmunitionCatalog.definition(type)
+    val ammunition: List<LoadoutAmmunitionDefinition> = balance.ammunition.all.map { definition ->
             LoadoutAmmunitionDefinition(
-                id = type.name,
-                effect = type.effect.toLoadoutEffect(),
-                unlimited = type.unlimited,
+                id = definition.type.name,
+                effect = definition.effect.toLoadoutEffect(),
+                unlimited = definition.unlimited,
+                initialSpeedMultiplier = definition.flight.initialSpeedMultiplier,
+                windResponse = definition.flight.windResponse,
+                gravityResponse = definition.flight.gravityResponse,
+                drag = definition.flight.drag,
                 reloadSeconds = definition.reload.reloadSeconds,
                 unitDamage = definition.damage.unitDamage,
                 fortressDamage = definition.damage.fortressDamage,
@@ -91,7 +99,7 @@ object LoadoutCatalog {
             )
         }
 
-    val spells: List<LoadoutSpellDefinition> = SpellCatalog.all.map { spell ->
+    val spells: List<LoadoutSpellDefinition> = balance.spells.all.map { spell ->
         LoadoutSpellDefinition(
             id = spell.type.name,
             goldCost = spell.goldCost,
@@ -115,6 +123,11 @@ object LoadoutCatalog {
         ammunition.firstOrNull { it.id == id }
 
     fun findSpell(id: String): LoadoutSpellDefinition? = spells.firstOrNull { it.id == id }
+
+    companion object {
+        fun bundled(): LoadoutCatalog =
+            LoadoutCatalog(GameBalanceRepository.bundled.requireConfig())
+    }
 }
 
 private fun AmmunitionEffect.toLoadoutEffect(): LoadoutAmmunitionEffect = when (this) {

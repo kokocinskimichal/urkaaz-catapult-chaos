@@ -97,7 +97,7 @@ blocker wymagający decyzji użytkownika.
 
 - Od 1 do 3 unikalnych typów; zachowaj kolejność wyboru.
 - Default: pierwsze maksymalnie trzy dostępne typy w kolejności
-  `SiegeUnitType.entries`; obecna kolejność `UnitConfigurations.all` zachowuje
+  `SiegeUnitType.entries`; obecna kolejność `GameBalanceConfig.units.all` zachowuje
   tę kolejność z legacy.
 - Nie pozwalaj odznaczyć ostatniej jednostki. Nie pozwalaj wybrać jednostki
   niedostępnej na poziomie.

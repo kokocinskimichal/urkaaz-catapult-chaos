@@ -171,7 +171,7 @@ błędów.
 - Lista ma od 1 do 3 unikalnych typów jednostek; zachowuje kolejność wyboru.
 - Default to pierwsze maksymalnie trzy dostępne typy w kolejności
   `SiegeUnitType.entries` z legacy, zachowanej przez bieżącą kolejność
-  `UnitConfigurations.all`.
+  `GameBalanceConfig.units.all`.
 - Nie można odznaczyć ostatniej jednostki. Niedostępnych jednostek nie można
   dodać.
 - Wartości kosztów i statystyk pozostają w centralnych konfiguracjach
@@ -323,9 +323,9 @@ przycisk `ⓘ` pozostaje osobno po lewej stronie.
 Przycisk startu prowadzi do meczu wyłącznie po udanym zatwierdzeniu. Szczegóły
 otwierają się wewnątrz ekranu; powrót zachowuje draft i scroll. Lifecycle
 ekranu anuluje operacje w toku. `LoadoutCatalog` w `game-application`
-udostępnia UI niemutowalne projekcje `UnitConfigurations`,
-`AmmunitionCatalog` i `SpellType`, więc Android nie kopiuje wartości balansu
-ani nie zależy bezpośrednio od domeny. `LoadoutAssetCatalog` mapuje istniejące
+udostępnia UI niemutowalne projekcje wspólnego `GameBalanceConfig` dla jednostek,
+amunicji, czarów i many, więc Android nie kopiuje wartości balansu ani nie
+zależy bezpośrednio od domeny. `LoadoutAssetCatalog` mapuje istniejące
 ikony jednostek i amunicji; brak ilustracji zaklęć jawnie zwraca `Missing` i
 nie blokuje ekranu ani buildu.
 
@@ -525,8 +525,8 @@ progresji mógłby przyznawać po określonym działaniu gracza czasowe uprawnie
 do wybranego typu amunicji, na przykład efektywnie nieograniczony zapas przez
 15 minut.
 
-- `AmmunitionType.unlimited` i katalog balansu pozostają niezmienną bazową
-  definicją; bonus nie powinien modyfikować globalnej cechy typu.
+- `AmmunitionDefinition.inventory.unlimited` z profilu `game-balance.json`
+  pozostaje niezmienną bazową definicją; bonus nie powinien modyfikować profilu.
 - Progresja powinna być właścicielem przyznania i wygaśnięcia bonusu oraz
   dostarczać Loadout i konfiguracji meczu niemutowalny snapshot aktywnych
   uprawnień.

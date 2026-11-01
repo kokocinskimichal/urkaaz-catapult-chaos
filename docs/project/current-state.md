@@ -34,9 +34,12 @@ kampanię, AI oraz działający match screen. Gałąź robocza: `develop`.
 - Dynamiczny wiatr z początkowym opóźnieniem, przejściem i kolejnymi zmianami.
 - Wybór amunicji w popup gridzie; niedostępna/depleted amunicja jest
   przygaszona i zablokowana.
-- `AmmunitionCatalog` jako wspólna definicja dla gracza, AI i symulacji.
+- Profile jednostek, amunicji, czarów, many, bossów i pozostałe parametry
+  runtime pochodzą ze ścisłego `game-balance.json` schema 3. Aplikacyjny loader
+  przekazuje jeden typowany `GameBalanceConfig` do symulacji, AI, kampanii,
+  nagród, loadoutu i projekcji Androida.
 - Dedykowane jednostki: Defender, Sapper, Demolisher, Raging Boar,
-  Slingmaster; balans w `UnitConfigurations.kt`.
+  Slingmaster; `UnitCatalog` tworzy ich definicje zachowań z profili JSON.
 - `BossSystem` obsługuje central objectives oraz mobile siege bossy na
   poziomach 5–50. Profile legacy, w tym HP, obrażenia, prędkość, enrage i
   odporność na `PLAGUE_CAULDRON`, pochodzą z

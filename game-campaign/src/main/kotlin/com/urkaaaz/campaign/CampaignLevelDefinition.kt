@@ -3,22 +3,20 @@ package com.urkaaaz.campaign
 import com.urkaaaz.contracts.BattlefieldConfig
 import com.urkaaaz.contracts.BossEncounterConfig
 import com.urkaaaz.contracts.BossVictoryRule
-import com.urkaaaz.contracts.AiProfileId
 import com.urkaaaz.contracts.AiProfileSelection
 import com.urkaaaz.contracts.MatchScenario
 import com.urkaaaz.contracts.MapDefinition
 import com.urkaaaz.contracts.PlayerConfig
 import com.urkaaaz.contracts.PlayerId
 import com.urkaaaz.contracts.PlayerLoadoutConfig
-import com.urkaaaz.contracts.ResourceSnapshot
 import com.urkaaaz.contracts.Team
 import com.urkaaaz.contracts.VictoryRulesConfig
 import com.urkaaaz.contracts.WindSnapshot
 import com.urkaaaz.contracts.WorldDimensions
 import com.urkaaaz.domain.AmmunitionType
 import com.urkaaaz.domain.SpellType
-import com.urkaaaz.domain.UnitDefinition
-import com.urkaaaz.domain.UnitFactory
+import com.urkaaaz.domain.UnitIds
+import com.urkaaaz.domain.CampaignBalance
 
 /** Tutorial instructions are data and do not contain Android views or resource IDs. */
 data class TutorialParameters(
@@ -39,17 +37,15 @@ data class EnemyConfiguration(
 data class CampaignLevelDefinition(
     val level: Int,
     val enemy: EnemyConfiguration,
-    val availableUnits: Set<UnitDefinition>,
+    val availableUnits: Set<String>,
     val availableAmmunition: Set<AmmunitionType>,
     val availableSpells: Set<SpellType>,
-    val startingAmmunition: Int,
     val initialWind: WindSnapshot = WindSnapshot(),
     val tutorial: TutorialParameters = TutorialParameters(enabled = false),
     val mapDefinition: MapDefinition,
 ) {
     init {
         require(level in 1..MAX_LEVELS) { "level must be between 1 and $MAX_LEVELS" }
-        require(startingAmmunition >= 0) { "startingAmmunition must not be negative" }
     }
 
     fun toMatchScenario(
@@ -66,10 +62,7 @@ data class CampaignLevelDefinition(
             PlayerConfig(playerId, Team.BLUE),
             PlayerConfig(opponentId, Team.RED),
         ),
-        initialResources = ResourceSnapshot(
-            ammunition = availableAmmunition.associate { it.name to startingAmmunition },
-        ),
-        availableUnits = availableUnits.map { it.id }.sorted(),
+        availableUnits = availableUnits.sorted(),
         availableAmmunition = availableAmmunition.map { it.name }.sorted(),
         availableSpells = availableSpells.map { it.name }.sorted(),
         playerLoadout = playerLoadout,
@@ -111,6 +104,7 @@ data class CampaignLevelDefinition(
 
         fun forLevel(
             level: Int,
+            campaignBalance: CampaignBalance,
             mapRepository: MapDefinitionRepository = MapDefinitionRepository.bundled,
         ): CampaignLevelDefinition {
             val safeLevel = level.coerceIn(1, MAX_LEVELS)
@@ -129,13 +123,13 @@ data class CampaignLevelDefinition(
             }
             return CampaignLevelDefinition(
                 level = safeLevel,
-                enemy = EnemyConfiguration(aiProfile = aiProfileFor(safeLevel)),
+                enemy = EnemyConfiguration(aiProfile = aiProfileFor(safeLevel, campaignBalance)),
                 availableUnits = buildSet {
-                    add(UnitFactory.defender())
-                    if (safeLevel >= 5) add(UnitFactory.sapper())
-                    if (safeLevel >= 8) add(UnitFactory.demolisher())
-                    if (safeLevel >= 11) add(UnitFactory.ragingBoar())
-                    if (safeLevel >= 13) add(UnitFactory.slingmaster())
+                    add(UnitIds.DEFENDER)
+                    if (safeLevel >= 5) add(UnitIds.SAPPER)
+                    if (safeLevel >= 8) add(UnitIds.DEMOLISHER)
+                    if (safeLevel >= 11) add(UnitIds.RAGING_BOAR)
+                    if (safeLevel >= 13) add(UnitIds.SLINGMASTER)
                 },
                 availableAmmunition = buildSet {
                     add(AmmunitionType.ROCK)
@@ -152,10 +146,9 @@ data class CampaignLevelDefinition(
                     if (safeLevel >= 11) add(SpellType.ICE_TRAP)
                     if (safeLevel >= 21) add(SpellType.RUNIC_BASTION)
                 },
-                startingAmmunition = if (safeLevel <= 10) 8 + (safeLevel - 1) * 2 else 30,
                 initialWind = WindSnapshot(
                     direction = if (safeLevel % 2 == 0) -1f else 1f,
-                    strength = 0.25f + ((safeLevel - 1) % 4) * 0.15f,
+                    strength = campaignBalance.initialWindStrength(safeLevel),
                 ),
                 tutorial = TutorialParameters(
                     enabled = safeLevel == 1,
@@ -169,21 +162,9 @@ data class CampaignLevelDefinition(
             )
         }
 
-        private fun aiProfileFor(level: Int): AiProfileSelection {
-            val profileId = when {
-                level <= 10 -> AiProfileId.CADET
-                level <= 30 -> AiProfileId.VETERAN
-                else -> AiProfileId.ELITE
-            }
-            val progression = if (profileId == AiProfileId.ELITE && level >= 31) {
-                ((level - 31) * 100) / (MAX_LEVELS - 31)
-            } else {
-                0
-            }
-            return AiProfileSelection(
-                profileId = profileId,
-                progressionPercent = progression,
-            )
+        private fun aiProfileFor(level: Int, campaignBalance: CampaignBalance): AiProfileSelection {
+            val band = campaignBalance.aiDifficultyFor(level)
+            return AiProfileSelection(band.profileId, band.progressionPercent(level))
         }
 
     }

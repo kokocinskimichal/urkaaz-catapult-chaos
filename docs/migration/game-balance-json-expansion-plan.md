@@ -2,16 +2,21 @@
 
 ## Status i cel
 
+**Status: wdrożono schema 3.** Migracja schema 2 przeniosła katalogi bossów,
+jednostek, amunicji, czarów i many. Schema 3 przenosi również wspólne parametry
+runtime ekonomii, fortec, meczu, fizyki, wiatru, walki, bossów, AI, nagród i
+kampanii. Poniższe etapy schema 2 opisują zakończoną migrację bazową.
+
 Plan przenosi obecne charakterystyki jednostek, amunicji i czarów do
 `game-domain/src/main/resources/balance/game-balance.json`. Jest to migracja
 źródła konfiguracji, nie zmiana balansu ani dodanie nowych mechanik. Wartości
 mają pozostać równe obecnemu zachowaniu runtime.
 
-Obecny plik używa `schemaVersion: 1` i zawiera wyłącznie profile bossów.
+Przed migracją plik używał `schemaVersion: 1` i zawierał wyłącznie profile bossów.
 `GameBalanceConfig` oraz `GameBalanceRepository` również modelują obecnie tylko
 bossy. Jednostki korzystają z `UnitConfigurations`, amunicja z
 `AmmunitionType` i `AmmunitionCatalog`, a czary z `SpellCatalog` oraz
-`ManaConfiguration`. Studio Balance waliduje obecnie wyłącznie sekcję bossów.
+`ManaConfiguration`. Studio Balance walidowało wtedy wyłącznie sekcję bossów.
 
 ## Ustalone decyzje
 
@@ -28,7 +33,7 @@ bossy. Jednostki korzystają z `UnitConfigurations`, amunicja z
 
 ## Zakres danych
 
-Docelowy dokument schema 2 rozszerza istniejące `bosses` o:
+Schema 2 rozszerzyła istniejące `bosses` o:
 
 | Sekcja | Dane przenoszone z obecnych katalogów |
 |---|---|
@@ -36,18 +41,20 @@ Docelowy dokument schema 2 rozszerza istniejące `bosses` o:
 | `ammunition` | typ efektu, reload, inventory, parametry lotu i fragmentacji, kolizje, profile obrażeń/falloffu, teren, warstwy trafień i parametry impact behavior |
 | `spells` | gold/mana cost, kategoria, target, `special`, recast i typowane parametry obecnie zaimplementowanych efektów |
 | `mana` | start, limit, ilość i interwał regeneracji z `ManaConfiguration` |
+| `runtime` (schema 3) | ekonomia i supply, zdrowie fortec, czas meczu, fizyka i wiatr, walka jednostek, Demolisher, walka bossów, profile i strategie AI, nagrody i parametry kampanii |
 
 Przykładowy kształt korzenia:
 
 ```json
 {
-  "schemaVersion": 2,
-  "balanceRevision": "game-balance-2",
+  "schemaVersion": 3,
+  "balanceRevision": "game-balance-3",
   "bosses": [],
   "units": [],
   "ammunition": [],
   "spells": [],
-  "mana": {}
+  "mana": {},
+  "runtime": {}
 }
 ```
 
@@ -66,7 +73,7 @@ zawiera skryptów.
    krater `165×112`, podczas gdy profil `AmmunitionCatalog` używany przez
    runtime ma radius `220` i krater `150×90`. Zgodnie z ustaleniem przenieść
    wartości katalogu runtime, bez retuningu.
-2. **Schema 2 i typowany model.** Rozszerzyć `GameBalanceConfig`,
+2. **Schema 2 i typowany model (zakończone).** Rozszerzyć `GameBalanceConfig`,
    `GameBalanceRepository` i DTO o wszystkie sekcje. Dodać ścisłą walidację
    pól, zakresów, enumów, unikalności ID i pełnego pokrycia stabilnych ID.
    Rozszerzyć `studio/server/src/services/balanceCatalog.ts` o tę samą
@@ -95,6 +102,9 @@ zawiera skryptów.
 
 - Każde `UnitDefinition`, `AmmunitionType` i `SpellType` ma dokładnie jedną
   konfigurację; brak lub duplikat jest błędem, bez domyślnych wartości sukcesu.
+- Parametry gameplayu, ekonomii i trudności zdefiniowane w `runtime` mają
+  wyłącznie jedną wartość w schema 3; geometria, prezentacja i stałe techniczne
+  pozostają w kontraktach i kodzie.
 - Wartości przeniesione są zgodne z obecnym runtime, łącznie z profilem
   amunicji kanonicznym dla symulacji.
 - `UnitFactory`, symulacja, AI, loadout, progresja i Androidowy read model nie
@@ -102,7 +112,7 @@ zawiera skryptów.
 - Testy sprawdzają loader/validator, granice i błędne JSON-y, zachowanie
   jednostek/amunicji/czarów, decyzje AI, walidację loadoutu oraz
   deterministyczność i kontrolę rewizji/hashu replaya.
-- Studio Balance przyjmuje schema 2, odrzuca błędne sekcje i nadal zapisuje
+- Studio Balance przyjmuje schema 3, odrzuca błędne sekcje i nadal zapisuje
   atomowo z kontrolą `expectedHash` oraz `balanceRevision`.
 - Istniejące assety, stabilne identyfikatory, dostępność kampanijna i
   niezaimplementowane efekty czarów pozostają bez zmian.

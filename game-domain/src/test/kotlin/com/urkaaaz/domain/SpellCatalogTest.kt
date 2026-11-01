@@ -1,5 +1,7 @@
 package com.urkaaaz.domain
 
+import com.urkaaaz.domain.UnitIds
+
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
@@ -8,9 +10,9 @@ import kotlin.test.assertTrue
 class SpellCatalogTest {
     @Test
     fun catalogDefinesEveryStableSpellWithLegacyCostsAndTargetCategory() {
-        assertEquals(SpellType.values().toSet(), SpellCatalog.all.map { it.type }.toSet())
-        assertEquals(SpellCatalog.all.size, SpellCatalog.all.map { it.type }.distinct().size)
-        assertTrue(SpellCatalog.all.all { it.goldCost >= 0 && it.manaCost > 0 })
+        assertEquals(SpellType.values().toSet(), GameBalanceFixtures.balance.spells.all.map { it.type }.toSet())
+        assertEquals(GameBalanceFixtures.balance.spells.all.size, GameBalanceFixtures.balance.spells.all.map { it.type }.distinct().size)
+        assertTrue(GameBalanceFixtures.balance.spells.all.all { it.goldCost >= 0 && it.manaCost > 0 })
         assertEquals(
             mapOf(
                 SpellType.ICE_TRAP to 50,
@@ -25,7 +27,7 @@ class SpellCatalogTest {
                 SpellType.SIEGE_FRENZY to 60,
                 SpellType.BERSERKER to 100,
             ),
-            SpellCatalog.all.associate { it.type to it.manaCost },
+            GameBalanceFixtures.balance.spells.all.associate { it.type to it.manaCost },
         )
         assertEquals(
             mapOf(
@@ -41,7 +43,7 @@ class SpellCatalogTest {
                 SpellType.SIEGE_FRENZY to 1_200,
                 SpellType.BERSERKER to 2_000,
             ),
-            SpellCatalog.all.associate { it.type to it.goldCost },
+            GameBalanceFixtures.balance.spells.all.associate { it.type to it.goldCost },
         )
         assertEquals(
             mapOf(
@@ -57,7 +59,7 @@ class SpellCatalogTest {
                 SpellType.SIEGE_FRENZY to SpellTargetCategory.ALLIED_FORCE,
                 SpellType.BERSERKER to SpellTargetCategory.ALLIED_UNIT,
             ),
-            SpellCatalog.all.associate { it.type to it.targetCategory },
+            GameBalanceFixtures.balance.spells.all.associate { it.type to it.targetCategory },
         )
         assertEquals(
             setOf(
@@ -68,7 +70,7 @@ class SpellCatalogTest {
                 SpellType.SIEGE_FRENZY,
                 SpellType.BERSERKER,
             ),
-            SpellCatalog.all.filter { it.special }.map { it.type }.toSet(),
+            GameBalanceFixtures.balance.spells.all.filter { it.special }.map { it.type }.toSet(),
         )
         assertEquals(
             setOf(
@@ -84,7 +86,7 @@ class SpellCatalogTest {
                 SpellType.SIEGE_FRENZY,
                 SpellType.BERSERKER,
             ),
-            SpellCatalog.all.map { it.type }.toSet(),
+            GameBalanceFixtures.balance.spells.all.map { it.type }.toSet(),
         )
     }
 
@@ -96,9 +98,9 @@ class SpellCatalogTest {
                 SpellType.HASTE,
                 SpellType.FORTRESS_SHIELD,
             ),
-            SpellCatalog.all.filter { it.isImplemented }.map { it.type }.toSet(),
+            GameBalanceFixtures.balance.spells.all.filter { it.isImplemented }.map { it.type }.toSet(),
         )
-        val haste = SpellCatalog.definition(SpellType.HASTE)
+        val haste = GameBalanceFixtures.balance.spells.definition(SpellType.HASTE)
         assertEquals(50, haste.manaCost)
         assertEquals(900, haste.goldCost)
         assertEquals(SpellTargetCategory.ALLIED_FORCE, haste.targetCategory)
@@ -109,15 +111,15 @@ class SpellCatalogTest {
             ),
             haste.effect,
         )
-        val shield = SpellCatalog.definition(SpellType.FORTRESS_SHIELD)
+        val shield = GameBalanceFixtures.balance.spells.definition(SpellType.FORTRESS_SHIELD)
         assertEquals(80, shield.manaCost)
         assertEquals(SpellTargetCategory.OWN_FORTRESS, shield.targetCategory)
         assertEquals(SpellEffectDefinition.FortressShield(150), shield.effect)
-        val bastion = SpellCatalog.definition(SpellType.RUNIC_BASTION)
+        val bastion = GameBalanceFixtures.balance.spells.definition(SpellType.RUNIC_BASTION)
         assertEquals(70, bastion.manaCost)
         assertEquals(SpellTargetCategory.OWN_GATE, bastion.targetCategory)
         assertEquals(SpellEffectDefinition.RunicBastion(360), bastion.effect)
         assertFalse(bastion.recastableWhileActive)
-        assertFalse(SpellCatalog.definition(SpellType.ICE_TRAP).isImplemented)
+        assertFalse(GameBalanceFixtures.balance.spells.definition(SpellType.ICE_TRAP).isImplemented)
     }
 }

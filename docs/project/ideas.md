@@ -14,3 +14,21 @@ ewentualny status akceptacji podany przez użytkownika.
   i wyposażenia; kierunek przeciwnika można uzyskać odbiciem animacji, z
   wyjątkami dla asymetrycznych postaci. Zacząć od pilota dla jednej jednostki,
   aby ograniczyć rozjazdy animacji i koszt generowania.
+
+### Testy e2e aplikacji (pomysł, tylko ustalenia)
+
+Status: pomysł; nic nie zaimplementowano ani nie zaakceptowano. Repo ma dziś
+tylko testy JVM (`src/test`), bez `androidTest`.
+
+- Odpowiednik Selenium dla Androida to Appium (WebDriver). Alternatywy:
+  Espresso, UI Automator, Maestro, Robolectric.
+- Przepływy ekranów (wybór poziomu → loadout → start → wynik, zmiana języka)
+  nadają się do Espresso lub Maestro na emulatorze.
+- `BattlefieldView` rysuje na canvasie, więc narzędzia UI nie widzą jednostek
+  ani pocisków; obsłużą tylko gesty i zwykłe widoki (HUD).
+- Przebieg walki sprawdzać na trzech poziomach: (1) symulacja JVM ze stałym
+  seedem (najlepsze miejsce, już istnieje), (2) test instrumentowany z
+  zadanym scenariuszem i asercjami na `MatchViewModel`/`MatchSnapshot` oraz
+  sterowanym zegarem zamiast czasu rzeczywistego, (3) nieliczne testy
+  screenshotowe (kruche, zależne od GPU i rozdzielczości).
+- Do ustalenia: wybór narzędzia, zakres scenariuszy, emulator w CI czy lokalnie.

@@ -1,11 +1,13 @@
 package com.urkaaaz.simulation
 
 import com.urkaaaz.contracts.WindSnapshot
+import com.urkaaaz.domain.WindBalance
 import kotlin.random.Random
 
 /** Deterministic wind transitions used by the projectile simulation. */
 class WindSystem(
     initialAccelerationX: Float,
+    private val balance: WindBalance,
     private val accelerationScale: Float = 1f,
     seed: Int = 0,
 ) {
@@ -28,7 +30,7 @@ class WindSystem(
     private var secondsUntilChange = if (direction == 0f) {
         Float.POSITIVE_INFINITY
     } else {
-        INITIAL_DELAY_SECONDS
+        balance.initialDelaySeconds
     }
 
     fun update(deltaSeconds: Float) {
@@ -39,7 +41,7 @@ class WindSystem(
         if (transitionRemainingSeconds > 0f) {
             transitionRemainingSeconds =
                 (transitionRemainingSeconds - deltaSeconds).coerceAtLeast(0f)
-            val progress = 1f - transitionRemainingSeconds / TRANSITION_SECONDS
+            val progress = 1f - transitionRemainingSeconds / balance.transitionSeconds
             strength = transitionStartStrength +
                 (targetStrength - transitionStartStrength) * progress
         }
@@ -49,12 +51,12 @@ class WindSystem(
                 direction = -direction
             }
             transitionStartStrength = strength
-            targetStrength = MIN_STRENGTH +
-                random.nextFloat() * (MAX_STRENGTH - MIN_STRENGTH)
-            transitionRemainingSeconds = TRANSITION_SECONDS
-            secondsUntilChange = MIN_CHANGE_INTERVAL_SECONDS +
+            targetStrength = balance.minimumStrength +
+                random.nextFloat() * (balance.maximumStrength - balance.minimumStrength)
+            transitionRemainingSeconds = balance.transitionSeconds
+            secondsUntilChange = balance.minimumChangeIntervalSeconds +
                 random.nextFloat() *
-                (MAX_CHANGE_INTERVAL_SECONDS - MIN_CHANGE_INTERVAL_SECONDS)
+                (balance.maximumChangeIntervalSeconds - balance.minimumChangeIntervalSeconds)
         }
     }
 
@@ -65,12 +67,4 @@ class WindSystem(
         strength = strength,
     )
 
-    private companion object {
-        const val INITIAL_DELAY_SECONDS = 8f
-        const val TRANSITION_SECONDS = 3f
-        const val MIN_CHANGE_INTERVAL_SECONDS = 18f
-        const val MAX_CHANGE_INTERVAL_SECONDS = 24f
-        const val MIN_STRENGTH = 0.35f
-        const val MAX_STRENGTH = 0.90f
-    }
 }

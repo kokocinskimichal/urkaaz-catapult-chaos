@@ -8,12 +8,15 @@ import com.urkaaaz.contracts.PlayerLoadoutConfig
 import com.urkaaaz.application.reward.LevelRewardResult
 import com.urkaaaz.campaign.CampaignRewardRegistry
 import com.urkaaaz.ui.MatchScreenController
+import com.urkaaaz.application.loadout.LoadoutCatalog
+import com.urkaaaz.application.campaign.BundledCampaignBalance
 
 class MatchScreen(
     activity: Activity,
     campaignLevel: Int,
-    rewardRegistry: CampaignRewardRegistry = CampaignRewardRegistry.default(),
+    rewardRegistry: CampaignRewardRegistry = BundledCampaignBalance.rewardRegistry(),
     playerLoadout: PlayerLoadoutConfig? = null,
+    loadoutCatalog: LoadoutCatalog = LoadoutCatalog.bundled(),
     demoMode: Boolean = false,
     onBackClicked: () -> Unit,
     openDebugOnStart: Boolean = false,
@@ -30,6 +33,7 @@ class MatchScreen(
         campaignLevel = campaignLevel,
         rewardRegistry = rewardRegistry,
         playerLoadout = playerLoadout,
+        loadoutCatalog = loadoutCatalog,
         demoMode = demoMode,
         onBackClicked = onBackClicked,
         openDebugOnStart = openDebugOnStart,

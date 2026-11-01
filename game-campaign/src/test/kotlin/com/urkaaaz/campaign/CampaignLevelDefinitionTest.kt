@@ -1,5 +1,7 @@
 package com.urkaaaz.campaign
 
+import com.urkaaaz.domain.UnitIds
+
 import com.urkaaaz.contracts.PlayerId
 import com.urkaaaz.contracts.PlayerLoadoutConfig
 import com.urkaaaz.contracts.AiProfileId
@@ -18,8 +20,8 @@ class CampaignLevelDefinitionTest {
         val level = CampaignLevelDefinition.forLevel(1)
 
         assertEquals("green_frontier", level.mapDefinition.biome)
-        assertTrue(level.availableUnits.any { it.id == UnitFactory.defender().id })
-        assertFalse(level.availableUnits.any { it.id == UnitFactory.sapper().id })
+        assertTrue(UnitIds.DEFENDER in level.availableUnits)
+        assertFalse(UnitIds.SAPPER in level.availableUnits)
         assertFalse(AmmunitionType.POWDER_BARREL in level.availableAmmunition)
         assertEquals(
             setOf(AmmunitionType.ROCK, AmmunitionType.SIEGE_BOMB),
@@ -70,7 +72,6 @@ class CampaignLevelDefinitionTest {
         assertEquals("chapter1-level3", level.mapDefinition.mapId)
         assertEquals(AiProfileId.CADET, level.enemy.aiProfile.profileId)
         assertEquals(0, level.enemy.aiProfile.progressionPercent)
-        assertEquals(12, level.startingAmmunition)
         assertEquals(1f, level.initialWind.direction)
         assertEquals(0.55f, level.initialWind.strength)
         assertFalse(level.tutorial.enabled)
@@ -82,7 +83,6 @@ class CampaignLevelDefinitionTest {
 
         assertEquals("chapter1-level4", level.mapDefinition.mapId)
         assertEquals(AiProfileId.CADET, level.enemy.aiProfile.profileId)
-        assertEquals(14, level.startingAmmunition)
         assertEquals(-1f, level.initialWind.direction)
         assertEquals(0.7f, level.initialWind.strength, 0.0001f)
         assertFalse(level.tutorial.enabled)
@@ -146,7 +146,7 @@ class CampaignLevelDefinitionTest {
 
         assertEquals("demo-map", level.mapDefinition.mapId)
         assertEquals("copperwood", level.mapDefinition.biome)
-        assertTrue(level.availableUnits.any { it.id == UnitFactory.slingmaster().id })
+        assertTrue(UnitIds.SLINGMASTER in level.availableUnits)
         assertTrue(AmmunitionType.PLAGUE_CAULDRON in level.availableAmmunition)
         assertTrue(SpellType.RUNIC_BASTION in level.availableSpells)
         assertEquals(AiProfileId.ELITE, level.enemy.aiProfile.profileId)
@@ -168,7 +168,7 @@ class CampaignLevelDefinitionTest {
         assertTrue("DEFENDER" in scenario.availableUnits)
         assertTrue(scenario.initialUnits.isEmpty())
         assertTrue("SIEGE_BOMB" in scenario.availableAmmunition)
-        assertTrue(scenario.initialResources.ammunition.isNotEmpty())
+        assertTrue(scenario.initialResources.ammunition.isEmpty())
         assertEquals(AiProfileId.CADET, scenario.aiProfile.profileId)
     }
 

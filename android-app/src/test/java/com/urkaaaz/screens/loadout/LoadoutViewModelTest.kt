@@ -26,6 +26,8 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class LoadoutViewModelTest {
+    private val catalog = LoadoutCatalog.bundled()
+
     @Test
     fun availableOptionsSortBeforeUnavailableOptionsAndKeepCatalogOrder() {
         val options = listOf("unavailable", "available", "selected", "locked", "outOfStock")
@@ -77,12 +79,12 @@ class LoadoutViewModelTest {
         viewModel.load()
 
         assertTrue(viewModel.state.demoMode)
-        assertEquals(LoadoutCatalog.units.map { it.id }.toSet(), viewModel.state.availableUnits.toSet())
+        assertEquals(catalog.units.map { it.id }.toSet(), viewModel.state.availableUnits.toSet())
         assertEquals(
-            LoadoutCatalog.ammunition.map { it.id }.toSet(),
+            catalog.ammunition.map { it.id }.toSet(),
             viewModel.state.availableAmmunition.toSet(),
         )
-        assertEquals(LoadoutCatalog.spells.map { it.id }.toSet(), viewModel.state.availableSpells.toSet())
+        assertEquals(catalog.spells.map { it.id }.toSet(), viewModel.state.availableSpells.toSet())
         viewModel.state.availableAmmunition.forEach { type ->
             assertTrue(
                 viewModel.optionStatus(LoadoutItemReference.Ammunition(type)) in

@@ -41,7 +41,7 @@ data class BossAttackBalance(
     val rangeWorldUnits: Float,
     val cooldownSeconds: Float,
     val initialCooldownSeconds: Float,
-    val windupSeconds: Float = 0f,
+    val windupSeconds: Float,
 ) {
     init {
         require(damage > 0) { "boss attack damage must be positive" }
@@ -137,6 +137,11 @@ data class GameBalanceConfig(
     val schemaVersion: Int,
     val balanceRevision: String,
     val bosses: List<BossBalanceProfile>,
+    val units: UnitCatalog,
+    val ammunition: AmmunitionCatalog,
+    val spells: SpellCatalog,
+    val mana: ManaConfiguration,
+    val runtime: RuntimeBalance,
 ) {
     init {
         require(schemaVersion == CURRENT_SCHEMA_VERSION) {
@@ -147,12 +152,18 @@ data class GameBalanceConfig(
         require(bosses.map(BossBalanceProfile::id).distinct().size == bosses.size) {
             "boss profile IDs must be unique"
         }
+        val knownAmmunitionTypes = AmmunitionType.values().mapTo(mutableSetOf()) { it.name }
+        require(bosses.all { profile ->
+            profile.immuneAmmunitionTypes.all { it in knownAmmunitionTypes }
+        }) {
+            "boss ammunition immunities must use stable ammunition IDs"
+        }
     }
 
     fun bossProfile(id: String): BossBalanceProfile =
         bosses.firstOrNull { it.id == id } ?: error("unknown boss profile: $id")
 
     companion object {
-        const val CURRENT_SCHEMA_VERSION = 1
+        const val CURRENT_SCHEMA_VERSION = 3
     }
 }

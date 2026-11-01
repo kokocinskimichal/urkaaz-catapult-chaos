@@ -1,5 +1,26 @@
 # Changelog
 
+## 2026-11-01
+
+### Added
+
+- Added TutorialSystem and LocalizationSystem architecture documents with
+  implementation prompts; localization is designed for Polish, English and
+  Spanish, but neither system has runtime implementation yet.
+
+### Changed
+
+- Expanded the shared balance source and Studio Balance editor to schema 3,
+  covering unit, ammunition, spell, mana and shared runtime profiles without
+  changing the established balance values. Match simulation, AI, loadout,
+  campaign, rewards and Android projections now consume a typed shared balance
+  configuration.
+
+### Fixed
+
+- Studio balance validation now rejects fields required by the runtime loader,
+  preventing accepted edits that would fail when the game loads the balance.
+
 ## 2026-10-31
 
 ### Added

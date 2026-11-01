@@ -8,11 +8,13 @@ import com.urkaaaz.contracts.MatchCommand
 import com.urkaaaz.contracts.PlayerId
 import com.urkaaaz.contracts.Team
 import com.urkaaaz.contracts.UnitSnapshot
-import com.urkaaaz.domain.AmmunitionCatalog
 import com.urkaaaz.domain.AmmunitionType
 import com.urkaaaz.domain.SapperUnit
 import com.urkaaaz.domain.UnitDefinition
 import com.urkaaaz.domain.UnitFactory
+import com.urkaaaz.domain.GameBalanceConfig
+import com.urkaaaz.domain.AiUnitScoringBalance
+import com.urkaaaz.domain.UnitIds
 import kotlin.math.abs
 import kotlin.math.atan2
 import kotlin.random.Random
@@ -23,6 +25,7 @@ data class AiStrategyContext(
     val team: Team,
     val allowedUnits: Set<UnitDefinition>,
     val allowedAmmunition: Set<AmmunitionType>,
+    val balance: GameBalanceConfig,
     val tuning: AiProfileTuning,
     val random: Random,
     private val commandIdFactory: (String) -> CommandId,
@@ -106,7 +109,7 @@ private object SimpleCatapultStrategy : CatapultDecisionStrategy {
 
     override fun decide(context: AiStrategyContext): List<MatchCommand> =
         fireAt(context, preferredTarget = { _, enemyCatapult -> enemyCatapult.toTargetPoint() }) { ammunition ->
-            AmmunitionCatalog.definition(ammunition).damage.fortressDamage.toFloat()
+            context.balance.ammunition.definition(ammunition).damage.fortressDamage.toFloat()
         }
 }
 
@@ -115,9 +118,12 @@ private object SituationalCatapultStrategy : CatapultDecisionStrategy {
 
     override fun decide(context: AiStrategyContext): List<MatchCommand> =
         fireAt(context, preferredTarget = ::bestUnitCluster) { ammunition ->
-            val damage = AmmunitionCatalog.definition(ammunition).damage
-            damage.fortressDamage * 1.25f + damage.unitDamage +
-                damage.fortressRadius * 0.1f + damage.unitRadius * 0.1f
+            val damage = context.balance.ammunition.definition(ammunition).damage
+            val weights = context.balance.runtime.aiStrategy.ammunitionScoring
+            damage.fortressDamage * weights.situationalFortressDamageWeight +
+                damage.unitDamage * weights.situationalUnitDamageWeight +
+                damage.fortressRadius * weights.situationalFortressRadiusWeight +
+                damage.unitRadius * weights.situationalUnitRadiusWeight
         }
 }
 
@@ -126,9 +132,12 @@ private object CounterplayCatapultStrategy : CatapultDecisionStrategy {
 
     override fun decide(context: AiStrategyContext): List<MatchCommand> =
         fireAt(context, preferredTarget = ::highestThreatUnit) { ammunition ->
-            val damage = AmmunitionCatalog.definition(ammunition).damage
-            damage.unitDamage * 1.5f + damage.unitRadius +
-                damage.fortressDamage * 0.5f + damage.fortressRadius * 0.1f
+            val damage = context.balance.ammunition.definition(ammunition).damage
+            val weights = context.balance.runtime.aiStrategy.ammunitionScoring
+            damage.unitDamage * weights.counterplayUnitDamageWeight +
+                damage.unitRadius * weights.counterplayUnitRadiusWeight +
+                damage.fortressDamage * weights.counterplayFortressDamageWeight +
+                damage.fortressRadius * weights.counterplayFortressRadiusWeight
         }
 }
 
@@ -163,11 +172,13 @@ private fun fireAt(
     val angleFromHorizontal = Math.toDegrees(
         atan2(abs(target.y - catapult.y).toDouble(), horizontalDistance.toDouble()),
     ).toFloat()
-    val angle = (angleFromHorizontal + 42f + randomOffset(
+    val strategyBalance = context.balance.runtime.aiStrategy
+    val angle = (angleFromHorizontal + strategyBalance.aimAngleOffsetDegrees + randomOffset(
         context.random,
         context.tuning.angleErrorDegrees,
     )).coerceIn(0f, 180f)
-    val power = (horizontalDistance / 12f + randomOffset(
+    val power = (horizontalDistance / strategyBalance.horizontalDistancePerPowerPercent +
+        randomOffset(
         context.random,
         context.tuning.powerError,
     )).coerceIn(0f, 100f)
@@ -200,7 +211,8 @@ private fun fireAt(
 private fun availableAmmunition(context: AiStrategyContext): List<AmmunitionType> {
     val resources = context.snapshot.resourcesByTeam[context.team] ?: context.snapshot.resources
     return context.allowedAmmunition.filter { ammunition ->
-        ammunition.unlimited || (resources.ammunition[ammunition.name] ?: 0) > 0
+        context.balance.ammunition.definition(ammunition).unlimited ||
+            (resources.ammunition[ammunition.name] ?: 0) > 0
     }
 }
 
@@ -219,18 +231,17 @@ private fun highestThreatUnit(
     context: AiStrategyContext,
     enemyCatapult: CatapultSnapshot,
 ): TargetPoint {
+    val scoring = context.balance.runtime.aiStrategy.unitScoring
     val target = activeEnemies(context).maxByOrNull { unit ->
         when {
-            unit.unitType == UnitFactory.sapper().id -> 1_000f
-            unit.unitType == "DEMOLISHER" -> 900f
-            else -> definitionFor(unit)?.let {
-                it.attackDamage * 2f + it.speed
-            } ?: 0f
+            unit.unitType == UnitIds.SAPPER -> scoring.sapperPriorityScore
+            unit.unitType == UnitIds.DEMOLISHER -> scoring.demolisherPriorityScore
+            else -> definitionFor(unit, context)?.let { unitPriorityScore(it, scoring) } ?: 0f
         }
     } ?: return enemyCatapult.toTargetPoint()
     val movementDirection = if (target.team == Team.BLUE) 1f else -1f
     val lead = if (target.moving) {
-        (definitionFor(target)?.speed ?: 0f) *
+        (definitionFor(target, context)?.speed ?: 0f) *
             context.tuning.reactionIntervalMilliseconds / 1_000f *
             movementDirection
     } else {
@@ -265,9 +276,10 @@ private object SituationalRecruitmentStrategy : UnitRecruitmentStrategy {
     override fun chooseUnit(context: AiStrategyContext): UnitDefinition? {
         val affordable = affordableUnits(context)
         if (hasEnemySapper(context)) {
-            affordable.firstOrNull { it.id == UnitFactory.defender().id }?.let { return it }
+            affordable.firstOrNull { it.id == UnitIds.DEFENDER }?.let { return it }
         }
-        return affordable.maxByOrNull { it.attackDamage * 2f + it.speed }
+        val scoring = context.balance.runtime.aiStrategy.unitScoring
+        return affordable.maxByOrNull { unitPriorityScore(it, scoring) }
     }
 }
 
@@ -277,20 +289,21 @@ private object CounterplayRecruitmentStrategy : UnitRecruitmentStrategy {
     override fun chooseUnit(context: AiStrategyContext): UnitDefinition? {
         val affordable = affordableUnits(context)
         val enemies = livingEnemies(context)
-        if (enemies.any { it.unitType == UnitFactory.sapper().id }) {
-            affordable.firstOrNull { it.id == UnitFactory.defender().id }?.let { return it }
+        if (enemies.any { it.unitType == UnitIds.SAPPER }) {
+            affordable.firstOrNull { it.id == UnitIds.DEFENDER }?.let { return it }
         }
-        if (enemies.any { it.unitType == "DEMOLISHER" }) {
-            affordable.firstOrNull { it.id == "SLINGMASTER" }?.let { return it }
+        if (enemies.any { it.unitType == UnitIds.DEMOLISHER }) {
+            affordable.firstOrNull { it.id == UnitIds.SLINGMASTER }?.let { return it }
         }
-        val threat = enemies.mapNotNull(::definitionFor)
-            .maxByOrNull { it.attackDamage * 2f + it.speed }
+        val scoring = context.balance.runtime.aiStrategy.unitScoring
+        val threat = enemies.mapNotNull { definitionFor(it, context) }
+            .maxByOrNull { unitPriorityScore(it, scoring) }
         if (threat != null) {
             affordable.maxByOrNull { unit ->
-                counterScore(unit, threat)
+                counterScore(unit, threat, scoring)
             }?.let { return it }
         }
-        return affordable.maxByOrNull { it.attackDamage * 2f + it.speed }
+        return affordable.maxByOrNull { unitPriorityScore(it, scoring) }
     }
 }
 
@@ -298,7 +311,7 @@ private fun affordableUnits(context: AiStrategyContext): List<UnitDefinition> {
     val supply = (context.snapshot.resourcesByTeam[context.team] ?: context.snapshot.resources).supply
     val hasSapper = context.snapshot.units.any {
         it.team == context.team &&
-            it.unitType == UnitFactory.sapper().id &&
+            it.unitType == UnitIds.SAPPER &&
             it.health > 0
     }
     return context.allowedUnits.filter {
@@ -308,20 +321,34 @@ private fun affordableUnits(context: AiStrategyContext): List<UnitDefinition> {
 }
 
 private fun hasEnemySapper(context: AiStrategyContext): Boolean =
-    livingEnemies(context).any { it.unitType == UnitFactory.sapper().id }
+    livingEnemies(context).any { it.unitType == UnitIds.SAPPER }
 
-private fun definitionFor(unit: UnitSnapshot): UnitDefinition? =
-    UnitFactory.all().firstOrNull { it.id == unit.unitType }
+private fun definitionFor(unit: UnitSnapshot, context: AiStrategyContext): UnitDefinition? =
+    context.balance.units.find(unit.unitType)?.let(UnitFactory::create)
 
-private fun counterScore(unit: UnitDefinition, threat: UnitDefinition): Float {
+private fun counterScore(
+    unit: UnitDefinition,
+    threat: UnitDefinition,
+    scoring: AiUnitScoringBalance,
+): Float {
     val roleBonus = when {
-        threat.id == UnitFactory.sapper().id && unit.id == UnitFactory.defender().id -> 1_000f
-        threat.attacksFromRange && unit.attacksFromRange -> 100f
-        !threat.attacksFromRange && unit.attacksFromRange -> 50f
+        threat.id == UnitIds.SAPPER && unit.id == UnitIds.DEFENDER ->
+            scoring.defenderVsSapperRoleBonus
+        threat.attacksFromRange && unit.attacksFromRange ->
+            scoring.rangedVsRangedRoleBonus
+        !threat.attacksFromRange && unit.attacksFromRange ->
+            scoring.rangedVsMeleeRoleBonus
         else -> 0f
     }
-    return roleBonus + unit.attackDamage * 2f + unit.speed - unit.supplyCost * 0.25f
+    return unitPriorityScore(unit, scoring) + roleBonus -
+        unit.supplyCost * scoring.supplyCostPenaltyWeight
 }
+
+private fun unitPriorityScore(
+    unit: UnitDefinition,
+    scoring: AiUnitScoringBalance,
+): Float =
+    unit.attackDamage * scoring.attackDamageWeight + unit.speed * scoring.speedWeight
 
 private object SimpleWaveDispatchStrategy : WaveDispatchStrategy {
     override val id = AiStrategyId("simple")
@@ -334,7 +361,8 @@ private object SituationalWaveDispatchStrategy : WaveDispatchStrategy {
     override val id = AiStrategyId("situational")
 
     override fun shouldSend(context: AiStrategyContext): Boolean =
-        readyUnits(context).size >= 3
+        readyUnits(context).size >=
+            context.balance.runtime.aiStrategy.waveDispatch.situationalMinimumReadyUnits
 }
 
 private object CounterplayWaveDispatchStrategy : WaveDispatchStrategy {
@@ -344,15 +372,19 @@ private object CounterplayWaveDispatchStrategy : WaveDispatchStrategy {
         val ready = readyUnits(context)
         if (ready.isEmpty()) return false
         val fortress = context.snapshot.fortresses.firstOrNull { it.team == context.team }
-        if (fortress != null && fortress.health <= fortress.maxHealth * 0.35f) return true
+        val waveBalance = context.balance.runtime.aiStrategy.waveDispatch
+        if (
+            fortress != null &&
+            fortress.health <= fortress.maxHealth * waveBalance.lowFortressHealthFraction
+        ) return true
         if (hasEnemySapper(context) &&
-            ready.any { it.unitType == UnitFactory.defender().id }
+            ready.any { it.unitType == UnitIds.DEFENDER }
         ) return true
         val enemyUnits = livingEnemies(context)
         return if (enemyUnits.any(UnitSnapshot::moving)) {
-            ready.size >= 2
+            ready.size >= waveBalance.counterplayMinimumReadyUnitsAgainstMovingEnemies
         } else {
-            ready.size >= 3
+            ready.size >= waveBalance.counterplayMinimumReadyUnits
         }
     }
 }

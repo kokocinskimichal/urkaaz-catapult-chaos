@@ -10,10 +10,9 @@ import android.graphics.RectF
 import android.view.View
 import android.view.animation.DecelerateInterpolator
 import com.urkaaaz.android.R
-import com.urkaaaz.application.loadout.LoadoutCatalog
 import kotlin.math.min
 
-class SupplyGaugeView(context: Context) : View(context) {
+class SupplyGaugeView(context: Context, private val maximum: Int) : View(context) {
     private val density = resources.displayMetrics.density
     private val supplyIconBitmap = requireNotNull(
         BitmapFactory.decodeResource(resources, R.drawable.match_hud_supply_icon),
@@ -43,8 +42,6 @@ class SupplyGaugeView(context: Context) : View(context) {
     private var supply = 0
     private var animatedSupply = 0f
     private var supplyAnimator: ValueAnimator? = null
-    private val maximum = LoadoutCatalog.maximumSupply
-
     fun setSupply(value: Int) {
         val nextSupply = value.coerceIn(0, maximum)
         contentDescription = context.getString(

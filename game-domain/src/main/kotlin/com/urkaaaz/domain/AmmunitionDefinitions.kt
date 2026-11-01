@@ -38,7 +38,7 @@ data class ReloadProfile(
 
 data class InventoryProfile(
     val unlimited: Boolean,
-    val startingCount: Int = 0,
+    val startingCount: Int,
 ) {
     init {
         require(startingCount >= 0) { "starting ammunition count must not be negative" }
@@ -70,11 +70,11 @@ data class ApexFragmentationProfile(
 data class FlightProfile(
     val mass: Float,
     val windResponse: Float,
-    val gravityResponse: Float = 1f,
-    val drag: Float = 0f,
-    val initialSpeedMultiplier: Float = 8f,
-    val maximumLifetimeSeconds: Float = 30f,
-    val apexFragmentation: ApexFragmentationProfile? = null,
+    val gravityResponse: Float,
+    val drag: Float,
+    val initialSpeedMultiplier: Float,
+    val maximumLifetimeSeconds: Float,
+    val apexFragmentation: ApexFragmentationProfile?,
 ) {
     init {
         require(mass > 0f) { "projectile mass must be positive" }
@@ -94,7 +94,7 @@ data class CollisionProfile(
     val hitLayers: Set<AmmunitionHitLayer>,
     val mode: AmmunitionCollisionMode,
     val hitRadius: Float,
-    val friendlyFire: FriendlyFirePolicy = FriendlyFirePolicy.ENEMY_ONLY,
+    val friendlyFire: FriendlyFirePolicy,
 ) {
     init {
         require(hitLayers.isNotEmpty()) { "collision profile must have hit layers" }
@@ -107,8 +107,8 @@ data class DamageProfile(
     val fortressDamage: Int,
     val unitRadius: Float,
     val fortressRadius: Float,
-    val falloff: AmmunitionFalloff = AmmunitionFalloff.LINEAR,
-    val minimumDamage: Int = 0,
+    val falloff: AmmunitionFalloff,
+    val minimumDamage: Int,
 ) {
     init {
         require(unitDamage >= 0) { "unit damage must not be negative" }
@@ -139,7 +139,12 @@ sealed interface AmmunitionImpactBehavior {
     data class Explosion(
         val radius: Float,
         val lifetimeSeconds: Float,
-    ) : AmmunitionImpactBehavior
+    ) : AmmunitionImpactBehavior {
+        init {
+            require(radius >= 0f) { "explosion radius must not be negative" }
+            require(lifetimeSeconds > 0f) { "explosion lifetime must be positive" }
+        }
+    }
 
     data class LingeringArea(
         val radius: Float,
@@ -148,10 +153,10 @@ sealed interface AmmunitionImpactBehavior {
         val damagePerTick: Int,
         val fortressDamagePerTick: Int,
         val driftsWithWind: Boolean,
-        val windDriftMultiplier: Float = 1f,
-        val followsTerrain: Boolean = false,
-        val status: UnitStatus? = null,
-        val unitFriendlyFire: FriendlyFirePolicy = FriendlyFirePolicy.ENEMY_ONLY,
+        val windDriftMultiplier: Float,
+        val followsTerrain: Boolean,
+        val status: UnitStatus?,
+        val unitFriendlyFire: FriendlyFirePolicy,
     ) : AmmunitionImpactBehavior {
         init {
             require(radius >= 0f) { "lingering radius must not be negative" }
@@ -188,9 +193,9 @@ data class StatusState(
     }
 }
 
-sealed class AmmunitionDefinition(
+data class AmmunitionDefinition(
     val type: AmmunitionType,
-    val displayKey: String,
+    val effect: AmmunitionEffect,
     val reload: ReloadProfile,
     val inventory: InventoryProfile,
     val flight: FlightProfile,
@@ -201,7 +206,6 @@ sealed class AmmunitionDefinition(
     val availableLayers: Set<AmmunitionHitLayer>,
 ) {
     init {
-        require(displayKey.isNotBlank()) { "display key must not be blank" }
         require(availableLayers.isNotEmpty()) { "available layers must not be empty" }
     }
 
@@ -216,166 +220,20 @@ sealed class AmmunitionDefinition(
             collision.friendlyFire != FriendlyFirePolicy.ENEMY_ONLY
 }
 
-object RockAmmunition : AmmunitionDefinition(
-    type = AmmunitionType.ROCK,
-    displayKey = "ammunition.rock",
-    reload = ReloadProfile(0f),
-    inventory = InventoryProfile(unlimited = true),
-    flight = FlightProfile(mass = 1.5f, windResponse = 1f),
-    collision = CollisionProfile(
-        hitLayers = setOf(
-            AmmunitionHitLayer.TERRAIN,
-            AmmunitionHitLayer.UNIT,
-            AmmunitionHitLayer.FORTRESS,
-        ),
-        mode = AmmunitionCollisionMode.IMPACT_ON_TERRAIN,
-        hitRadius = 14f,
-    ),
-    damage = DamageProfile(
-        unitDamage = 50,
-        fortressDamage = 50,
-        unitRadius = 28f,
-        fortressRadius = 28f,
-        minimumDamage = 50,
-    ),
-    terrain = TerrainProfile(true, 24f, 14f),
-    behavior = AmmunitionImpactBehavior.DirectImpact,
-    availableLayers = setOf(
-        AmmunitionHitLayer.TERRAIN,
-        AmmunitionHitLayer.UNIT,
-        AmmunitionHitLayer.FORTRESS,
-    ),
-)
+class AmmunitionCatalog(definitions: List<AmmunitionDefinition>) {
+    val all: List<AmmunitionDefinition> = definitions.toList()
+    private val byType = all.associateBy(AmmunitionDefinition::type)
 
-object SiegeBombAmmunition : AmmunitionDefinition(
-    type = AmmunitionType.SIEGE_BOMB,
-    displayKey = "ammunition.siege_bomb",
-    reload = ReloadProfile(5.5f),
-    inventory = InventoryProfile(unlimited = true),
-    flight = FlightProfile(mass = 2.5f, windResponse = 0.8f),
-    collision = CollisionProfile(
-        hitLayers = setOf(AmmunitionHitLayer.TERRAIN, AmmunitionHitLayer.FORTRESS),
-        mode = AmmunitionCollisionMode.IMPACT_ON_TERRAIN,
-        hitRadius = 57.5f,
-    ),
-    damage = DamageProfile(
-        unitDamage = 72,
-        fortressDamage = 100,
-        unitRadius = 115f,
-        fortressRadius = 115f,
-    ),
-    terrain = TerrainProfile(true, 82f, 48f),
-    behavior = AmmunitionImpactBehavior.Explosion(115f, 0.8f),
-    availableLayers = setOf(AmmunitionHitLayer.TERRAIN, AmmunitionHitLayer.FORTRESS),
-)
-
-object PowderBarrelAmmunition : AmmunitionDefinition(
-    type = AmmunitionType.POWDER_BARREL,
-    displayKey = "ammunition.powder_barrel",
-    reload = ReloadProfile(6.5f),
-    inventory = InventoryProfile(unlimited = false, startingCount = 3),
-    flight = FlightProfile(mass = 2f, windResponse = 0.9f),
-    collision = CollisionProfile(
-        hitLayers = setOf(AmmunitionHitLayer.TERRAIN, AmmunitionHitLayer.FORTRESS),
-        mode = AmmunitionCollisionMode.IMPACT_ON_TERRAIN,
-        hitRadius = 110f,
-        friendlyFire = FriendlyFirePolicy.ALL_UNITS,
-    ),
-    damage = DamageProfile(
-        unitDamage = 120,
-        fortressDamage = 120,
-        unitRadius = 220f,
-        fortressRadius = 220f,
-    ),
-    terrain = TerrainProfile(true, 150f, 90f),
-    behavior = AmmunitionImpactBehavior.Explosion(220f, 0.8f),
-    availableLayers = setOf(AmmunitionHitLayer.TERRAIN, AmmunitionHitLayer.FORTRESS),
-)
-
-object FireRainAmmunition : AmmunitionDefinition(
-    type = AmmunitionType.FIRE_RAIN,
-    displayKey = "ammunition.fire_rain",
-    reload = ReloadProfile(8f),
-    inventory = InventoryProfile(unlimited = false, startingCount = 3),
-    flight = FlightProfile(
-        mass = 1.2f,
-        windResponse = 1.1f,
-        initialSpeedMultiplier = 8f,
-        apexFragmentation = ApexFragmentationProfile(
-            fragmentsPerSide = 3,
-            minimumReferenceSpeed = 120f,
-            horizontalSpreadPerStep = 0.09f,
-            initialDownwardSpeed = 0.10f,
-            downwardSpreadPerStep = 0.025f,
-        ),
-    ),
-    collision = CollisionProfile(
-        hitLayers = setOf(AmmunitionHitLayer.TERRAIN, AmmunitionHitLayer.FORTRESS),
-        mode = AmmunitionCollisionMode.IMPACT_ON_TERRAIN,
-        hitRadius = 34f,
-    ),
-    damage = DamageProfile(
-        unitDamage = 4,
-        fortressDamage = 4,
-        unitRadius = 68f,
-        fortressRadius = 68f,
-    ),
-    terrain = TerrainProfile(true, 36f, 10f),
-    behavior = AmmunitionImpactBehavior.LingeringArea(
-        radius = 68f,
-        durationSeconds = 9f,
-        tickIntervalSeconds = 0.5f,
-        damagePerTick = 4,
-        fortressDamagePerTick = 4,
-        driftsWithWind = false,
-        status = UnitStatus.BURNING,
-        unitFriendlyFire = FriendlyFirePolicy.ALL_UNITS,
-    ),
-    availableLayers = setOf(AmmunitionHitLayer.TERRAIN, AmmunitionHitLayer.FORTRESS),
-)
-
-object PlagueCauldronAmmunition : AmmunitionDefinition(
-    type = AmmunitionType.PLAGUE_CAULDRON,
-    displayKey = "ammunition.plague_cauldron",
-    reload = ReloadProfile(15f),
-    inventory = InventoryProfile(unlimited = false, startingCount = 3),
-    flight = FlightProfile(mass = 3f, windResponse = 0.6f),
-    collision = CollisionProfile(
-        hitLayers = setOf(AmmunitionHitLayer.TERRAIN, AmmunitionHitLayer.FORTRESS),
-        mode = AmmunitionCollisionMode.IMPACT_ON_TERRAIN,
-        hitRadius = 130f,
-    ),
-    damage = DamageProfile(
-        unitDamage = 8,
-        fortressDamage = 0,
-        unitRadius = 300f,
-        fortressRadius = 300f,
-    ),
-    terrain = TerrainProfile(false, 0f, 0f),
-    behavior = AmmunitionImpactBehavior.LingeringArea(
-        radius = 300f,
-        durationSeconds = 6f,
-        tickIntervalSeconds = 1f,
-        damagePerTick = 8,
-        fortressDamagePerTick = 0,
-        driftsWithWind = true,
-        windDriftMultiplier = 0.75f,
-        followsTerrain = true,
-        status = UnitStatus.POISONED,
-    ),
-    availableLayers = setOf(AmmunitionHitLayer.TERRAIN, AmmunitionHitLayer.FORTRESS),
-)
-
-object AmmunitionCatalog {
-    val all: List<AmmunitionDefinition> = listOf(
-        RockAmmunition,
-        SiegeBombAmmunition,
-        PowderBarrelAmmunition,
-        FireRainAmmunition,
-        PlagueCauldronAmmunition,
-    )
+    init {
+        require(byType.size == all.size) { "ammunition definitions must be unique" }
+        require(byType.keys == AmmunitionType.values().toSet()) {
+            "ammunition catalog must define every stable ammunition ID exactly once"
+        }
+    }
 
     fun definition(type: AmmunitionType): AmmunitionDefinition =
-        all.firstOrNull { it.type == type }
-            ?: error("unknown ammunition definition: ${type.name}")
+        byType[type] ?: error("unknown ammunition definition: ${type.name}")
+
+    fun find(id: String): AmmunitionDefinition? =
+        AmmunitionType.values().firstOrNull { it.name == id }?.let(byType::get)
 }

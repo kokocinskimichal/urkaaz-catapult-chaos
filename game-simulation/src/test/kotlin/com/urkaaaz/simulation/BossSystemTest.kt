@@ -1,5 +1,8 @@
 package com.urkaaaz.simulation
 
+import com.urkaaaz.domain.GameBalanceFixtures
+import com.urkaaaz.domain.UnitIds
+
 import com.urkaaaz.contracts.BossArchetype
 import com.urkaaaz.contracts.BossAttackAnimationTiming
 import com.urkaaaz.contracts.BossEncounterConfig
@@ -305,7 +308,7 @@ class BossSystemTest {
         val boss = system(centralProfile(health = 1_000))
         val slingmaster = Unit(
             id = EntityId("blue-slingmaster"),
-            type = UnitFactory.slingmaster(),
+            type = GameBalanceFixtures.unit(UnitIds.SLINGMASTER),
             team = Team.BLUE,
             position = WorldPosition(480f, 200f),
             moving = true,
@@ -358,6 +361,7 @@ class BossSystemTest {
         val simulation = DeterministicMatchSimulation(
             matchId = MatchId("boss-duration"),
             config = SimulationConfig(
+                balance = GameBalanceFixtures.balance,
                 bounds = WorldBounds(7_200f, 4_800f),
                 matchDurationMilliseconds = 100L,
                 bossEncounterMatchDurationMilliseconds = 300L,
@@ -384,12 +388,14 @@ class BossSystemTest {
                     rangeWorldUnits = 0f,
                     cooldownSeconds = 100f,
                     initialCooldownSeconds = 100f,
+                    windupSeconds = 0f,
                 ),
             ),
         )
         val simulation = DeterministicMatchSimulation(
             matchId = MatchId("boss-unit-attack"),
             config = SimulationConfig(
+                balance = GameBalanceFixtures.balance,
                 bounds = WorldBounds(7_200f, 4_800f),
                 bossEncounter = BossEncounterConfig(
                     profileId = profile.id,
@@ -400,7 +406,7 @@ class BossSystemTest {
             ),
         )
         simulation.start()
-        repeat(4) { simulation.deployUnit(UnitFactory.defender(), Team.BLUE) }
+        repeat(4) { simulation.deployUnit(GameBalanceFixtures.unit(UnitIds.DEFENDER), Team.BLUE) }
         simulation.sendWave(Team.BLUE)
 
         val events = buildList {
@@ -431,6 +437,8 @@ class BossSystemTest {
                 BossVictoryRule.DEFEAT_BOSS
             },
         ),
+        combatBalance = GameBalanceFixtures.balance.runtime.combat,
+        bossCombatBalance = GameBalanceFixtures.balance.runtime.bossCombat,
         worldWidth = worldWidth,
         groundHeightAt = { 200f },
     )
@@ -475,6 +483,7 @@ class BossSystemTest {
                 rangeWorldUnits = 300f,
                 cooldownSeconds = 4.5f,
                 initialCooldownSeconds = 2.5f,
+                windupSeconds = 0f,
             ),
             BossAttackBalance(
                 target = BossAttackTarget.FORTRESS_GATE,
@@ -483,6 +492,7 @@ class BossSystemTest {
                 rangeWorldUnits = 80f,
                 cooldownSeconds = 1f,
                 initialCooldownSeconds = 1f,
+                windupSeconds = 0f,
             ),
         ),
         specialAbilities = listOf(
@@ -502,7 +512,7 @@ class BossSystemTest {
         targetId: EntityId? = null,
     ) = Unit(
         id = EntityId(id),
-        type = UnitFactory.defender(),
+        type = GameBalanceFixtures.unit(UnitIds.DEFENDER),
         team = team,
         position = WorldPosition(x, 200f),
         moving = true,

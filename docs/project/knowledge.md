@@ -494,10 +494,10 @@ The current match HUD also displays:
   Unit contact still detonates immediately. Fortress blast falloff uses
   distance to the hitbox surface rather than its center.
 - Unit behavior is implemented by dedicated `DefenderUnit`, `SapperUnit`,
-   `DemolisherUnit`, `RagingBoarUnit`, and `SlingmasterUnit` classes. Their
-   balance values live centrally in `UnitConfigurations.kt`; `UnitFactory`
-   creates the dedicated class from a configuration or command identifier, so
-   balance tuning does not require editing unit classes.
+  `DemolisherUnit`, `RagingBoarUnit`, and `SlingmasterUnit` classes. Their
+  balance values live in `game-balance.json`; `UnitCatalog` supplies typed
+  configurations to `UnitFactory`, which creates the dedicated class without
+  embedding stat values in unit behavior.
 - Melee units stop `150` world units from their target and attack from that
    standoff distance, with `55` additional world units per formation rank. This
    keeps opposing sprites visually separated while preserving melee attacks.
@@ -950,8 +950,9 @@ must go through commands and domain/application boundaries.
 - The AI only considers ammunition with positive fortress damage when choosing
   a shot against a fortress. Entity-impact presentation uses the collision
   coordinates from `ProjectileHitEntity`.
-- Unit maximum health is centralized in `UnitConfigurations.kt`: Sapper 20,
-  Defender 50, Demolisher 25, Raging Boar 80 and Slingmaster 25.
+- Unit maximum health is centralized in `game-balance.json`: Sapper 20,
+  Defender 50, Demolisher 25, Raging Boar 80 and Slingmaster 25. Stable unit
+  identifiers remain in `UnitIds`.
 - Demo matches configure the BLUE player fortress with 5,000 maximum health
   (ten times the standard 500), while the RED fortress and non-demo matches
   retain 500 maximum health. The value is passed through the application
@@ -1066,14 +1067,21 @@ when their target is listed in `runtimeBossIdleTargets`. Other boss states are
 runtime-loaded only when their exact sequence id is listed in
 `runtimeBossSequences` (currently `anim_boss_ancient_war_oak_attack_right`).
 
-The Balance tab edits the single source
-`game-domain/src/main/resources/balance/game-balance.json`. `GET /api/balance`
+The Balance tab edits the single schema 3 source
+`game-domain/src/main/resources/balance/game-balance.json`, which owns boss,
+unit, ammunition, spell and mana profiles plus shared runtime economy, physics,
+combat, AI strategy/profile, reward and campaign values. `GET /api/balance`
 returns exact file content and SHA-256, `POST /api/balance/validate` performs
-strict schema and semantic validation, and `PUT /api/balance` writes atomically
-only when `expectedHash` is current. A changed document must advance
-`balanceRevision`; the editor automatically bumps a trailing revision number.
-Balance is loaded when a match starts and its revision/hash are included in
-match snapshots and replay configuration; there is no hot reload.
+strict structural, range and stable-ID coverage validation, and
+`PUT /api/balance` writes atomically only when `expectedHash` is current. A changed
+document must advance `balanceRevision`; the editor automatically bumps a
+trailing revision number.
+The application loader creates one immutable `GameBalanceConfig` for the
+bundled resource and passes its typed catalogs to simulation, AI, loadout,
+progression and Android presentation projections. `UnitIds`, `AmmunitionType`
+and `SpellType` retain stable identifiers only; balance values are not copied
+into those enums or behavior classes. Match snapshots and replay configuration
+retain the loaded revision and file hash; there is no hot reload.
 
 The Progress tab edits
 `game-application/src/main/resources/progression/developer-progress.json`.
@@ -1104,8 +1112,9 @@ presentation only and does not own simulation state.
 
 `game-simulation/BossSystem` owns runtime for the central objective and mobile
 siege boss. `MatchScenario.bossEncounter` selects a typed profile, spawn ratio
-and victory rule; `MatchSession` loads that profile through the application
-balance repository and passes it into deterministic simulation. Levels 5–50
+and victory rule; `MatchSession` loads the shared `GameBalanceConfig` through
+the application balance repository and passes that same configuration into
+deterministic simulation and AI. Levels 5–50
 have profiles and assets; levels 51–54 remain playable without bosses, and the
 campaign frontier stops at 54 until encounters for level 55 onward are
 complete. Boss sprites and optional idle sequences are mapped by

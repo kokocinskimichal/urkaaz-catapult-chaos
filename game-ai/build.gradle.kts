@@ -10,4 +10,5 @@ dependencies {
     implementation(project(":game-contracts"))
     implementation(project(":game-domain"))
     testImplementation(kotlin("test"))
+    testImplementation(testFixtures(project(":game-domain")))
 }

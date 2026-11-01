@@ -1,0 +1,636 @@
+# TutorialSystem — architektura i plan implementacji
+
+## Status i cel
+
+**TutorialSystem nie jest zaimplementowany.** Ten dokument opisuje zatwierdzoną
+architekturę przyszłego, przekrojowego systemu tutoriala. Nic poniżej nie
+opisuje działającego kodu, dopóki nie zostanie wdrożone zgodnie z planem.
+Wymagania opisane jako „musi” są kryteriami akceptacji przyszłej
+implementacji.
+
+Cel: prowadzić nowego gracza przez Dashboard, Kampanię, Loadout, Sklep i Mecz
+kontekstowymi, jednorazowymi i pomijalnymi instrukcjami. Instrukcje wskazują
+dokładne elementy UI lub pola bitwy, a w meczu mogą wstrzymać symulację i AI,
+czekać na akcję gracza oraz blokować panele do czasu ich wprowadzenia.
+
+Typ systemu: przekrojowy — aplikacyjny (reguły, stan, persystencja),
+prezentacyjny (overlay Android) i authoringowy (treść w JSON, edycja w
+Urkaaaz Studio).
+
+Legacy (`~/workspace/orc-catapult`, tylko do odczytu) jest źródłem mechanik,
+tekstów i zasad prezentacji. Kolejność kroków legacy **nie jest** przenoszona:
+legacy wybierało kroki przez `when (level)` w `MainActivity`, a Urkaaaz
+wyzwala tutoriale kontekstowo.
+
+## Zatwierdzone decyzje
+
+| Decyzja | Wybór |
+|---|---|
+| Treść | JSON w zasobach współdzielonych plus zakładka Studio **Tutorial** od pierwszej wersji kontraktów. |
+| Wyzwalanie | Kontekstowe: pierwsze wejście na ekran, pierwsza dostępność mechaniki, poziom kampanii lub zdarzenie; każdy tutorial pokazuje się raz. |
+| Pomijanie i powtarzanie | `Skip` na każdym kroku oznacza tutorial jako widziany. Powtórka jest dostępna z Dashboardu. |
+| Symulacja meczu | Hint z `NEXT` pauzuje symulację. Kroki wymagające akcji gracza działają na żywym meczu z wstrzymanym AI. Po tutorialu AI wraca. |
+| Persystencja | Osobny, wersjonowany namespace DataStore; wliczony w Dashboard RESET. |
+| Demo (`TEST`, poziom 0) | Odizolowane: bez tutoriali, bez zapisu postępu tutoriala. |
+| Teksty | Polski, angielski i hiszpański w JSON. |
+| Język | Przełącznik PL/EN/ES na Dashboardzie, osobny DataStore, lokalizacja całego UI; zaprojektowane w `docs/systems/localization-system.md` (domyślnie EN, RESET nie czyści języka). |
+| Powtórka meczu | Przy najbliższym meczu spełniającym wyzwalacz; Dashboard pokazuje informację. |
+| Back | Podczas tutoriala wykonuje `Skip`. |
+| Zastępowany stub | `TutorialParameters` w `game-campaign` zostaje usunięty w fazie 1. |
+| Zakres katalogu v1 | Lista tematów zatwierdzona; teksty i kroki w fazie treści z akceptacją. |
+
+Pozostałe punkty w „Otwarte decyzje” (Sklep, podgląd Hintu, dokument
+lokalizacji) nie blokują fazy 1.
+
+## Zakres
+
+W zakresie:
+
+- definicje tutoriali i kroków jako dane (JSON) z walidacją;
+- wybór tutoriala po sygnałach (ekran, mecz, zdarzenie, milestone);
+- runtime aktywnego tutoriala: kolejka, kroki, warunki ukończenia, Skip;
+- efekty meczowe: pauza symulacji, wstrzymanie AI, blokada paneli do czasu
+  wprowadzenia mechaniki;
+- port i adapter persystencji postępu oraz reset;
+- overlay Android: Tutorial Hint, Tutorial Spotlight, rejestr celów;
+- powtórka tutoriali z Dashboardu;
+- zakładka Studio do edycji treści i walidacji.
+
+## Poza zakresem
+
+- reguły gameplayu, balans i definicje poziomów — pozostają w domenie,
+  symulacji i `game-campaign`;
+- przyznawanie nagród, milestone'ów i odblokowań — pozostaje w
+  `CampaignSystem`; TutorialSystem tylko konsumuje ich sygnały;
+- implementacja Sklepu, ekranu wyniku i samej mechaniki żyć;
+- nawigacja — pozostaje w `AppNavigator`; TutorialSystem jej nie zmienia;
+- nowy moduł Gradle, hot reload treści, skrypty wykonywalne w JSON;
+- import postępu tutoriala z legacy;
+- samouczek wideo, głos lektora i zdalna dystrybucja treści.
+
+## Istniejące rozwiązania i ryzyko duplikacji
+
+| Istniejące | Stan | Decyzja |
+|---|---|---|
+| `TutorialParameters(enabled, stepKeys)` w `CampaignLevelDefinition` | Jedyny ślad w kodzie. Tylko poziom 1, klucze `aim/fire/advance`, nikt go nie konsumuje. Komentarz: instrukcje są danymi bez widoków Android. | Zastąpiony. Wyzwalacze poziomu przechodzą do definicji tutorialów, więc pole staje się drugim, równoległym źródłem prawdy. |
+| Legacy `TutorialOverlayController`, `TutorialHighlightView`, `MainActivity.tutorialStepsForLevel` | Poza repozytorium, tylko odczyt. | Źródło mechanik i tekstów. Kodu nie kopiować. Szczególnie `when (level)`, flagi `tutorialCalloutOnSide` i pola w `MainActivity`. |
+| `MatchScenario.available*`, `LocalMatchGateway.setAiAllowedUnitIds` / `AiMatchCoordinator.pause/resume` | Gotowe mechanizmy dostępności i wstrzymania AI. | Wykorzystane przez port meczowy; bez nowego katalogu dostępności. |
+| `CampaignSystem` milestone'y (Haste poziom 6, Heal poziom 8) | Źródło sygnałów odblokowania. Milestone'y celowo nie przechowują flag tutoriala. | Konsumowane przez kontrakt sygnału; flagi tutoriala należą do TutorialSystem. |
+| `DataStore*Repository` oraz `DataStorePlayerProgressResetRepository` | Wzorzec namespace'ów i reset całego Preferences DataStore z zachowaniem hasha presetu developerskiego. | Ten sam wzorzec; reset obejmie klucze `tutorial.*` bez zmiany adaptera resetu. |
+| Studio: Progress/Balance/Campaign | Wzorzec: JSON w zasobach, `expectedHash`, atomowy zapis, walidacja, auto-podbicie rewizji. | Ten sam wzorzec dla zakładki Tutorial. |
+
+Nie istnieje inny system tutoriala, hintów ani spotlightów; rekomendacja nie
+duplikuje funkcjonalności.
+
+## Właściciel i kierunek zależności
+
+| Odpowiedzialność | Właściciel |
+|---|---|
+| Definicje, walidacja, runtime, porty, efekty, use case'y | `game-application`, pakiet `com.urkaaaz.application.tutorial`. |
+| Dane treści | `game-application/src/main/resources/tutorial/tutorial-catalog.json`. |
+| Persystencja postępu | `android-app/.../persistence/DataStoreTutorialProgressRepository`. |
+| Overlay, rejestr celów, host, pozycjonowanie Hintu | `android-app`, pakiet `com.urkaaaz.tutorial`. |
+| Mostek meczowy (pauza, AI, blokada paneli) | Port `MatchTutorialPort` w `game-application`; adapter w `android-app` nad `LocalMatchGateway` i ViewModelem. |
+| Edycja treści | `studio/` (zakładka Tutorial, API, kontrakty `@studio/contracts`). |
+
+Nowego modułu Gradle nie potrzeba. `game-contracts`, `game-domain`,
+`game-simulation`, `game-campaign` i `game-ai` **nie** zależą od
+TutorialSystem. Zmiana tych modułów ogranicza się do usunięcia
+`TutorialParameters` z `game-campaign`.
+
+```mermaid
+flowchart LR
+    Screens[Ekrany Android] -->|TutorialSignal| Host[TutorialHost]
+    Match[MatchScreenController] -->|MatchSnapshot / MatchEvent| Host
+    Campaign[CampaignSystem] -->|MilestoneApplied| Host
+    Host --> Engine[TutorialEngine game-application]
+    Catalog[tutorial-catalog.json] --> Engine
+    Engine -->|TutorialUiState| Overlay[TutorialOverlayView]
+    Engine -->|TutorialEffect| Port[MatchTutorialPort]
+    Port --> Gateway[LocalMatchGateway / AI]
+    Engine <--> Repo[TutorialProgressRepository]
+    Repo --> DS[(DataStore tutorial.*)]
+    Overlay --> Registry[TutorialTargetRegistry]
+    Studio[Studio Tutorial tab] --> Catalog
+```
+
+Kierunek: `android-app` → `game-application` → `game-domain` /
+`game-contracts`. Engine nie zna Androida, `View`, `R.string` ani ID zasobów.
+
+## Kontrakty (opis, nie kod)
+
+Wszystkie kontrakty są niemutowalne i walidowane przy konstrukcji.
+
+### Definicje (konfiguracja, nie runtime state)
+
+- **`TutorialCatalog`**: `schemaVersion`, `revision`, lista `TutorialTargetDefinition`,
+  lista `TutorialDefinition`.
+- **`TutorialTargetDefinition`**: stabilny `targetId`, `screen` (lub `MATCH`),
+  rodzaj (`VIEW` albo `BATTLEFIELD`). Katalog jest jedynym źródłem poprawnych
+  identyfikatorów celów; Studio i testy Android korzystają z niego.
+- **`TutorialDefinition`**: `tutorialId`, `scope` (ekran lub mecz), `trigger`,
+  `requires` (inne tutoriale, które muszą mieć status terminalny), `priority`,
+  `introduces` (mechaniki wprowadzane przez tutorial), `rules`
+  (`TutorialRuleSet`), `steps`.
+- **`TutorialTrigger`** (zamknięty zbiór):
+  - `ScreenEntered(screen)`;
+  - `MatchStarted(campaignLevelRange?, requiresMechanic?)` — mechanika
+    pochodzi z `MatchScenario` (jednostka, amunicja, czar, boss), więc tutorial
+    „pierwsza dostępność mechaniki” nie powiela tabeli poziomów;
+  - `MatchEventObserved(eventKind)`, np. pierwszy `BossSpawned`;
+  - `CampaignMilestoneApplied(milestoneId)`.
+- **`TutorialStep`**: `stepId`, `targetId?` (brak = Hint wyśrodkowany bez
+  Spotlightu), `text` (mapa `pl`/`en`/`es`), `placementPreference`,
+  `completion`, `unlocksTargets`.
+- **`TutorialStepCompletion`**: `Next`, `PlayerAction(kind, count)` (np. trzy
+  strzały), `MatchEventCount(eventKind, count)`.
+- **`TutorialRuleSet`**: `pauseSimulationOnHint`, `suspendAiWhileActive`,
+  `restrictAiToIntroducedMechanics`.
+
+### Wejścia
+
+- **`TutorialSignal`**: `ScreenEntered(screen, context)`,
+  `MatchStarted(scenarioFacts)`, `MatchEventObserved(MatchEvent)`,
+  `MilestoneApplied(id)`, `UserAction` (`Next`, `Skip`, `PlayerActionPerformed`).
+  `scenarioFacts` to niemutowalny odczyt: poziom kampanii, dostępne jednostki,
+  amunicja, czary i obecność bossa — bez referencji do `Match`.
+- **`TutorialContext`**: czy tryb Demo, język (`pl`/`en`/`es`) z portu
+  `LanguageSettings`.
+- Definicje JSON przez `TutorialCatalogRepository` (ładowanie i walidacja).
+
+### Wyjścia
+
+- **`TutorialUiState`** (render state, `null` gdy brak aktywnego tutoriala):
+  tutorial i krok, tekst w wybranym języku, `targetId?`, pozycja kroku (np.
+  `2/5`), etykieta przycisku (`NEXT` / `START BATTLE`), czy Skip jest dostępny,
+  zbiór celów aktualnie dozwolonych dla dotyku, zbiór celów zablokowanych.
+- **`TutorialEffect`**: `PauseSimulation`, `ResumeSimulation`, `SuspendAi`,
+  `ResumeAi`, `RestrictAiToIntroduced`, `LockTargets`, `UnlockTargets`,
+  `FocusTarget`. Efekty wykonuje wyłącznie adapter; engine ich nie wywołuje.
+- **`TutorialEvent`**: `Started`, `StepCompleted`, `Skipped`, `Completed`,
+  `Rejected` (z jawnym powodem). Do logów i testów, bez wpływu na gameplay.
+- Zapis postępu przez `TutorialProgressRepository`.
+
+### Porty
+
+- `TutorialCatalogRepository` — ładuje katalog z zasobów, błędy jawne.
+- `TutorialProgressRepository` — `load()`, `markTerminal(tutorialId, status)`,
+  `reset(tutorialId?)`.
+- `MatchTutorialPort` — `pause(reason)`, `resume(reason)`, `suspendAi()`,
+  `resumeAi()`, `restrictAi(introducedMechanics)`.
+
+## Runtime state, konfiguracja i persystencja
+
+| Dane | Typ | Właściciel |
+|---|---|---|
+| Katalog tutoriali i celów | Konfiguracja (niemutowalna po załadowaniu) | `tutorial-catalog.json` |
+| Aktywny tutorial, indeks kroku, licznik akcji, kolejka oczekujących | Runtime state | `TutorialEngine` (jedyny właściciel) |
+| Statusy terminalne `COMPLETED` / `SKIPPED` na tutorial | Postęp trwały | `TutorialProgressRepository` |
+| Rozmieszczenie celów na ekranie | Prezentacja, efemeryczne | `TutorialTargetRegistry` |
+
+Zasady:
+
+- Persystowane są **tylko** statusy terminalne i wersja schematu oraz rewizja
+  katalogu. Aktywny krok nie jest zapisywany; po zabiciu procesu tutorial
+  startuje od pierwszego kroku.
+- Klucze DataStore mają prefiks `tutorial.` (np. `tutorial.schema_version`,
+  `tutorial.progress`), analogicznie do `campaign.*`. Postęp tutoriala nie
+  trafia do `CampaignProgress`, profilu ani loadoutu.
+- `DataStorePlayerProgressResetRepository` czyści całe Preferences DataStore
+  poza hashem presetu, więc Dashboard RESET kasuje też postęp tutoriala. Test
+  musi to potwierdzać, aby przyszła zmiana resetu nie rozpięła tej zależności.
+- Nieznany `tutorialId` w zapisie (np. usunięty z katalogu) jest ignorowany
+  jawnie i zapisywany w logu, a nie interpretowany jako ukończony inny tutorial.
+  Nowsza wersja schematu niż obsługiwana jest błędem `Rejected`, nie cichym
+  resetem.
+- Demo nie czyta ani nie zapisuje postępu tutoriala.
+
+## Lifecycle
+
+| Zdarzenie | Zachowanie |
+|---|---|
+| Wejście na ekran | Sygnał `ScreenEntered`. Engine wybiera nieukończony tutorial o najwyższym priorytecie, którego `requires` są spełnione. Maksymalnie jeden aktywny; pozostałe czekają w kolejce i wracają po zakończeniu. |
+| Start meczu | Sygnał `MatchStarted(scenarioFacts)` przed pierwszym tickiem. Efekty `PauseSimulation` i `SuspendAi` muszą zadziałać zanim symulacja ruszy. |
+| `NEXT` | Następny krok albo zakończenie tutoriala (`COMPLETED` zapisany, efekty `Resume*`). |
+| `Skip` | `SKIPPED` zapisany, efekty `Resume*`, odblokowanie paneli wprowadzanych przez tutorial. |
+| Krok z akcją gracza | Symulacja żywa, AI wstrzymane, Hint widoczny, ukończenie po spełnieniu `completion`. |
+| Pauza użytkownika | Pauza ma właściciela (powód): `USER` lub `TUTORIAL`. Wznowienie następuje, gdy żaden powód nie pozostaje. Podczas tutoriala przycisk pauzy jest zasłonięty Spotlightem. |
+| `onPause` ekranu / Android w tle | Overlay znika, stan engine zachowany, powrót odtwarza ten sam krok. |
+| Restart meczu | Aktywny tutorial przerwany bez statusu terminalnego; nieukończone wracają przy następnym starcie. |
+| Koniec meczu w trakcie tutoriala | Tutorial przerwany bez statusu; `Resume*` nie jest potrzebne, bo mecz skończony. |
+| Powtórka z Dashboardu | `reset(tutorialId)` usuwa status. Tutoriale ekranów startują od razu po `ScreenEntered`; tutoriale meczu uruchomią się przy najbliższym meczu spełniającym wyzwalacz, a Dashboard pokazuje przy nich informację „uruchomi się w następnym meczu”. |
+| Dashboard RESET | Wszystkie statusy usunięte razem z resztą DataStore. |
+
+## Przepływ komend, snapshotów i eventów
+
+1. Ekran lub `MatchScreenController` wysyła `TutorialSignal` do `TutorialHost`
+   (adapter `android-app`), który przekazuje go do `TutorialEngine`.
+   Kontroler meczu przekazuje `MatchEvent` i fakty scenariusza; nie przekazuje
+   mutowalnych obiektów domeny ani referencji do `Match`.
+2. Engine oblicza nowy `TutorialUiState`, listę `TutorialEffect` i
+   `TutorialEvent`.
+3. Host renderuje `TutorialUiState` przez overlay i wykonuje efekty przez
+   `MatchTutorialPort`. Pauza i wznowienie przechodzą przez istniejące
+   `LocalMatchGateway.pause/resume`; wstrzymanie AI przez
+   `AiMatchCoordinator.pause/resume` i `setAllowedUnitIds`.
+4. Akcje gracza w overlayu (`NEXT`, `Skip`) wracają jako `UserAction`.
+   Akcje rozgrywki (strzał, rekrutacja) pozostają zwykłymi `MatchUiAction`;
+   tutorial je tylko obserwuje przez `MatchEvent`.
+
+Tutorial nie wywołuje metod silnika, nie wysyła komend gameplayu w imieniu
+gracza i nie zapisuje do `Match`. W tej architekturze nie ma „tutorialowych”
+komend; kroki kończą się obserwacją zwykłych eventów.
+
+## Determinizm, czas i replay
+
+- Engine jest deterministyczny: ten sam katalog, postęp i sekwencja sygnałów
+  dają ten sam `TutorialUiState`. Nie używa zegara ani losowości; nie ma
+  animacji czasowych w engine.
+- Tutorial nie zmienia symulacji: nie dodaje komend, nie zmienia seeda i nie
+  modyfikuje `MatchScenario`. Pauza zatrzymuje ticki; wstrzymane AI nie
+  wydaje komend. Replay zapisuje tylko wydane komendy, więc replay meczu z
+  tutorialem pozostaje odtwarzalny. Test regresji musi to potwierdzić.
+- Czas animacji Spotlightu i Hintu jest wyłącznie prezentacją
+  (`android-app`).
+
+## Integracja z istniejącymi systemami
+
+### Dashboard
+
+Cele: karta Kampanii, Loadout, Sklep, ustawienia/RESET, sekcja **Tutorials**
+(nowa, z listą tutoriali do powtórzenia i statusem). Zmiana UI Dashboardu
+ogranicza się do tej sekcji i rejestracji celów.
+
+### Campaign
+
+Cele: mapa rozdziału, znacznik aktualnego poziomu, stan zablokowany i
+ukończony, boss. Tutorial korzysta z istniejącego
+`CampaignMapViewport`/`CampaignMapView`; cele mapy rejestrują się w
+`TutorialTargetRegistry` z prostokątem znacznika po transformacji viewportu.
+
+### Loadout
+
+Cele: sekcje jednostek, amunicji i czarów, liczniki, przycisk startu.
+Tutorial zmiany loadoutu po odblokowaniu Haste/Heal wyzwala
+`CampaignMilestoneApplied`, więc milestone nie dostaje pól tutorialowych.
+Systemowy Back zamykający podstronę szczegółów ma pierwszeństwo przed
+tutorialem tylko wtedy, gdy overlay nie jest aktywny (patrz „Back”).
+
+### Shop
+
+Ekran jest dziś placeholderem. Definicje tutoriala Sklepu mogą istnieć w
+katalogu, ale walidacja wymaga, aby cel istniał w rejestrze ekranu; dopóki
+Sklep nie rejestruje celów, tutorial Sklepu jest oznaczony w katalogu jako
+`enabled = false` i nie jest wyzwalany.
+
+### Match
+
+- Cele widoków: timer, wskaźnik wiatru, panel amunicji, panel jednostek,
+  `SupplyGaugeView`, `ManaOrbView`, panel czarów, `HealthCardView`,
+  przycisk Send Wave, boss HUD.
+- Cele pola bitwy (`BATTLEFIELD`): wroga forteca, własna katapulta, własna
+  forteca. Pozycje w world-space są tłumaczone transformacją
+  `BattlefieldCameraController`; fortece i katapulty używają ustalonego
+  baseline'u prezentacji (fortece `672 × 504`, katapulty `182.4` szer.). Spotlight
+  używa tych samych hitboxów co renderer, aby Highlight pasował do grafiki.
+- Blokada paneli: panel jest aktywny, gdy mechanika jest dostępna w
+  `MatchScenario` **i** nie jest zablokowana przez trwający tutorial.
+  Mechanika zablokowana to taka, którą `introduces` oczekujący tutorial
+  jeszcze nie wprowadził. Po statusie terminalnym panel pozostaje aktywny
+  na kolejnych poziomach. Źródłem prawdy o dostępności nadal jest
+  `MatchScenario`; tutorial może panel tylko dodatkowo wyłączyć.
+- AI: przy `suspendAiWhileActive` AI nie wydaje komend, dopóki tutorial jest
+  aktywny. `restrictAiToIntroducedMechanics` zawęża dozwolone jednostki i
+  amunicję AI do wprowadzonych mechanik. AI aktualnie nie używa czarów, więc
+  ograniczenie czarów jest na razie bez efektu, ale reguła pozostaje w
+  kontrakcie.
+- Wstrzymanie AI: `LocalMatchGateway.pause()` wstrzymuje sesję i AI razem,
+  więc port meczowy wymaga nowych, cienkich `suspendAi()`/`resumeAi()` w
+  gateway nad `AiMatchCoordinator.pause()/resume()`. Podczas pauzy AI
+  `decide` zwraca pustą listę i nie nalicza czasu, więc nie przesuwa
+  seedowanych decyzji. `AiMatchCoordinator.start()`/`stop()` zerują pauzę,
+  więc po restarcie meczu efekty muszą być wydane ponownie.
+- Pauza: użytkownikowa pauza w `MatchViewModel` i pauza tutoriala muszą mieć
+  rozróżnialne powody, bo dziś ViewModel trzyma pojedynczą flagę `paused`, a
+  `resume()` wznawia też AI. Wymaga to drobnej zmiany w mostku
+  (zbiór powodów pauzy: `USER`, `TUTORIAL`; wznowienie dopiero gdy zbiór jest
+  pusty), nie w symulacji.
+- Kamera: do `FocusTarget` potrzebne jest nowe publiczne
+  `BattlefieldCameraController.focusOnWorldRect(...)`; dziś `centerOnWorld` i
+  `animateToTeam` są prywatne. Rect celu w ekranie to `world * scale + offset`
+  z `CameraTransform`, tą samą transformacją co renderer.
+
+### Kampania — `TutorialParameters`
+
+Po wdrożeniu pole `tutorial` i typ `TutorialParameters` są usuwane razem z
+asercjami w `CampaignLevelDefinitionTest`. Poziom nie wskazuje tutoriala;
+tutoriale wskazują poziomy przez trigger.
+
+## Android UI i assety
+
+### Komponenty
+
+- `TutorialHost` — łączy `ScreenHost`, overlay, engine i porty. Jest jedynym
+  punktem montażu tutoriala; `MainActivity` tylko go tworzy przy starcie
+  (lifecycle), tak jak `AppNavigator`, i nie dostaje pól tutoriala.
+- `TutorialOverlayView` — warstwa nad `ScreenHost`, zawiera dwa osobne
+  elementy: `TutorialSpotlightView` i `TutorialHintView`.
+- `TutorialTargetRegistry` — mapuje `targetId` na dostawcę prostokąta w
+  współrzędnych ekranu. Ekran rejestruje cele przy `onResume` i wyrejestrowuje
+  przy `onPause`. Opcjonalna zdolność ekranu (`TutorialTargetSource`) trafia do
+  `ScreenContent` jako domyślna metoda, aby istniejące ekrany się nie zmieniały.
+- `TutorialHintPlacer` — czysta funkcja wyboru pozycji Hintu (testowalna bez
+  Androida UI).
+- `DataStoreTutorialProgressRepository`.
+
+### Reguły prezentacji (z glosariusza, jako wymagania)
+
+1. **Target widoczny.** Przed pokazaniem kroku host sprawdza, że prostokąt
+   celu mieści się w widocznym kadrze. Cele pola bitwy: host prosi kamerę o
+   ustawienie widoku (`FocusTarget`). Jeśli cel nadal nie jest w kadrze,
+   krok jest odrzucony jawnym `Rejected(TARGET_NOT_VISIBLE)`, a nie
+   pokazywany bez Spotlightu ani z innym elementem.
+2. **Hint i Spotlight są osobne.** Hint ma własny widok i pozycję; wybiera
+   pozycję dynamicznie spośród kandydatów (nad, pod, lewo, prawo, środek) i
+   **nie może zasłonić** celu. Gdy żadna pozycja się nie mieści, krok jest
+   odrzucony, a nie rysowany nad celem.
+3. **Panele nieaktywne do wprowadzenia.** Realizowane przez `LockTargets`
+   (patrz Match).
+4. **AI nie wyprzedza tutoriala.** Realizowane przez reguły AI.
+5. **Highlight zgodny z grafiką.** Otwór w Spotlightcie to dokładnie
+   prostokąt celu w pikselach ekranu, bez marginesu, przesunięcia ani
+   przybliżonego hitboxa. W przeciwieństwie do legacy (`setTarget(view,
+   margin, offsetX, offsetY, feather)`) nie istnieją przeciążenia z marginesem;
+   miękka krawędź nie może wychodzić poza prostokąt celu.
+
+### Ulepszenia UX względem legacy (proponowane)
+
+- wskaźnik postępu kroków (`2/5`), widoczny `Skip` na każdym kroku;
+- płynne przejście Spotlightu między celami i delikatny puls ramki (wyłącznie
+  prezentacja, wyłączany przy ustawieniu „zmniejsz animacje”);
+- dotyk przepuszczany tylko przez cel kroku wymagającego akcji; reszta
+  ekranu blokowana;
+- opis dostępności (`contentDescription`) i komunikat dla TalkBack dla Hintu;
+  minimalny rozmiar celów dotyku `48 dp`;
+- Systemowy Back podczas aktywnego tutoriala wykonuje `Skip` (zatwierdzone).
+  `TutorialHost` obsługuje Back przed `ScreenContent.onBackPressed()`, więc
+  Back nie zamyka podstrony Loadoutu ani nie opuszcza ekranu, dopóki tutorial
+  jest aktywny.
+
+### Assety
+
+Pierwsza wersja używa istniejących stylów HUD (`HudPanelStyle`,
+`UiTypography`) i rysowania w kodzie, bez nowych assetów graficznych.
+Ewentualne ramki, ikony postępu lub ilustracje Hintu wymagają osobnej
+specyfikacji AGP i akceptacji. Nie przygotowuję ich w tym dokumencie.
+
+### Treści
+
+Teksty żyją w JSON, a nie w `strings.xml`: `text: { "pl": "...", "en": "...", "es": "..." }`.
+Walidacja wymaga wszystkich trzech języków. Teksty legacy (`values-pl`, `values-en`) są
+źródłem do ręcznego przeniesienia i redakcji PL/EN; legacy nie ma hiszpańskiego,
+więc teksty `es` tłumaczy agent i idą do akceptacji użytkownika. Nie są
+kopiowane automatycznie.
+
+### Język i lokalizacja
+
+Język i lokalizacja UI należą do osobnego systemu opisanego w
+[`localization-system.md`](localization-system.md): przełącznik PL/EN/ES na
+Dashboardzie, język domyślny EN, osobny DataStore, który przetrwa Dashboard
+RESET, oraz zastosowanie języka przez `recreate()`.
+
+- TutorialSystem nie jest właścicielem ustawienia języka. Konsumuje je przez
+  port `LanguageSettings` (`AppLanguage`), który trafia do
+  `TutorialContext.language`. Język zmienia się wyłącznie przez `recreate()`
+  `Activity` na Dashboardzie, a overlay blokuje dotyk poza celem kroku, więc
+  engine nie obserwuje zmian języka w trakcie tutoriala. Po `recreate()` aktywny
+  tutorial startuje od pierwszego kroku (aktywny krok nie jest persystowany).
+- Nieobsługiwany język w zapisie jest jawnym błędem (`LanguageLoadResult`), nie
+  cichym zamiennikiem.
+- Fazy 1–2 lokalizacji (kontrakt i persystencja języka) wystarczają dla fazy 3
+  TutorialSystemu; pełna lokalizacja UI dochodzi niezależnie.
+
+## Katalog tutoriali (propozycja, bez ustalonej kolejności)
+
+Kolejność wynika z wyzwalaczy, `requires` i `priority`, nie z numeru
+kroku. Tematy pochodzą z legacy; ich zakres i podział wymagają akceptacji
+przy tworzeniu treści.
+
+| Propozycja `tutorialId` | Wyzwalacz | Tematy (źródło legacy) |
+|---|---|---|
+| `dashboard.welcome` | `ScreenEntered(Dashboard)` | Cel gry, przegląd kart: Kampania, Loadout, Sklep. |
+| `campaign.map` | `ScreenEntered(Campaign)` | Mapa rozdziału, poziomy zablokowane/dostępne, boss. |
+| `loadout.basics` | `ScreenEntered(Loadout)` | Sekcje, liczniki, przycisk startu. |
+| `match.basics` | `MatchStarted` poziom 1 | Cel (wroga forteca), katapulta, celowanie, **trzy strzały ćwiczeń**, wiatr, amunicja, zdrowie, timer. |
+| `match.units` | `MatchStarted` + dostępny Defender | Defender, Supply, Send Wave. Wymaga `match.basics`. |
+| `match.mana` | `MatchStarted` + dostępne czary | Mana, panel czarów, Fortress Shield. |
+| `match.boss` | `MatchEventObserved(BossSpawned)` | Boss i HUD bossa. |
+| `match.haste`, `match.heal` | `CampaignMilestoneApplied` / pierwsza dostępność | Czar i jego przycisk. |
+| `match.sapper`, `match.demolisher` | pierwsza dostępność jednostki | Opis jednostki. |
+| `shop.intro` | `ScreenEntered(Shop)` | Wyłączony do czasu wdrożenia Sklepu. |
+
+Elementy legacy, których nie przenoszę, bo zależały od sztywnej numeracji
+poziomów: komunikat `tutorial_level_progress` jako domyślny dla poziomów
+bez tutoriala oraz stałe warunki `level > 2` / `level > 3` w
+`showTutorialIfNeeded`.
+
+## Błędy i odrzucenia
+
+Błędy są jawne i typowane; brak szerokich `catch` i cichych fallbacków.
+
+| Sytuacja | Zachowanie |
+|---|---|
+| Katalog niepoprawny (duplikat ID, nieznany cel, brak `pl`/`en`/`es`, cykl w `requires`, pusty krok, `PlayerAction.count < 1`) | Ładowanie katalogu kończy się błędem walidacji z ścieżką pola. Aplikacja nie startuje tutoriali z niepoprawnym katalogiem. |
+| Cel nieobecny w rejestrze ekranu | `Rejected(TARGET_NOT_REGISTERED)`; błąd w logu, tutorial przerwany bez zapisu statusu. |
+| Cel poza kadrem | `Rejected(TARGET_NOT_VISIBLE)` po próbie `FocusTarget`. |
+| Hint nie mieści się bez zasłonięcia celu | `Rejected(HINT_PLACEMENT_IMPOSSIBLE)`. |
+| Zapis postępu nieudany (IO) | Typowany wynik błędu (jak `PlayerProgressResetFailure`); tutorial kończy się w UI, ale nie jest uznany za zapisany. Brak ponownej próby bez wiedzy użytkownika. |
+| Sygnał w trybie Demo | Ignorowany jawnie, bez zdarzeń i bez zapisu. |
+| Sygnał niepasujący do stanu (np. `Next` bez aktywnego tutoriala) | `Rejected(NO_ACTIVE_TUTORIAL)`. |
+| Wersja schematu zapisu nowsza niż obsługiwana | `Rejected(UNSUPPORTED_SCHEMA)`; dane nie są kasowane. |
+
+## Urkaaaz Studio — zakładka Tutorial
+
+Wzorzec jak Progress/Balance: JSON w repozytorium, serwer lokalny, zapis
+atomowy z `expectedHash`.
+
+- `GET /api/tutorials` — zawartość JSON i SHA-256.
+- `POST /api/tutorials/validate` — lista problemów ze ścieżkami.
+- `PUT /api/tutorials` — wymaga aktualnego hasha (409 przy rozbieżności),
+  waliduje i zapisuje atomowo; rewizja jest podbijana automatycznie.
+- Kontrakty TypeScript w `studio/server/src/contracts/tutorials.ts`
+  (`@studio/contracts`); walidacja w TS powtarza reguły Kotlin, tak jak w
+  edytorach Maps i Balance; test kontraktowy sprawdza zgodność z Kotlin na tych
+  samych przykładach.
+- UI: lista tutoriali, edycja kroków (cel z listy `targets`, teksty PL/EN/ES,
+  rodzaj ukończenia, reguły), podgląd tekstu Hintu oraz listy walidacji.
+  Podgląd rozmieszczenia Hintu na zrzucie ekranu jest rozszerzeniem poza
+  pierwszą wersją.
+- Zmiana wymaga rebuilda i restartu aplikacji; Studio nie ma hot reloadu.
+- Studio nie edytuje stanu gracza ani postępu tutoriala.
+
+## Plan testów i kryteria akceptacji
+
+### `game-application` (JVM, bez Androida)
+
+- konstrukcja i walidacja katalogu: duplikaty, brak języka, nieznany cel,
+  cykle `requires`, niepoprawne `count`;
+- wybór tutoriala: priorytet, `requires`, jednokrotność, kolejka, brak
+  tutoriala w Demo;
+- przejścia kroków: `Next`, `Skip`, `PlayerAction` (3 strzały), `MatchEventCount`;
+- efekty: pauza przy Hincie, żywa symulacja przy kroku akcji, `Resume*` po
+  końcu i po Skip; kolejność efektów przed pierwszym tickiem;
+- blokada paneli: aktywna do wprowadzenia, odblokowana po `COMPLETED` i
+  `SKIPPED`, zachowana na kolejnych poziomach;
+- reguły AI: wstrzymanie i ograniczenie do wprowadzonych mechanik;
+- determinizm: te same sygnały → ten sam `TutorialUiState`;
+- brak mutacji: engine nie wywołuje niczego poza portami (test z fake'ami);
+- persystencja: round-trip, schemat nieobsługiwany, nieznany `tutorialId`,
+  błąd zapisu;
+- replay regression: mecz z aktywnym tutorialem i bez niego daje identyczny
+  replay komend gracza.
+
+### `android-app`
+
+- `TutorialHintPlacer`: Hint nie przecina celu, mieści się w ekranie, brak
+  pozycji → odrzucenie;
+- geometria Spotlightu: otwór równy dokładnie prostokątowi celu (brak
+  marginesu), także po transformacji kamery dla celów pola bitwy;
+- `TutorialTargetRegistry`: rejestracja przy `onResume`, wyrejestrowanie przy
+  `onPause`, cel poza kadrem;
+- test pokrycia: każdy `targetId` z katalogu jest rejestrowany przez swój
+  ekran;
+- `DataStoreTutorialProgressRepository` i test, że Dashboard RESET czyści
+  `tutorial.*`;
+- rozróżnienie powodu pauzy (`USER` / `TUTORIAL`) w mostku meczowym;
+- brak pól tutoriala w `MainActivity`.
+
+### Studio (`npm test && npm run lint`)
+
+- walidacja zgodna z Kotlin; konflikt hasha (409); zapis atomowy;
+  automatyczny bump rewizji.
+
+### Architektura
+
+- brak importów Android w `game-application`; brak zależności modułów
+  gameplayowych od tutoriala; brak drugiego katalogu dostępności lub
+  równoległego pola `tutorial` w `game-campaign`.
+
+### Kryteria akceptacji
+
+1. Nowy gracz widzi tutoriale ekranów i meczu wyłącznie raz; powtórka z
+   Dashboardu działa.
+2. W każdym kroku element jest w kadrze, Spotlight pasuje do niego bez
+   marginesu, Hint go nie zasłania.
+3. Panele mechanik wprowadzanych przez tutorial są nieaktywne do jego
+   przejścia lub pominięcia.
+4. Mecz z tutorialem nie zmienia wyniku symulacji ani replayu komend.
+5. Demo nie zapisuje i nie pokazuje tutoriali.
+6. `./gradlew test assembleDebug --quiet` oraz `npm test && npm run lint` w
+   `studio/` przechodzą.
+
+## Plan wdrożenia (fazy)
+
+1. **Kontrakty i engine** w `game-application` plus katalog JSON z
+   `match.basics`, bez UI; testy JVM. Usunięcie `TutorialParameters`.
+   Przed fazą 3 musi działać `LanguageSettings` (fazy 1–2 z
+   `localization-system.md`).
+2. **Persystencja**: port, adapter DataStore, test resetu.
+3. **Overlay Android**: Spotlight, Hint, rejestr celów, `TutorialHost`;
+   integracja z Matchem (pauza z powodem, AI, blokada paneli).
+4. **Pozostałe ekrany**: Dashboard (w tym sekcja Tutorials), Campaign, Loadout;
+   Sklep po jego wdrożeniu.
+5. **Studio**: kontrakty, API, zakładka, testy.
+6. **Dokumentacja**: aktualizacja `current-state.md`, `knowledge.md`,
+   `architecture.md` (sekcja 28 i persystencja), glosariusza (status TutS).
+
+## Proponowane pliki do przyszłej implementacji
+
+- `game-application/src/main/kotlin/com/urkaaaz/application/tutorial/` —
+  `TutorialCatalog.kt`, `TutorialDefinition.kt`, `TutorialSignal.kt`,
+  `TutorialUiState.kt`, `TutorialEngine.kt`, `TutorialProgressRepository.kt`,
+  `MatchTutorialPort.kt`, `TutorialUseCases.kt`;
+- `game-application/src/main/resources/tutorial/tutorial-catalog.json`;
+- `game-application/src/test/kotlin/com/urkaaaz/application/tutorial/`;
+- `android-app/.../persistence/DataStoreTutorialProgressRepository.kt`;
+- `android-app/.../tutorial/` — `TutorialHost.kt`, `TutorialOverlayView.kt`,
+  `TutorialSpotlightView.kt`, `TutorialHintView.kt`,
+  `TutorialTargetRegistry.kt`, `TutorialHintPlacer.kt`,
+  `MatchTutorialAdapter.kt`;
+- zmiany w `ScreenContent`, ekranach (rejestracja celów),
+  `MatchScreenController`/`MatchViewModel` (powód pauzy), `DashboardScreen`
+  (sekcja Tutorials i przełącznik języka), `MainActivity` (wyłącznie
+  utworzenie hosta);
+- `game-application/.../LocalMatchGateway.kt` (`suspendAi()`/`resumeAi()`) i
+  `android-app/.../ui/BattlefieldCameraController.kt`
+  (`focusOnWorldRect`) wraz z testami;
+- port `LanguageSettings` i jego adapter DataStore (szczegóły w przyszłym
+  `docs/systems/localization-system.md`);
+- `game-campaign/.../CampaignLevelDefinition.kt` i test (usunięcie
+  `TutorialParameters`);
+- `studio/server/src/contracts/tutorials.ts`,
+  `studio/server/src/services/tutorialCatalog.ts` (+ test),
+  `studio/web/src/tabs/tutorials/`.
+
+## Rozważone warianty
+
+| Wariant | Czytelność | Testowalność | Koszt | Uwagi |
+|---|---|---|---|---|
+| A. Kroki per ekran jako `when` w ekranach (styl legacy) | Niska | Niska (logika w UI) | Niski na start | Powiela stan w ekranach i `MainActivity`; narusza zasady architektury. |
+| **B. Jeden silnik w `game-application` + JSON + overlay (rekomendowany)** | Wysoka | Wysoka (JVM) | Średni | Nowy tutorial to dane; reguły testowalne bez Androida; Studio edytuje ten sam katalog. |
+| C. Definicje w Kotlinie, bez Studio | Średnia | Wysoka | Niższy | Każda zmiana tekstu wymaga kodu; odrzucone decyzją użytkownika. |
+| D. Zewnętrzna biblioteka coachmarków | Średnia | Niska | Średni | Nie zna world-space pola bitwy ani reguł pauzy/AI; trudna kontrola dokładności Spotlightu. |
+
+Rekomendacja B: jeden właściciel stanu, jawne porty, brak zmian w
+symulacji i domenie, a najważniejsza przewaga to dodawanie tutoriali jako
+danych zamiast kodu UI.
+
+## Otwarte decyzje i niedokończony zakres
+
+### Rozstrzygnięte
+
+1. **Język.** Przełącznik PL/EN/ES na Dashboardzie, zapisywany w osobnym DataStore,
+   obejmuje całe UI (decyzja użytkownika). Patrz „Język i lokalizacja”.
+2. **Powtórka tutoriala meczu.** Uruchamia się przy najbliższym meczu
+   spełniającym wyzwalacz; Dashboard informuje o tym przy takiej pozycji.
+3. **Back podczas tutoriala.** Wykonuje `Skip` aktualnego tutoriala.
+4. **Zakres katalogu v1.** Lista tematów z „Katalog tutoriali” jest
+   zatwierdzona. Teksty PL/EN/ES i podział na kroki powstają w fazie treści i
+   wymagają akceptacji użytkownika.
+5. **`TutorialParameters`.** Usunięty w fazie 1; wyzwalacze poziomów
+   wyłącznie w katalogu tutoriali.
+6. **Wstrzymanie AI.** `LocalMatchGateway.pause()` wstrzymuje razem sesję i AI,
+   więc krok z akcją gracza wymaga wstrzymania samego AI. Decyzja: gateway
+   dostaje osobne `suspendAi()`/`resumeAi()` nad istniejącym
+   `AiMatchCoordinator.pause()/resume()` (podczas pauzy `decide` zwraca
+   pustą listę i nie liczy czasu, więc decyzje seedowane nie przesuwają się).
+   Flagi dozwolonych identyfikatorów służą tylko do
+   `restrictAiToIntroducedMechanics`. `start()` i `stop()` koordynatora zerują
+   pauzę, więc po restarcie meczu `TutorialHost` musi ponownie wydać efekty.
+7. **API kamery.** `BattlefieldCameraController` ma publiczne tylko
+   `update`, `applyZoom`, pan oraz konwersje ekran↔świat; `centerOnWorld` i
+   `animateToTeam` są prywatne. Decyzja: dodać publiczne
+   `focusOnWorldRect(...)`, a konwersję świat→ekran wykonać tą samą
+   transformacją co renderer (`world * scale + offset` z `CameraTransform`).
+
+### Nadal otwarte
+
+8. **Sklep** pozostaje bez tutoriala do czasu wdrożenia ekranu.
+9. **Podgląd Hintu w Studio** na zrzucie ekranu i ilustracje Hintu —
+   poza pierwszą wersją.
+10. **Lokalizacja** jest zaprojektowana w
+    [`localization-system.md`](localization-system.md) (niezaimplementowana).
+    TutorialSystem zależy tylko od portu `LanguageSettings`; jego implementacja
+    (fazy 1–2 lokalizacji) musi poprzedzić fazę 3 tutoriala.
+
+## Powiązana dokumentacja
+
+- [Architektura](../architecture/architecture.md) — sekcja 28 „Tutorial” oraz
+  persystencja;
+- [Reguły implementacji](../architecture/implementation-rules.md);
+- [System kampanii](campaign-system.md) i [plan milestone'ów](campaign-milestones-plan.md);
+- [System loadoutu](loadout-system.md);
+- [Analiza brakujących mechanik UI](../ui/mechanics-gap-analysis.md) —
+  pozycje 9–11, 25 i 31 dotyczące tutoriala;
+- [Architektura Studio](../architecture/studio-architecture.md);
+- [Słownik](../reference/GLOSSARY.md) — sekcja „Tutorial” i wiersz TutS.

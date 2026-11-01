@@ -5,35 +5,20 @@ import type { AddressInfo } from "node:net";
 import { request } from "node:http";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { createStudioServer } from "../app.ts";
+import { readBalance } from "../services/balanceCatalog.ts";
+import { resolveRepoRoot } from "../services/repoRoot.ts";
 
 let repoRoot: string;
 let server: ReturnType<typeof createStudioServer>;
 let port: number;
 
-const initialBalance = JSON.stringify({
-  schemaVersion: 1,
-  balanceRevision: "initial",
-  bosses: [{
-    id: "boss.central-oak.level-05",
-    presentationKey: "oak",
-    archetype: "CENTRAL_OBJECTIVE",
-    maxHealth: 12000,
-    collision: { width: 1440, height: 2016 },
-    movement: { kind: "STATIC", speedWorldUnitsPerSecond: 0 },
-    attacks: [{
-      target: "UNIT",
-      damage: 150,
-      minimumDamage: 35,
-      rangeWorldUnits: 780,
-      cooldownSeconds: 4,
-      initialCooldownSeconds: 2.5,
-    }],
-    specialAbilities: [],
-    immuneAmmunitionTypes: ["PLAGUE_CAULDRON"],
-  }],
-});
+let initialBalance: string;
 
 beforeEach(async () => {
+  const bundledBalance = (await readBalance(await resolveRepoRoot())).content;
+  const document = JSON.parse(bundledBalance) as { balanceRevision: string };
+  document.balanceRevision = "initial";
+  initialBalance = JSON.stringify(document);
   repoRoot = await mkdtemp(join(tmpdir(), "studio-balance-api-"));
   const directory = join(repoRoot, "game-domain", "src", "main", "resources", "balance");
   await mkdir(directory, { recursive: true });
@@ -54,7 +39,9 @@ afterEach(async () => {
 describe("balance API", () => {
   it("validates and saves with a matching content hash", async () => {
     const loaded = await call("/api/balance");
-    const content = initialBalance.replace('"balanceRevision":"initial"', '"balanceRevision":"updated"');
+    const updated = JSON.parse(initialBalance) as { balanceRevision: string };
+    updated.balanceRevision = "updated";
+    const content = JSON.stringify(updated);
     const validation = await call("/api/balance/validate", {
       method: "POST",
       body: { content },
@@ -93,7 +80,11 @@ describe("balance API", () => {
 
   it("requires a new balance revision when content changes", async () => {
     const loaded = await call("/api/balance");
-    const changed = initialBalance.replace('"maxHealth":12000', '"maxHealth":12001');
+    const changedDocument = JSON.parse(initialBalance) as {
+      bosses: { maxHealth: number }[];
+    };
+    changedDocument.bosses[0].maxHealth += 1;
+    const changed = JSON.stringify(changedDocument);
     const response = await call("/api/balance", {
       method: "PUT",
       body: {

@@ -55,11 +55,10 @@ data class MatchReplayConfiguration(
     val mapDefinition: MapDefinition?,
     val scenario: MatchScenario?,
     val blueFortressMaxHealth: Int,
-    val redFortressMaxHealth: Int = 500,
+    val redFortressMaxHealth: Int,
     val balanceRevision: String? = null,
     val balanceContentHash: String? = null,
-    val bossEncounterMatchDurationMilliseconds: Long =
-        SimulationConfig.DEFAULT_MATCH_DURATION_MILLISECONDS,
+    val bossEncounterMatchDurationMilliseconds: Long,
 )
 
 data class MatchReplayResult(

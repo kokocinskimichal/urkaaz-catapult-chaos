@@ -43,7 +43,9 @@
   reprodukowalne replaye.
 - Błędy i odrzucone komendy muszą być jawne; nie stosować cichych fallbacków,
   szerokich `catch` ani sukcesopodobnych wartości błędnych.
-- `AmmunitionCatalog` jest single source of truth dla amunicji.
+- `AmmunitionCatalog` jest typowanym profilem z `game-balance.json`; `AmmunitionType`
+  zawiera wyłącznie stabilne ID, a gracze, AI i symulacja używają tego samego
+  wczytanego `GameBalanceConfig`.
 - Nie duplikować wartości balansu w Androidzie ani AI.
 - Jednostki korzystają z centralnych konfiguracji; nowe zachowania należy
   przypisać właściwej klasie/systemowi zamiast rozbudowywać God Object.

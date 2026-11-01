@@ -2,6 +2,8 @@ package com.urkaaaz.contracts
 
 /** Shared presentation and collision scale rules for match entities. */
 object WorldScale {
+    const val PHYSICS_REFERENCE_WORLD_WIDTH = 1_600f
+
     const val FORTRESS_SCALE = 2.4f
     const val UNIT_SCALE = 3.0f
 

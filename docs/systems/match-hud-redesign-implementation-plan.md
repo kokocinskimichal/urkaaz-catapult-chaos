@@ -213,7 +213,7 @@ albo jawna decyzja, które elementy tymczasowo rysować natywnie.
 - Oprzeć listy jednostek, amunicji i czarów o zatwierdzony loadout oraz
   dostępność kampanii, zachowując istniejące filtrowanie.
 - Przenieść koszty jednostek do istniejącego źródła balansu
-  (`UnitConfigurations` / projekcja `LoadoutCatalog`) zamiast utrzymywać
+  (`GameBalanceConfig.units` / projekcja `LoadoutCatalog`) zamiast utrzymywać
   lokalne koszty w `UnitPanelView`.
 - Wartości maksymalne Supply i many pobierać z istniejących konfiguracji lub
   kontraktów; jeżeli snapshot nie niesie wymaganej wartości, rozszerzyć

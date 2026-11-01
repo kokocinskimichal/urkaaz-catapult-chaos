@@ -19,8 +19,8 @@ class LocalMatchGateway(
     initialWind: WindSnapshot = WindSnapshot(),
     mapDefinition: MapDefinition? = null,
     scenario: MatchScenario? = null,
-    blueFortressMaxHealth: Int = 500,
-    redFortressMaxHealth: Int = 500,
+    blueFortressMaxHealth: Int? = null,
+    redFortressMaxHealth: Int? = null,
     combatLogSink: CombatLogSink = NoOpCombatLogSink,
     ammunitionLogSink: AmmunitionLogSink = NoOpAmmunitionLogSink,
     eventObserver: MatchEventObserver = MatchEventObserver { },
@@ -53,7 +53,7 @@ class LocalMatchGateway(
         if (command is MatchCommand.Start) {
             val seed = session.replay()?.randomSeed
                 ?: error("started match is missing its recorded random seed")
-            aiCoordinator.start(seed)
+            aiCoordinator.start(seed, session.balanceConfig())
         }
     }
 
@@ -83,7 +83,7 @@ class LocalMatchGateway(
         val snapshot = session.restart(matchId, playerId)
         val seed = session.replay()?.randomSeed
             ?: error("restarted match is missing its recorded random seed")
-        aiCoordinator.start(seed)
+        aiCoordinator.start(seed, session.balanceConfig())
         return snapshot
     }
 

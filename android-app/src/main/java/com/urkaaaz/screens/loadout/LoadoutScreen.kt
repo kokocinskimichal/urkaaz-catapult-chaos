@@ -51,11 +51,17 @@ class LoadoutScreen(
     context: Context,
     campaignLevel: Int,
     loadoutUseCases: LoadoutUseCases,
+    private val loadoutCatalog: LoadoutCatalog = LoadoutCatalog.bundled(),
     private val onBack: () -> Unit,
     private val onStart: (PlayerLoadoutConfig) -> Unit,
     demoMode: Boolean = false,
 ) : ScreenContent {
-    private val viewModel = LoadoutViewModel(campaignLevel, loadoutUseCases, demoMode)
+    private val viewModel = LoadoutViewModel(
+        campaignLevel,
+        loadoutUseCases,
+        loadoutCatalog,
+        demoMode,
+    )
     private val unavailableArtworkFilter = ColorMatrixColorFilter(
         ColorMatrix().apply { setSaturation(0f) },
     )
@@ -456,7 +462,7 @@ class LoadoutScreen(
         val spellCarouselX = spellCarousel.scrollX
         val state = viewModel.state
         unitOptions.removeAllViews()
-        availableOptionsFirst(LoadoutCatalog.units) { unit ->
+        availableOptionsFirst(loadoutCatalog.units) { unit ->
             viewModel.optionStatus(LoadoutItemReference.Unit(unit.id))
         }.forEach { unit ->
             val reference = LoadoutItemReference.Unit(unit.id)
@@ -474,7 +480,7 @@ class LoadoutScreen(
         }
 
         ammunitionOptions.removeAllViews()
-        availableOptionsFirst(LoadoutCatalog.ammunition) { ammunition ->
+        availableOptionsFirst(loadoutCatalog.ammunition) { ammunition ->
             viewModel.optionStatus(LoadoutItemReference.Ammunition(ammunition.id))
         }.forEach { ammunition ->
             val reference = LoadoutItemReference.Ammunition(ammunition.id)
@@ -519,7 +525,7 @@ class LoadoutScreen(
         }
 
         spellOptions.removeAllViews()
-        availableOptionsFirst(LoadoutCatalog.spells) { spell ->
+        availableOptionsFirst(loadoutCatalog.spells) { spell ->
             viewModel.optionStatus(LoadoutItemReference.Spell(spell.id))
         }.forEach { spell ->
             val reference = LoadoutItemReference.Spell(spell.id)
@@ -1079,7 +1085,7 @@ class LoadoutScreen(
 
         when (item) {
             is LoadoutItemReference.Unit -> {
-                val unit = LoadoutCatalog.findUnit(item.identifier)
+                val unit = loadoutCatalog.findUnit(item.identifier)
                     ?: return
                 property(context.getString(R.string.loadout_prop_supply_cost, unit.supplyCost))
                 property(context.getString(R.string.loadout_prop_health, unit.maxHealth))
@@ -1089,7 +1095,7 @@ class LoadoutScreen(
                 property(context.getString(R.string.loadout_prop_attack_range, unit.attackRange))
             }
             is LoadoutItemReference.Ammunition -> {
-                val ammunition = LoadoutCatalog.findAmmunition(item.identifier)
+                val ammunition = loadoutCatalog.findAmmunition(item.identifier)
                     ?: return
                 val effectName = when (ammunition.effect) {
                     LoadoutAmmunitionEffect.DIRECT ->
@@ -1125,7 +1131,7 @@ class LoadoutScreen(
                 })
             }
             is LoadoutItemReference.Spell -> {
-                val spell = LoadoutCatalog.findSpell(item.identifier)
+                val spell = loadoutCatalog.findSpell(item.identifier)
                     ?: return
                 property(context.getString(R.string.loadout_prop_gold_cost, spell.goldCost))
                 property(context.getString(

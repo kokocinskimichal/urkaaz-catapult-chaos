@@ -9,8 +9,8 @@ import com.urkaaaz.contracts.CatapultPresentationContract
 /**
  * A catapult participating in a match.
  *
- * The model owns position, aim and health, but does not calculate projectile
- * flight or perform rendering.
+ * The model owns position and aim, but does not calculate projectile flight
+ * or perform rendering.
  */
 data class Catapult(
     val id: EntityId,
@@ -19,16 +19,9 @@ data class Catapult(
     val anchorPosition: WorldPosition = position.copy(
         y = position.y + CatapultPresentationContract.ANCHOR_VERTICAL_OFFSET_FROM_FOUNDATION,
     ),
-    val aim: Aim = Aim(directionDegrees = 45f, power = 50f),
-    val health: Health = Health(maximum = 100),
+    val aim: Aim,
 ) {
-    val isAlive: Boolean
-        get() = health.isAlive
-
     fun withAim(newAim: Aim): Catapult = copy(aim = newAim)
-
-    fun withDamage(amount: Int): Catapult = copy(health = health.damage(amount))
-
 }
 
 /** A fortress that can receive damage and be eliminated. */
@@ -36,7 +29,7 @@ data class Fortress(
     val id: EntityId,
     val team: Team,
     val center: WorldPosition,
-    val maxHealth: Int = 500,
+    val maxHealth: Int,
     val health: Health = Health(maximum = maxHealth),
     val shield: FortressShield? = null,
 ) {

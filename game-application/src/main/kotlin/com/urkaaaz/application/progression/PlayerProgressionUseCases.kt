@@ -7,10 +7,12 @@ import com.urkaaaz.application.loadout.LoadoutProgressionSnapshot
 import com.urkaaaz.application.loadout.LoadoutPurchaseResult
 import com.urkaaaz.domain.AmmunitionType
 import com.urkaaaz.domain.SpellType
-import com.urkaaaz.domain.SpellCatalog
+import com.urkaaaz.domain.GameBalanceConfig
+import com.urkaaaz.application.balance.GameBalanceRepository
 
 class PlayerProgressionUseCases(
     private val repository: PlayerProgressionRepository,
+    private val balance: GameBalanceConfig = GameBalanceRepository.bundled.requireConfig(),
 ) : LoadoutProgressionPort {
     override suspend fun snapshot(level: Int): LoadoutProgressionRead {
         if (level <= 0) {
@@ -19,7 +21,7 @@ class PlayerProgressionUseCases(
 
         return when (val result = repository.loadOrInitialize(INITIAL_PROFILE)) {
             is PlayerProgressionRepositoryResult.Available -> {
-                if (isValidProfile(result.snapshot)) {
+                if (isValidProfile(result.snapshot, balance)) {
                     LoadoutProgressionRead.Available(result.snapshot)
                 } else {
                     LoadoutProgressionRead.Blocked(LoadoutProgressionFailure.INVALID_PROFILE)
@@ -43,15 +45,19 @@ class PlayerProgressionUseCases(
         LoadoutPurchaseResult.Blocked
 
     companion object {
-        fun isValidProfile(snapshot: LoadoutProgressionSnapshot): Boolean {
-            val knownSpells = SpellCatalog.all.associateBy { it.type.name }
+        fun isValidProfile(
+            snapshot: LoadoutProgressionSnapshot,
+            balance: GameBalanceConfig = GameBalanceRepository.bundled.requireConfig(),
+        ): Boolean {
+            val knownSpells = balance.spells.all.associateBy { it.type.name }
             val knownAmmunition = AmmunitionType.values().associateBy { it.name }
             return snapshot.unlockedSpellTypes.all { id ->
                 knownSpells[id]?.special == false
             } &&
                 snapshot.defaultSpellTypes.isEmpty() &&
                 snapshot.ammunitionStocks.all { (id, count) ->
-                    knownAmmunition[id]?.unlimited == false && count >= 0
+                    knownAmmunition[id] != null &&
+                        balance.ammunition.find(id)?.unlimited == false && count >= 0
                 } &&
                 snapshot.specialSpellStocks.all { (id, count) ->
                     knownSpells[id]?.special == true && count >= 0

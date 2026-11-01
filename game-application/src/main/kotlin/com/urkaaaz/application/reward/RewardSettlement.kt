@@ -3,6 +3,9 @@ package com.urkaaaz.application.reward
 import com.urkaaaz.application.campaign.CampaignProgress
 import com.urkaaaz.application.loadout.LoadoutProgressionSnapshot
 import com.urkaaaz.application.progression.PlayerProgressionUseCases
+import com.urkaaaz.application.balance.GameBalanceRepository
+import com.urkaaaz.application.campaign.BundledCampaignBalance
+import com.urkaaaz.domain.GameBalanceConfig
 import com.urkaaaz.campaign.CampaignLevelDefinition
 import com.urkaaaz.campaign.CampaignRewardRegistry
 import com.urkaaaz.contracts.MatchEvent
@@ -63,7 +66,8 @@ interface RewardSettlementPort {
 
 class RewardSettlementUseCase(
     private val port: RewardSettlementPort,
-    private val rewards: CampaignRewardRegistry = CampaignRewardRegistry.default(),
+    private val rewards: CampaignRewardRegistry = BundledCampaignBalance.rewardRegistry(),
+    private val balance: GameBalanceConfig = GameBalanceRepository.bundled.requireConfig(),
 ) {
     suspend fun settle(
         level: Int,
@@ -183,7 +187,7 @@ class RewardSettlementUseCase(
                 result.level in 1..CampaignLevelDefinition.MAX_LEVELS
         }
         return campaignValid &&
-            PlayerProgressionUseCases.isValidProfile(profile) &&
+            PlayerProgressionUseCases.isValidProfile(profile, balance) &&
             receiptsValid
     }
 }

@@ -1,5 +1,7 @@
 package com.urkaaaz.campaign
 
+import com.urkaaaz.domain.RewardBalance
+
 sealed interface RewardCondition {
     data object DirectEnemyUnitHit : RewardCondition
     data class FastWin(val maximumTimeMilliseconds: Long) : RewardCondition {
@@ -47,7 +49,7 @@ data class LevelRewardDefinition(
 }
 
 class CampaignRewardRegistry(
-    definitions: List<LevelRewardDefinition> = DEFAULT_DEFINITIONS,
+    definitions: List<LevelRewardDefinition>,
     val milestones: CampaignMilestoneRegistry = CampaignMilestoneRegistry.default(),
 ) {
     private val byLevel = definitions.associateBy { it.level }
@@ -59,35 +61,40 @@ class CampaignRewardRegistry(
     fun forLevel(level: Int): LevelRewardDefinition? = byLevel[level]
 
     companion object {
-        private val DEFAULT_DEFINITIONS = (1..CampaignLevelDefinition.MAX_LEVELS).map { level ->
-            LevelRewardDefinition(
-                level = level,
-                winGold = 100L,
-                achievements = listOf(
-                    AchievementDefinition(
-                        id = "direct_enemy_unit_hit",
-                        gold = 10L,
-                        condition = RewardCondition.DirectEnemyUnitHit,
-                    ),
-                    AchievementDefinition(
-                        id = "fast_win",
-                        gold = 25L,
-                        condition = RewardCondition.FastWin(120_000L),
-                    ),
-                    AchievementDefinition(
-                        id = "untouched_fortress",
-                        gold = 25L,
-                        condition = RewardCondition.UntouchedFortress,
-                    ),
-                    AchievementDefinition(
-                        id = "fortress_hit_streak",
-                        gold = 10L,
-                        condition = RewardCondition.FortressHitStreak(2),
-                    ),
-                ),
+        fun default(balance: RewardBalance): CampaignRewardRegistry =
+            CampaignRewardRegistry(
+                definitions = (1..CampaignLevelDefinition.MAX_LEVELS).map { level ->
+                    LevelRewardDefinition(
+                        level = level,
+                        winGold = balance.winGold,
+                        achievements = listOf(
+                            AchievementDefinition(
+                                id = "direct_enemy_unit_hit",
+                                gold = balance.directEnemyUnitHitGold,
+                                condition = RewardCondition.DirectEnemyUnitHit,
+                            ),
+                            AchievementDefinition(
+                                id = "fast_win",
+                                gold = balance.fastWinGold,
+                                condition = RewardCondition.FastWin(
+                                    balance.fastWinThresholdMilliseconds,
+                                ),
+                            ),
+                            AchievementDefinition(
+                                id = "untouched_fortress",
+                                gold = balance.untouchedFortressGold,
+                                condition = RewardCondition.UntouchedFortress,
+                            ),
+                            AchievementDefinition(
+                                id = "fortress_hit_streak",
+                                gold = balance.fortressHitStreakGoldPerHitBeyondFirst,
+                                condition = RewardCondition.FortressHitStreak(
+                                    balance.fortressHitStreakStartHits,
+                                ),
+                            ),
+                        ),
+                    )
+                },
             )
-        }
-
-        fun default(): CampaignRewardRegistry = CampaignRewardRegistry()
     }
 }

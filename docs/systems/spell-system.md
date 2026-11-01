@@ -70,7 +70,7 @@ W repozytorium istnieją już:
 | Element | Obecna rola | Docelowe użycie |
 |---|---|---|
 | `game-domain/Spells.kt: SpellType` | stabilne identyfikatory zaklęć | zachować identyfikatory; balans i metadane należą do katalogu |
-| `game-domain/SpellCatalog.kt: SpellCatalog` | koszty, kategorie roli/celu i typowane efekty HASTE, tarczy oraz Bastionu | kanoniczne źródło definicji wszystkich 11 zaklęć |
+| `GameBalanceConfig.spells` (`SpellCatalog`) | profile JSON wszystkich 11 zaklęć; typowany katalog waliduje stabilne ID i zgodność zaimplementowanych efektów | wspólne źródło danych dla runtime, loadoutu i UI |
 | `game-domain/Spells.kt: SpellCategory` | `OFFENSIVE`, `DEFENSIVE`, `BATTLEFIELD_CONTROL`, `SUPPORT`, `SIEGE` | zachować jako kategorię roli/efektu; nie używać jako kategorii targetu |
 | `game-application/.../loadout/MatchLoadout` | wspólny wybór jednostek, amunicji i czarów | kanoniczny model LoadoutSystemu |
 | `MatchCommand.CastSpell` | komenda z ID tekstowym i opcjonalnym celem | wejście do walidacji/aktywacji; nie zmienia stanu bezpośrednio |
@@ -182,10 +182,10 @@ lustrzanie odbija tylko błysk niebieskiej (lewej) fortecy; czerwona (prawa)
 używa oryginalnej orientacji. Podgląd zaakceptowano mimo kolorowej poświaty
 poza konturem i niewielkiej zmiany obrysu/położenia w środkowych klatkach.
 
-Istniejące podobne rozwiązanie do naśladowania to `AmmunitionCatalog`:
-jednoznaczna definicja balansu w domenie, niezależna od Androida i używana
-przez symulację. Nie należy kopiować parametrów zaklęć do rendererów,
-ViewModelu, kampanii ani AI.
+Analogicznie do `AmmunitionCatalog`, `SpellCatalog` jest typowaną domenową
+projekcją profili z `game-balance.json`, niezależną od Androida i używaną przez
+symulację. Nie należy kopiować parametrów zaklęć do rendererów, ViewModelu,
+kampanii ani AI.
 
 ## Właściciele i kierunek zależności
 
@@ -241,11 +241,12 @@ albo wskazywać całą armię.
 
 ## Katalog i rozszerzalność
 
-`SpellCatalog` jest kanonicznym źródłem stabilnych typów, kategorii roli i
-celu oraz kosztów złota i many dla wszystkich 11 zaklęć. Runtime effect
-definition istnieje dla HASTE, tarczy fortecy i Runicznego Bastionu; pozostałe
-osiem efektów nie jest zaimplementowanych. Katalog docelowo
-pozostaje jedynym źródłem:
+`GameBalanceConfig.spells` jest kanonicznym źródłem profili stabilnych typów,
+kategorii roli i celu oraz kosztów złota i many dla wszystkich 11 zaklęć.
+`SpellCatalog` dostarcza typowanego lookupu i sprawdza pokrycie ID. Runtime
+effect definition istnieje dla HASTE, tarczy fortecy i Runicznego Bastionu;
+pozostałe osiem efektów nie jest zaimplementowanych. JSON pozostaje jedynym
+źródłem wartości:
 
 - stabilnego `SpellType`/ID;
 - obecnej kategorii roli `SpellCategory`;
@@ -482,7 +483,7 @@ z zatwierdzonego assetu AnimGen. Pozostałe efekty, prezentacja kategorii celu, 
 oraz trwałe rozliczanie stocku są jeszcze poza implementacją.
 
 1. **Baseline i parytet.** Wartości kosztów i targetów są zapisane w
-   `SpellCatalog`; pozostałe reguły efektów nadal wymagają porównania z
+   `game-balance.json` przez `SpellCatalog`; pozostałe reguły efektów nadal wymagają porównania z
    legacy `SpellType.kt`, `Mana.kt`,
    poszczególnych klas czarów, `SpellContext`, `SpellSystem`, `GameEngine`,
    `SpellProgress` i zasobów UI. Dla każdego czaru zdefiniować cel,
@@ -590,8 +591,9 @@ właścicielem loadoutu, a SpellSystem nie posiada persystencji.
 
 Lista pozostałych prac:
 
-- `game-domain/.../Spells.kt` i `SpellCatalog.kt` — stabilne ID, koszty i
-  kategorie są już wdrożone; uzupełniać definicje efektów;
+- `game-domain/.../Spells.kt` i `SpellCatalog.kt` — stabilne ID oraz typowany
+  access do schema 3 są wdrożone; uzupełniać definicje efektów wyłącznie po
+  osobnej decyzji o ich implementacji;
 - `game-domain/.../SpellRules.kt` lub wyspecjalizowane reguły — tylko jeśli
   potrzebne po analizie istniejących helperów;
 - `game-contracts/.../MatchCommands.kt`, `MatchEvents.kt`,

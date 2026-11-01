@@ -1,5 +1,8 @@
 package com.urkaaaz.simulation
 
+import com.urkaaaz.domain.GameBalanceFixtures
+import com.urkaaaz.domain.UnitIds
+
 import com.urkaaaz.contracts.CatapultPresentationContract
 import com.urkaaaz.contracts.EntityId
 import com.urkaaaz.contracts.FortressHitboxProfile
@@ -17,11 +20,9 @@ import com.urkaaaz.contracts.PlayerId
 import com.urkaaaz.contracts.WorldDimensions
 import com.urkaaaz.contracts.WorldScale
 import com.urkaaaz.domain.AmmunitionType
-import com.urkaaaz.domain.AmmunitionCatalog
 import com.urkaaaz.domain.Aim
 import com.urkaaaz.domain.Catapult
 import com.urkaaaz.domain.Fortress
-import com.urkaaaz.domain.UnitConfigurations
 import com.urkaaaz.domain.UnitDefinition
 import com.urkaaaz.domain.UnitFactory
 import com.urkaaaz.domain.WorldBounds
@@ -35,7 +36,10 @@ import kotlin.test.assertNotEquals
 import kotlin.test.assertTrue
 
 class DeterministicMatchSimulationTest {
+    private val fortressMaximumHealth =
+        GameBalanceFixtures.balance.runtime.fortresses.standardMaximumHealth
     private val config = SimulationConfig(
+        balance = GameBalanceFixtures.balance,
         bounds = WorldBounds(width = 1_000f, height = 600f),
         gravityAccelerationY = 0f,
         windAccelerationX = 2f,
@@ -45,7 +49,7 @@ class DeterministicMatchSimulationTest {
         UnitFactory.create(type.configuration.copy(supplyCost = 0))
 
     private fun durableDefender() =
-        UnitFactory.create(UnitConfigurations.DEFENDER.copy(maxHealth = 260, supplyCost = 0))
+        UnitFactory.create(GameBalanceFixtures.balance.units.configuration(UnitIds.DEFENDER).copy(maxHealth = 260, supplyCost = 0))
 
     @Test
     fun startProducesDeterministicLifecycleEventsAndSnapshot() {
@@ -64,7 +68,7 @@ class DeterministicMatchSimulationTest {
     fun defaultFortressCollisionMarginIsHalfThePreviousRadius() {
         assertEquals(
             23f,
-            SimulationConfig(bounds = WorldBounds(width = 1_000f, height = 600f))
+            SimulationConfig(balance = GameBalanceFixtures.balance, bounds = WorldBounds(width = 1_000f, height = 600f))
                 .fortressCollisionRadius,
         )
     }
@@ -74,8 +78,10 @@ class DeterministicMatchSimulationTest {
         val simulation = DeterministicMatchSimulation(
             MatchId("mana-regeneration"),
             SimulationConfig(
+                balance = GameBalanceFixtures.withMana(
+                    GameBalanceFixtures.balance.mana.copy(startingMana = 20),
+                ),
                 bounds = WorldBounds(width = 1_000f, height = 600f),
-                startingMana = 20,
             ),
         )
         simulation.start()
@@ -104,8 +110,10 @@ class DeterministicMatchSimulationTest {
         val simulation = DeterministicMatchSimulation(
             MatchId("insufficient-spell-mana"),
             SimulationConfig(
+                balance = GameBalanceFixtures.withMana(
+                    GameBalanceFixtures.balance.mana.copy(startingMana = 79),
+                ),
                 bounds = WorldBounds(width = 1_000f, height = 600f),
-                startingMana = 79,
             ),
         )
         simulation.start()
@@ -124,10 +132,12 @@ class DeterministicMatchSimulationTest {
             id = EntityId("red-fortress"),
             team = Team.RED,
             center = WorldPosition(400f, 0f),
+            maxHealth = fortressMaximumHealth,
         ).withShield(150)
         val simulation = DeterministicMatchSimulation(
             matchId = MatchId("shield-impact"),
             config = SimulationConfig(
+                balance = GameBalanceFixtures.balance,
                 bounds = WorldBounds(width = 1_000f, height = 600f),
                 gravityAccelerationY = 0f,
             ),
@@ -142,6 +152,7 @@ class DeterministicMatchSimulationTest {
                 id = EntityId("blue-fortress"),
                 team = Team.BLUE,
                 center = WorldPosition(50f, 0f),
+                maxHealth = fortressMaximumHealth,
             ),
             redFortress = redFortress,
         )
@@ -153,7 +164,7 @@ class DeterministicMatchSimulationTest {
         assertTrue(events.any { it is MatchEvent.ShieldDamaged })
         assertEquals(500, simulation.snapshot().fortresses.single { it.team == Team.RED }.health)
         assertEquals(
-            150 - AmmunitionCatalog.definition(AmmunitionType.ROCK).damage.fortressDamage,
+            150 - GameBalanceFixtures.balance.ammunition.definition(AmmunitionType.ROCK).damage.fortressDamage,
             simulation.snapshot().fortresses.single { it.team == Team.RED }.shieldHealth,
         )
         assertTrue(simulation.snapshot().projectiles.isEmpty())
@@ -164,6 +175,7 @@ class DeterministicMatchSimulationTest {
         val simulation = DeterministicMatchSimulation(
             matchId = MatchId("shield-break"),
             config = SimulationConfig(
+                balance = GameBalanceFixtures.balance,
                 bounds = WorldBounds(width = 1_000f, height = 600f),
                 gravityAccelerationY = 0f,
             ),
@@ -178,11 +190,13 @@ class DeterministicMatchSimulationTest {
                 id = EntityId("blue-fortress"),
                 team = Team.BLUE,
                 center = WorldPosition(50f, 0f),
+                maxHealth = fortressMaximumHealth,
             ),
             redFortress = Fortress(
                 id = EntityId("red-fortress"),
                 team = Team.RED,
                 center = WorldPosition(400f, 0f),
+                maxHealth = fortressMaximumHealth,
             ).withShield(1),
         )
         simulation.start()
@@ -204,11 +218,13 @@ class DeterministicMatchSimulationTest {
         val simulation = DeterministicMatchSimulation(
             MatchId("runic-bastion-wave"),
             SimulationConfig(
+                balance = GameBalanceFixtures.withMana(
+                    GameBalanceFixtures.balance.mana.copy(
+                        regenerationAmount = 70,
+                        regenerationIntervalMilliseconds = 1_000L,
+                    ),
+                ),
                 bounds = WorldBounds(width = 2_000f, height = 600f),
-                startingMana = 100,
-                maximumMana = 100,
-                manaRegenerationAmount = 70,
-                manaRegenerationIntervalMilliseconds = 1_000L,
                 combatRandomSeed = 41L,
             ),
         )
@@ -223,7 +239,7 @@ class DeterministicMatchSimulationTest {
         )
         assertEquals(30, simulation.snapshot().resourcesByTeam[Team.RED]?.mana)
 
-        val deployed = simulation.deployUnit(UnitFactory.defender(), Team.BLUE)
+        val deployed = simulation.deployUnit(GameBalanceFixtures.unit(UnitIds.DEFENDER), Team.BLUE)
         simulation.sendWave(Team.BLUE)
         val events = mutableListOf<MatchEvent>()
         var elapsedSteps = 0
@@ -281,17 +297,19 @@ class DeterministicMatchSimulationTest {
             id = EntityId("blue-fortress"),
             team = Team.BLUE,
             center = WorldPosition(300f, 300f),
+            maxHealth = fortressMaximumHealth,
         )
         val redFortress = Fortress(
             id = EntityId("red-fortress"),
             team = Team.RED,
             center = WorldPosition(1_700f, 300f),
+            maxHealth = fortressMaximumHealth,
         )
         val simulation = DeterministicMatchSimulation(
             matchId = MatchId("runic-bastion-size-and-position"),
             config = SimulationConfig(
+                balance = GameBalanceFixtures.balance,
                 bounds = WorldBounds(width = 2_000f, height = 600f),
-                startingMana = 100,
             ),
             blueFortress = blueFortress,
             redFortress = redFortress,
@@ -324,6 +342,7 @@ class DeterministicMatchSimulationTest {
         val simulation = DeterministicMatchSimulation(
             matchId = MatchId("runic-bastion-projectile"),
             config = SimulationConfig(
+                balance = GameBalanceFixtures.balance,
                 bounds = WorldBounds(width = 2_000f, height = 600f),
                 gravityAccelerationY = 0f,
                 windAccelerationX = 0f,
@@ -339,6 +358,7 @@ class DeterministicMatchSimulationTest {
                 id = EntityId("red-fortress"),
                 team = Team.RED,
                 center = WorldPosition(700f, 400f),
+                maxHealth = fortressMaximumHealth,
             ),
         )
         simulation.start()
@@ -363,6 +383,7 @@ class DeterministicMatchSimulationTest {
         val simulation = DeterministicMatchSimulation(
             MatchId("sapper-runic-bastion"),
             SimulationConfig(
+                balance = GameBalanceFixtures.balance,
                 bounds = WorldBounds(width = 2_000f, height = 600f),
                 combatRandomSeed = 12L,
             ),
@@ -370,7 +391,7 @@ class DeterministicMatchSimulationTest {
         simulation.start()
         simulation.castRunicBastion(PlayerId("red-player"), Team.RED, null)
         val bastionId = simulation.snapshot().runicBastions.single().entityId
-        val deployed = simulation.deployUnit(UnitFactory.sapper(), Team.BLUE)
+        val deployed = simulation.deployUnit(GameBalanceFixtures.unit(UnitIds.SAPPER), Team.BLUE)
         simulation.sendWave(Team.BLUE)
 
         val events = mutableListOf<MatchEvent>()
@@ -400,6 +421,7 @@ class DeterministicMatchSimulationTest {
         val simulation = DeterministicMatchSimulation(
             MatchId("demolisher-runic-bastion"),
             SimulationConfig(
+                balance = GameBalanceFixtures.balance,
                 bounds = WorldBounds(width = 2_000f, height = 600f),
                 combatRandomSeed = 23L,
             ),
@@ -407,7 +429,7 @@ class DeterministicMatchSimulationTest {
         simulation.start()
         simulation.castRunicBastion(PlayerId("red-player"), Team.RED, null)
         val bastionId = simulation.snapshot().runicBastions.single().entityId
-        val deployed = simulation.deployUnit(UnitFactory.demolisher(), Team.BLUE)
+        val deployed = simulation.deployUnit(GameBalanceFixtures.unit(UnitIds.DEMOLISHER), Team.BLUE)
         simulation.sendWave(Team.BLUE)
 
         val events = mutableListOf<MatchEvent>()
@@ -448,6 +470,7 @@ class DeterministicMatchSimulationTest {
             val simulation = DeterministicMatchSimulation(
                 MatchId("demolisher-fortress-${team.name.lowercase()}"),
                 SimulationConfig(
+                    balance = GameBalanceFixtures.balance,
                     bounds = WorldBounds(width = 4_800f, height = 600f),
                     combatRandomSeed = 23L,
                 ),
@@ -458,7 +481,7 @@ class DeterministicMatchSimulationTest {
                 .single { it.team == enemyTeam }
             val fortressCenterX = requireNotNull(enemyFortress.x)
             val initialHealth = enemyFortress.health
-            val deployed = simulation.deployUnit(UnitFactory.demolisher(), team)
+            val deployed = simulation.deployUnit(GameBalanceFixtures.unit(UnitIds.DEMOLISHER), team)
             simulation.sendWave(team)
 
             val events = mutableListOf<MatchEvent>()
@@ -584,7 +607,7 @@ class DeterministicMatchSimulationTest {
     fun snapshotExposesFortressWorldPositionsAndDefaultFoundation() {
         val simulation = DeterministicMatchSimulation(
             MatchId("fortress-render-state"),
-            SimulationConfig(bounds = WorldBounds(width = 7_200f, height = 4_800f)),
+            SimulationConfig(balance = GameBalanceFixtures.balance, bounds = WorldBounds(width = 7_200f, height = 4_800f)),
         )
         simulation.start()
 
@@ -648,6 +671,7 @@ class DeterministicMatchSimulationTest {
         val simulation = DeterministicMatchSimulation(
             MatchId("per-ammunition-reload"),
             SimulationConfig(
+                balance = GameBalanceFixtures.balance,
                 bounds = WorldBounds(width = 1_000f, height = 600f),
                 gravityAccelerationY = 1_000f,
             ),
@@ -671,6 +695,7 @@ class DeterministicMatchSimulationTest {
         val simulation = DeterministicMatchSimulation(
             MatchId("match-1"),
             SimulationConfig(
+                balance = GameBalanceFixtures.balance,
                 bounds = WorldBounds(width = 2_000f, height = 600f),
                 gravityAccelerationY = 1_000f,
             ),
@@ -695,6 +720,7 @@ class DeterministicMatchSimulationTest {
             val simulation = DeterministicMatchSimulation(
                 MatchId("terrain-impact-${team.name.lowercase()}"),
                 SimulationConfig(
+                    balance = GameBalanceFixtures.balance,
                     bounds = WorldBounds(width = 2_000f, height = 600f),
                     gravityAccelerationY = 1_000f,
                     windAccelerationX = 0f,
@@ -735,6 +761,7 @@ class DeterministicMatchSimulationTest {
         val simulation = DeterministicMatchSimulation(
             MatchId("plague-match"),
             SimulationConfig(
+                balance = GameBalanceFixtures.balance,
                 bounds = WorldBounds(width = 2_000f, height = 600f),
                 gravityAccelerationY = 1_000f,
                 windAccelerationX = 0.2f,
@@ -779,6 +806,7 @@ class DeterministicMatchSimulationTest {
         val simulation = DeterministicMatchSimulation(
             MatchId("fire-rain-match"),
             SimulationConfig(
+                balance = GameBalanceFixtures.balance,
                 bounds = WorldBounds(width = 1_000f, height = 600f),
                 gravityAccelerationY = 1_000f,
             ),
@@ -823,11 +851,11 @@ class DeterministicMatchSimulationTest {
         assertEquals(rock.velocityX, fireRain.velocityX)
         assertEquals(rock.velocityY, fireRain.velocityY)
         assertEquals(
-            AmmunitionCatalog.definition(AmmunitionType.FIRE_RAIN).collision.hitRadius,
+            GameBalanceFixtures.balance.ammunition.definition(AmmunitionType.FIRE_RAIN).collision.hitRadius,
             fireRain.collisionRadius,
         )
         assertEquals(
-            AmmunitionCatalog.definition(AmmunitionType.ROCK).collision.hitRadius,
+            GameBalanceFixtures.balance.ammunition.definition(AmmunitionType.ROCK).collision.hitRadius,
             rock.collisionRadius,
         )
     }
@@ -837,6 +865,7 @@ class DeterministicMatchSimulationTest {
         val simulation = DeterministicMatchSimulation(
             MatchId("fire-rain-friendly-fire-match"),
             SimulationConfig(
+                balance = GameBalanceFixtures.balance,
                 bounds = WorldBounds(width = 1_060f, height = 600f),
                 gravityAccelerationY = 1_000f,
             ),
@@ -865,6 +894,7 @@ class DeterministicMatchSimulationTest {
         val simulation = DeterministicMatchSimulation(
             MatchId("fire-rain-split-match"),
             SimulationConfig(
+                balance = GameBalanceFixtures.balance,
                 bounds = WorldBounds(
                     width = WorldDimensions.WIDTH,
                     height = WorldDimensions.HEIGHT,
@@ -911,9 +941,9 @@ class DeterministicMatchSimulationTest {
         assertEquals(20, simulation.snapshot().resourcesByTeam[Team.BLUE]?.supply)
         assertEquals(20, simulation.snapshot().resourcesByTeam[Team.RED]?.supply)
 
-        simulation.deployUnit(com.urkaaaz.domain.UnitFactory.defender(), Team.BLUE)
-        simulation.deployUnit(com.urkaaaz.domain.UnitFactory.defender(), Team.BLUE)
-        simulation.deployUnit(com.urkaaaz.domain.UnitFactory.defender(), Team.BLUE)
+        simulation.deployUnit(GameBalanceFixtures.unit(UnitIds.DEFENDER), Team.BLUE)
+        simulation.deployUnit(GameBalanceFixtures.unit(UnitIds.DEFENDER), Team.BLUE)
+        simulation.deployUnit(GameBalanceFixtures.unit(UnitIds.DEFENDER), Team.BLUE)
 
         assertEquals(5, simulation.snapshot().resourcesByTeam[Team.BLUE]?.supply)
         simulation.advance(2_999)
@@ -930,10 +960,10 @@ class DeterministicMatchSimulationTest {
     fun deployingAnotherUnitMovesTheExistingUnitToTheNextGarrisonSlot() {
         val simulation = DeterministicMatchSimulation(MatchId("garrison-match"), config)
         simulation.start()
-        simulation.deployUnit(com.urkaaaz.domain.UnitFactory.defender(), Team.BLUE)
-        simulation.deployUnit(com.urkaaaz.domain.UnitFactory.defender(), Team.BLUE)
+        simulation.deployUnit(GameBalanceFixtures.unit(UnitIds.DEFENDER), Team.BLUE)
+        simulation.deployUnit(GameBalanceFixtures.unit(UnitIds.DEFENDER), Team.BLUE)
         simulation.advance(15_000)
-        simulation.deployUnit(com.urkaaaz.domain.UnitFactory.defender(), Team.BLUE)
+        simulation.deployUnit(GameBalanceFixtures.unit(UnitIds.DEFENDER), Team.BLUE)
 
         val before = simulation.snapshot()
         assertTrue(before.units[0].moving)
@@ -952,10 +982,10 @@ class DeterministicMatchSimulationTest {
     fun deployingAnotherRedUnitMovesExistingRedUnitsIntoMirroredGarrisonSlots() {
         val simulation = DeterministicMatchSimulation(MatchId("red-garrison-match"), config)
         simulation.start()
-        simulation.deployUnit(com.urkaaaz.domain.UnitFactory.defender(), Team.RED)
-        simulation.deployUnit(com.urkaaaz.domain.UnitFactory.defender(), Team.RED)
+        simulation.deployUnit(GameBalanceFixtures.unit(UnitIds.DEFENDER), Team.RED)
+        simulation.deployUnit(GameBalanceFixtures.unit(UnitIds.DEFENDER), Team.RED)
         simulation.advance(15_000)
-        simulation.deployUnit(com.urkaaaz.domain.UnitFactory.defender(), Team.RED)
+        simulation.deployUnit(GameBalanceFixtures.unit(UnitIds.DEFENDER), Team.RED)
 
         val before = simulation.snapshot()
         assertTrue(before.units.filter { it.team == Team.RED }.all { it.moving })
@@ -972,11 +1002,11 @@ class DeterministicMatchSimulationTest {
     fun deployingDuringAnActiveWaveKeepsTheNewUnitInGarrison() {
         val simulation = DeterministicMatchSimulation(MatchId("wave-garrison-match"), config)
         simulation.start()
-        simulation.deployUnit(com.urkaaaz.domain.UnitFactory.defender(), Team.BLUE)
+        simulation.deployUnit(GameBalanceFixtures.unit(UnitIds.DEFENDER), Team.BLUE)
         simulation.sendWave(Team.BLUE)
         simulation.advance(1_000)
 
-        simulation.deployUnit(freeUnit(com.urkaaaz.domain.UnitFactory.sapper()), Team.BLUE)
+        simulation.deployUnit(freeUnit(GameBalanceFixtures.unit(UnitIds.SAPPER)), Team.BLUE)
 
         val deployed = simulation.snapshot().units.first { it.unitType == "SAPPER" }
         assertEquals("GARRISONED", deployed.actionState)
@@ -993,12 +1023,12 @@ class DeterministicMatchSimulationTest {
     fun deployingMultipleUnitsDuringAnActiveWaveShiftsOnlyGarrisonSlots() {
         val simulation = DeterministicMatchSimulation(MatchId("wave-garrison-slots-match"), config)
         simulation.start()
-        simulation.deployUnit(freeUnit(com.urkaaaz.domain.UnitFactory.defender()), Team.BLUE)
+        simulation.deployUnit(freeUnit(GameBalanceFixtures.unit(UnitIds.DEFENDER)), Team.BLUE)
         simulation.sendWave(Team.BLUE)
         simulation.advance(1_000)
 
-        simulation.deployUnit(freeUnit(com.urkaaaz.domain.UnitFactory.sapper()), Team.BLUE)
-        simulation.deployUnit(freeUnit(com.urkaaaz.domain.UnitFactory.slingmaster()), Team.BLUE)
+        simulation.deployUnit(freeUnit(GameBalanceFixtures.unit(UnitIds.SAPPER)), Team.BLUE)
+        simulation.deployUnit(freeUnit(GameBalanceFixtures.unit(UnitIds.SLINGMASTER)), Team.BLUE)
 
         val blueUnits = simulation.snapshot().units.filter { it.team == Team.BLUE }
         val activeDefender = blueUnits.first { it.unitType == "DEFENDER" }
@@ -1027,7 +1057,7 @@ class DeterministicMatchSimulationTest {
             )
             simulation.start()
             repeat(3) {
-                simulation.deployUnit(freeUnit(com.urkaaaz.domain.UnitFactory.defender()), team)
+                simulation.deployUnit(freeUnit(GameBalanceFixtures.unit(UnitIds.DEFENDER)), team)
             }
             simulation.advance(20_000)
 
@@ -1050,8 +1080,8 @@ class DeterministicMatchSimulationTest {
     fun opposingDefendersStopAndDamageEachOtherAfterTheirWavesMeet() {
         val simulation = DeterministicMatchSimulation(MatchId("unit-combat-match"), config)
         simulation.start()
-        simulation.deployUnit(com.urkaaaz.domain.UnitFactory.defender(), Team.BLUE)
-        simulation.deployUnit(com.urkaaaz.domain.UnitFactory.defender(), Team.RED)
+        simulation.deployUnit(GameBalanceFixtures.unit(UnitIds.DEFENDER), Team.BLUE)
+        simulation.deployUnit(GameBalanceFixtures.unit(UnitIds.DEFENDER), Team.RED)
         simulation.sendWave(Team.BLUE)
         simulation.sendWave(Team.RED)
 
@@ -1059,7 +1089,7 @@ class DeterministicMatchSimulationTest {
 
         val units = simulation.snapshot().units
         assertTrue(units.size <= 2)
-        assertTrue(units.isEmpty() || units.all { it.health < UnitConfigurations.DEFENDER.maxHealth })
+        assertTrue(units.isEmpty() || units.all { it.health < GameBalanceFixtures.balance.units.configuration(UnitIds.DEFENDER).maxHealth })
     }
 
     @Test
@@ -1231,8 +1261,8 @@ class DeterministicMatchSimulationTest {
     fun attackStartsBeforeItsHitIsResolved() {
         val simulation = DeterministicMatchSimulation(MatchId("attack-timing-match"), config)
         simulation.start()
-        simulation.deployUnit(com.urkaaaz.domain.UnitFactory.defender(), Team.BLUE)
-        simulation.deployUnit(com.urkaaaz.domain.UnitFactory.defender(), Team.RED)
+        simulation.deployUnit(GameBalanceFixtures.unit(UnitIds.DEFENDER), Team.BLUE)
+        simulation.deployUnit(GameBalanceFixtures.unit(UnitIds.DEFENDER), Team.RED)
         simulation.sendWave(Team.BLUE)
         simulation.sendWave(Team.RED)
 
@@ -1260,8 +1290,8 @@ class DeterministicMatchSimulationTest {
     fun defeatedUnitsRemainVisibleForTheirDeathAnimationWindow() {
         val simulation = DeterministicMatchSimulation(MatchId("death-window-match"), config)
         simulation.start()
-        simulation.deployUnit(com.urkaaaz.domain.UnitFactory.defender(), Team.BLUE)
-        simulation.deployUnit(com.urkaaaz.domain.UnitFactory.defender(), Team.RED)
+        simulation.deployUnit(GameBalanceFixtures.unit(UnitIds.DEFENDER), Team.BLUE)
+        simulation.deployUnit(GameBalanceFixtures.unit(UnitIds.DEFENDER), Team.RED)
         simulation.sendWave(Team.BLUE)
         simulation.sendWave(Team.RED)
 
@@ -1287,10 +1317,10 @@ class DeterministicMatchSimulationTest {
     fun onlyOneSapperCanBeActivePerTeam() {
         val simulation = DeterministicMatchSimulation(MatchId("sapper-limit-match"), config)
         simulation.start()
-        simulation.deployUnit(com.urkaaaz.domain.UnitFactory.sapper(), Team.BLUE)
+        simulation.deployUnit(GameBalanceFixtures.unit(UnitIds.SAPPER), Team.BLUE)
 
         assertFailsWith<IllegalStateException> {
-            simulation.deployUnit(com.urkaaaz.domain.UnitFactory.sapper(), Team.BLUE)
+            simulation.deployUnit(GameBalanceFixtures.unit(UnitIds.SAPPER), Team.BLUE)
         }
     }
 
@@ -1301,8 +1331,8 @@ class DeterministicMatchSimulationTest {
             config.copy(bounds = WorldBounds(width = 4_800f, height = 600f)),
         )
         simulation.start()
-        simulation.deployUnit(freeUnit(com.urkaaaz.domain.UnitFactory.defender()), Team.BLUE)
-        simulation.deployUnit(freeUnit(com.urkaaaz.domain.UnitFactory.sapper()), Team.BLUE)
+        simulation.deployUnit(freeUnit(GameBalanceFixtures.unit(UnitIds.DEFENDER)), Team.BLUE)
+        simulation.deployUnit(freeUnit(GameBalanceFixtures.unit(UnitIds.SAPPER)), Team.BLUE)
         simulation.sendWave(Team.BLUE)
 
         repeat(20) { simulation.advance(100) }
@@ -1321,7 +1351,7 @@ class DeterministicMatchSimulationTest {
     fun aSapperDamagesTheEnemyFortressAndReturnsWithARefilledBomb() {
         val simulation = DeterministicMatchSimulation(MatchId("sapper-attack-match"), config)
         simulation.start()
-        simulation.deployUnit(com.urkaaaz.domain.UnitFactory.sapper(), Team.BLUE)
+        simulation.deployUnit(GameBalanceFixtures.unit(UnitIds.SAPPER), Team.BLUE)
         simulation.sendWave(Team.BLUE)
 
         val initialFortressHealth = simulation.snapshot().fortresses
@@ -1357,7 +1387,7 @@ class DeterministicMatchSimulationTest {
                 config,
             )
             simulation.start()
-            simulation.deployUnit(com.urkaaaz.domain.UnitFactory.sapper(), team)
+            simulation.deployUnit(GameBalanceFixtures.unit(UnitIds.SAPPER), team)
             simulation.sendWave(team)
             val enemyTeam = if (team == Team.BLUE) Team.RED else Team.BLUE
             val initialFortress = simulation.snapshot().fortresses.first { it.team == enemyTeam }
@@ -1388,7 +1418,8 @@ class DeterministicMatchSimulationTest {
 
             assertTrue(
                 kotlin.math.abs(
-                    distanceToFront - DeterministicMatchSimulation.SAPPER_FORTRESS_STANDOFF_DISTANCE,
+                    distanceToFront -
+                        GameBalanceFixtures.balance.runtime.combat.sapperFortressStandoffDistance,
                 ) <= 1f,
                 "$team Sapper attacked $distanceToFront units from the fortress hitbox",
             )
@@ -1399,7 +1430,7 @@ class DeterministicMatchSimulationTest {
     fun aMeleeUnitDamagesTheEnemyFortress() {
         val simulation = DeterministicMatchSimulation(MatchId("melee-fortress-attack-match"), config)
         simulation.start()
-        simulation.deployUnit(com.urkaaaz.domain.UnitFactory.defender(), Team.BLUE)
+        simulation.deployUnit(GameBalanceFixtures.unit(UnitIds.DEFENDER), Team.BLUE)
         simulation.sendWave(Team.BLUE)
 
         repeat(120) { simulation.advance(100) }
@@ -1416,7 +1447,7 @@ class DeterministicMatchSimulationTest {
         val simulation = DeterministicMatchSimulation(MatchId("melee-formation-fortress-match"), config)
         simulation.start()
         repeat(3) {
-            simulation.deployUnit(freeUnit(com.urkaaaz.domain.UnitFactory.defender()), Team.BLUE)
+            simulation.deployUnit(freeUnit(GameBalanceFixtures.unit(UnitIds.DEFENDER)), Team.BLUE)
         }
         simulation.sendWave(Team.BLUE)
 
@@ -1478,7 +1509,7 @@ class DeterministicMatchSimulationTest {
                 ),
             )
             simulation.start()
-            simulation.deployUnit(com.urkaaaz.domain.UnitFactory.defender(), Team.BLUE)
+            simulation.deployUnit(GameBalanceFixtures.unit(UnitIds.DEFENDER), Team.BLUE)
             simulation.sendWave(Team.BLUE)
 
             return buildList {
@@ -1511,6 +1542,7 @@ class DeterministicMatchSimulationTest {
             val simulation = DeterministicMatchSimulation(
                 MatchId("ammunition-variance-match"),
                 SimulationConfig(
+                    balance = GameBalanceFixtures.balance,
                     bounds = WorldBounds(width = 1_060f, height = 600f),
                     gravityAccelerationY = 1_000f,
                     combatRandomSeed = seed,

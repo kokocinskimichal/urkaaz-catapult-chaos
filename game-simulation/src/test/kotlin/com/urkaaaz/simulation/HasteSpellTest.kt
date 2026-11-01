@@ -1,12 +1,14 @@
 package com.urkaaaz.simulation
 
+import com.urkaaaz.domain.GameBalanceFixtures
+import com.urkaaaz.domain.UnitIds
+
 import com.urkaaaz.contracts.EntityId
 import com.urkaaaz.contracts.MatchError
 import com.urkaaaz.contracts.MatchId
 import com.urkaaaz.contracts.PlayerId
 import com.urkaaaz.contracts.Team
 import com.urkaaaz.domain.StatusState
-import com.urkaaaz.domain.UnitConfigurations
 import com.urkaaaz.domain.UnitFactory
 import com.urkaaaz.domain.UnitStatus
 import com.urkaaaz.domain.WorldBounds
@@ -18,6 +20,7 @@ import kotlin.test.assertTrue
 
 class HasteSpellTest {
     private val config = SimulationConfig(
+        balance = GameBalanceFixtures.balance,
         bounds = WorldBounds(width = 10_000f, height = 600f),
         gravityAccelerationY = 0f,
     )
@@ -25,11 +28,16 @@ class HasteSpellTest {
     private fun simulation(id: String, startingMana: Int = 100) =
         DeterministicMatchSimulation(
             MatchId(id),
-            config.copy(startingMana = startingMana),
+            config.copy(
+                balance = GameBalanceFixtures.withMana(
+                    config.balance.mana.copy(startingMana = startingMana),
+                    source = config.balance,
+                ),
+            ),
         ).apply { start() }
 
     private fun unitType() =
-        UnitFactory.create(UnitConfigurations.DEFENDER.copy(speed = 40f, supplyCost = 0))
+        UnitFactory.create(GameBalanceFixtures.balance.units.configuration(UnitIds.DEFENDER).copy(speed = 40f, supplyCost = 0))
 
     @Test
     fun hasteAppliesToDeployedAlliesIncludingUnitsSentAfterCasting() {

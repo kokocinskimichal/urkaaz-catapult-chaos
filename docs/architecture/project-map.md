@@ -140,16 +140,17 @@ gest slingshot
 
 ### Jednostki
 
-Jednostki są tworzone przez `UnitFactory` z centralnych
-`UnitConfigurations.kt`. Rekrutacja zużywa supply, jednostki ustawiają się w
+Jednostki są tworzone przez `UnitFactory` z typowanego `UnitCatalog` wczytanego
+z `game-balance.json`. Rekrutacja zużywa supply, jednostki ustawiają się w
 garrisonie, mogą zostać wysłane falą, poruszają się w symulacji i wykonują
 dedykowane interakcje: walka Defenderów i Raging Boars, atak Slingmastera,
 detonacja Demolishera oraz atak fortecy przez Sapera.
 
 ### Amunicja
 
-`AmmunitionCatalog` jest jedynym źródłem definicji amunicji dla gracza, AI i
-symulacji. `AmmunitionType` pozostaje stabilnym identyfikatorem serializowanym.
+`AmmunitionCatalog` budowany z `game-balance.json` jest wspólnym źródłem
+profilów dla gracza, AI i symulacji. `AmmunitionType` pozostaje wyłącznie
+stabilnym identyfikatorem serializowanym.
 Logowanie amunicji jest host-independent i nie może zmieniać stanu gry.
 
 ### Kampania i wiatr

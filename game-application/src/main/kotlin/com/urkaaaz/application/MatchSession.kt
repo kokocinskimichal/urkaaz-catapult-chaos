@@ -10,7 +10,7 @@ import com.urkaaaz.contracts.MapDefinition
 import com.urkaaaz.domain.AmmunitionType
 import com.urkaaaz.domain.WorldBounds
 import com.urkaaaz.domain.UnitFactory
-import com.urkaaaz.domain.SpellCatalog
+import com.urkaaaz.domain.GameBalanceConfig
 import com.urkaaaz.domain.SpellType
 import com.urkaaaz.contracts.Team
 import com.urkaaaz.contracts.WindSnapshot
@@ -33,8 +33,8 @@ class MatchSession(
     private val initialWind: WindSnapshot = WindSnapshot(),
     private val mapDefinition: MapDefinition? = null,
     private val scenario: MatchScenario? = null,
-    private val blueFortressMaxHealth: Int = 500,
-    private val redFortressMaxHealth: Int = 500,
+    private val blueFortressMaxHealth: Int? = null,
+    private val redFortressMaxHealth: Int? = null,
     private val combatLogSink: CombatLogSink = NoOpCombatLogSink,
     private val ammunitionLogSink: AmmunitionLogSink = NoOpAmmunitionLogSink,
     private val randomSeedProvider: () -> Long = { Random.nextLong() },
@@ -42,10 +42,10 @@ class MatchSession(
     private val balanceRepository: GameBalanceRepository = GameBalanceRepository.bundled,
     private val expectedBalanceRevision: String? = null,
     private val expectedBalanceContentHash: String? = null,
-    private val bossEncounterMatchDurationMilliseconds: Long =
-        SimulationConfig.DEFAULT_MATCH_DURATION_MILLISECONDS,
+    private val bossEncounterMatchDurationMilliseconds: Long? = null,
 ) {
     private var simulation: DeterministicMatchSimulation? = null
+    private var loadedBalance: com.urkaaaz.application.balance.LoadedGameBalance? = null
     private val selectedAmmunition = mutableMapOf(
         Team.BLUE to AmmunitionType.ROCK,
         Team.RED to AmmunitionType.ROCK,
@@ -56,15 +56,7 @@ class MatchSession(
     private var replaySeed: Long? = null
     private val replaySteps = mutableListOf<MatchReplayStep>()
 
-    private var replayConfiguration = MatchReplayConfiguration(
-        terrainBiome = terrainBiome,
-        initialWind = initialWind,
-        mapDefinition = mapDefinition ?: scenario?.mapDefinition,
-        scenario = scenario,
-        blueFortressMaxHealth = blueFortressMaxHealth,
-        redFortressMaxHealth = redFortressMaxHealth,
-        bossEncounterMatchDurationMilliseconds = bossEncounterMatchDurationMilliseconds,
-    )
+    private var replayConfiguration: MatchReplayConfiguration? = null
 
     fun dispatch(command: MatchCommand): MatchSnapshot {
         if (command is MatchCommand.CastSpell) {
@@ -91,10 +83,11 @@ class MatchSession(
             }
             is MatchCommand.DeployUnit -> {
                 enforceUnitSelection(command.playerId, command.unitType)
-                val unitType = UnitFactory.byId(command.unitType)
-                requireRunning().deployUnit(unitType, teamForPlayer(command.playerId))
-                latestEvents = requireRunning().drainEvents()
-                requireRunning().snapshot()
+                val runningSimulation = requireRunning()
+                val unitType = UnitFactory.byId(command.unitType, balanceConfig().units)
+                runningSimulation.deployUnit(unitType, teamForPlayer(command.playerId))
+                latestEvents = runningSimulation.drainEvents()
+                runningSimulation.snapshot()
             }
             is MatchCommand.SendWave -> {
                 requireRunning().sendWave(teamForPlayer(command.playerId))
@@ -168,7 +161,7 @@ class MatchSession(
             MatchStatus.FINISHED -> return rejected(MatchError.ALREADY_FINISHED)
             else -> return rejected(MatchError.MATCH_NOT_RUNNING)
         }
-        val spell = SpellCatalog.find(command.spellType)
+        val spell = balanceConfig().spells.find(command.spellType)
             ?: return rejected(MatchError.UNKNOWN_SPELL)
         val matchScenario = scenario
             ?: return rejected(MatchError.SPELL_NOT_AVAILABLE)
@@ -215,7 +208,9 @@ class MatchSession(
             formatVersion = MatchReplay.CURRENT_FORMAT_VERSION,
             matchId = startCommand.matchId,
             randomSeed = seed,
-            configuration = replayConfiguration,
+            configuration = requireNotNull(replayConfiguration) {
+                "recorded match replay is missing its configuration"
+            },
             steps = replaySteps.toList(),
         )
     }
@@ -259,6 +254,9 @@ class MatchSession(
 
     fun rewardResult() = eventObserver.rewardResult()
 
+    fun balanceConfig(): GameBalanceConfig =
+        requireNotNull(loadedBalance) { "game balance is not loaded before match start" }.config
+
     fun canDeployUnit(team: Team, unitType: String): Boolean {
         val matchScenario = scenario
         if (matchScenario != null) {
@@ -270,7 +268,8 @@ class MatchSession(
                 if (loadout != null && unitType !in loadout.unitTypes) return false
             }
         }
-        val definition = runCatching { UnitFactory.byId(unitType) }.getOrNull() ?: return false
+        val definition = loadedBalance?.config?.units?.find(unitType)
+            ?.let(UnitFactory::create) ?: return false
         val resources = latestSnapshot.resourcesByTeam[team] ?: return false
         if (resources.supply < definition.supplyCost) return false
         return definition !is com.urkaaaz.domain.SapperUnit ||
@@ -290,6 +289,7 @@ class MatchSession(
             is GameBalanceRead.Failure ->
                 error("Unable to load game balance: ${result.reason}")
         }
+        this.loadedBalance = loadedBalance
         expectedBalanceRevision?.let { expected ->
             check(loadedBalance.config.balanceRevision == expected) {
                 "replay balance revision does not match the current game balance"
@@ -302,7 +302,19 @@ class MatchSession(
         }
         val bossEncounter = scenario?.bossEncounter
         val bossProfile = bossEncounter?.let { loadedBalance.config.bossProfile(it.profileId) }
-        replayConfiguration = replayConfiguration.copy(
+        val standardFortressHealth = loadedBalance.config.runtime.fortresses.standardMaximumHealth
+        val resolvedBlueFortressHealth = blueFortressMaxHealth ?: standardFortressHealth
+        val resolvedRedFortressHealth = redFortressMaxHealth ?: standardFortressHealth
+        val resolvedBossDuration = bossEncounterMatchDurationMilliseconds
+            ?: loadedBalance.config.runtime.match.bossEncounterDurationMilliseconds
+        replayConfiguration = MatchReplayConfiguration(
+            terrainBiome = terrainBiome,
+            initialWind = initialWind,
+            mapDefinition = mapDefinition ?: scenario?.mapDefinition,
+            scenario = scenario,
+            blueFortressMaxHealth = resolvedBlueFortressHealth,
+            redFortressMaxHealth = resolvedRedFortressHealth,
+            bossEncounterMatchDurationMilliseconds = resolvedBossDuration,
             balanceRevision = loadedBalance.config.balanceRevision,
             balanceContentHash = loadedBalance.contentHash,
         )
@@ -313,10 +325,11 @@ class MatchSession(
                     width = WorldDimensions.WIDTH,
                     height = WorldDimensions.HEIGHT,
                 ),
+                balance = loadedBalance.config,
                 terrainBiome = terrainBiome,
                 windAccelerationX = initialWind.direction * initialWind.strength,
-                blueFortressMaxHealth = blueFortressMaxHealth,
-                redFortressMaxHealth = redFortressMaxHealth,
+                blueFortressMaxHealth = resolvedBlueFortressHealth,
+                redFortressMaxHealth = resolvedRedFortressHealth,
                 mapDefinition = mapDefinition ?: scenario?.mapDefinition,
                 bossEncounter = bossEncounter,
                 bossProfile = bossProfile,
@@ -325,8 +338,7 @@ class MatchSession(
                 playerLoadout = scenario?.playerLoadout,
                 availableAmmunitionTypes = scenario?.availableAmmunition?.toSet().orEmpty(),
                 combatRandomSeed = randomSeed,
-                bossEncounterMatchDurationMilliseconds =
-                    bossEncounterMatchDurationMilliseconds,
+                bossEncounterMatchDurationMilliseconds = resolvedBossDuration,
             ),
             combatLogSink = combatLogSink,
             ammunitionLogSink = ammunitionLogSink,
