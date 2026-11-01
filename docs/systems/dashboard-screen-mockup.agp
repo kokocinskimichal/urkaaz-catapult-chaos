@@ -2,20 +2,42 @@ Create one high-fidelity visual concept for the Urkaaaz Android Dashboard
 screen. This is a screen-design study only; do not edit production code or
 generate a production background or runtime asset.
 
-## Reference images
+## Reference inputs and approved assets
 
 - Attach the existing Loadout screen screenshot and the existing Campaign
-  screen screenshot as the only visual references.
-- Treat both images as equal references for Urkaaaz's visual language. Identify
-  and reuse their shared design system: painterly fantasy scenery, dark
-  translucent panels, carved wood and iron details, restrained warm-gold trim,
-  pale readable text, and consistent fantasy-style buttons and frames.
-- Do not copy either screen's complete layout or move its screen-specific
-  controls onto the Dashboard. The Dashboard must feel like the same game, not
-  a third visual theme.
-- Use the screenshots for appearance only. Do not copy campaign marker states,
-  loadout selections, counts, or other temporary values as permanent game
-  data.
+  screen screenshot as visual references. Treat both equally and extract their
+  shared Urkaaaz visual language: painterly fantasy scenery, dark translucent
+  panels, carved wood and iron details, restrained warm-gold trim, pale
+  readable text, and consistent fantasy-style buttons and frames.
+- Attach the separately supplied Dashboard background image as the exact
+  background layer. Preserve its composition and artwork; do not regenerate,
+  repaint, or replace it with a different landscape.
+- Reuse the repository's existing approved UI PNGs wherever they fit. If the
+  design tool cannot access repository files directly, attach the named PNGs
+  as additional inputs before generation.
+- Prefer these existing Dashboard assets, using their original art, colors,
+  proportions, and labels without redraw:
+  - `android-app/src/main/res/drawable-nodpi/dashboard_hud_top_panel.png`
+  - `android-app/src/main/res/drawable-nodpi/dashboard_hud_portrait_frame.png`
+  - `android-app/src/main/res/drawable-nodpi/dashboard_back_button.png`
+  - `android-app/src/main/res/drawable-nodpi/dashboard_campaign_button.png`
+  - `android-app/src/main/res/drawable-nodpi/dashboard_shop_button.png`
+- Reuse the existing profile icons:
+  - `android-app/src/main/res/drawable-nodpi/icon_lives_heart.png`
+  - `android-app/src/main/res/drawable-nodpi/icon_orcoins.png`
+  - `android-app/src/main/res/drawable-nodpi/icon_next_life_hourglass.png`
+- For the small `RESET` control and the language control's button surround,
+  use an appropriately sized existing dark button background from
+  `assets_src/loadout/ui/ui_button_dark_*_normal.png` (or its matching
+  `_pressed.png` state). Do not use the red button family for this screen.
+- There is no dedicated language/globe icon among the current named UI assets.
+  Create only a simple, separate neutral globe/language glyph for this concept,
+  placed over the existing dark button treatment. Do not create a flag or
+  redesign any of the approved buttons or frames.
+- The screenshots guide style only; do not copy their complete layouts,
+  campaign marker states, loadout selections, counts, or temporary values.
+- Do not move screen-specific Campaign or Loadout controls onto the Dashboard.
+  It must look like the same game while retaining its own layout.
 
 ## Output
 
@@ -77,6 +99,11 @@ generate a production background or runtime asset.
 - Give the Campaign action the strongest visual emphasis in the central area,
   supported by a restrained campaign-themed illustration or preview that does
   not imitate the Campaign screen's map, route, markers, or chapter controls.
+- Use the exact supplied `dashboard_campaign_button.png` for the primary
+  action, and the exact `dashboard_shop_button.png` and
+  `dashboard_back_button.png` for those actions. Treat these as complete
+  button assets; preserve any artwork and lettering already present and do not
+  draw duplicate labels over them.
 - Place `SHOP` and `BACK` as clearly secondary actions with consistent sizing,
   spacing, and button styling. Keep the small `RESET` utility separated from
   the primary navigation.
@@ -97,6 +124,10 @@ generate a production background or runtime asset.
   button labels, with clear, compact supporting text.
 - Keep avatar art, icons, labels, counters, backgrounds, and panel surfaces as
   distinct visual layers. Do not bake readable UI text into the scenery.
+- Use the exact Dashboard header panel, portrait frame, and profile icon PNGs
+  listed above; do not synthesize replacements. Keep changing values as
+  separate live UI text where the supplied asset does not already contain
+  lettering.
 
 ## Negative requirements
 
@@ -112,6 +143,8 @@ generate a production background or runtime asset.
   fabricated profile values beyond the specified example.
 - No fake life timer or claim that lives regenerate.
 - No advertising, reward-video, or social-share buttons.
+- Do not use `android-app/src/main/res/drawable-nodpi/dashboard_ad_reward_button.png`;
+  its current action is not implemented.
 - No flags, text-heavy language selector, or invented localization options.
 - No cluttered HUD, unrelated battle UI, decorative pseudo-text, gibberish,
   stretched scenery, device bezel, watermark, or signature.
@@ -129,6 +162,8 @@ generate a production background or runtime asset.
   not as part of the background artwork.
 - Confirm the language-change icon is clearly visible, tappable-looking,
   neutral rather than flag-based, and aligned with the header.
+- Confirm the supplied Dashboard background and existing Dashboard button,
+  frame, and profile-icon assets were reused rather than redrawn.
 - Confirm the composition does not imply a direct Loadout/match route,
   working shop, life regeneration, or other unimplemented feature.
 - Use the concept for visual review only; do not import it as a single
