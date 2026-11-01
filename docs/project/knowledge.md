@@ -13,6 +13,11 @@ only after the profile and saved loadout are read, validated and committed.
 Shop and result screens remain placeholders.
 `MainActivity` hides Android status and navigation bars for immersive
 full-screen presentation; system bars can be revealed transiently with a swipe.
+`CampaignScreen` and `LoadoutScreen` share Android UI chrome values from
+`android-app/src/main/java/com/urkaaaz/ui/ScreenChromeMetrics.kt`: a 4 dp edge
+inset, 96 × 48 dp Back button, and 6 dp gap before the screen title. Loadout
+adds its own 14 dp content inset and 6 dp content top padding inside the shared
+outer inset.
 Campaign wins are evaluated by RewardSystem and atomically settle gold,
 campaign completion, milestone grants and an idempotent receipt in the local
 DataStore. The match result popup presents the committed reward and can retry
@@ -1076,6 +1081,12 @@ strict structural, range and stable-ID coverage validation, and
 `PUT /api/balance` writes atomically only when `expectedHash` is current. A changed
 document must advance `balanceRevision`; the editor automatically bumps a
 trailing revision number.
+The Balance UI presents all existing schema 3 fields through Bosses, Units,
+Ammunition, Spells & Mana and Runtime tabs; it does not expose a JSON text
+editor. Profile identifiers and list structure remain fixed. Incomplete
+numeric drafts do not become zero values, validation errors are linked to
+field paths, and an external-write `409` preserves the draft until explicit
+reload.
 The application loader creates one immutable `GameBalanceConfig` for the
 bundled resource and passes its typed catalogs to simulation, AI, loadout,
 progression and Android presentation projections. `UnitIds`, `AmmunitionType`

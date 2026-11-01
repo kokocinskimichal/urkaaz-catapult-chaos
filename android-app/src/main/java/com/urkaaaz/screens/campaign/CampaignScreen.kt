@@ -27,6 +27,7 @@ import com.urkaaaz.campaign.CampaignMapLayoutRepository
 import com.urkaaaz.campaign.CampaignMapLandmarkKind
 import com.urkaaaz.navigation.ScreenContent
 import com.urkaaaz.ui.UiTypography
+import com.urkaaaz.ui.ScreenChromeMetrics
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -170,8 +171,8 @@ class CampaignScreen(
         addView(
             createTopBar(),
             FrameLayout.LayoutParams(dp(260), dp(90), Gravity.TOP or Gravity.START).apply {
-                topMargin = dp(4)
-                marginStart = dp(4)
+                topMargin = dp(ScreenChromeMetrics.EDGE_INSET_DP)
+                marginStart = dp(ScreenChromeMetrics.EDGE_INSET_DP)
             },
         )
     }
@@ -183,36 +184,53 @@ class CampaignScreen(
             UiTypography.applyButtonTypeface(this)
             setTextColor(Color.rgb(64, 38, 20))
             gravity = Gravity.CENTER
+            setPadding(0, 0, 0, 0)
             setBackgroundResource(R.drawable.loadout_start_match_button_xs_short)
             isFocusable = true
             setOnClickListener { onBack() }
-        }, FrameLayout.LayoutParams(dp(96), dp(48), Gravity.TOP or Gravity.START))
+        }, FrameLayout.LayoutParams(
+            dp(ScreenChromeMetrics.BACK_BUTTON_WIDTH_DP),
+            dp(ScreenChromeMetrics.BACK_BUTTON_HEIGHT_DP),
+            Gravity.TOP or Gravity.START,
+        ))
 
         addView(
             campaignLabelText,
             FrameLayout.LayoutParams(dp(146), dp(16), Gravity.TOP or Gravity.START).apply {
-                leftMargin = dp(102)
+                leftMargin = dp(
+                    ScreenChromeMetrics.BACK_BUTTON_WIDTH_DP +
+                        ScreenChromeMetrics.BACK_BUTTON_TITLE_GAP_DP,
+                )
                 topMargin = dp(8)
             },
         )
         addView(
             chapterNumberText,
             FrameLayout.LayoutParams(dp(146), dp(18), Gravity.TOP or Gravity.START).apply {
-                leftMargin = dp(102)
+                leftMargin = dp(
+                    ScreenChromeMetrics.BACK_BUTTON_WIDTH_DP +
+                        ScreenChromeMetrics.BACK_BUTTON_TITLE_GAP_DP,
+                )
                 topMargin = dp(27)
             },
         )
         addView(
             titleText,
             FrameLayout.LayoutParams(dp(146), dp(20), Gravity.TOP or Gravity.START).apply {
-                leftMargin = dp(102)
+                leftMargin = dp(
+                    ScreenChromeMetrics.BACK_BUTTON_WIDTH_DP +
+                        ScreenChromeMetrics.BACK_BUTTON_TITLE_GAP_DP,
+                )
                 topMargin = dp(47)
             },
         )
         addView(
             chapterProgressPanel,
             FrameLayout.LayoutParams(dp(146), dp(18), Gravity.TOP or Gravity.START).apply {
-                leftMargin = dp(102)
+                leftMargin = dp(
+                    ScreenChromeMetrics.BACK_BUTTON_WIDTH_DP +
+                        ScreenChromeMetrics.BACK_BUTTON_TITLE_GAP_DP,
+                )
                 topMargin = dp(68)
             },
         )

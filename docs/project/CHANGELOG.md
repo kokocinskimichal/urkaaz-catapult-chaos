@@ -7,6 +7,9 @@
 - Added TutorialSystem and LocalizationSystem architecture documents with
   implementation prompts; localization is designed for Polish, English and
   Spanish, but neither system has runtime implementation yet.
+- Added a Dashboard visual-concept brief at
+  `docs/systems/dashboard-screen-mockup.agp`; it is a design prompt only, not a
+  runtime asset or screen implementation.
 
 ### Changed
 
@@ -15,6 +18,12 @@
   changing the established balance values. Match simulation, AI, loadout,
   campaign, rewards and Android projections now consume a typed shared balance
   configuration.
+- Replaced the Studio Balance JSON text area with a structured schema 3 form
+  covering bosses, units, ammunition, spells, mana and runtime settings. The
+  form retains stable profile IDs and uses the existing validated, hash-guarded
+  save API.
+- Centralized shared Campaign/Loadout screen-chrome dimensions and tightened
+  the Loadout content inset while preserving its gameplay and navigation flow.
 
 ### Fixed
 

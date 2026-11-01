@@ -18,6 +18,8 @@ do bieżącego zadania według [indeksu dokumentów kontekstu](docs/agent-contex
 - [Mapa projektu i przepływów](docs/architecture/project-map.md)
 - [Struktura projektu](docs/architecture/project-structure.md)
 - [Architektura Urkaaaz Studio (propozycja)](docs/architecture/studio-architecture.md)
+- [Plan formularza balansu Studio](docs/architecture/studio-balance-form-implementation-plan.md)
+- [Prompt formularza balansu Studio](docs/architecture/studio-balance-form-implementation-prompt.md)
 
 ### Stan i wiedza projektu
 
@@ -96,6 +98,7 @@ do bieżącego zadania według [indeksu dokumentów kontekstu](docs/agent-contex
 ### UI i prompty
 
 - [Analiza brakujących mechanik UI](docs/ui/mechanics-gap-analysis.md)
+- [Brief koncepcji wizualnej Dashboardu](docs/systems/dashboard-screen-mockup.agp)
 - [Prompt systemu definicji poziomów](docs/prompts/IMPLEMENT_LEVEL_DEFINITION_SYSTEM.md)
 - [Prompt systemu reliktów](docs/prompts/IMPLEMENT_RELIC_SYSTEM.md)
 
@@ -167,6 +170,8 @@ typed campaign level into `MatchScreen` and then `MatchViewModel`.
 
 Do not add new screen controls directly to `MainActivity`. Add a screen-owned
 view/controller and connect it through `AppScreen` and `AppNavigator`.
+Shared Campaign/Loadout screen-edge and Back-button dimensions use
+`ScreenChromeMetrics`; reuse those tokens rather than duplicating their values.
 
 ## Layering rules
 

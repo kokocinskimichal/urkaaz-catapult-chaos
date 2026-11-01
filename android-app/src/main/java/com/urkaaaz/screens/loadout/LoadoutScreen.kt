@@ -41,6 +41,7 @@ import com.urkaaaz.application.loadout.MatchLoadout
 import com.urkaaaz.contracts.PlayerLoadoutConfig
 import com.urkaaaz.navigation.ScreenContent
 import com.urkaaaz.ui.UiTypography
+import com.urkaaaz.ui.ScreenChromeMetrics
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -147,8 +148,10 @@ class LoadoutScreen(
 
         mainContent = LinearLayout(context).apply {
             orientation = LinearLayout.VERTICAL
-            val horizontalPadding = dp(context, 18)
-            val topPadding = dp(context, 10)
+            val horizontalPadding = dp(context, ScreenChromeMetrics.EDGE_INSET_DP)
+            val topPadding = dp(context, ScreenChromeMetrics.EDGE_INSET_DP)
+            val contentHorizontalPadding = dp(context, 14)
+            val contentTopPadding = dp(context, 6)
             val bottomGap = dp(context, 12)
             setPadding(horizontalPadding, topPadding, horizontalPadding, bottomGap)
             ViewCompat.setOnApplyWindowInsetsListener(this) { view, insets ->
@@ -165,134 +168,145 @@ class LoadoutScreen(
             }
             addView(createHeader(context, showBack = true), matchWrap())
 
-            val columns = LinearLayout(context).apply {
-                orientation = LinearLayout.HORIZONTAL
-                setPadding(0, dp(context, 8), 0, dp(context, 8))
-                addView(createColumn(
-                    context,
-                    R.string.loadout_units,
-                    onScrollCreated = { unitScroll = it },
-                    onCountCreated = { unitCountView = it },
-                ) { content ->
-                    unitOptions = LinearLayout(context).apply {
-                        orientation = LinearLayout.HORIZONTAL
-                    }
-                    unitCarousel = createCarousel(context, unitOptions)
-                    content.addView(unitCarousel, matchWrap())
-                }, columnParams(context))
-                addView(createColumn(
-                    context,
-                    R.string.loadout_ammunition,
-                    onScrollCreated = { ammunitionScroll = it },
-                    onCountCreated = { ammunitionCountView = it },
-                ) { content ->
-                    ammunitionOptions = LinearLayout(context).apply {
-                        orientation = LinearLayout.HORIZONTAL
-                    }
-                    ammunitionCarousel = createCarousel(context, ammunitionOptions)
-                    content.addView(ammunitionCarousel, matchWrap())
-                }, columnParams(context))
-                addView(createColumn(
-                    context,
-                    R.string.loadout_spells,
-                    onScrollCreated = { spellScroll = it },
-                    onCountCreated = { spellCountView = it },
-                ) { content ->
-                    spellOptions = LinearLayout(context).apply {
-                        orientation = LinearLayout.HORIZONTAL
-                    }
-                    spellCarousel = createCarousel(context, spellOptions)
-                    content.addView(spellCarousel, matchWrap())
-                }, columnParams(context))
-            }
-            addView(columns, LinearLayout.LayoutParams(-1, 0, 1f))
+            val content = LinearLayout(context).apply {
+                orientation = LinearLayout.VERTICAL
+                setPadding(
+                    contentHorizontalPadding,
+                    contentTopPadding,
+                    contentHorizontalPadding,
+                    0,
+                )
 
-            val footer = LinearLayout(context).apply {
-                orientation = LinearLayout.HORIZONTAL
-                gravity = Gravity.CENTER_VERTICAL
-                setPadding(dp(context, 14), dp(context, 8), dp(context, 14), dp(context, 8))
-                setBackgroundResource(R.drawable.bg_hud_panel)
-                val summary = LinearLayout(context).apply {
-                    orientation = LinearLayout.VERTICAL
-                    val categories = LinearLayout(context).apply {
-                        orientation = LinearLayout.HORIZONTAL
-                        gravity = Gravity.CENTER_VERTICAL
-                        addView(TextView(context).apply {
-                            text = context.getString(R.string.loadout_summary_title)
-                            textSize = 10f
-                            setTypeface(typeface, Typeface.BOLD)
-                            setTextColor(Color.WHITE)
-                            gravity = Gravity.CENTER_VERTICAL
-                            maxLines = 2
-                        }, LinearLayout.LayoutParams(dp(context, 72), dp(context, 40)).apply {
-                            marginEnd = dp(context, 4)
-                        })
-                        addSummaryDivider(context, this)
-                        addView(
-                            createSummaryCategory(
-                                context,
-                                R.string.loadout_summary_units,
-                                LoadoutAssetCatalog.summaryUnitsIcon(),
-                            ) { unitSummaryCountView = it },
-                            LinearLayout.LayoutParams(0, dp(context, 40), 1f),
-                        )
-                        addSummaryDivider(context, this)
-                        addView(
-                            createSummaryCategory(
-                                context,
-                                R.string.loadout_summary_ammo,
-                                LoadoutAssetCatalog.summaryAmmunitionIcon(),
-                            ) { ammunitionSummaryCountView = it },
-                            LinearLayout.LayoutParams(0, dp(context, 40), 1f),
-                        )
-                        addSummaryDivider(context, this)
-                        addView(
-                            createSummaryCategory(
-                                context,
-                                R.string.loadout_summary_spells,
-                                LoadoutAssetCatalog.summarySpellsIcon(),
-                            ) { spellSummaryCountView = it },
-                            LinearLayout.LayoutParams(0, dp(context, 40), 1f),
-                        )
-                    }
-                    addView(categories, LinearLayout.LayoutParams(-1, dp(context, 40)))
-                    statusView = TextView(context).apply {
-                        textSize = 11f
-                        maxLines = 1
-                        setTextColor(Color.rgb(255, 205, 135))
-                    }
-                    addView(statusView, wrap())
+                val columns = LinearLayout(context).apply {
+                    orientation = LinearLayout.HORIZONTAL
+                    setPadding(0, dp(context, 8), 0, dp(context, 8))
+                    addView(createColumn(
+                        context,
+                        R.string.loadout_units,
+                        onScrollCreated = { unitScroll = it },
+                        onCountCreated = { unitCountView = it },
+                    ) { content ->
+                        unitOptions = LinearLayout(context).apply {
+                            orientation = LinearLayout.HORIZONTAL
+                        }
+                        unitCarousel = createCarousel(context, unitOptions)
+                        content.addView(unitCarousel, matchWrap())
+                    }, columnParams(context))
+                    addView(createColumn(
+                        context,
+                        R.string.loadout_ammunition,
+                        onScrollCreated = { ammunitionScroll = it },
+                        onCountCreated = { ammunitionCountView = it },
+                    ) { content ->
+                        ammunitionOptions = LinearLayout(context).apply {
+                            orientation = LinearLayout.HORIZONTAL
+                        }
+                        ammunitionCarousel = createCarousel(context, ammunitionOptions)
+                        content.addView(ammunitionCarousel, matchWrap())
+                    }, columnParams(context))
+                    addView(createColumn(
+                        context,
+                        R.string.loadout_spells,
+                        onScrollCreated = { spellScroll = it },
+                        onCountCreated = { spellCountView = it },
+                    ) { content ->
+                        spellOptions = LinearLayout(context).apply {
+                            orientation = LinearLayout.HORIZONTAL
+                        }
+                        spellCarousel = createCarousel(context, spellOptions)
+                        content.addView(spellCarousel, matchWrap())
+                    }, columnParams(context))
                 }
-                addView(summary, LinearLayout.LayoutParams(0, -2, 1f).apply {
-                    marginEnd = dp(context, 12)
-                })
-                startButton = Button(context).apply {
-                    text = context.getString(R.string.loadout_start_match)
-                    textSize = 17f
-                    UiTypography.applyButtonTypeface(this)
-                    setTextColor(Color.rgb(64, 38, 20))
-                    setBackgroundResource(LoadoutAssetCatalog.startMatchButtonBackground())
-                    isEnabled = false
-                    alpha = 0.45f
-                    setOnClickListener {
-                        screenScope?.launch {
-                            val loadout = viewModel.commit()
-                            renderMain()
-                            loadout?.let(onStart)
+                addView(columns, LinearLayout.LayoutParams(-1, 0, 1f))
+
+                val footer = LinearLayout(context).apply {
+                    orientation = LinearLayout.HORIZONTAL
+                    gravity = Gravity.CENTER_VERTICAL
+                    setPadding(dp(context, 14), dp(context, 8), dp(context, 14), dp(context, 8))
+                    setBackgroundResource(R.drawable.bg_hud_panel)
+                    val summary = LinearLayout(context).apply {
+                        orientation = LinearLayout.VERTICAL
+                        val categories = LinearLayout(context).apply {
+                            orientation = LinearLayout.HORIZONTAL
+                            gravity = Gravity.CENTER_VERTICAL
+                            addView(TextView(context).apply {
+                                text = context.getString(R.string.loadout_summary_title)
+                                textSize = 10f
+                                setTypeface(typeface, Typeface.BOLD)
+                                setTextColor(Color.WHITE)
+                                gravity = Gravity.CENTER_VERTICAL
+                                maxLines = 2
+                            }, LinearLayout.LayoutParams(dp(context, 72), dp(context, 40)).apply {
+                                marginEnd = dp(context, 4)
+                            })
+                            addSummaryDivider(context, this)
+                            addView(
+                                createSummaryCategory(
+                                    context,
+                                    R.string.loadout_summary_units,
+                                    LoadoutAssetCatalog.summaryUnitsIcon(),
+                                ) { unitSummaryCountView = it },
+                                LinearLayout.LayoutParams(0, dp(context, 40), 1f),
+                            )
+                            addSummaryDivider(context, this)
+                            addView(
+                                createSummaryCategory(
+                                    context,
+                                    R.string.loadout_summary_ammo,
+                                    LoadoutAssetCatalog.summaryAmmunitionIcon(),
+                                ) { ammunitionSummaryCountView = it },
+                                LinearLayout.LayoutParams(0, dp(context, 40), 1f),
+                            )
+                            addSummaryDivider(context, this)
+                            addView(
+                                createSummaryCategory(
+                                    context,
+                                    R.string.loadout_summary_spells,
+                                    LoadoutAssetCatalog.summarySpellsIcon(),
+                                ) { spellSummaryCountView = it },
+                                LinearLayout.LayoutParams(0, dp(context, 40), 1f),
+                            )
+                        }
+                        addView(categories, LinearLayout.LayoutParams(-1, dp(context, 40)))
+                        statusView = TextView(context).apply {
+                            textSize = 11f
+                            maxLines = 1
+                            setTextColor(Color.rgb(255, 205, 135))
+                        }
+                        addView(statusView, wrap())
+                    }
+                    addView(summary, LinearLayout.LayoutParams(0, -2, 1f).apply {
+                        marginEnd = dp(context, 12)
+                    })
+                    startButton = Button(context).apply {
+                        text = context.getString(R.string.loadout_start_match)
+                        textSize = 17f
+                        UiTypography.applyButtonTypeface(this)
+                        setTextColor(Color.rgb(64, 38, 20))
+                        setBackgroundResource(LoadoutAssetCatalog.startMatchButtonBackground())
+                        isEnabled = false
+                        alpha = 0.45f
+                        setOnClickListener {
+                            screenScope?.launch {
+                                val loadout = viewModel.commit()
+                                renderMain()
+                                loadout?.let(onStart)
+                            }
                         }
                     }
+                    addView(startButton, LinearLayout.LayoutParams(
+                        dp(context, 220),
+                        dp(context, 54),
+                    ).apply {
+                        marginStart = dp(context, 8)
+                    })
                 }
-                addView(startButton, LinearLayout.LayoutParams(
-                    dp(context, 220),
-                    dp(context, 54),
-                ).apply {
-                    marginStart = dp(context, 8)
-                })
+                addView(
+                    footer,
+                    LinearLayout.LayoutParams(-1, -2),
+                )
             }
-            addView(
-                footer,
-                LinearLayout.LayoutParams(-1, -2),
-            )
+            addView(content, LinearLayout.LayoutParams(-1, 0, 1f))
         }
         addView(mainContent, FrameLayout.LayoutParams(-1, -1))
 
@@ -377,9 +391,15 @@ class LoadoutScreen(
                     setTextColor(Color.rgb(64, 38, 20))
                     gravity = Gravity.CENTER
                     setPadding(0, 0, 0, 0)
+                    isFocusable = true
                     setBackgroundResource(LoadoutAssetCatalog.backButtonBackground())
                     setOnClickListener { onBack() }
-                }, LinearLayout.LayoutParams(dp(context, 96), dp(context, 48)))
+                }, LinearLayout.LayoutParams(
+                    dp(context, ScreenChromeMetrics.BACK_BUTTON_WIDTH_DP),
+                    dp(context, ScreenChromeMetrics.BACK_BUTTON_HEIGHT_DP),
+                ).apply {
+                    gravity = Gravity.TOP
+                })
             } else {
                 addView(TextView(context).apply {
                     text = "←"
@@ -421,7 +441,9 @@ class LoadoutScreen(
                     topMargin = dp(context, 56)
                 })
             }
-            addView(title, LinearLayout.LayoutParams(0, dp(context, 96), 1f))
+            addView(title, LinearLayout.LayoutParams(0, dp(context, 96), 1f).apply {
+                marginStart = dp(context, ScreenChromeMetrics.BACK_BUTTON_TITLE_GAP_DP)
+            })
             val headerGold = TextView(context).apply {
                 textSize = 12f
                 setTextColor(Color.rgb(255, 211, 106))

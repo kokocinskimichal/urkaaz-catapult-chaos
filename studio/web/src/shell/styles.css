@@ -26,7 +26,6 @@ button:disabled{opacity:.5}
 .balance-editor-header p,.balance-revision{margin:0;color:#aab8c5}
 .balance-actions{display:flex;gap:8px;flex-wrap:wrap}
 .balance-actions .primary{background:#3775a7}
-.balance-json{box-sizing:border-box;width:100%;min-height:55vh;resize:vertical;background:#111b26;color:#dce7ef;border:1px solid #314358;border-radius:6px;padding:14px;font:13px/1.5 ui-monospace,SFMono-Regular,Consolas,monospace;tab-size:2}
 .balance-issues{margin:0;padding:12px 12px 12px 32px;background:#391d20;color:#ffd2d4;border-radius:6px}
 .balance-success{margin:0;color:#91d6a5}
 .progress-editor{display:flex;flex-direction:column;gap:12px;padding:18px}

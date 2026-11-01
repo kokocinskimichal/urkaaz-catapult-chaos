@@ -1,11 +1,13 @@
 # Urkaaaz Studio — architektura
 
-Status: **kroki 1–6 wdrożone** (szkielet, wizualizator animacji, indeks assetów,
-edytor map gameplayowych oraz edytor map kampanii w `studio/`; patrz
-`studio/README.md`). Studio to lokalne narzędzie deweloperskie, nie część gry.
+Status: szkielet, wizualizator animacji, indeks assetów, edytory Map i Campaign
+oraz zakładka Balance z walidacją i zapisem `game-balance.json` są wdrożone w
+`studio/`; patrz `studio/README.md`. Balance używa pełnego formularza schema 3
+opisanego w planie i promptcie implementacyjnym. Studio to lokalne narzędzie
+deweloperskie, nie część gry.
 
-Wdrożone zakładki: **Animacje**, **Mapy** i **Campaign**. Zakładka **Balans**
-pozostaje odroczona (sekcja 11).
+Wdrożone zakładki: **Animacje**, **Mapy**, **Campaign**, **Balance** i
+**Progress**. Formularz Balance nie pokazuje ani nie edytuje tekstu JSON.
 
 ## 1. Cel i zakres
 
@@ -16,7 +18,7 @@ rozproszone narzędzia pomocnicze:
 |---|---|---|
 | Mapy | edycja `MapDefinition` JSON (teren, fundamenty, dekoracje, relikty) | edytor przeniesiony do Studio |
 | Kampania / mapy rozdziałów | podgląd mapy z ramką i edycja pozycji markerów poziomów | **wdrożone** (sekcja 10) |
-| Balans | edycja parametrów silnika, uruchamianie symulacji, raporty | **odroczone** (`game-balance` na niescalonej gałęzi `feature/balance-simulation`) |
+| Balance | edycja `game-balance.json` schema 3 | pełny formularz, walidacja serwerowa i zapis przez API wdrożone |
 | Wizualizator animacji | podgląd istniejących animacji | wdrożony |
 
 Poza zakresem (na teraz): uwierzytelnianie, praca wielu użytkowników, hosting,
@@ -42,15 +44,17 @@ flowchart LR
     Maps["Tab: Mapy"]
     Campaign["Tab: Campaign"]
     Viz["Tab: Animacje"]
-    Shell --> Maps & Campaign & Viz
+    Balance["Tab: Balance"]
+    Shell --> Maps & Campaign & Viz & Balance
   end
   subgraph Local["Lokalny backend (studio-server, Node)"]
     Api["HTTP API /api/*"]
     Maps["mapCatalog (zapis map)"]
     CampaignCatalog["campaignMapCatalog (rozdziały i układy map)"]
+    BalanceCatalog["balanceCatalog (walidacja i zapis balansu)"]
     Assets["terrainAssets (indeks i PNG)"]
     Anim["animationCatalog"]
-    Api --> Maps & CampaignCatalog & Assets & Anim
+    Api --> Maps & CampaignCatalog & BalanceCatalog & Assets & Anim
   end
   Browser -- "fetch /api" --> Api
   Fs --> Repo[("Repozytorium\nmapy, assety")]
@@ -58,9 +62,9 @@ flowchart LR
   Anim --> Repo
 ```
 
-Odroczona zakładka Balans może później dodać `JobRunner` (uruchamianie Gradle).
-Zakładka Campaign używa osobnego routera i katalogu danych; nie rozszerza
-kontraktu gameplayowej mapy `MapDefinition`.
+Zakładka Balance zapisuje kanoniczny plik przez `balanceCatalog`; nie uruchamia
+symulacji balansu ani Gradle. Zakładka Campaign używa osobnego routera i
+katalogu danych; nie rozszerza kontraktu gameplayowej mapy `MapDefinition`.
 
 - **`studio-web`** — React/Vite (przeniesiony frontend dawnego `map-editor-web`). Czysty
   frontend; nie dotyka systemu plików.
@@ -80,13 +84,13 @@ studio/
       tabs/
         maps/               # domena, format, rendering, state i UI edytora map
         animations/
-        campaign/            # edytor rozmieszczenia markerów map kampanii (plan)
-        # balance/ — odroczone
+        campaign/            # wdrożony edytor rozmieszczenia markerów map kampanii
+        balance/             # typowany formularz game-balance.json
       shared/               # klient API, komponenty, typy kontraktów
   server/                   # lokalny backend
     src/
       api/                  # routery per zasób
-      services/             # mapCatalog, terrainAssets, animationCatalog
+      services/             # mapCatalog, campaignMapCatalog, balanceCatalog, terrainAssets, animationCatalog
       contracts/            # schematy żądań/odpowiedzi (współdzielone z web)
   README.md
 ```
@@ -115,11 +119,13 @@ stronie serwera (sekcja 5). Format: JSON, chyba że zaznaczono inaczej.
 | `GET /api/assets/terrain/{path}` | plik PNG ze źródeł assetów (z kontrolą ścieżki) |
 | `GET /api/animations` | katalog animacji (sekcja 8) |
 | `GET /api/animations/{id}/frames/{n}` | pojedyncza klatka PNG |
+| `GET /api/balance` | treść `game-balance.json` i SHA-256 |
+| `POST /api/balance/validate` | walidacja schema 3 bez zapisu |
+| `PUT /api/balance` | walidacja i atomowy zapis z `expectedHash` |
 
-Odroczone: endpoint listy poziomów/kamieni milowych
-`GET /api/campaign/levels` oraz zakładka Balans:
-`GET/PUT /api/balance/parameters`,
-`POST /api/balance/runs` (zwraca `jobId`), `GET /api/jobs/{jobId}` (log, SSE).
+Odroczony pozostaje endpoint listy poziomów/kamieni milowych
+`GET /api/campaign/levels`. Form-based UI korzysta z istniejących endpointów
+balansu; nie wymaga osobnego API ani JobRunnera.
 
 Błędy mają stały kształt: `{ code, message, details[] }`. `details` niesie
 wyniki walidacji (ścieżka pola, reguła), tak by frontend mógł je pokazać przy
@@ -407,23 +413,28 @@ overlap oraz rejestrację zakładki. Studio dodatkowo przechodzi `npm test`,
 | Dodać osobny Studio JSON, pozostawiając Kotlin chapter registry i anchors hard-coded | Najmniejsza początkowa zmiana | Dubluje ID rozdziałów/pozycji; bez synchronizacji Studio może zapisać dane, których gra nie używa | Odrzucony |
 | Wspólny chapter JSON + osobny campaign map layout JSON, używany przez Studio i grę | Jedno źródło prawdy, testowalne na obu platformach, zachowuje granice `game-campaign`/Android | Wymaga jednorazowej migracji rejestru i nowego API/serializatora | Rekomendowany |
 
-## 11. Zakładka: balans
+## 11. Zakładka: Balance
 
-**Odroczone** — poza pierwszymi wersjami Studio. Szkic na później.
+Zakładka Balance edytuje jedyne źródło wartości balansu:
+`game-domain/src/main/resources/balance/game-balance.json`, schema 3.
+Formularz udostępnia zakładki Bosses, Units, Ammunition, Spells & Mana i
+Runtime. Profile, stabilne ID, liczebność i kolejność rekordów są stałe;
+wszystkie pozostałe pola schema 3 są edytowane przez typowane kontrolki.
+Backend oferuje
+`GET /api/balance` (treść i SHA-256), `POST /api/balance/validate` oraz
+`PUT /api/balance` z `expectedHash`; zapis jest walidowany i atomowy, a zmiana
+rewizji jest wymagana dla zmienionej treści. Po zapisie aplikacja wymaga
+rebuilda i restartu; hot reload nie istnieje.
 
-Opiera się na module `game-balance` i wstrzykiwalnym katalogu parametrów
-silnika (`GameBalance.kt`), obecnych na gałęzi `feature/balance-simulation`,
-która **nie jest jeszcze scalona z `develop`**. Zakładka może być
-zaimplementowana dopiero po scaleniu (lub na tej gałęzi).
-
-- Odczyt/zapis parametrów przez `GET/PUT /api/balance/parameters`; serwer
-  waliduje zakresy tym samym kodem Kotlin, co gra.
-- Symulacje (`POST /api/balance/runs`) uruchamia `JobRunner` jako proces
-  Gradle; wynik (raport z `BalanceReport`) jest strumieniowany jako log i
-  zapisywany jako artefakt poza repozytorium (np. `build/studio/`).
-- Zasada zachowana z wcześniejszych ustaleń: Studio nie zmienia parametrów
-  po cichu — każda zmiana jest widoczna jako diff w git, a HP fortec nie jest
-  obniżane bez wyraźnej decyzji użytkownika.
+Surowe wartości niekompletnych pól liczbowych pozostają lokalnym draftem;
+puste, niefinitywne lub niepoprawne wartości blokują walidację i zapis.
+Warianty amunicji pokazują właściwe pola, a nowe wymagane wartości nie są
+uzupełniane domyślnie. Konflikt `409` zachowuje draft i wymaga jawnego Reload.
+Szczegóły zakresu oraz implementacji opisują
+[`studio-balance-form-implementation-plan.md`](studio-balance-form-implementation-plan.md)
+i [`studio-balance-form-implementation-prompt.md`](studio-balance-form-implementation-prompt.md).
+Formularz używa tych samych endpointów i walidatora serwera; nie zmienia
+wartości balansu, kodu gameplayu ani nie uruchamia symulacji/Gradle.
 
 ## 12. Uruchamianie i testy
 
@@ -455,8 +466,8 @@ zaimplementowana dopiero po scaleniu (lub na tej gałęzi).
 6. **Campaign map editor**: wspólny chapter catalog i layout JSON,
    bezpieczne API Studio, framed map preview z markerami, drag + X/Y oraz
    odczyt tych samych layoutów przez Android. **Wdrożone**.
-
-Odroczona: zakładka Balans (po scaleniu `feature/balance-simulation`).
+7. **Balance form**: pełny formularz schema 3 z walidacją i zapisem przez
+   istniejące API. **Wdrożone**.
 
 Każdy krok jest osobno wdrażalny i kończy się działającą aplikacją.
 
@@ -467,9 +478,9 @@ Każdy krok jest osobno wdrażalny i kończy się działającą aplikacją.
 | 1 | Walidacja map | tylko TypeScript; Kotlin autorytatywny w testach | rozjazd TS ↔ Kotlin; ograniczany wspólnymi mapami referencyjnymi i bramką `./gradlew test` |
 | 2 | Dwie kopie map | Studio zapisuje obie kopie jednym żądaniem; duplikat zostaje | dwufazowy zapis musi być atomowy w parze |
 | 3 | Indeksy assetów | jeden indeks budowany w locie ze źródeł; usunąć `sync-assets.mjs` i kopie | trzeba nadać jawne kategorie i biomy plikom spoza indeksu |
-| 4 | `feature/balance-simulation` | zakładka Balans pominięta w pierwszych wersjach | gałąź nadal niescalona |
+| 4 | Formularz Balance | wszystkie profile edytowane w kontrolkach; surowy JSON nie jest prezentowany | zachować kontrakt schema 3 i jeden walidator serwera |
 | 5 | Równoległe zmiany plików | hash zawartości + `409` | brak blokad plików |
-| 6 | Gradle z serwera | nie dotyczy pierwszych wersji (brak zadań Gradle) | wróci razem z zakładką Balans |
+| 6 | JobRunner/Gradle | poza zakresem formularza Balance | wymaga osobnego zakresu i decyzji o uruchamianiu symulacji |
 | 7 | Hosting zdalny | poza zakresem; Studio działa lokalnie | wymagałby auth i innego modelu undo |
 | 8 | Edycja map kampanii | wspólny chapter JSON i layout JSON zapisujący znormalizowane pozycje | Chapter 2–10 czekają na artwork; pozycje stają się widoczne w grze po buildzie/ponownym uruchomieniu |
 | 9 | Lokalizacja kodu | katalog `studio/` w tym repozytorium | — |

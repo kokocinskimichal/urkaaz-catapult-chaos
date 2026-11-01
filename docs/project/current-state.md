@@ -19,6 +19,9 @@ kampanię, AI oraz działający match screen. Gałąź robocza: `develop`.
 - Studio ma zakładkę Campaign do edycji pozycji X/Y wszystkich 10 markerów
   danego rozdziału. Wspólny JSON rozdziałów i osobny layout JSON są czytane
   przez Studio i grę; Chapter 2–10 są tylko do odczytu do czasu dodania map.
+- Campaign i Loadout współdzielą `ScreenChromeMetrics` dla insetu ekranu
+  (`4 dp`) oraz wymiarów i odstępu Back buttona; treść Loadout ma osobny
+  wewnętrzny padding.
 - Dashboard udostępnia potwierdzony reset lokalnego postępu gracza: kampanii,
   złota, odblokowań, stocków, zapisanych loadoutów i paragonów nagród.
 - Lokalny przepływ:
@@ -38,6 +41,10 @@ kampanię, AI oraz działający match screen. Gałąź robocza: `develop`.
   runtime pochodzą ze ścisłego `game-balance.json` schema 3. Aplikacyjny loader
   przekazuje jeden typowany `GameBalanceConfig` do symulacji, AI, kampanii,
   nagród, loadoutu i projekcji Androida.
+- Studio Balance edytuje wszystkie istniejące pola schema 3 przez zakładki
+  i typowane kontrolki; surowy JSON nie jest prezentowany, a stabilne ID i
+  struktura profili pozostają stałe. Walidacja i zapis używają istniejącego
+  API z kontrolą SHA-256 i `expectedHash`.
 - Dedykowane jednostki: Defender, Sapper, Demolisher, Raging Boar,
   Slingmaster; `UnitCatalog` tworzy ich definicje zachowań z profili JSON.
 - `BossSystem` obsługuje central objectives oraz mobile siege bossy na

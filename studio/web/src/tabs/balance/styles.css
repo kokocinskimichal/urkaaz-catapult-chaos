@@ -1,0 +1,266 @@
+.balance-editor-header {
+  height: auto;
+  min-height: 52px;
+  flex-wrap: wrap;
+}
+
+.balance-metadata {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 7px 18px;
+  color: #b8c9d8;
+  font-size: 12px;
+}
+
+.balance-metadata span {
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: 5px;
+}
+
+.balance-metadata code {
+  overflow-wrap: anywhere;
+  color: #dce7ef;
+}
+
+.balance-dirty-indicator {
+  color: #f2ca72;
+  font-weight: 700;
+}
+
+.balance-form-lock {
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.balance-form {
+  display: flex;
+  min-height: 0;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.balance-section-tabs,
+.balance-runtime-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  padding: 8px;
+  border: 1px solid #314358;
+  border-radius: 6px;
+  background: #182433;
+}
+
+.balance-section-tabs button[aria-selected="true"],
+.balance-runtime-tabs button[aria-selected="true"] {
+  border-color: #dbb766;
+  background: #38536c;
+}
+
+.balance-runtime-tabs {
+  margin-bottom: 12px;
+}
+
+.balance-form-content {
+  display: flex;
+  min-height: 0;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.balance-form-content > section {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.balance-profile-selector {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: end;
+  gap: 14px;
+  padding: 12px 14px;
+  border: 1px solid #314358;
+  border-radius: 6px;
+  background: #1b2939;
+}
+
+.balance-profile-selector > .balance-field {
+  min-width: min(360px, 100%);
+  flex: 1;
+}
+
+.balance-profile-selector > span {
+  padding-bottom: 8px;
+  color: #9ab1c5;
+  font-size: 12px;
+}
+
+.balance-field-group,
+.balance-multiselect {
+  min-width: 0;
+  margin: 0;
+  padding: 14px;
+  border: 1px solid #314358;
+  border-radius: 6px;
+  background: #1b2939;
+}
+
+.balance-field-group > legend,
+.balance-multiselect > legend {
+  padding: 0 6px;
+  color: #f0ca78;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.balance-field-group > p {
+  margin: 2px 0 12px;
+  color: #9ab1c5;
+  font-size: 12px;
+}
+
+.balance-field-grid,
+.balance-nested-record {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px 16px;
+}
+
+.balance-field {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: 6px;
+  color: #dce7ef;
+  font-size: 12px;
+}
+
+.balance-field-label {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 6px;
+  font-weight: 600;
+}
+
+.balance-field-label small,
+.balance-field-hint,
+.balance-field-range {
+  color: #9ab1c5;
+  font-size: 11px;
+  font-weight: 400;
+}
+
+.balance-field input,
+.balance-field select {
+  box-sizing: border-box;
+  width: 100%;
+  min-width: 0;
+  background: #111b26;
+  border-color: #455b70;
+}
+
+.balance-field input[readonly] {
+  color: #aab8c5;
+  background: #182433;
+}
+
+.balance-field [aria-invalid="true"] {
+  border-color: #ff8992;
+}
+
+.balance-field-error {
+  color: #ff9ca2;
+  font-size: 11px;
+}
+
+.balance-multiselect {
+  min-width: 240px;
+}
+
+.balance-multiselect-options {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 8px 12px;
+}
+
+.balance-multiselect-options label {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  color: #dce7ef;
+  font-size: 12px;
+}
+
+.balance-multiselect-options input {
+  margin: 0;
+  accent-color: #dbb766;
+}
+
+.balance-nested-record {
+  grid-column: 1 / -1;
+  padding: 12px;
+  border: 1px solid #34495f;
+  border-radius: 5px;
+  background: #172536;
+}
+
+.balance-nested-record h4 {
+  grid-column: 1 / -1;
+  margin: 0;
+  color: #c8d6e3;
+  font-size: 12px;
+}
+
+.balance-empty-note {
+  margin: 0;
+  color: #9ab1c5;
+  font-size: 12px;
+}
+
+.balance-validation-summary {
+  margin: 0;
+  padding: 12px 14px;
+  border: 1px solid #79434a;
+  border-radius: 6px;
+  background: #351f29;
+  color: #ffd2d4;
+}
+
+.balance-validation-summary h3 {
+  margin: 0 0 8px;
+  font-size: 13px;
+}
+
+.balance-validation-summary ul {
+  margin: 0;
+  padding-left: 18px;
+}
+
+.balance-validation-summary li + li {
+  margin-top: 5px;
+}
+
+.balance-validation-summary button {
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  text-align: left;
+  font-size: 12px;
+}
+
+.balance-validation-summary button:hover {
+  text-decoration: underline;
+}
+
+@media (max-width: 720px) {
+  .balance-field-grid,
+  .balance-nested-record {
+    grid-template-columns: 1fr;
+  }
+}

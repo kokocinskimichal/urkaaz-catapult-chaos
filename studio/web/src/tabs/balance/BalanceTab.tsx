@@ -3,143 +3,237 @@ import type {
   BalanceValidationResponse,
 } from "@studio/contracts/balance";
 import { useEffect, useState } from "react";
-import { ApiError, fetchBalance, saveBalance, validateBalance } from "../../shared/api";
+import {
+  ApiError,
+  fetchBalance,
+  saveBalance,
+  validateBalance,
+} from "../../shared/api";
+import { BalanceForm } from "./BalanceForm";
+import {
+  balanceDocumentMatches,
+  materializeBalanceDraft,
+  parseBalanceDocument,
+  serializeBalanceDocument,
+  toBalanceFormDraft,
+  withIncrementedBalanceRevision,
+} from "./model";
+import type {
+  BalanceFormDraft,
+  GameBalanceDocumentV3,
+} from "./model";
+import "./styles.css";
 
 export function BalanceTab() {
   const [document, setDocument] = useState<BalanceDocumentResponse | null>(null);
-  const [draft, setDraft] = useState("");
+  const [baseline, setBaseline] = useState<GameBalanceDocumentV3 | null>(null);
+  const [draft, setDraft] = useState<BalanceFormDraft<GameBalanceDocumentV3> | null>(null);
   const [validation, setValidation] = useState<BalanceValidationResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const [needsReload, setNeedsReload] = useState(false);
 
-  const reload = () => {
+  const dirty = draft !== null && baseline !== null && isDraftDirty(draft, baseline);
+
+  const reload = async (confirmDiscard = true) => {
+    if (confirmDiscard && dirty &&
+      !window.confirm("Discard your unsaved balance changes and reload the repository file?")
+    ) return;
+
     setBusy(true);
     setError(null);
-    fetchBalance()
-      .then(result => {
-        setDocument(result);
-        setDraft(result.content);
-        setValidation(null);
-        setMessage(null);
-      })
-      .catch((cause: Error) => setError(cause.message))
-      .finally(() => setBusy(false));
+    setMessage(null);
+    setNeedsReload(false);
+    try {
+      const loaded = await fetchBalance();
+      const checked = await validateBalance(loaded.content);
+      if (!checked.valid) {
+        setValidation(checked);
+        setNeedsReload(true);
+        setError("The repository balance file is invalid. The current form was left unchanged.");
+        return;
+      }
+
+      const parsed = parseBalanceDocument(loaded.content);
+      setDocument(loaded);
+      setBaseline(parsed);
+      setDraft(toBalanceFormDraft(parsed));
+      setValidation(null);
+      setMessage("Loaded schema 3 balance.");
+    } catch (cause) {
+      setError(errorMessage(cause));
+    } finally {
+      setBusy(false);
+    }
   };
 
-  useEffect(reload, []);
+  useEffect(() => {
+    void reload(false);
+  }, []);
 
-  const runValidation = async (): Promise<boolean> => {
+  const createSaveCandidate = () => {
+    if (!draft || !baseline) return null;
+    const materialized = materializeBalanceDraft(draft);
+    if (!materialized.valid) {
+      setValidation({ valid: false, issues: materialized.issues });
+      return null;
+    }
+    const revised = withIncrementedBalanceRevision(baseline, materialized.document);
+    return {
+      document: revised,
+      content: serializeBalanceDocument(revised),
+    };
+  };
+
+  const validateDraft = async (): Promise<string | null> => {
+    if (!document || !baseline || !draft || needsReload) return null;
     setBusy(true);
     setError(null);
     setMessage(null);
     try {
-      const result = await validateBalance(draft);
+      const candidate = createSaveCandidate();
+      if (!candidate) return null;
+      const result = await validateBalance(candidate.content);
       setValidation(result);
-      setMessage(result.valid ? "Balance JSON is valid." : null);
-      return result.valid;
+      setMessage(result.valid ? "Balance is valid." : null);
+      return result.valid ? candidate.content : null;
     } catch (cause) {
-      setError(cause instanceof Error ? cause.message : String(cause));
-      return false;
+      setValidation(null);
+      setError(errorMessage(cause));
+      return null;
     } finally {
       setBusy(false);
     }
   };
 
   const save = async () => {
-    if (!document || !(await runValidation())) return;
-    const content = withIncrementedRevision(document.content, draft);
-    if (content !== draft) setDraft(content);
+    if (!document || !baseline || !draft || !dirty || needsReload) return;
     setBusy(true);
     setError(null);
+    setMessage(null);
     try {
+      const candidate = createSaveCandidate();
+      if (!candidate) return;
+      const checked = await validateBalance(candidate.content);
+      setValidation(checked);
+      if (!checked.valid) return;
+
       const saved = await saveBalance({
-        content,
+        content: candidate.content,
         expectedHash: document.hash,
       });
+      const parsed = parseBalanceDocument(saved.content);
       setDocument(saved);
-      setDraft(saved.content);
+      setBaseline(parsed);
+      setDraft(toBalanceFormDraft(parsed));
       setValidation({ valid: true, issues: [] });
+      setNeedsReload(false);
       setMessage("Saved. Rebuild and restart the game to apply the balance.");
     } catch (cause) {
       if (cause instanceof ApiError && cause.status === 409) {
-        setError("The balance file changed on disk. Reload it before saving to avoid overwriting newer edits.");
+        setNeedsReload(true);
+        setError(
+          "The balance file changed on disk. Reload it before saving to avoid overwriting newer edits.",
+        );
       } else {
-        setError(cause instanceof Error ? cause.message : String(cause));
+        setError(errorMessage(cause));
       }
     } finally {
       setBusy(false);
     }
   };
 
-  const dirty = document !== null && draft !== document.content;
+  const onDraftChange = (next: BalanceFormDraft<GameBalanceDocumentV3>) => {
+    setDraft(next);
+    setValidation(null);
+    setError(null);
+    setMessage(null);
+  };
+
+  const validationButtonLabel = busy ? "Working…" : "Validate";
 
   return (
     <section className="balance-editor" aria-label="Game balance editor">
       <header className="balance-editor-header">
         <div>
           <h2>Game balance</h2>
-          <p>Edits the repository JSON. Changes apply after rebuilding and restarting the app.</p>
+          <p>
+            Edit schema 3 profiles using the form. Changes apply after rebuilding
+            and restarting the app.
+          </p>
         </div>
         <div className="balance-actions">
-          <button type="button" onClick={reload} disabled={busy}>Reload</button>
-          <button type="button" onClick={() => void runValidation()} disabled={busy || !document}>
-            Validate
+          <button type="button" onClick={() => void reload()} disabled={busy}>
+            Reload
+          </button>
+          <button
+            type="button"
+            onClick={() => void validateDraft()}
+            disabled={busy || !document || !draft || needsReload}
+          >
+            {validationButtonLabel}
           </button>
           <button
             type="button"
             className="primary"
             onClick={() => void save()}
-            disabled={busy || !document || !dirty || validation?.valid !== true}
+            disabled={
+              busy ||
+              !document ||
+              !draft ||
+              !dirty ||
+              needsReload ||
+              validation?.valid !== true
+            }
           >
             Save
           </button>
         </div>
       </header>
-      {document && <p className="balance-revision">Current file SHA-256: <code>{document.hash}</code></p>}
+
+      {document && baseline && (
+        <div className="balance-metadata" aria-label="Balance file metadata">
+          <span>Schema version <strong>{baseline.schemaVersion}</strong></span>
+          <span>Revision <code>{baseline.balanceRevision}</code></span>
+          <span>SHA-256 <code>{document.hash}</code></span>
+          {dirty && <span className="balance-dirty-indicator">Unsaved changes</span>}
+        </div>
+      )}
       {error && <p className="error" role="alert">{error}</p>}
       {message && <p className="balance-success" role="status">{message}</p>}
-      {validation && !validation.valid && (
-        <ul className="balance-issues" aria-label="Balance validation errors">
-          {validation.issues.map((item, index) => (
-            <li key={`${item.path}-${index}`}><code>{item.path}</code>: {item.message}</li>
+      {!document && !error && <p className="hint-text">Loading game balance…</p>}
+      {validation && !validation.valid && !draft && (
+        <ul className="balance-issues" aria-label="Balance file validation errors">
+          {validation.issues.map((issue, index) => (
+            <li key={`${issue.path}-${index}`}>
+              <code>{issue.path || "gameBalance"}</code>: {issue.message}
+            </li>
           ))}
         </ul>
       )}
-      {!document && !error && <p className="hint-text">Loading game balance…</p>}
-      {document && (
-        <textarea
-          aria-label="game-balance.json"
-          className="balance-json"
-          spellCheck={false}
-          value={draft}
-          onChange={event => {
-            setDraft(event.target.value);
-            setValidation(null);
-            setMessage(null);
-          }}
-        />
+      {draft && (
+        <fieldset className="balance-form-lock" disabled={busy || needsReload}>
+          <BalanceForm
+            key={document?.hash ?? "balance-form"}
+            draft={draft}
+            validation={validation}
+            onChange={onDraftChange}
+          />
+        </fieldset>
       )}
     </section>
   );
 }
 
-function withIncrementedRevision(currentContent: string, draft: string): string {
-  const current: unknown = JSON.parse(currentContent);
-  const next: unknown = JSON.parse(draft);
-  if (!isRecord(current) || !isRecord(next)) return draft;
-  if (
-    typeof current.balanceRevision !== "string" ||
-    typeof next.balanceRevision !== "string" ||
-    current.balanceRevision !== next.balanceRevision
-  ) return draft;
-  const match = /^(.*?)([-.])(\d+)$/.exec(next.balanceRevision);
-  next.balanceRevision = match
-    ? `${match[1]}${match[2]}${Number(match[3]) + 1}`
-    : `${next.balanceRevision}-2`;
-  return `${JSON.stringify(next, null, 2)}\n`;
+function isDraftDirty(
+  draft: BalanceFormDraft<GameBalanceDocumentV3>,
+  baseline: GameBalanceDocumentV3,
+): boolean {
+  const result = materializeBalanceDraft(draft);
+  return !result.valid || !balanceDocumentMatches(result.document, baseline);
 }
 
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === "object" && value !== null && !Array.isArray(value);
+function errorMessage(cause: unknown): string {
+  return cause instanceof Error ? cause.message : String(cause);
 }
