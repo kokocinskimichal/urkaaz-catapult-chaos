@@ -1,5 +1,9 @@
 # Prompt implementacji DashboardScreen
 
+> Prompt opisuje pierwotną implementację Dashboardu. Shop był wtedy
+> placeholderem; obecnie Dashboard otwiera zaimplementowany `ShopScreen`,
+> który po powrocie przywraca Dashboard.
+
 Skopiuj prompt poniżej do zadania implementacyjnego w repozytorium Urkaaaz.
 
 ## Prompt
@@ -107,7 +111,7 @@ modułu Gradle ani systemu gameplayowego.
   - Back → poprzedni ekran przez `AppNavigator`;
   - Campaign → `CampaignScreen`, która prowadzi przez wybrany poziom do
     Loadout;
-  - Shop → istniejący Shop placeholder.
+  - Shop → `ShopScreen`; powrót prowadzi do Dashboardu.
 - Pokaż tylko jeden RESET, w miejscu zgodnym ze screenshotem. Usuń
   nieobsługiwany, duplikujący RESET z górnego HUD-u. Zostaw istniejący dialog
   potwierdzenia i wywołuj `PlayerProgressResetRepository` dopiero po

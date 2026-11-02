@@ -67,11 +67,11 @@ kontrakty są wyraźnie oddzielone.
 | **CaS** | **Campaign System** | Poziomy, chaptery, odblokowania, cele, modyfikatory i postęp kampanii. | Częściowy; lokalna progresja oraz milestone'y i nagrody poziomowe działają. Właściciel definicji: `game-campaign`; use case'y: `game-application`. |
 | **SS** | **Spell System** | Definicje czarów, mana, aktywacja, efekty, cooldowny, dostępność i integracja z walką. | Częściowy: `CastSpell`, mana, snapshoty, Fortress Shield i HASTE działają; pozostałe dziewięć efektów oraz czary AI są niezaimplementowane. |
 | **TutS** | **Tutorial System** | Kroki tutoriala, hinty, spotlighty, cele, odblokowywanie paneli i ograniczenia AI. | Zaprojektowany w `docs/systems/tutorial-system.md`; niezaimplementowany. |
-| **PSys** | **Persistence System** | Trwały zapis profilu, waluty, loadoutu i postępu kampanii. | Częściowy: profil, lives, zatwierdzony loadout oraz atomowe rozliczenie lokalnych nagród kampanii używają DataStore; lives są tylko ustawiane i wyświetlane, zakupy i tutoriale pozostają poza implementacją. |
-| **PPS** | **Player Progression System** | Snapshot lokalnego profilu używany przy walidacji loadoutu; właściciel salda złota. | Częściowy: profil, złoto z nagród, stocki oraz debugowy preset wybranych pól działają; zakupy, rozliczanie stocku oraz gameplay żyć pozostają poza zakresem. |
-| **LoS** | **Loadout System** | Konfiguracja jednostek, amunicji i czarów przed poziomem. | Częściowy: walidacja, normalizacja, interaktywna selekcja, zapis DataStore i bezpieczny start działają; kampanijne odblokowania Haste/Heal są zintegrowane dla poziomów 6/8. Trwałe rozliczanie stocku pozostaje poza implementacją. |
+| **PSys** | **Persistence System** | Trwały zapis profilu, waluty, loadoutu i postępu kampanii. | Częściowy: profil, lives, zatwierdzony loadout, nagrody i zakupy/stock Shop używają DataStore; lives są tylko ustawiane i wyświetlane, tutorial progress pozostaje poza implementacją. |
+| **PPS** | **Player Progression System** | Trwały profil lokalny, saldo i stock odczytywane przy walidacji loadoutu. | Profil, nagrody złota, atomowe mutacje profilu i debugowy preset działają. Zakupy i settlement stocku realizuje ShopSystem na tym samym profilu; gameplay żyć pozostaje poza zakresem. |
+| **LoS** | **Loadout System** | Konfiguracja jednostek, amunicji i czarów przed poziomem. | Walidacja, normalizacja, interaktywna selekcja, zapis DataStore i bezpieczny start działają; kampanijne odblokowania Haste/Heal są zintegrowane dla poziomów 6/8. Loadout nie wykonuje zakupów ani stock settlementu. |
 | **RS** | **Reward System** | Ocena osiągnięć poziomowych i naliczanie złota po zwycięstwie kampanii. | Zaimplementowany lokalnie: nagrody za wygraną i osiągnięcia są atomowo rozliczane z progresją kampanii; sklep i inne typy nagród pozostają poza zakresem. |
-| **BS** | **Balance System** | Wersjonowane parametry balansu, walidacja konfiguracji i symulacje porównawcze. | Częściowy: profile bossów są ładowane z wersjonowanego JSON-u i edytowane w Studio; pozostałe katalogi balansu oraz symulacje porównawcze pozostają do migracji. |
+| **BS** | **Balance System** | Wersjonowane parametry balansu i walidacja konfiguracji. | Katalogi bossów, jednostek, amunicji, czarów i runtime są w `game-balance.json` schema 4; Studio edytuje je formularzem. Symulacje porównawcze pozostają poza implementacją. |
 | **ObjS** | **Objective System** | Cele główne i specjalne, Central Objective oraz reguły poziomów boss/special. | Częściowy: BossSystem obsługuje central objectives i mobilnych bossów na poziomach 5–50; dalsze profile, ataki i animacje są odłożone. |
 | **AssetS** | **Asset System** | Klucze assetów, cache, mapowanie wariantów wizualnych i ładowanie zasobów. | Działa częściowo dla obecnego zakresu renderingu. |
 | **RenderS** | **Rendering System** | Mapowanie snapshotów na render state, kamera, world-space, HUD i kolejność rysowania. | Działa dla obecnego match screen. |
@@ -124,7 +124,7 @@ kontrakty są wyraźnie oddzielone.
 | **Mana Gauge** | Wskaźnik zasobu używanego do aktywowania czarów. |
 | **Wave Button** | Przycisk wysyłający zrekrutowane jednostki z garnizonu do walki. |
 | **Unit Loadout** | Ekran konfiguracji przed bitwą, na którym gracz wybiera maksymalnie trzy odblokowane jednostki dostępne w danym poziomie. Tylko wybrane jednostki są widoczne w HUD-zie i mogą zostać zrekrutowane. |
-| **Game Balance Configuration** | Wersjonowana schema 3 w `game-balance.json`, zawierająca profile bossów, jednostek, amunicji, czarów i many oraz parametry runtime ekonomii, walki, fizyki, AI, nagród i kampanii; jest oddzielona od stanu rozgrywki. Warstwa aplikacyjna waliduje plik i przekazuje ten sam niemutowalny `GameBalanceConfig` do symulacji, AI, kampanii, loadoutu i projekcji UI. |
+| **Game Balance Configuration** | Wersjonowana schema 4 w `game-balance.json`, zawierająca profile bossów, jednostek, amunicji (w tym nullable `shopCostGold`), czarów i many oraz parametry runtime ekonomii, walki, fizyki, AI, nagród i kampanii; jest oddzielona od stanu rozgrywki. Warstwa aplikacyjna waliduje plik i przekazuje ten sam niemutowalny `GameBalanceConfig` do symulacji, AI, kampanii, loadoutu, Shop i projekcji UI. |
 | **AmmunitionCatalog** | Typowany lookup profili amunicji z `GameBalanceConfig`. Player, AI i symulacja korzystają z tego samego źródła; `AmmunitionType` przechowuje wyłącznie stabilne serializowane ID. |
 | **AmmunitionDefinition** | Jawna definicja jednego typu amunicji obejmująca identyfikator, reload, inventory, lot, kolizję, obrażenia, deformację terenu i zachowanie impactu. |
 | **AmmunitionCollisionLayer** | Warstwa celu pocisku: `TERRAIN`, `UNIT`, `FORTRESS`, `BOSS` albo `OUT_OF_BOUNDS`. Warstwa jest częścią kontraktu symulacji, a nie heurystyką renderera. |
@@ -153,8 +153,8 @@ kontrakty są wyraźnie oddzielone.
 | **Boss Node** | Wyraźnie wyróżniony punkt poziomu 10 danego Chapteru, oznaczający finałowego bossa i nagrodę za ukończenie rozdziału. |
 | **Spell Loadout** | Ekran konfiguracji przed bitwą. Gracz wybiera maksymalnie trzy posiadane czary, które będą dostępne w danym poziomie. |
 | **Campaign Spell** | Czar odblokowywany przez postęp kampanii. Po odblokowaniu ma nieskończoną dostępność w kolejnych poziomach i nie zużywa zapasu. |
-| **Special Spell** | Czar kupowany w Shopie jako ograniczony zapas pojedynczych użyć. Zapas zmniejsza się dopiero po udanej aktywacji, nie przy wyborze loadoutu. |
-| **Spell Stock** | Liczba posiadanych użyć Special Spell. Jest niezależna od odblokowania Campaign Spell i musi być widoczna w Shopie, loadoucie oraz HUD-zie. |
+| **Special Spell** | Czar kupowany w Shopie jako ograniczony zapas pojedynczych użyć. Zapas zmniejsza się po udanym `SpellCast`; czary bez runtime efektu pozostają nieużywalne i ich stock nie jest zużywany. |
+| **Spell Stock** | Trwała liczba posiadanych użyć czaru specjalnego. Jest niezależna od milestone'ów kampanii; widoczna w Shopie i stanie Loadoutu. |
 | **Temporary Spell Booster** | Planowany booster dający wybranemu Special Spell nielimitowane użycia przez 30 minut czasu rzeczywistego. Timer działa również offline; po wygaśnięciu czar wraca do normalnego zapasu i nie staje się Campaign Spell. |
 | **Booster** | Tymczasowy bonus meta-gry. Nie zmienia na stałe odblokowania ani klasy czaru, amunicji lub jednostki. |
 | **Battlefield** | Ekran aktywnej bitwy. Zawiera teren, fortece, katapulty, jednostki, pociski, efekty, HUD i interakcje gracza. |
@@ -168,8 +168,8 @@ kontrakty są wyraźnie oddzielone.
 | --- | --- |
 | **Life** | Jedna próba rozpoczęcia kampanijnego poziomu. Przegrana próba zużywa jedno Life; TEST Mode nie zużywa Lives. |
 | **Lives** | Wspólny dla kampanii zasób prób. Maksymalnie gracz posiada 10 Lives, a brakujące Lives odnawiają się automatycznie co 30 minut. |
-| **OrCoins** | Trwała waluta gracza używana między innymi do odblokowywania czarów i przyszłych zakupów w Shop. |
-| **Shop** | Planowany ekran zakupów za OrCoins. Dashboard zawiera przejście do Shop, nawet gdy konkretne oferty nie są jeszcze wdrożone. |
+| **OrCoins** | Trwała waluta gracza używana do zakupów stocku w lokalnym Shopie; profil przechowuje saldo w polu `goldBalance`. |
+| **Shop** | Lokalny sklep za OrCoins z zakładkami `SPELLS` i `AMMUNITION`. Dostępny z Dashboardu i Loadoutu; pojedynczy zakup atomowo debituje saldo i dodaje jeden stock. |
 | **Precision Challenge** | Planowany event na płaskiej mapie treningowej. Halloweenowa wersja, **Pumpkin Trial**, używa nieruchomych dyń w różnych rozmiarach i odległościach zamiast tarcz; jest sezonowym theme, a nie stałym biomem kampanii. |
 | **Pumpkin Trial** | Sezonowa halloweenowa wersja Precision Challenge. Mniejsze dynie są trudniejsze i dają więcej punktów; wynik zależy od rozmiaru, odległości oraz strefy trafienia. |
 | **Marksman Points** | Tymczasowe punkty eventu Precision Challenge. Nie są OrCoins i służą wyłącznie do zdobywania eventowych losów. |

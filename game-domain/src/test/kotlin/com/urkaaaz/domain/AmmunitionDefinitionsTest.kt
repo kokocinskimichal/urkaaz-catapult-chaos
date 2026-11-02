@@ -5,6 +5,7 @@ import com.urkaaaz.domain.UnitIds
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
+import kotlin.test.assertFailsWith
 import kotlin.test.assertTrue
 
 class AmmunitionDefinitionsTest {
@@ -106,6 +107,33 @@ class AmmunitionDefinitionsTest {
 
         assertEquals(72, siegeBomb.damage.unitDamage)
         assertEquals(100, siegeBomb.damage.fortressDamage)
+        assertEquals(null, siegeBomb.shopCostGold)
+        assertEquals(
+            mapOf(
+                AmmunitionType.POWDER_BARREL to 250,
+                AmmunitionType.FIRE_RAIN to 350,
+                AmmunitionType.PLAGUE_CAULDRON to 500,
+            ),
+            GameBalanceFixtures.balance.ammunition.all
+                .mapNotNull { definition ->
+                    definition.shopCostGold?.let { definition.type to it }
+                }
+                .toMap(),
+        )
+    }
+
+    @Test
+    fun shopPriceMustBeNonNegativeAndLimitedAmmunitionOnly() {
+        val powderBarrel =
+            GameBalanceFixtures.balance.ammunition.definition(AmmunitionType.POWDER_BARREL)
+        val rock = GameBalanceFixtures.balance.ammunition.definition(AmmunitionType.ROCK)
+
+        assertFailsWith<IllegalArgumentException> {
+            powderBarrel.copy(shopCostGold = -1)
+        }
+        assertFailsWith<IllegalArgumentException> {
+            rock.copy(shopCostGold = 1)
+        }
     }
 
     @Test

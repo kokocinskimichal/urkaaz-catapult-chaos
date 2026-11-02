@@ -8,7 +8,7 @@ import kotlin.test.assertIs
 
 class DeveloperProgressPresetTest {
     @Test
-    fun bundledPresetQueuesOnlyTheSelectedLevel() {
+    fun bundledPresetQueuesTheSelectedLevelAndGold() {
         val loaded = assertIs<DeveloperProgressPresetRead.Available>(
             DeveloperProgressPresetRepository.bundled.load(),
         ).loaded
@@ -16,8 +16,14 @@ class DeveloperProgressPresetTest {
         assertEquals(2, loaded.preset.schemaVersion)
         assertEquals(5, loaded.preset.currentLevel)
         assertEquals(5, loaded.preset.lives)
-        assertEquals(0, loaded.preset.gold)
-        assertEquals(setOf(DeveloperProgressPreset.DeveloperProgressField.CURRENT_LEVEL), loaded.preset.fieldsToApply)
+        assertEquals(5_000, loaded.preset.gold)
+        assertEquals(
+            setOf(
+                DeveloperProgressPreset.DeveloperProgressField.CURRENT_LEVEL,
+                DeveloperProgressPreset.DeveloperProgressField.GOLD,
+            ),
+            loaded.preset.fieldsToApply,
+        )
         assertEquals(true, loaded.preset.applyOnNextLaunch)
         assertEquals(64, loaded.contentHash.length)
     }

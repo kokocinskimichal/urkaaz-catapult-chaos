@@ -8,8 +8,9 @@ deterministyczny stan 360 HP, powiększoną geometrię przed bramą, blokowanie
 i ataki jednostek, kolizje pocisków, snapshot oraz prezentację zdrowia na
 ikonie zaklęcia. Jedna
 bariera na drużynę blokuje kolejne rzucenie bez pobrania many aż do zniszczenia.
-Pozostałe osiem efektów oraz trwałe rozliczanie stocku nadal są
-niezaimplementowane. Zatwierdzona 20-klatkowa animacja wyrastania Bastionu
+Pozostałe osiem efektów nadal jest niezaimplementowanych. ShopSystem pozwala
+kupić stock czarów specjalnych, ale obecnie nie mogą być użyte, a odrzucony
+cast nie zużywa stocku. Zatwierdzona 20-klatkowa animacja wyrastania Bastionu
 z ziemi przechodzi po 2,4 s w zatwierdzoną 24-klatkową pętlę pulsowania run;
 24-klatkowa animacja zniszczenia jest odtwarzana po jego zniknięciu.
 Zaakceptowana przez użytkownika 12-klatkowa animacja world-space HASTE z
@@ -50,8 +51,8 @@ Poza zakresem SpellSystemu:
   `LoadoutSystem`;
 - własność trwałego złota, odblokowań i stocku gracza;
 - reguły kampanii, nawigacji i Android lifecycle;
-- zakupy oraz trwałe rozliczanie profilu po meczu — pozostają granicą
-  PlayerProgressionSystemu i adapterów persystencji;
+- zakupy oraz trwałe rozliczanie stocku — należą do ShopSystemu i granicy
+  persystencji PlayerProgressionSystemu, nie do SpellSystemu;
 - implementacja reguł gameplayowych w Android UI lub osobna implementacja
   tych reguł w AI.
 
@@ -60,8 +61,9 @@ interaktywne edytory, walidację oraz lokalny zapis zatwierdzonego loadoutu.
 `CampaignSystem` zapisuje postęp i nagrody Haste/Heal. SpellSystem nie może
 tworzyć równoległego loadoutu ani przejmować walidacji wyboru lub kampanijnych
 odblokowań. Otrzymuje niemutowalny, zatwierdzony `PlayerLoadoutConfig` jako
-konfigurację meczu. Zakupy i trwałe rozliczanie stocku pozostają
-niewdrożonymi odpowiedzialnościami progresji.
+konfigurację meczu. Zakupy i trwały stock pozostają własnością
+PlayerProgressionSystemu/ShopSystemu; obecnie niezaimplementowane czary
+specjalne nie emitują `SpellCast`, więc ich stock nie jest zużywany.
 
 ## Obecne elementy i granice
 
@@ -198,7 +200,7 @@ SpellSystem jest podsystemem, nie nowym modułem Gradle.
 | Komendy, wyniki odrzuceń, eventy i niemutowalne snapshoty | `game-contracts` |
 | Lifecycle sesji i przekazywanie komend/snapshotów | `game-application` |
 | Dostępność na poziomie | `game-campaign` |
-| Odczyt lokalnego złota, odblokowań i stocku oraz ich zapis | częściowy `PlayerProgressionSystem` w `game-application` z adapterem DataStore w `android-app`; zakupy i rozliczenie stocku pozostają poza zakresem |
+| Odczyt złota/stocku, zakupy i settlement profilu | `PlayerProgressionSystem` i `ShopSystem` w `game-application` z adapterem DataStore w `android-app` |
 | Łączny loadout jednostek i zaklęć | istniejący `LoadoutSystem`, poza zakresem SpellSystemu |
 | Input, lokalizacja, HUD i rysowanie | `android-app` |
 | Decyzje AI na snapshotach i komendy | `game-ai`, jeśli później zostanie włączone do zakresu |
@@ -293,7 +295,8 @@ nieznany ID jest jawnym błędem, a nie domyślnym czarem.
    jawnie sprawdzić, że zaklęcie jest dostępne i wyposażone.
 4. Autorytatywny stan symulacji: mana, jednostki, katapulty, fortece,
    aktywne efekty i stock przypisany do bieżącego meczu. Mana jest już częścią
-   runtime'u; stock zaklęć pozostaje niewdrożony.
+   runtime'u; ograniczanie castów stockiem specjalnych czarów wdroży się razem
+   z ich efektami.
 5. Deterministyczny czas symulacji przekazany przez istniejący cykl
    `AdvanceSimulation`.
 
@@ -480,7 +483,10 @@ Stan pionowego wycinka: etapy 2–5 są częściowo wdrożone dla katalogu,
 kontraktów, HASTE i `FORTRESS_SHIELD`; mana, timer HASTE, ruch, tarcza i jej
 prezentacja w match screenie działają. Battlefield VFX HASTE jest zintegrowany
 z zatwierdzonego assetu AnimGen. Pozostałe efekty, prezentacja kategorii celu, AI
-oraz trwałe rozliczanie stocku są jeszcze poza implementacją.
+oraz runtime stock gate dla niezaimplementowanych czarów specjalnych są jeszcze
+poza implementacją. ShopSystem już zapisuje zakupiony stock i rozlicza udane
+zdarzenia stockowanych użyć po meczu; obecnie specjalne czary nie emitują
+`SpellCast`, bo runtime je odrzuca.
 
 1. **Baseline i parytet.** Wartości kosztów i targetów są zapisane w
    `game-balance.json` przez `SpellCatalog`; pozostałe reguły efektów nadal wymagają porównania z
@@ -577,13 +583,14 @@ LoadoutSystemu.
   kontraktów wyspecjalizowanych dla własnych efektów;
 - pełna reguła wygaśnięcia efektu na granicy ticka i matematyka nakładających
   się różnych buffów, potwierdzona testami parytetu legacy;
-- rozliczenie trwałego stocku w przypadku przerwanego/zakończonego meczu;
+- runtime gate, który odrzuci cast specjalnego czaru bez stocku, zanim
+  wyemituje udany `SpellCast`;
 - które efekty wymagają osobnych assetów, a które mogą użyć istniejących
   zasobów; ilustracje kart zaklęć są dostępne, natomiast mapowanie wizualizacji
   world-effectów pozostaje do rozstrzygnięcia dla kolejnych efektów.
 
-Nadal trzeba domknąć trwałe rozliczanie stocku, pozostałe efekty oraz ich
-prezentację. Zrealizowana tarcza i HASTE nie zmieniają
+Nadal trzeba domknąć pozostałe efekty, runtime zużycie stocku czarów
+specjalnych oraz ich prezentację. Zrealizowana tarcza i HASTE nie zmieniają
 przyjętych zasad: Haste działa tylko na sojuszników, LoadoutSystem pozostaje
 właścicielem loadoutu, a SpellSystem nie posiada persystencji.
 
@@ -592,7 +599,7 @@ właścicielem loadoutu, a SpellSystem nie posiada persystencji.
 Lista pozostałych prac:
 
 - `game-domain/.../Spells.kt` i `SpellCatalog.kt` — stabilne ID oraz typowany
-  access do schema 3 są wdrożone; uzupełniać definicje efektów wyłącznie po
+  dostęp do schema 4 są wdrożone; uzupełniać definicje efektów wyłącznie po
   osobnej decyzji o ich implementacji;
 - `game-domain/.../SpellRules.kt` lub wyspecjalizowane reguły — tylko jeśli
   potrzebne po analizie istniejących helperów;

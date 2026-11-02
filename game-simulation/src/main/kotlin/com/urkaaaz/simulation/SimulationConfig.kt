@@ -5,6 +5,7 @@ import com.urkaaaz.contracts.BossEncounterConfig
 import com.urkaaaz.contracts.BossArchetype
 import com.urkaaaz.contracts.BossVictoryRule
 import com.urkaaaz.contracts.PlayerLoadoutConfig
+import com.urkaaaz.contracts.PlayerInventoryConfig
 import com.urkaaaz.domain.BossBalanceProfile
 import com.urkaaaz.domain.GameBalanceConfig
 import com.urkaaaz.domain.WorldBounds
@@ -30,6 +31,7 @@ data class SimulationConfig(
     val balanceRevision: String? = null,
     val balanceContentHash: String? = null,
     val playerLoadout: PlayerLoadoutConfig? = null,
+    val playerInventory: PlayerInventoryConfig? = null,
     val availableAmmunitionTypes: Set<String> = emptySet(),
     val combatRandomSeed: Long = 0L,
 ) {
@@ -65,6 +67,21 @@ data class SimulationConfig(
                     (bossEncounter.victoryRule == BossVictoryRule.CENTRAL_DAMAGE_RACE),
             ) {
                 "boss victory rule must match the boss archetype"
+            }
+        }
+        playerInventory?.let { inventory ->
+            require(playerLoadout?.playerId == inventory.playerId) {
+                "inventory player must match the committed loadout player"
+            }
+            require(inventory.ammunitionStocks.all { (identifier, _) ->
+                balance.ammunition.find(identifier)?.unlimited == false
+            }) {
+                "inventory ammunition must use known limited ammunition IDs"
+            }
+            require(inventory.specialSpellStocks.keys.all { identifier ->
+                balance.spells.find(identifier)?.special == true
+            }) {
+                "inventory spells must use known special spell IDs"
             }
         }
     }

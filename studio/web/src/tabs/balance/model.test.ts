@@ -12,11 +12,11 @@ import {
   toBalanceFormDraft,
   withIncrementedBalanceRevision,
 } from "./model";
-import type { GameBalanceDocumentV3 } from "./model";
+import type { GameBalanceDocumentV4 } from "./model";
 import type { BalanceFormDraft } from "./model";
 
 let originalContent: string;
-let original: GameBalanceDocumentV3;
+let original: GameBalanceDocumentV4;
 
 beforeAll(async () => {
   const root = await resolveRepoRoot();
@@ -27,8 +27,36 @@ beforeAll(async () => {
   original = parseBalanceDocument(originalContent);
 });
 
+it("preserves nullable shop prices and materializes an enabled price", () => {
+  const ammunitionIndex = original.ammunition.findIndex(
+    profile => profile.type === "POWDER_BARREL",
+  );
+  expect(ammunitionIndex).toBeGreaterThanOrEqual(0);
+  const path = `ammunition[${ammunitionIndex}].shopCostGold`;
+
+  const unavailable = setBalanceDraftValue(
+    toBalanceFormDraft(original),
+    path,
+    null,
+  );
+  const unavailableDocument = materializeBalanceDraft(unavailable);
+  expect(unavailableDocument.valid).toBe(true);
+  if (!unavailableDocument.valid) return;
+  expect(unavailableDocument.document.ammunition[ammunitionIndex]?.shopCostGold).toBe(null);
+
+  const available = setBalanceDraftValue(
+    toBalanceFormDraft(original),
+    path,
+    { __numberInputDraft: true, text: "0" },
+  );
+  const availableDocument = materializeBalanceDraft(available);
+  expect(availableDocument.valid).toBe(true);
+  if (!availableDocument.valid) return;
+  expect(availableDocument.document.ammunition[ammunitionIndex]?.shopCostGold).toBe(0);
+});
+
 describe("Balance form model", () => {
-  it("round-trips the complete checked-in schema 3 document", () => {
+  it("round-trips the complete checked-in schema 4 document", () => {
     const form = toBalanceFormDraft(original);
     const materialized = materializeBalanceDraft(form);
 
@@ -38,7 +66,7 @@ describe("Balance form model", () => {
   });
 
   it("rejects unknown schemas and unsupported root fields", () => {
-    expect(() => parseBalanceDocument(JSON.stringify({ schemaVersion: 4 })))
+    expect(() => parseBalanceDocument(JSON.stringify({ schemaVersion: 3 })))
       .toThrow("Unsupported balance schema version");
 
     const invalid = JSON.parse(originalContent) as Record<string, unknown>;
@@ -116,13 +144,13 @@ describe("Balance form model", () => {
     };
     const revised = withIncrementedBalanceRevision(original, edited);
 
-    expect(revised.balanceRevision).toBe("game-balance-4");
+    expect(revised.balanceRevision).toBe("game-balance-5");
     expect(balanceDocumentMatches(original, original)).toBe(true);
   });
 });
 
 function setBalanceFormNumbers(
-  form: BalanceFormDraft<GameBalanceDocumentV3>,
+  form: BalanceFormDraft<GameBalanceDocumentV4>,
   fields: Record<string, string>,
 ) {
   return Object.entries(fields).reduce(

@@ -3,8 +3,9 @@
 ## Status i cel
 
 **Zaimplementowany lokalnie dla kampanii.** Tracker, rozliczenie, transakcja
-DataStore i prezentacja wyniku są podłączone; sklep i inne typy nagród pozostają
-poza zakresem.
+DataStore i prezentacja wyniku są podłączone. Zakupy i stock settlement należą
+do odrębnego ShopSystemu; reklamy i inne typy nagród pozostają poza zakresem
+RewardSystemu.
 
 `RewardSystem` przyznaje złoto za ukończenie kampanijnego poziomu oraz za
 spełnione w jego trakcie osiągnięcia. Warunki osiągnięć są oceniane na
@@ -106,7 +107,10 @@ Obecny przepływ ma trzy istotne elementy:
 - `LoadoutProgressionSnapshot` przechowuje `goldBalance`, a
   `PlayerProgressionUseCases` go odczytuje. `RewardSettlementUseCase` rozlicza
   złoto przez port atomowej transakcji; profil, kampania i receipts używają
-  odrębnych kluczy w tym samym AndroidX DataStore.
+  odrębnych kluczy w tym samym AndroidX DataStore. ShopSystem używa wspólnego
+  `PlayerProgressionDataStoreCodec` i atomowego DataStore do zakupów oraz
+  settlementu stocku; żaden system nie zapisuje starego pełnego snapshotu
+  profilu poza transakcją.
 
 Dodanie osobnego, niezależnego katalogu osiągnięć obok milestone registry
 grozi rozdzieleniem definicji nagród, kolizjami identyfikatorów oraz różną

@@ -26,7 +26,8 @@ import type {
   BossArchetype,
   BossMovementKind,
   FriendlyFirePolicy,
-  GameBalanceDocumentV3,
+  GameBalanceDocumentV4,
+  NumericInputDraft,
   SpellCategory,
   SpellDefinition,
   SpellEffectDefinition,
@@ -53,9 +54,9 @@ type RuntimeSection =
   | "campaign";
 
 interface BalanceFormProps {
-  draft: BalanceFormDraft<GameBalanceDocumentV3>;
+  draft: BalanceFormDraft<GameBalanceDocumentV4>;
   validation: { valid: boolean; issues: BalanceValidationIssue[] } | null;
-  onChange: (draft: BalanceFormDraft<GameBalanceDocumentV3>) => void;
+  onChange: (draft: BalanceFormDraft<GameBalanceDocumentV4>) => void;
 }
 
 const SECTIONS: Array<{ id: BalanceSection; label: string }> = [
@@ -209,6 +210,37 @@ export function BalanceForm({ draft, validation, onChange }: BalanceFormProps) {
       onChange={next => update(path, next)}
       {...options}
     />
+  );
+
+  const nullableNumberField = (
+    path: string,
+    label: string,
+    value: NumericInputDraft | null,
+    saleAllowed: boolean,
+  ) => (
+    <div className="balance-nullable-number">
+      <BooleanField
+        path={`${path}.forSale`}
+        label="Available in Shop"
+        value={saleAllowed && value !== null}
+        disabled={!saleAllowed}
+        hint={saleAllowed
+          ? "When disabled, the item is not sold."
+          : "Unlimited ammunition cannot be sold as a stock item."}
+        onChange={enabled => update(
+          path,
+          saleAllowed && enabled === true
+            ? { __numberInputDraft: true, text: "" }
+            : null,
+        )}
+      />
+      {saleAllowed && value !== null && numberField(path, label, value, {
+        unit: "OrCoins",
+        min: 0,
+        step: 1,
+        hint: "Price for one stock. Zero is allowed.",
+      })}
+    </div>
   );
 
   const selectField = (
@@ -571,6 +603,14 @@ export function BalanceForm({ draft, validation, onChange }: BalanceFormProps) {
                 "Starting count",
                 ammunition.inventory.startingCount,
                 { min: 0, step: 1 },
+              )}
+            </FieldGroup>
+            <FieldGroup title="Shop">
+              {nullableNumberField(
+                `ammunition[${ammunitionIndex}].shopCostGold`,
+                "Price per stock",
+                ammunition.shopCostGold,
+                !ammunition.inventory.unlimited,
               )}
             </FieldGroup>
             <FieldGroup title="Flight">
@@ -1126,7 +1166,7 @@ function ManaFields({
   draft,
   numberField,
 }: {
-  draft: BalanceFormDraft<GameBalanceDocumentV3>;
+  draft: BalanceFormDraft<GameBalanceDocumentV4>;
   numberField: (
     path: string,
     label: string,
@@ -1167,10 +1207,10 @@ function RuntimeFields({
   numberField,
   selectField,
 }: {
-  draft: BalanceFormDraft<GameBalanceDocumentV3>;
+  draft: BalanceFormDraft<GameBalanceDocumentV4>;
   section: RuntimeSection;
   profileIndex: number;
-  aiProfile: BalanceFormDraft<GameBalanceDocumentV3["runtime"]["aiProfiles"][number]> | undefined;
+  aiProfile: BalanceFormDraft<GameBalanceDocumentV4["runtime"]["aiProfiles"][number]> | undefined;
   setAiProfileId: (id: AiProfileId) => void;
   numberField: (
     path: string,
@@ -1490,7 +1530,7 @@ function CombatFields({
   runtime,
   numberField,
 }: {
-  runtime: BalanceFormDraft<GameBalanceDocumentV3["runtime"]>;
+  runtime: BalanceFormDraft<GameBalanceDocumentV4["runtime"]>;
   numberField: (
     path: string,
     label: string,
@@ -1602,7 +1642,7 @@ function AiStrategyFields({
   runtime,
   numberField,
 }: {
-  runtime: BalanceFormDraft<GameBalanceDocumentV3["runtime"]>;
+  runtime: BalanceFormDraft<GameBalanceDocumentV4["runtime"]>;
   numberField: (
     path: string,
     label: string,

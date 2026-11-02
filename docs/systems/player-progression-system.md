@@ -9,8 +9,9 @@ DataStore, a ekran rozpoczyna mecz dopiero po odczycie, walidacji i udanym
 zapisie. CampaignSystem autoryzuje progresję i milestone'y; przy wygranej
 RewardSettlementUseCase zapisuje je atomowo wraz ze złotem i receipt.
 Read model loadoutu łączy odblokowania czarów z profilem. Zakupy i rozliczanie stocku
-pozostają poza wdrożonym zakresem. RewardSystem przyznaje złoto za wygrane
-poziomy przez atomowy adapter, a profil pozostaje właścicielem salda.
+obsługuje teraz ShopSystem przez atomowy port mutacji profilu. RewardSystem
+przyznaje złoto za wygrane poziomy, a profil pozostaje jedynym trwałym
+właścicielem salda i zapasów.
 
 ## 1. Cel i zakres
 
@@ -34,11 +35,15 @@ loadoutem. Nie stanowi pełnej ekonomii ani pełnego zapisu kampanii.
 
 - Odblokowywanie poziomów i zapis `highestUnlockedLevel` — pozostają
   odpowiedzialnością `CampaignSystem`.
-- Zakupy, sklep oraz transakcje specjalnych przedmiotów. Istniejący port
-  zakupowy zwraca jawny wynik `Blocked`; nie może symulować sukcesu. Naliczanie
-  złota za wygraną jest wyłączną odpowiedzialnością RewardSystem.
-- Rozliczanie zużytej amunicji lub czarów po meczu ani synchronizacja zapasów
-  z `MatchFinished`. Runtime stocku pozostaje poza tym zakresem.
+- Definicje ofert, ceny i polityka zakupu należą do ShopSystemu. Profil
+  udostępnia mu atomowy `updateProfile`; istniejący
+  `LoadoutProgressionPort.purchaseSpell` pozostaje jawnie `Blocked` i nie jest
+  drugą ścieżką zakupową.
+- Reguły zużycia stocku podczas symulacji należą do runtime meczu. ShopSystem
+  rozlicza udane użycia na aktualnym profilu po `MatchFinished` oraz przed
+  jawnym stopem/restartem; ten use case nie zmienia stanu symulacji.
+- Naliczanie złota za wygraną kampanii pozostaje wyłączną odpowiedzialnością
+  RewardSystem.
 - Stan runtime meczu, replay, aktywacja czarów i ich efekty.
 - Synchronizacja chmurowa, konto, wiele profili, import zapisów/preferencji z
   legacy oraz współdzielenie postępu między urządzeniami.
@@ -53,6 +58,7 @@ używane jako jego wartość domyślna.
 | Odpowiedzialność | Właściciel |
 |---|---|
 | Profil, snapshot progresji, use case'y i port repozytorium profilu | `game-application` |
+| Katalog ofert, zakupy i rozliczenie zapasów | ShopSystem w `game-application`, korzystający z portu profilu |
 | Walidacja wyboru, normalizacja i zapis `MatchLoadout` | istniejący LoadoutSystem w `game-application` |
 | Definicje poziomu i dostępność jednostek, amunicji oraz czarów na poziomie | `game-campaign` / `CampaignLevelDefinition` |
 | Odblokowanie poziomów i postęp po wyniku | `CampaignSystem` |
@@ -140,8 +146,11 @@ jako jawny failure, bez zastępowania ich seedem. Nie wykonuje się migracji
 kluczy ani zapisów z osobnej instalacji legacy.
 
 Lokalny zapis używa AndroidX Preferences DataStore i atomowych aktualizacji.
-`DataStorePlayerProgressionRepository` inicjalizuje/odczytuje profil, a
-`DataStoreLoadoutRepository` odczytuje i zapisuje wyłącznie zatwierdzony wybór.
+`DataStorePlayerProgressionRepository` inicjalizuje/odczytuje oraz atomowo
+mutuje profil; współdzielony `PlayerProgressionDataStoreCodec` jest używany
+również przez RewardSystem. Adapter progresji implementuje także transakcję
+settlementu stocku z receiptem generacji meczu. `DataStoreLoadoutRepository`
+odczytuje i zapisuje wyłącznie zatwierdzony wybór.
 `DataStoreCampaignProgressRepository` zapisuje niezależny, wersjonowany
 CampaignProgress. Adaptery współdzielą backend, zachowując osobne klucze i
 wersje. Typy DataStore, Flow i Context nie przekraczają granicy `android-app`.
@@ -185,9 +194,14 @@ ekranu i anulowane przy jego zniszczeniu. Powrót do ekranu ponownie odczytuje
 trwały stan; ViewModel nie staje się drugim właścicielem profilu.
 
 Profil nie ma cyklu życia meczu: pauza, restart i zakończenie meczu nie resetują
-go. Odtworzenie aplikacji odczytuje ten sam zapis. Stan runtime amunicji nadal
-jest inicjalizowany przez aktualny scenariusz i nie jest automatycznie
-rozliczany z trwałym stockiem w tym zakresie.
+go. Kampanijny `MatchScenario` przenosi niemutowalny `PlayerInventoryConfig`
+BLUE jako wejściowy stan jednej generacji; nie jest to trwały profil ani jego
+druga kopia. Limitowana amunicja BLUE startuje z dokładnego stocku profilu,
+zużywa się w `ResourceWallet`, a aplikacyjny tracker rozlicza wyłącznie udane
+użycia na świeżym profilu. RED/AI i demo zachowują własne zapasy balansowe.
+Replay zawiera ten sam wejściowy snapshot, ale nigdy nie zapisuje profilu.
+Wymuszone zamknięcie procesu przed końcowym settlementem pozostaje znanym
+ograniczeniem MVP.
 
 ## 8. Przepływ danych i integracja
 
@@ -202,8 +216,11 @@ CampaignLevelDefinition
             → Android DataStore adapter
   → Loadout screen: gotowy draft / widoczna korekta / jawny błąd
   → LoadoutUseCases.commit [świeży snapshot + walidacja + async save]
-  → PlayerLoadoutConfig
+  → PlayerLoadoutConfig + PlayerInventoryConfig
   → MatchScreen → LocalMatchGateway → MatchSession
+  → successful ProjectileFired / SpellCast
+  → ShopSystem stock settlement
+  → PlayerProgressionRepository.updateProfile
 ```
 
 1. Ekran otrzymuje typowy poziom z `AppScreen.Loadout`.
@@ -255,7 +272,9 @@ SpellSystem nie jest implementowany przez ten system.
 - Zmiana profilu między otwarciem a zatwierdzeniem: zatwierdzenie ponownie
   odczytuje snapshot i odrzuca już niedozwolony wybór.
 - Błąd zapisu loadoutu: bez `PlayerLoadoutConfig`, bez nawigacji do meczu.
-- Zakup czaru w tej fazie: jawny `Blocked`, bez zmiany złota/odblokowań.
+- Legacy `LoadoutProgressionPort.purchaseSpell`: jawny `Blocked`, bez zmiany
+  profilu. Rzeczywiste transakcje wykonuje wyłącznie `ShopUseCases` przez
+  atomowy port progresji.
 
 ## 11. Determinizm i transakcje
 
@@ -267,8 +286,8 @@ nie jest źródłem kolejności symulacji ani częścią replayu.
 PlayerProgressionSystem nie obserwuje bezpośrednio `MatchFinished`.
 `CampaignSystem` przekazuje kanoniczny wynik meczu i tracker rewardów do
 `RewardSettlementUseCase`, który atomowo aktualizuje postęp kampanii, receipt
-i istniejące saldo profilu. RewardSystem nie rozlicza stocku, a zapasów z
-loadoutu nie wolno deklarować jako rozliczonych po meczu.
+i istniejące saldo profilu. RewardSystem nie rozlicza stocku; debit i receipt
+stocku są własnością ShopSystemu i używają tej samej granicy profilu.
 
 ## 12. Plan testów i kryteria akceptacji
 
@@ -283,9 +302,10 @@ loadoutu nie wolno deklarować jako rozliczonych po meczu.
 - Nieobsługiwana wersja, uszkodzone dane i błąd DataStore zwracają jawny
   status; nigdy nie zamieniają się w pełny odblokowany profil.
 - `LoadoutProgressionPort` dostarcza snapshot z profilem i kampanijnymi
-  odblokowaniami; niedostępna kampania blokuje odczyt, a zakupy pozostają
-  jawnie zablokowane, jeśli StoreSystem nie należy do zakresu. RewardSystem
-  aktualizuje istniejące saldo wyłącznie po zatwierdzonym rozliczeniu.
+  odblokowaniami; niedostępna kampania blokuje odczyt. Legacy
+  `purchaseSpell` pozostaje jawnie zablokowany; zakupy odbywają się wyłącznie
+  przez ShopSystem. RewardSystem i ShopSystem zachowują aktualne saldo przy
+  atomowych aktualizacjach.
 - Asynchroniczny LoadoutSystem otwiera ekran, filtruje zapis, ponownie
   waliduje świeży stan, zapisuje zatwierdzony wybór i zwraca konfigurację
   tylko po sukcesie.
@@ -315,9 +335,9 @@ loadoutu nie wolno deklarować jako rozliczonych po meczu.
   zatwierdzeniu i udanym zapisie.
 - Wszystkie moduły core pozostają niezależne od Androida; nie powstaje nowy
   moduł ani drugi katalog balansu/progresji.
-- Dokumentacja jasno oznacza, że zakupy, rozliczenie stocku i gameplay
-  czarów pozostają poza tym zakresem; odblokowania kampanijne są własnością
-  CampaignSystemu.
+- Dokumentacja jasno rozdziela: profil i atomowe mutacje należą do
+  PlayerProgressionSystemu; ceny, zakupy i stock settlement do ShopSystemu;
+  nagrody do RewardSystemu; odblokowania kampanijne do CampaignSystemu.
 
 ## 13. Pliki aktualnej implementacji
 
@@ -326,6 +346,7 @@ Najważniejsze pliki:
 | Obszar | Kandydaci |
 |---|---|
 | Port profilu i resetu | `game-application/.../progression/PlayerProgressionRepository.kt`, `PlayerProgressionUseCases.kt`, `PlayerProgressResetRepository.kt` |
+| ShopSystem | `game-application/.../shop/ShopUseCases.kt`, `MatchStockUsageTracker.kt`, `MatchStockSettlementUseCase.kt` |
 | Developer progress preset | `game-application/.../progression/DeveloperProgressPreset.kt`, `android-app/.../persistence/DataStoreDeveloperProgressPresetAdapter.kt`, `studio/web/src/tabs/progress/ProgressTab.tsx` |
 | Porty i use case'y loadoutu | `game-application/.../loadout/LoadoutContracts.kt`, `LoadoutUseCases.kt` |
 | Adaptery DataStore | `android-app/.../persistence/DataStorePlayerProgressionRepository.kt`, `DataStorePlayerProgressResetRepository.kt`, `DataStoreLoadoutRepository.kt` |
@@ -354,6 +375,10 @@ synchronicznego cache'u.
   do przyszłego TutorialSystem.
 - Ekran pokazuje i zatwierdza deterministyczny draft, ale interaktywne
   kontrolki edycji loadoutu pozostają do wdrożenia.
-- Należy ustalić późniejszy właścicielski przepływ zakupów/nagród i rozliczeń
-  stocku po meczu przed przedstawieniem tych funkcji jako produkcyjnych.
+- Właściciele są rozdzieleni: nagrody obsługuje RewardSystem, a zakupy i stock
+  settlement — ShopSystem.
+- Wymuszona utrata procesu przed końcowym settlementem może utracić
+  niezapisane użycia stocku; trwała rezerwacja/journal pozostaje poza MVP.
+- Kupione czary specjalne, których efekty nie są jeszcze wdrożone przez
+  SpellSystem, pozostają nieużywalne w meczu i muszą być tak oznaczone w UI.
 - `CastSpell` i efekty czarów pozostają niezależnym blokerem gameplayu.

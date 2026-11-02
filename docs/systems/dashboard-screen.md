@@ -124,7 +124,7 @@ prezentacyjne i nie konsumują danych z innych systemów.
 - Back → istniejący stos `AppNavigator`.
 - Campaign → istniejący `CampaignScreen`; wybranie poziomu prowadzi dalej do
   Loadout.
-- Shop → istniejący ekran-placeholder.
+- Shop → `ShopScreen`; powrót po zakupie prowadzi do Dashboardu.
 - RESET → dialog potwierdzenia, a dopiero po akceptacji wywołanie istniejącego
   resetu postępu.
 - Globus → otwarcie lub zamknięcie popupu flag; dotknięcie flag nie wywołuje

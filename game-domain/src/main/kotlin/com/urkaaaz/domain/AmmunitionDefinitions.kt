@@ -198,6 +198,7 @@ data class AmmunitionDefinition(
     val effect: AmmunitionEffect,
     val reload: ReloadProfile,
     val inventory: InventoryProfile,
+    val shopCostGold: Int?,
     val flight: FlightProfile,
     val collision: CollisionProfile,
     val damage: DamageProfile,
@@ -207,6 +208,12 @@ data class AmmunitionDefinition(
 ) {
     init {
         require(availableLayers.isNotEmpty()) { "available layers must not be empty" }
+        require(shopCostGold == null || shopCostGold >= 0) {
+            "shop cost must not be negative"
+        }
+        require(shopCostGold == null || !inventory.unlimited) {
+            "unlimited ammunition cannot be sold as a stock item"
+        }
     }
 
     val reloadSeconds: Float

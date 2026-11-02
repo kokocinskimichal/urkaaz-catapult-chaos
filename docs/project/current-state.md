@@ -24,6 +24,9 @@ kampanię, AI oraz działający match screen. Gałąź robocza: `develop`.
   wewnętrzny padding.
 - Dashboard udostępnia potwierdzony reset lokalnego postępu gracza: kampanii,
   złota, odblokowań, stocków, zapisanych loadoutów i paragonów nagród.
+- Shop jest ekranem natywnych kontrolek, dostępny z Dashboardu i Loadoutu.
+  Używa dwóch kategorii `SPELLS`/`AMMUNITION`, kupuje pojedynczy stock za
+  OrCoins i wraca do wybranego przedmiotu bez autoekwipowania.
 - Dashboard używa zaakceptowanego układu, osobnego tła i istniejących assetów
   przycisków/ramki. Globus otwiera krótką listę flag PL/UK/ES; flagi nie
   zmieniają jeszcze języka. `AD REWARD` pozostaje nieaktywny, a dwa boczne
@@ -42,12 +45,12 @@ kampanię, AI oraz działający match screen. Gałąź robocza: `develop`.
 - Wybór amunicji w popup gridzie; niedostępna/depleted amunicja jest
   przygaszona i zablokowana.
 - Profile jednostek, amunicji, czarów, many, bossów i pozostałe parametry
-  runtime pochodzą ze ścisłego `game-balance.json` schema 3. Aplikacyjny loader
+  runtime pochodzą ze ścisłego `game-balance.json` schema 4. Aplikacyjny loader
   przekazuje jeden typowany `GameBalanceConfig` do symulacji, AI, kampanii,
   nagród, loadoutu i projekcji Androida.
-- Studio Balance edytuje wszystkie istniejące pola schema 3 przez zakładki
-  i typowane kontrolki; surowy JSON nie jest prezentowany, a stabilne ID i
-  struktura profili pozostają stałe. Walidacja i zapis używają istniejącego
+- Studio Balance edytuje wszystkie istniejące pola schema 4, w tym nullable
+  `shopCostGold`, przez zakładki i typowane kontrolki; surowy JSON nie jest
+  prezentowany, a stabilne ID i struktura profili pozostają stałe. Walidacja i zapis używają istniejącego
   API z kontrolą SHA-256 i `expectedHash`.
 - Dedykowane jednostki: Defender, Sapper, Demolisher, Raging Boar,
   Slingmaster; `UnitCatalog` tworzy ich definicje zachowań z profili JSON.
@@ -131,19 +134,19 @@ snapshotów i eventów zamiast mutować bezpośrednio stan innych podsystemów.
 
 ## Ograniczenia i niedokończone obszary
 
-- `LoadoutScreen` asynchronicznie odczytuje, waliduje i zapisuje domyślny
-  loadout; interaktywne edytory nadal nie są gotowe. `ShopScreen` i
-  `ResultScreen` pozostają placeholderami.
+- `LoadoutScreen` asynchronicznie odczytuje, waliduje i zapisuje loadout.
+  `ResultScreen` pozostaje placeholderem.
 - Chapter 1 ma zatwierdzoną mapę i assety campaign UI; mapy Chapter 2–10 nie
   są jeszcze dostępne, więc te rozdziały używają listy poziomów.
-- Nie wszystkie systemy progresji są kompletne: sklep/zakupy oraz mechanika
-  zużywania i regeneracji żyć pozostają poza obecnym zakresem. Campaign
-  progress i nagrody za zwycięstwo są już zapisywane lokalnie.
+- Mechanika zużywania i regeneracji żyć pozostaje poza obecnym zakresem.
+  Campaign progress, nagrody i lokalne zakupy/stock Shop są zapisywane w
+  DataStore.
 - Match result popup prezentuje rozliczoną nagrodę i pozwala przejść do
   następnego poziomu po zapisaniu ukończenia; przegrana i błąd zapisu mają
   osobne ścieżki retry/powrotu.
-- Local profile i loadout są zapisywane przez DataStore; zakupy oraz pełne
-  rozliczanie zużycia stocku po meczu pozostają do uzupełnienia.
+- Local profile i loadout są zapisywane przez DataStore. Shop rozlicza
+  wykorzystany stock po wszystkich wynikach meczu oraz przed jawnym stopem lub
+  restartem; przymusowe zamknięcie procesu przed zapisem pozostaje ograniczeniem.
 - SpellSystem nie obejmuje jeszcze pozostałych ośmiu efektów katalogu ani
   castowania zaklęć przez AI; brakuje też tutoriala i wszystkich legacy
   widgetów HUD.
@@ -157,13 +160,13 @@ snapshotów i eventów zamiast mutować bezpośrednio stan innych podsystemów.
 
 ## Jawnie odroczone decyzje
 
-1. Mapy i walidacja wizualnych anchorów dla rozdziałów kampanii 2–10;
-   sklep/zakupy i system żyć pozostają odroczone.
+1. Mapy i walidacja wizualnych anchorów dla rozdziałów kampanii 2–10 oraz
+   system żyć pozostają odroczone.
 2. Docelowa technologia nawigacji: obecny `AppNavigator` versus Android
    Navigation/Compose.
 3. Zakres i właściciel przyszłego backendu/network play.
-4. Interaktywna edycja loadoutu oraz pełna migracja tutoriala, sklepu,
-   pozostałych zaklęć i wyników; animacje bossów oraz zawartość bossów
+4. Pełna migracja tutoriala, pozostałych zaklęć i wyników; animacje bossów
+   oraz zawartość bossów
    poziomów 55–100 są odłożone.
 5. Zakres zgodności wizualnej i regresyjnej ze starą aplikacją poza obecnym
    deterministycznym wycinkiem M11.

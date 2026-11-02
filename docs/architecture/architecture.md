@@ -1517,8 +1517,14 @@ application.progression
 ├── PlayerProgressionRepository (port)
 └── PlayerProgressionUseCases
 
+application.shop
+├── ShopUseCases
+├── MatchStockUsageTracker
+└── MatchStockSettlementUseCase
+
 android-app.persistence
 ├── DataStorePlayerProgressionRepository
+├── PlayerProgressionDataStoreCodec
 ├── DataStoreLoadoutRepository
 └── DataStoreCampaignProgressRepository
 ```
@@ -1529,6 +1535,12 @@ ukończone poziomy, najwyższy odblokowany poziom i przyznane milestone-ID w
 trzecim, osobnym namespace. Adaptery pozostają w `android-app`; core zna
 wyłącznie porty. CampaignSystem atomowo aktualizuje postęp i milestone'y
 tylko po `MatchEvent.MatchFinished(BLUE_WIN)`.
+ShopSystem atomowo kupuje jeden stock i rozlicza udane użycia amunicji/czarów
+na świeżym profilu. `DataStorePlayerProgressionRepository`,
+`DataStoreRewardSettlementAdapter` i settlement stocku używają wspólnego
+profile codec oraz `DataStore.updateData`, by nie nadpisywać równoległych
+zmian salda lub stocku. Settlement ma wersjonowany receipt bieżącej generacji
+meczu; zapisany wybór `MatchLoadout` pozostaje odrębny.
 
 Poziom kampanii tworzy konfigurację meczu:
 
@@ -1540,13 +1552,19 @@ MatchScenario
 ├── availableUnits
 ├── availableAmmo
 ├── availableSpells
+├── playerLoadout
+├── playerInventory (stock BLUE dla tej generacji)
 ├── startingResources
 ├── enabledTutorialRules
 └── victoryCondition
 ```
 
-Silnik zna `MatchScenario`, ale nie zna `CampaignProgress`, sklepu, ekranów
-ani persystencji Androida.
+`PlayerInventoryConfig` jest niemutowalnym wejściem pojedynczej generacji,
+nie profilem zapisanym w runtime. Kampanijny BLUE używa go do inicjalizacji
+limitowanej amunicji; AI/RED i demo zachowują własne zapasy balansowe.
+`MatchReplayConfiguration` przechowuje ten sam snapshot, a replay nie zmienia
+profilu. Silnik zna `MatchScenario`, ale nie zna `CampaignProgress`, cen,
+ekranów ani persystencji Androida.
 
 ---
 
@@ -1580,8 +1598,11 @@ Specjalne zachowanie poziomu tutorialowego powinno być opisane przez
 Persystencja mobilna przechowuje dane aplikacyjne. Obecny zakres implementacji
 to wersjonowany lokalny profil progresji i zatwierdzony loadout w AndroidX
 DataStore. Profil przechowuje odblokowane czary, zapasy ograniczonej amunicji
-i czarów specjalnych oraz saldo; zakupy i rozliczanie stocku pozostają poza
-obecną implementacją. CampaignSystem zapisuje `CampaignProgress` w osobnym,
+i czarów specjalnych oraz saldo. ShopSystem używa istniejącego profilu do
+zakupów za OrCoins i rozlicza udane użycia po `MatchFinished` oraz przed
+jawnym stopem/restartem; niewykorzystane stocki pozostają w profilu.
+Wymuszone zamknięcie procesu przed settlementem jest znanym ograniczeniem
+MVP. CampaignSystem zapisuje `CampaignProgress` w osobnym,
 wersjonowanym namespace DataStore: ukończone poziomy, najwyższy odblokowany
 poziom i zastosowane milestone-ID. Tylko `BLUE_WIN` atomowo zapisuje
 ukończenie, następny poziom i nagrody.
@@ -1775,7 +1796,7 @@ Aktualne ekrany:
 - `CampaignScreen` — wybór poziomu z nawigacją;
 - `LoadoutScreen` — asynchronicznie odczytuje i edytuje draft; szczegóły
   elementu są podstroną ekranu i Back zamyka je przed nawigacją;
-- `ShopScreen` — placeholder;
+- `ShopScreen` — lokalny sklep za OrCoins, otwierany z Dashboardu i Loadoutu;
 - `MatchScreen` — działający ekran meczu;
 - `ResultScreen` — placeholder.
 

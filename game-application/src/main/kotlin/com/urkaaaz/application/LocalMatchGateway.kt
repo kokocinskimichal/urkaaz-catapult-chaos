@@ -79,8 +79,9 @@ class LocalMatchGateway(
     fun restart(
         matchId: com.urkaaaz.contracts.MatchId,
         playerId: com.urkaaaz.contracts.PlayerId,
+        scenarioOverride: MatchScenario? = null,
     ): MatchSnapshot {
-        val snapshot = session.restart(matchId, playerId)
+        val snapshot = session.restart(matchId, playerId, scenarioOverride)
         val seed = session.replay()?.randomSeed
             ?: error("restarted match is missing its recorded random seed")
         aiCoordinator.start(seed, session.balanceConfig())

@@ -81,8 +81,8 @@ export function validateBalanceContent(content: string): BalanceValidationRespon
     ],
     issues,
   );
-  if (root.schemaVersion !== 3) {
-    issues.push(issue("schemaVersion", "must be the supported schema version 3"));
+  if (root.schemaVersion !== 4) {
+    issues.push(issue("schemaVersion", "must be the supported schema version 4"));
   }
   if (typeof root.balanceRevision !== "string" || root.balanceRevision.trim() === "") {
     issues.push(issue("balanceRevision", "must be a non-empty string"));
@@ -238,11 +238,27 @@ function validateAmmunition(value: unknown, issues: BalanceValidationIssue[]): v
       ammunition,
       itemPath,
       [
-        "type", "effect", "reload", "inventory", "flight", "collision",
+        "type", "effect", "shopCostGold", "reload", "inventory", "flight", "collision",
         "damage", "terrain", "behavior", "availableLayers",
       ],
       issues,
     );
+    if (
+      ammunition.shopCostGold !== null &&
+      !nonNegativeInteger(ammunition.shopCostGold)
+    ) {
+      issues.push(issue(
+        `${itemPath}.shopCostGold`,
+        "must be null or a non-negative integer",
+      ));
+    }
+    const inventory = asRecord(ammunition.inventory);
+    if (ammunition.shopCostGold !== null && inventory?.unlimited === true) {
+      issues.push(issue(
+        `${itemPath}.shopCostGold`,
+        "unlimited ammunition cannot be sold as a stock item",
+      ));
+    }
     if (typeof ammunition.type !== "string" || !AMMUNITION_TYPES.has(ammunition.type)) {
       issues.push(issue(`${itemPath}.type`, "must be a stable ammunition ID"));
     } else if (ids.has(ammunition.type)) {

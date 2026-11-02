@@ -20,14 +20,14 @@ import {
 } from "./model";
 import type {
   BalanceFormDraft,
-  GameBalanceDocumentV3,
+  GameBalanceDocumentV4,
 } from "./model";
 import "./styles.css";
 
 export function BalanceTab() {
   const [document, setDocument] = useState<BalanceDocumentResponse | null>(null);
-  const [baseline, setBaseline] = useState<GameBalanceDocumentV3 | null>(null);
-  const [draft, setDraft] = useState<BalanceFormDraft<GameBalanceDocumentV3> | null>(null);
+  const [baseline, setBaseline] = useState<GameBalanceDocumentV4 | null>(null);
+  const [draft, setDraft] = useState<BalanceFormDraft<GameBalanceDocumentV4> | null>(null);
   const [validation, setValidation] = useState<BalanceValidationResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
@@ -60,7 +60,7 @@ export function BalanceTab() {
       setBaseline(parsed);
       setDraft(toBalanceFormDraft(parsed));
       setValidation(null);
-      setMessage("Loaded schema 3 balance.");
+      setMessage("Loaded schema 4 balance.");
     } catch (cause) {
       setError(errorMessage(cause));
     } finally {
@@ -144,7 +144,7 @@ export function BalanceTab() {
     }
   };
 
-  const onDraftChange = (next: BalanceFormDraft<GameBalanceDocumentV3>) => {
+  const onDraftChange = (next: BalanceFormDraft<GameBalanceDocumentV4>) => {
     setDraft(next);
     setValidation(null);
     setError(null);
@@ -159,7 +159,7 @@ export function BalanceTab() {
         <div>
           <h2>Game balance</h2>
           <p>
-            Edit schema 3 profiles using the form. Changes apply after rebuilding
+            Edit schema 4 profiles using the form. Changes apply after rebuilding
             and restarting the app.
           </p>
         </div>
@@ -227,8 +227,8 @@ export function BalanceTab() {
 }
 
 function isDraftDirty(
-  draft: BalanceFormDraft<GameBalanceDocumentV3>,
-  baseline: GameBalanceDocumentV3,
+  draft: BalanceFormDraft<GameBalanceDocumentV4>,
+  baseline: GameBalanceDocumentV4,
 ): boolean {
   const result = materializeBalanceDraft(draft);
   return !result.valid || !balanceDocumentMatches(result.document, baseline);

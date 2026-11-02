@@ -131,7 +131,8 @@ Poziom określa, co jest dozwolone w danym meczu; lokalny snapshot progresji
 określa, co gracz odblokował i posiada. Obie informacje są wymagane.
 `PlayerProgressionUseCases` dostarcza profil inicjalizowany potwierdzonym
 seedem. `CampaignAwareLoadoutProgressionPort` łączy profil z kampanijnymi
-odblokowaniami; zakupy pozostają poza zakresem.
+odblokowaniami; transakcje zakupowe i stock settlement są wykonywane przez
+ShopSystem na tym samym profilu.
 
 ### Wyniki
 
@@ -374,9 +375,9 @@ konfiguracji i lokalizacji.
    mapowania prezentacyjnego po stabilnym ID; liczby pobiera się z
    autorytatywnych definicji, a UI nie kopiuje balansu ani reguł. Szczegóły
    nie uruchamiają zakupów ani zaklęć. Dla niedostępnej pozycji pokazują
-   przyczynę blokady; zablokowany czar lub specjalny czar bez stocku może
-   otworzyć wyłącznie wewnętrzny placeholder sklepu, bez transakcji i bez
-   utraty draftu.
+   przyczynę blokady; sprzedawany specjalny czar lub limitowana amunicja bez
+   stocku może otworzyć `AppScreen.Shop`, zachowując wskazany przedmiot i
+   wracając do jego szczegółów bez autoekwipowania.
 5. **[Oczekuje na assety] Dodać brakujące ilustracje kart zaklęć.** Użyć
    [`loadout-spell-card-art.agp`](loadout-spell-card-art.agp) do wygenerowania
    osobnych ilustracji dla istniejących `SpellType`. Użyte w karcie obrazy
@@ -502,16 +503,16 @@ uzupełnienie kontraktu uruchomienia meczu i podłączenie go do obecnego
 ## Otwarte prace i blokery
 
 - Tutoriale poziomów 6/8 pozostają odroczone do przyszłego TutorialSystem.
-- Zablokowany czar lub specjalny czar bez stocku otwiera wewnętrzny
-  placeholder sklepu i wraca do tego samego draftu; rzeczywisty sklep/zakupy
-  pozostają niezaimplementowane.
+- Sprzedawany specjalny czar lub limitowana amunicja bez stocku otwiera Shop
+  i po powrocie zachowuje szczegóły tego samego przedmiotu.
 - Ilustracje kart zaklęć można podpiąć po dodaniu wygenerowanych plików;
   obecnie jawny wynik katalogu assetów to `Missing`.
 - Wymagana jest kontrola wizualna na urządzeniu oraz dobór tła i paneli do
   biomu wybranego poziomu.
 - Odblokowania i trwały `CampaignProgress` należą do CampaignSystemu,
   udokumentowanego w `campaign-system.md`.
-- Zakupy, nagrody i rozliczenie stocku po meczu pozostają poza zakresem.
+- Zakupy i rozliczanie stocku po meczu należą do ShopSystemu; Loadout waliduje
+  bieżący stock i zapisuje wyłącznie zatwierdzone wybory.
 - Integracja poziomów 6/8 z odblokowaniami i zakupami musi przejść przez
   przyszłego właściciela progresji; LoadoutSystem nie implementuje jej po cichu.
 - `CastSpell` oraz efekty czarów nie są obsługiwane przez SpellSystem.

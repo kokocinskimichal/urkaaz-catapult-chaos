@@ -39,6 +39,7 @@ import com.urkaaaz.application.loadout.LoadoutStorageFailure
 import com.urkaaaz.application.loadout.LoadoutUseCases
 import com.urkaaaz.application.loadout.MatchLoadout
 import com.urkaaaz.contracts.PlayerLoadoutConfig
+import com.urkaaaz.contracts.PlayerInventoryConfig
 import com.urkaaaz.navigation.ScreenContent
 import com.urkaaaz.ui.UiTypography
 import com.urkaaaz.ui.ScreenChromeMetrics
@@ -54,7 +55,9 @@ class LoadoutScreen(
     loadoutUseCases: LoadoutUseCases,
     private val loadoutCatalog: LoadoutCatalog = LoadoutCatalog.bundled(),
     private val onBack: () -> Unit,
-    private val onStart: (PlayerLoadoutConfig) -> Unit,
+    private val onStart: (PlayerLoadoutConfig, PlayerInventoryConfig) -> Unit,
+    private val onShop: (LoadoutItemReference) -> Unit,
+    private val initialDetailItem: LoadoutItemReference? = null,
     demoMode: Boolean = false,
 ) : ScreenContent {
     private val viewModel = LoadoutViewModel(
@@ -73,8 +76,6 @@ class LoadoutScreen(
     }
     private var screenScope: CoroutineScope? = null
     private var hasLoaded = false
-    private var isShopPlaceholderVisible = false
-    private var shopReturnsToDetails = false
     private lateinit var mainContent: LinearLayout
     private lateinit var unitScroll: ScrollView
     private lateinit var ammunitionScroll: ScrollView
@@ -112,6 +113,7 @@ class LoadoutScreen(
                 viewModel.load()
                 hasLoaded = true
                 renderMain()
+                initialDetailItem?.let(::showDetails)
             }
         }
     }
@@ -123,17 +125,6 @@ class LoadoutScreen(
     }
 
     override fun onBackPressed(): Boolean {
-        if (isShopPlaceholderVisible) {
-            val item = viewModel.state.detailItem
-            isShopPlaceholderVisible = false
-            if (shopReturnsToDetails && item != null) {
-                showDetails(item)
-            } else {
-                viewModel.closeDetails()
-                showMain()
-            }
-            return true
-        }
         if (!viewModel.handleBackPressed()) return false
         showMain()
         return true
@@ -290,7 +281,7 @@ class LoadoutScreen(
                             screenScope?.launch {
                                 val loadout = viewModel.commit()
                                 renderMain()
-                                loadout?.let(onStart)
+                                loadout?.let { onStart(it.playerLoadout, it.playerInventory) }
                             }
                         }
                     }
@@ -738,11 +729,12 @@ class LoadoutScreen(
             }
         }
         val canEdit = !isFixed && viewModel.state.draft != null &&
-            status in setOf(LoadoutOptionStatus.SELECTED, LoadoutOptionStatus.AVAILABLE)
-        val canOpenShop = viewModel.state.draft != null &&
-            item is LoadoutItemReference.Spell &&
-            (status == LoadoutOptionStatus.LOCKED ||
-                status == LoadoutOptionStatus.OUT_OF_STOCK)
+            status in setOf(
+                LoadoutOptionStatus.SELECTED,
+                LoadoutOptionStatus.AVAILABLE,
+                LoadoutOptionStatus.UNIMPLEMENTED,
+            )
+        val canOpenShop = viewModel.state.draft != null && isShopOfferOutOfStock(item, status)
 
         val textColumn = LinearLayout(context).apply {
             orientation = LinearLayout.VERTICAL
@@ -765,7 +757,10 @@ class LoadoutScreen(
                     TypedValue.COMPLEX_UNIT_SP,
                 )
             }, matchWrap())
-            val statusText = if (status == LoadoutOptionStatus.OUT_OF_STOCK) {
+            val statusText = if (
+                status == LoadoutOptionStatus.OUT_OF_STOCK ||
+                status == LoadoutOptionStatus.UNIMPLEMENTED
+            ) {
                 statusLabel(context, status)
             } else {
                 ""
@@ -901,11 +896,7 @@ class LoadoutScreen(
         card.isClickable = canEdit || canOpenShop
         card.isFocusable = canEdit || canOpenShop
         if (canEdit) card.setOnClickListener { onSelect() }
-        else if (canOpenShop) {
-            card.setOnClickListener {
-                showShopPlaceholder(item, returnToDetails = false)
-            }
-        }
+        else if (canOpenShop) card.setOnClickListener { onShop(item) }
         return card
     }
 
@@ -925,7 +916,6 @@ class LoadoutScreen(
     }
 
     private fun showDetails(item: LoadoutItemReference) {
-        isShopPlaceholderVisible = false
         viewModel.showDetails(item)
         val context = detailsContent.context
         detailsContent.removeAllViews()
@@ -982,12 +972,20 @@ class LoadoutScreen(
         }
         body.addView(detailColumn)
         detailsContent.addView(body, LinearLayout.LayoutParams(-1, 0, 1f))
+        val spell = (item as? LoadoutItemReference.Spell)
+            ?.let { loadoutCatalog.findSpell(it.identifier) }
         detailsContent.addView(TextView(context).apply {
-            text = context.getString(R.string.loadout_spell_effect_planned)
+            text = context.getString(
+                if (spell?.implemented == false) {
+                    R.string.loadout_spell_runtime_unavailable
+                } else {
+                    R.string.loadout_spell_effect_planned
+                },
+            )
             textSize = 12f
             setTextColor(Color.rgb(255, 205, 135))
             setPadding(dp(context, 6), dp(context, 6), dp(context, 6), dp(context, 6))
-            visibility = if (item is LoadoutItemReference.Spell) View.VISIBLE else View.GONE
+            visibility = if (spell?.implemented == false) View.VISIBLE else View.GONE
         }, wrap())
 
         detailsContent.addView(detailActionButton(context, item), matchWrap())
@@ -1001,8 +999,7 @@ class LoadoutScreen(
             val isSelected = status == LoadoutOptionStatus.SELECTED
             val isFixedRock = item is LoadoutItemReference.Ammunition &&
                 item.identifier == MatchLoadout.ROCK
-            val opensShop = item is LoadoutItemReference.Spell &&
-                status in setOf(LoadoutOptionStatus.LOCKED, LoadoutOptionStatus.OUT_OF_STOCK)
+            val opensShop = isShopOfferOutOfStock(item, status)
             text = if (isFixedRock) {
                 context.getString(R.string.loadout_state_fixed)
             } else if (opensShop) {
@@ -1021,7 +1018,7 @@ class LoadoutScreen(
                 ))
             setOnClickListener {
                 if (opensShop) {
-                    showShopPlaceholder(item, returnToDetails = true)
+                    onShop(item)
                     return@setOnClickListener
                 }
                 when (item) {
@@ -1041,53 +1038,20 @@ class LoadoutScreen(
             }
         }
 
-    private fun showShopPlaceholder(
+    private fun isShopOfferOutOfStock(
         item: LoadoutItemReference,
-        returnToDetails: Boolean,
-    ) {
-        viewModel.showDetails(item)
-        isShopPlaceholderVisible = true
-        shopReturnsToDetails = returnToDetails
-        val context = detailsContent.context
-        detailsContent.removeAllViews()
-        val header = LinearLayout(context).apply {
-            orientation = LinearLayout.HORIZONTAL
-            gravity = Gravity.CENTER_VERTICAL
-            addView(TextView(context).apply {
-                text = "←"
-                textSize = 26f
-                setTextColor(Color.WHITE)
-                setPadding(dp(context, 8), dp(context, 4), dp(context, 12), dp(context, 4))
-                contentDescription = context.getString(
-                    if (returnToDetails) R.string.loadout_back_to_spell
-                    else R.string.loadout_back_to_loadout,
-                )
-                setOnClickListener {
-                    isShopPlaceholderVisible = false
-                    if (returnToDetails) {
-                        showDetails(item)
-                    } else {
-                        viewModel.closeDetails()
-                        showMain()
-                    }
-                }
-            }, wrap())
-            addView(TextView(context).apply {
-                text = context.getString(R.string.loadout_shop_title)
-                textSize = 20f
-                setTypeface(typeface, Typeface.BOLD)
-                setTextColor(Color.rgb(255, 211, 106))
-            }, wrap())
+        status: LoadoutOptionStatus,
+    ): Boolean {
+        if (status != LoadoutOptionStatus.OUT_OF_STOCK) return false
+        return when (item) {
+            is LoadoutItemReference.Unit -> false
+            is LoadoutItemReference.Spell ->
+                loadoutCatalog.findSpell(item.identifier)?.special == true
+            is LoadoutItemReference.Ammunition ->
+                loadoutCatalog.findAmmunition(item.identifier)?.let { ammunition ->
+                    !ammunition.unlimited && ammunition.shopCostGold != null
+                } == true
         }
-        detailsContent.addView(header, wrap())
-        detailsContent.addView(TextView(context).apply {
-            text = context.getString(R.string.loadout_shop_placeholder)
-            textSize = 15f
-            setTextColor(Color.WHITE)
-            setPadding(dp(context, 8), dp(context, 18), dp(context, 8), dp(context, 18))
-        }, matchWrap())
-        mainContent.visibility = View.GONE
-        detailsContent.visibility = View.VISIBLE
     }
 
     private fun addItemProperties(
@@ -1180,7 +1144,6 @@ class LoadoutScreen(
     }
 
     private fun closeDetails() {
-        isShopPlaceholderVisible = false
         viewModel.closeDetails()
         showMain()
     }
@@ -1215,6 +1178,7 @@ class LoadoutScreen(
         context.getString(when (status) {
             LoadoutOptionStatus.SELECTED -> R.string.loadout_state_selected
             LoadoutOptionStatus.AVAILABLE -> R.string.loadout_state_available
+            LoadoutOptionStatus.UNIMPLEMENTED -> R.string.loadout_state_unimplemented
             LoadoutOptionStatus.UNAVAILABLE -> R.string.loadout_state_unavailable
             LoadoutOptionStatus.LOCKED -> R.string.loadout_state_locked
             LoadoutOptionStatus.OUT_OF_STOCK -> R.string.loadout_state_out_of_stock
@@ -1223,69 +1187,20 @@ class LoadoutScreen(
     private fun statusColor(status: LoadoutOptionStatus): Int = when (status) {
         LoadoutOptionStatus.SELECTED -> Color.rgb(134, 220, 143)
         LoadoutOptionStatus.AVAILABLE -> Color.rgb(255, 211, 106)
+        LoadoutOptionStatus.UNIMPLEMENTED -> Color.rgb(255, 174, 106)
         LoadoutOptionStatus.UNAVAILABLE,
         LoadoutOptionStatus.LOCKED,
         LoadoutOptionStatus.OUT_OF_STOCK -> Color.rgb(255, 145, 125)
     }
 
     private fun itemName(identifier: String): String =
-        mainContent.context.getString(itemNameResource(identifier))
+        mainContent.context.getString(LoadoutItemResources.name(identifier))
 
     private fun itemNameResource(item: LoadoutItemReference): Int =
-        itemNameResource(item.identifier)
-
-    private fun itemNameResource(identifier: String): Int = when (identifier) {
-        "DEFENDER" -> R.string.loadout_name_defender
-        "SAPPER" -> R.string.loadout_name_sapper
-        "DEMOLISHER" -> R.string.loadout_name_demolisher
-        "RAGING_BOAR" -> R.string.loadout_name_raging_boar
-        "SLINGMASTER" -> R.string.loadout_name_slingmaster
-        "ROCK" -> R.string.loadout_name_rock
-        "SIEGE_BOMB" -> R.string.loadout_name_siege_bomb
-        "POWDER_BARREL" -> R.string.loadout_name_powder_barrel
-        "FIRE_RAIN" -> R.string.loadout_name_fire_rain
-        "PLAGUE_CAULDRON" -> R.string.loadout_name_plague_cauldron
-        "ICE_TRAP" -> R.string.loadout_name_ice_trap
-        "RUNIC_BASTION" -> R.string.loadout_name_runic_bastion
-        "HASTE" -> R.string.loadout_name_haste
-        "HEAL" -> R.string.loadout_name_heal
-        "FORTRESS_SHIELD" -> R.string.loadout_name_fortress_shield
-        "CATAPULT_LOCK" -> R.string.loadout_name_catapult_lock
-        "SLOWING_FIELD" -> R.string.loadout_name_slowing_field
-        "VAMPIRIC_BANNER" -> R.string.loadout_name_vampiric_banner
-        "STONE_SKIN" -> R.string.loadout_name_stone_skin
-        "SIEGE_FRENZY" -> R.string.loadout_name_siege_frenzy
-        "BERSERKER" -> R.string.loadout_name_berserker
-        else -> R.string.loadout_name_unknown
-    }
+        LoadoutItemResources.name(item.identifier)
 
     private fun descriptionResource(item: LoadoutItemReference): Int =
-        descriptionResource(item.identifier)
-
-    private fun descriptionResource(identifier: String): Int = when (identifier) {
-        "DEFENDER" -> R.string.loadout_desc_defender
-        "SAPPER" -> R.string.loadout_desc_sapper
-        "DEMOLISHER" -> R.string.loadout_desc_demolisher
-        "RAGING_BOAR" -> R.string.loadout_desc_raging_boar
-        "SLINGMASTER" -> R.string.loadout_desc_slingmaster
-        "ROCK" -> R.string.loadout_desc_rock
-        "SIEGE_BOMB" -> R.string.loadout_desc_siege_bomb
-        "POWDER_BARREL" -> R.string.loadout_desc_powder_barrel
-        "FIRE_RAIN" -> R.string.loadout_desc_fire_rain
-        "PLAGUE_CAULDRON" -> R.string.loadout_desc_plague_cauldron
-        "ICE_TRAP" -> R.string.loadout_desc_ice_trap
-        "RUNIC_BASTION" -> R.string.loadout_desc_runic_bastion
-        "HASTE" -> R.string.loadout_desc_haste
-        "HEAL" -> R.string.loadout_desc_heal
-        "FORTRESS_SHIELD" -> R.string.loadout_desc_fortress_shield
-        "CATAPULT_LOCK" -> R.string.loadout_desc_catapult_lock
-        "SLOWING_FIELD" -> R.string.loadout_desc_slowing_field
-        "VAMPIRIC_BANNER" -> R.string.loadout_desc_vampiric_banner
-        "STONE_SKIN" -> R.string.loadout_desc_stone_skin
-        "SIEGE_FRENZY" -> R.string.loadout_desc_siege_frenzy
-        "BERSERKER" -> R.string.loadout_desc_berserker
-        else -> R.string.loadout_desc_unknown
-    }
+        LoadoutItemResources.description(item.identifier)
 
     private fun spellCategoryName(context: Context, category: LoadoutSpellCategory): String =
         context.getString(when (category) {

@@ -150,10 +150,19 @@ export function SelectField({
 
 interface BooleanFieldProps extends BaseFieldProps {
   value: boolean | null;
+  disabled?: boolean;
   onChange: (value: boolean | null) => void;
 }
 
-export function BooleanField({ path, label, value, hint, error, onChange }: BooleanFieldProps) {
+export function BooleanField({
+  path,
+  label,
+  value,
+  hint,
+  error,
+  disabled = false,
+  onChange,
+}: BooleanFieldProps) {
   const id = fieldId(path);
   const hintId = `${id}-hint`;
   const errorId = `${id}-error`;
@@ -165,6 +174,7 @@ export function BooleanField({ path, label, value, hint, error, onChange }: Bool
       <select
         id={id}
         value={value === null ? "" : String(value)}
+        disabled={disabled}
         aria-invalid={error ? "true" : "false"}
         aria-describedby={describedBy}
         onChange={event => {

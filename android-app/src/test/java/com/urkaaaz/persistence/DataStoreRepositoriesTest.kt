@@ -11,6 +11,7 @@ import com.urkaaaz.application.campaign.CampaignProgressRepositoryResult
 import com.urkaaaz.application.campaign.CampaignCompletionResult
 import com.urkaaaz.application.campaign.CampaignProgressRead
 import com.urkaaaz.application.campaign.CampaignSystem
+import com.urkaaaz.application.campaign.BundledCampaignBalance
 import com.urkaaaz.application.loadout.LoadoutProgressionRead
 import com.urkaaaz.application.loadout.LoadoutProgressionSnapshot
 import com.urkaaaz.application.loadout.LoadoutStorageFailure
@@ -19,6 +20,8 @@ import com.urkaaaz.application.loadout.LoadoutStorageWriteResult
 import com.urkaaaz.application.loadout.MatchLoadout
 import com.urkaaaz.application.loadout.StoredLoadoutSelection
 import com.urkaaaz.application.progression.PlayerProgressionRepositoryFailure
+import com.urkaaaz.application.progression.PlayerProgressionMutation
+import com.urkaaaz.application.progression.PlayerProgressionMutationResult
 import com.urkaaaz.application.progression.PlayerProgressionRepositoryResult
 import com.urkaaaz.application.progression.PlayerProgressResetFailure
 import com.urkaaaz.application.progression.PlayerProgressResetResult
@@ -32,6 +35,13 @@ import com.urkaaaz.application.reward.LevelRewardResult
 import com.urkaaaz.application.reward.RewardSettlementFailure
 import com.urkaaaz.application.reward.RewardSettlementRepositoryResult
 import com.urkaaaz.application.reward.RewardSettlementUseCase
+import com.urkaaaz.application.shop.MatchStockSettlementId
+import com.urkaaaz.application.shop.MatchStockSettlementResult
+import com.urkaaaz.application.shop.MatchStockUsage
+import com.urkaaaz.application.shop.ShopCategory
+import com.urkaaaz.application.shop.ShopItemReference
+import com.urkaaaz.application.shop.ShopPurchaseResult
+import com.urkaaaz.application.shop.ShopUseCases
 import com.urkaaaz.contracts.EventId
 import com.urkaaaz.contracts.MatchEvent
 import com.urkaaaz.contracts.MatchId
@@ -42,6 +52,7 @@ import java.util.Base64
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.async
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flow
@@ -183,6 +194,95 @@ class DataStoreRepositoriesTest {
             assertEquals(
                 100,
                 (repeatedProfile as LoadoutProgressionRead.Available).snapshot.goldBalance,
+            )
+        }
+    }
+
+    @Test
+    fun shopPurchaseAndRewardSettlementShareAtomicProfileTransactions() = runBlocking {
+        testStore().use { store ->
+            val progressionRepository = DataStorePlayerProgressionRepository(store.dataStore)
+            progressionRepository.loadOrInitialize(initialProfile().copy(goldBalance = 1_000))
+            val rewardRegistry = BundledCampaignBalance.rewardRegistry()
+            val campaign = CampaignSystem(
+                DataStoreCampaignProgressRepository(store.dataStore),
+                rewards = rewardRegistry,
+                rewardSettlement = RewardSettlementUseCase(
+                    DataStoreRewardSettlementAdapter(store.dataStore),
+                    rewards = rewardRegistry,
+                ),
+            )
+            val matchId = MatchId("shop-race-match")
+            val finish = MatchEvent.MatchFinished(
+                eventId = EventId("shop-race-finish"),
+                matchId = matchId,
+                simulationTimeMilliseconds = 10,
+                outcome = MatchOutcome.BLUE_WIN,
+            )
+            val reward = LevelRewardResult(
+                level = 1,
+                matchId = matchId.value,
+                rewards = listOf(EarnedReward("level_win", 100L)),
+                totalGold = 100L,
+                issues = emptySet(),
+            )
+
+            val purchase = async {
+                ShopUseCases(progressionRepository).purchase(
+                    ShopItemReference(ShopCategory.AMMUNITION, "POWDER_BARREL"),
+                )
+            }
+            val campaignReward = async { campaign.completeLevel(1, finish, reward) }
+
+            assertTrue(purchase.await() is ShopPurchaseResult.Purchased)
+            assertTrue(campaignReward.await() is CampaignCompletionResult.Completed)
+
+            val finalProgression = PlayerProgressionUseCases(progressionRepository).snapshot(1)
+            assertTrue(finalProgression is LoadoutProgressionRead.Available)
+            val finalProfile = (finalProgression as LoadoutProgressionRead.Available).snapshot
+            assertEquals(850, finalProfile.goldBalance)
+            assertEquals(1, finalProfile.ammunitionStock("POWDER_BARREL"))
+        }
+    }
+
+    @Test
+    fun matchStockSettlementDebitsOnceAndPreservesCurrentProfile() = runBlocking {
+        testStore().use { store ->
+            val repository = DataStorePlayerProgressionRepository(store.dataStore)
+            val start = initialProfile().copy(
+                ammunitionStocks = mapOf("POWDER_BARREL" to 2),
+                specialSpellStocks = mapOf("CATAPULT_LOCK" to 1),
+                goldBalance = 400,
+            )
+            repository.loadOrInitialize(start)
+            val settlementId = MatchStockSettlementId(MatchId("settlement-match"), 1)
+            val usage = MatchStockUsage(
+                ammunitionUsed = mapOf("POWDER_BARREL" to 1),
+                specialSpellsUsed = mapOf("CATAPULT_LOCK" to 1),
+            )
+
+            val firstResult = repository.settle(settlementId, usage)
+            assertTrue(firstResult is MatchStockSettlementResult.Settled)
+            val first = firstResult as MatchStockSettlementResult.Settled
+            assertEquals(1, first.profile.ammunitionStock("POWDER_BARREL"))
+            assertEquals(0, first.profile.specialSpellStock("CATAPULT_LOCK"))
+            assertEquals(400, first.profile.goldBalance)
+
+            val repeatedResult = repository.settle(settlementId, usage)
+            assertTrue(repeatedResult is MatchStockSettlementResult.AlreadySettled)
+            val repeated = repeatedResult as MatchStockSettlementResult.AlreadySettled
+            assertEquals(first.profile, repeated.profile)
+            assertEquals(
+                MatchStockSettlementResult.Rejected(
+                    com.urkaaaz.application.shop.MatchStockSettlementRejection.STOCK_CONFLICT,
+                ),
+                repository.settle(
+                    MatchStockSettlementId(MatchId("overdraw-match"), 1),
+                    MatchStockUsage(
+                        ammunitionUsed = mapOf("POWDER_BARREL" to 2),
+                        specialSpellsUsed = emptyMap(),
+                    ),
+                ),
             )
         }
     }
@@ -565,6 +665,28 @@ class DataStoreRepositoriesTest {
                 PlayerProgressionRepositoryFailure.STORAGE_UNAVAILABLE,
             ),
             DataStorePlayerProgressionRepository(failingStore).loadOrInitialize(initialProfile()),
+        )
+        val playerProgressionRepository = DataStorePlayerProgressionRepository(failingStore)
+        assertEquals(
+            PlayerProgressionMutationResult.Failure(
+                PlayerProgressionRepositoryFailure.STORAGE_UNAVAILABLE,
+            ),
+            playerProgressionRepository.updateProfile(initialProfile()) { current ->
+                PlayerProgressionMutation(
+                    snapshot = current.copy(goldBalance = current.goldBalance + 1),
+                    value = Unit,
+                    shouldPersist = true,
+                )
+            },
+        )
+        assertEquals(
+            MatchStockSettlementResult.Failure(
+                com.urkaaaz.application.shop.MatchStockSettlementFailure.STORAGE_UNAVAILABLE,
+            ),
+            playerProgressionRepository.settle(
+                MatchStockSettlementId(MatchId("failing-settlement"), 1),
+                MatchStockUsage(mapOf("POWDER_BARREL" to 1L), emptyMap()),
+            ),
         )
         assertEquals(
             LoadoutStorageResult.Failure(LoadoutStorageFailure.STORAGE_UNAVAILABLE),

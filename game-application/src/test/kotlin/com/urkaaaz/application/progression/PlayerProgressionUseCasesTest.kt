@@ -102,5 +102,21 @@ class PlayerProgressionUseCasesTest {
             this.initialProfile = initialProfile
             return result
         }
+
+        override suspend fun <T> updateProfile(
+            initialProfile: LoadoutProgressionSnapshot,
+            transform: (LoadoutProgressionSnapshot) -> PlayerProgressionMutation<T>,
+        ): PlayerProgressionMutationResult<T> {
+            val current = when (val loaded = result) {
+                is PlayerProgressionRepositoryResult.Available -> loaded.snapshot
+                is PlayerProgressionRepositoryResult.Failure ->
+                    return PlayerProgressionMutationResult.Failure(loaded.reason)
+            }
+            val mutation = transform(current)
+            return PlayerProgressionMutationResult.Completed(
+                mutation.snapshot,
+                mutation.value,
+            )
+        }
     }
 }

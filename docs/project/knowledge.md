@@ -15,7 +15,8 @@ future game-event icons; there is no Dashboard event feed yet. The test mode but
 per-level loadout persistence are implemented with AndroidX DataStore.
 Campaign matches start
 only after the profile and saved loadout are read, validated and committed.
-Shop and result screens remain placeholders.
+ShopScreen now supports local OrCoins purchases and post-match stock settlement;
+ResultScreen remains a placeholder.
 `MainActivity` hides Android status and navigation bars for immersive
 full-screen presentation; system bars can be revealed transiently with a swipe.
 `CampaignScreen` and `LoadoutScreen` share Android UI chrome values from
@@ -989,8 +990,9 @@ must go through commands and domain/application boundaries.
   limited-ammunition/special-spell stock. The screen supports interactive
   selection, normalized-loadout status, item details and guarded commit.
   Campaign progression and Haste/Heal milestone persistence are implemented;
-  tutorials remain deferred to TutorialSystem. Runtime ammunition consumption
-  is not reconciled with persistent stock.
+  tutorials remain deferred to TutorialSystem. ShopSystem passes an immutable
+  player inventory snapshot into each campaign match and settles successful
+  BLUE ammunition uses back to the profile.
 - RewardSystem is implemented for campaign-level gold rewards: a BLUE win
   grants 100 gold, with configurable achievement entries for a direct enemy
   unit hit (10), a win within 120 simulation seconds (25), an untouched own
@@ -999,8 +1001,9 @@ must go through commands and domain/application boundaries.
   resolution order; hits on a shield or bastion do not count. Reward settlement
   atomically saves the profile balance, campaign progress, milestone IDs and
   receipt. Demo/non-win runs pay nothing, completed levels cannot be retried,
-  and older completions without receipts are not paid retroactively. Purchases,
-  stock settlement, kill bonuses and other reward types remain out of scope.
+  and older completions without receipts are not paid retroactively. Shop
+  purchases/stock settlement are separate from RewardSystem; kill bonuses and
+  other reward types remain out of scope.
   During the match, direct enemy-unit and qualifying fortress-streak bonuses
   show a one-second rising `+X OrCoins` label at the hit location; labels are
   provisional until a BLUE win. The fortress streak is labeled “Fortress
@@ -1011,14 +1014,19 @@ must go through commands and domain/application boundaries.
   The other eight spell effects and AI casting are not implemented. HASTE's
   approved AnimGen world-space visual is integrated into Android and rendered
   behind moving HASTED units.
-- Shop and result screens remain placeholders.
+- ShopScreen is a functional local shop; ResultScreen remains a placeholder.
 - The Shop visual-concept brief is `docs/systems/shop-screen-mockup.agp`; its
   exact 1671 × 941 background reference, including the seller, is
   `assets_src/shop/screen-concepts/shop_background_reference.png`. This is a
-  concept reference only, not an Android runtime asset. The legacy shop layout
-  has SPELLS/AMMUNITION tabs, an item grid and a detail panel; its background
-  contains a different embedded seller and must not be combined with the saved
-  reference.
+  scenery source; the runtime Shop uses its drawable copy as a separate
+  background layer. The UI layout reference is
+  `assets_src/shop/screen-concepts/shop_ui_reference.png`; use it for
+  composition, panel hierarchy and proportions, not as a flattened runtime
+  asset or a source of offer data. It depicts a third ARTIFACTS tab and a
+  mixed-category grid; the implemented Shop has only SPELLS and AMMUNITION
+  tabs and displays one category at a time. The legacy shop background
+  contains a different embedded seller and must not be combined with the
+  saved scenery reference.
 - `ResultScreen` remains a placeholder; match results are still shown by the
   existing match presentation. Campaign progress is local-only and has no
   cloud synchronization or legacy-install migration.
@@ -1092,16 +1100,17 @@ when their target is listed in `runtimeBossIdleTargets`. Other boss states are
 runtime-loaded only when their exact sequence id is listed in
 `runtimeBossSequences` (currently `anim_boss_ancient_war_oak_attack_right`).
 
-The Balance tab edits the single schema 3 source
+The Balance tab edits the single schema 4 source
 `game-domain/src/main/resources/balance/game-balance.json`, which owns boss,
 unit, ammunition, spell and mana profiles plus shared runtime economy, physics,
-combat, AI strategy/profile, reward and campaign values. `GET /api/balance`
+combat, AI strategy/profile, reward and campaign values. Limited ammunition
+prices are the nullable `shopCostGold` field. `GET /api/balance`
 returns exact file content and SHA-256, `POST /api/balance/validate` performs
 strict structural, range and stable-ID coverage validation, and
 `PUT /api/balance` writes atomically only when `expectedHash` is current. A changed
 document must advance `balanceRevision`; the editor automatically bumps a
 trailing revision number.
-The Balance UI presents all existing schema 3 fields through Bosses, Units,
+The Balance UI presents all existing schema 4 fields through Bosses, Units,
 Ammunition, Spells & Mana and Runtime tabs; it does not expose a JSON text
 editor. Profile identifiers and list structure remain fixed. Incomplete
 numeric drafts do not become zero values, validation errors are linked to
@@ -1123,6 +1132,8 @@ preserves the player's existing lives and gold. A newly revised, queued preset
 is applied once to the local DataStore; release builds ignore it. The Dashboard
 reads the persisted level/lives/gold summary. Lives are currently stored and
 displayed only; consumption and regeneration remain unimplemented.
+The bundled queued preset currently applies level 5 and 5,000 gold on the next
+debug app launch, replacing the persisted gold balance once.
 
 The team-texture animation renderer is shared by units: it combines one neutral
 frame sequence per state with per-frame alpha masks and a BLUE/RED texture

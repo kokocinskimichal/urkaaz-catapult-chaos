@@ -2,6 +2,7 @@ package com.urkaaaz.application.loadout
 
 import com.urkaaaz.contracts.PlayerId
 import com.urkaaaz.contracts.PlayerLoadoutConfig
+import com.urkaaaz.contracts.PlayerInventoryConfig
 import com.urkaaaz.domain.AmmunitionType
 import com.urkaaaz.domain.GameBalanceConfig
 import com.urkaaaz.domain.SpellType
@@ -230,6 +231,11 @@ class LoadoutUseCases(
                 unitTypes = draft.unitTypes,
                 ammunitionSlots = draft.ammunitionSlots,
                 spellTypes = draft.spellTypes,
+            ),
+            playerInventory = PlayerInventoryConfig(
+                playerId = playerId,
+                ammunitionStocks = snapshot.ammunitionStocks,
+                specialSpellStocks = snapshot.specialSpellStocks,
             ),
         )
     }

@@ -21,6 +21,7 @@ import com.urkaaaz.application.progression.DeveloperProgressPresetUseCase
 import com.urkaaaz.application.progression.DemoLoadoutProgressionPort
 import com.urkaaaz.navigation.AppNavigator
 import com.urkaaaz.navigation.AppScreen
+import com.urkaaaz.navigation.ShopLoadoutReturn
 import com.urkaaaz.navigation.ScreenHost
 import com.urkaaaz.persistence.DataStoreCampaignProgressRepository
 import com.urkaaaz.persistence.DataStoreLoadoutRepository
@@ -35,6 +36,12 @@ import com.urkaaaz.screens.dashboard.DashboardScreen
 import com.urkaaaz.screens.loadout.LoadoutScreen
 import com.urkaaaz.screens.match.CampaignCompletionPresenter
 import com.urkaaaz.application.reward.RewardSettlementUseCase
+import com.urkaaaz.application.shop.MatchStockSettlementUseCase
+import com.urkaaaz.application.shop.ShopCategory
+import com.urkaaaz.application.shop.ShopItemReference
+import com.urkaaaz.application.shop.ShopUseCases
+import com.urkaaaz.contracts.MatchId
+import com.urkaaaz.screens.loadout.LoadoutItemReference
 import com.urkaaaz.screens.match.MatchScreen
 import com.urkaaaz.screens.result.ResultScreen
 import com.urkaaaz.screens.shop.ShopScreen
@@ -44,6 +51,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.launch
+import java.util.UUID
 
 class MainActivity : ComponentActivity() {
     private lateinit var screenHost: ScreenHost
@@ -54,6 +62,22 @@ class MainActivity : ComponentActivity() {
     private val campaignCompletionPresenter by lazy {
         CampaignCompletionPresenter(this, campaignSystem)
     }
+
+    private fun LoadoutItemReference.toShopItemReference(): ShopItemReference =
+        when (this) {
+            is LoadoutItemReference.Ammunition ->
+                ShopItemReference(ShopCategory.AMMUNITION, identifier)
+            is LoadoutItemReference.Spell ->
+                ShopItemReference(ShopCategory.SPELLS, identifier)
+            is LoadoutItemReference.Unit ->
+                error("Units are not sold in the Shop")
+        }
+
+    private fun ShopItemReference.toLoadoutItemReference(): LoadoutItemReference =
+        when (category) {
+            ShopCategory.AMMUNITION -> LoadoutItemReference.Ammunition(identifier)
+            ShopCategory.SPELLS -> LoadoutItemReference.Spell(identifier)
+        }
     private val campaignRewardRegistry by lazy { BundledCampaignBalance.rewardRegistry() }
     private val campaignSystem by lazy {
         CampaignSystem(
@@ -72,6 +96,18 @@ class MainActivity : ComponentActivity() {
     private val preferencesDataStore by lazy {
         applicationContext.urkaazPreferencesDataStore
     }
+    private val playerProgressionRepository by lazy {
+        DataStorePlayerProgressionRepository(preferencesDataStore)
+    }
+    private val playerProgressionUseCases by lazy {
+        PlayerProgressionUseCases(playerProgressionRepository)
+    }
+    private val shopUseCases by lazy {
+        ShopUseCases(playerProgressionRepository)
+    }
+    private val matchStockSettlementUseCase by lazy {
+        MatchStockSettlementUseCase(playerProgressionRepository)
+    }
     private val developerProgressPresetAdapter by lazy {
         DataStoreDeveloperProgressPresetAdapter(preferencesDataStore)
     }
@@ -86,9 +122,7 @@ class MainActivity : ComponentActivity() {
     }
     private val campaignAwareLoadoutProgression by lazy {
         CampaignAwareLoadoutProgressionPort(
-            playerProgression = PlayerProgressionUseCases(
-                DataStorePlayerProgressionRepository(preferencesDataStore),
-            ),
+            playerProgression = playerProgressionUseCases,
             campaignSystem = campaignSystem,
         )
     }
@@ -184,7 +218,7 @@ class MainActivity : ComponentActivity() {
                 context = this,
                 onBack = { navigator.back() },
                 onCampaign = { navigator.navigate(AppScreen.Campaign) },
-                onShop = { navigator.navigate(AppScreen.Shop) },
+                onShop = { navigator.navigate(AppScreen.Shop()) },
                 onResetProgress = { playerProgressResetRepository.reset() },
                 loadProgress = { developerProgressPreset.current() },
             )
@@ -205,7 +239,19 @@ class MainActivity : ComponentActivity() {
                 loadoutCatalog = loadoutCatalog,
                 onBack = { navigator.back() },
                 demoMode = screen.demoMode,
-                onStart = { playerLoadout ->
+                initialDetailItem = screen.focusItem?.toLoadoutItemReference(),
+                onShop = { item ->
+                    navigator.replace(
+                        AppScreen.Shop(
+                            returnToLoadout = ShopLoadoutReturn(
+                                campaignLevel = screen.campaignLevel,
+                                demoMode = screen.demoMode,
+                                item = item.toShopItemReference(),
+                            ),
+                        ),
+                    )
+                },
+                onStart = { playerLoadout, playerInventory ->
                     navigator.replace(
                         AppScreen.Match(
                             levelId = if (screen.demoMode) {
@@ -214,17 +260,42 @@ class MainActivity : ComponentActivity() {
                                 "LEVEL_${screen.campaignLevel}"
                             },
                             campaignLevel = screen.campaignLevel,
+                            matchId = MatchId(UUID.randomUUID().toString()),
                             playerLoadout = playerLoadout,
+                            playerInventory = playerInventory.takeUnless { screen.demoMode },
                         ),
                     )
                 },
             )
-            AppScreen.Shop -> ShopScreen(this)
+            is AppScreen.Shop -> ShopScreen(
+                context = this,
+                useCases = shopUseCases,
+                initialItem = screen.returnToLoadout?.item,
+                onBack = {
+                    val returnToLoadout = screen.returnToLoadout
+                    if (returnToLoadout == null) {
+                        if (!navigator.back()) finish()
+                    } else {
+                        navigator.replace(
+                            AppScreen.Loadout(
+                                campaignLevel = returnToLoadout.campaignLevel,
+                                demoMode = returnToLoadout.demoMode,
+                                focusItem = returnToLoadout.item,
+                            ),
+                        )
+                    }
+                },
+            )
             is AppScreen.Match -> MatchScreen(
                 activity = this,
                 campaignLevel = screen.campaignLevel,
                 rewardRegistry = campaignRewardRegistry,
                 playerLoadout = screen.playerLoadout,
+                playerInventory = screen.playerInventory,
+                matchId = screen.matchId,
+                stockSettlementUseCase = matchStockSettlementUseCase.takeIf {
+                    screen.playerInventory != null
+                },
                 loadoutCatalog = loadoutCatalog,
                 demoMode = screen.levelId == "DEMO_LEVEL",
                 onBackClicked = {

@@ -8,6 +8,7 @@ import com.urkaaaz.contracts.MatchScenario
 import com.urkaaaz.contracts.MapDefinition
 import com.urkaaaz.contracts.PlayerConfig
 import com.urkaaaz.contracts.PlayerId
+import com.urkaaaz.contracts.PlayerInventoryConfig
 import com.urkaaaz.contracts.PlayerLoadoutConfig
 import com.urkaaaz.contracts.Team
 import com.urkaaaz.contracts.VictoryRulesConfig
@@ -52,6 +53,7 @@ data class CampaignLevelDefinition(
         playerId: PlayerId = PlayerId("player"),
         opponentId: PlayerId = PlayerId("opponent"),
         playerLoadout: PlayerLoadoutConfig? = null,
+        playerInventory: PlayerInventoryConfig? = null,
     ): MatchScenario = MatchScenario(
         scenarioId = "campaign-$level",
         battlefield = BattlefieldConfig(
@@ -66,6 +68,7 @@ data class CampaignLevelDefinition(
         availableAmmunition = availableAmmunition.map { it.name }.sorted(),
         availableSpells = availableSpells.map { it.name }.sorted(),
         playerLoadout = playerLoadout,
+        playerInventory = playerInventory,
         wind = initialWind,
         victoryRules = VictoryRulesConfig(defeatAllOpponents = true),
         mapDefinition = mapDefinition,

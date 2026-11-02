@@ -8,6 +8,7 @@ import com.urkaaaz.application.loadout.LoadoutEditAction
 import com.urkaaaz.application.loadout.LoadoutEditResult
 import com.urkaaaz.application.loadout.LoadoutError
 import com.urkaaaz.application.loadout.LoadoutOpenResult
+import com.urkaaaz.application.loadout.LoadoutLaunchConfig
 import com.urkaaaz.application.loadout.LoadoutProgressionFailure
 import com.urkaaaz.application.loadout.LoadoutProgressionSnapshot
 import com.urkaaaz.application.loadout.LoadoutStorageFailure
@@ -15,6 +16,7 @@ import com.urkaaaz.application.loadout.LoadoutUseCases
 import com.urkaaaz.application.loadout.MatchLoadout
 import com.urkaaaz.campaign.CampaignLevelDefinition
 import com.urkaaaz.contracts.PlayerId
+import com.urkaaaz.contracts.PlayerInventoryConfig
 import com.urkaaaz.contracts.PlayerLoadoutConfig
 
 data class LoadoutUiState(
@@ -32,6 +34,7 @@ data class LoadoutUiState(
     val validationError: LoadoutError? = null,
     val detailItem: LoadoutItemReference? = null,
     val committedLoadout: PlayerLoadoutConfig? = null,
+    val committedInventory: PlayerInventoryConfig? = null,
 ) {
     val canStart: Boolean
         get() = !isLoading &&
@@ -62,6 +65,7 @@ sealed interface LoadoutItemReference {
 enum class LoadoutOptionStatus {
     SELECTED,
     AVAILABLE,
+    UNIMPLEMENTED,
     UNAVAILABLE,
     LOCKED,
     OUT_OF_STOCK,
@@ -74,6 +78,7 @@ internal fun <T> availableOptionsFirst(
     when (statusOf(option)) {
         LoadoutOptionStatus.SELECTED,
         LoadoutOptionStatus.AVAILABLE -> false
+        LoadoutOptionStatus.UNIMPLEMENTED,
         LoadoutOptionStatus.UNAVAILABLE,
         LoadoutOptionStatus.LOCKED,
         LoadoutOptionStatus.OUT_OF_STOCK -> true
@@ -136,6 +141,7 @@ class LoadoutViewModel(
             validationError = null,
             detailItem = null,
             committedLoadout = null,
+            committedInventory = null,
         )
         state = when (val result = useCases.open(availability)) {
             is LoadoutOpenResult.Opened -> state.copy(
@@ -221,6 +227,8 @@ class LoadoutViewModel(
                     spell.special &&
                         (progression?.specialSpellStock(item.identifier) ?: 0) <= 0 ->
                         LoadoutOptionStatus.OUT_OF_STOCK
+                    spell.special && !spell.implemented ->
+                        LoadoutOptionStatus.UNIMPLEMENTED
                     !spell.special && item.identifier !in availability.spellTypes ->
                         LoadoutOptionStatus.UNAVAILABLE
                     !spell.special &&
@@ -252,7 +260,7 @@ class LoadoutViewModel(
         }
     }
 
-    suspend fun commit(): PlayerLoadoutConfig? {
+    suspend fun commit(): LoadoutLaunchConfig? {
         val draft = state.draft ?: return null
         if (!state.canStart) return null
 
@@ -267,6 +275,7 @@ class LoadoutViewModel(
             is LoadoutCommitResult.Committed -> state.copy(
                 isSaving = false,
                 committedLoadout = result.playerLoadout,
+                committedInventory = result.playerInventory,
                 validationError = null,
             )
             is LoadoutCommitResult.Rejected -> state.copy(
@@ -283,7 +292,9 @@ class LoadoutViewModel(
                 failure = LoadoutUiFailure.Storage(result.reason),
             )
         }
-        return state.committedLoadout
+        val committedLoadout = state.committedLoadout ?: return null
+        val committedInventory = state.committedInventory ?: return null
+        return LoadoutLaunchConfig(committedLoadout, committedInventory)
     }
 
     private companion object {

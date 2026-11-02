@@ -14,6 +14,7 @@ import com.urkaaaz.contracts.WindSnapshot
 import com.urkaaaz.contracts.BattlefieldConfig
 import com.urkaaaz.contracts.MatchScenario
 import com.urkaaaz.contracts.PlayerConfig
+import com.urkaaaz.contracts.PlayerInventoryConfig
 import com.urkaaaz.contracts.PlayerLoadoutConfig
 import com.urkaaaz.contracts.Team
 import kotlin.test.Test
@@ -44,6 +45,60 @@ class MatchSessionTest {
         session.restart(matchId, playerId)
         assertEquals(2, batches.size)
         assertIs<MatchEvent.MatchStarted>(batches.last().first())
+    }
+
+    @Test
+    fun restartUsesUpdatedPlayerInventoryAndRecordsItInReplay() {
+        val playerId = PlayerId("inventory-player")
+        val initialScenario = MatchScenario(
+            scenarioId = "inventory-scenario",
+            battlefield = BattlefieldConfig(1_000, 600),
+            players = listOf(
+                PlayerConfig(playerId, Team.BLUE),
+                PlayerConfig(PlayerId("inventory-ai"), Team.RED),
+            ),
+            availableUnits = listOf("DEFENDER"),
+            availableAmmunition = listOf("ROCK", "POWDER_BARREL"),
+            availableSpells = listOf("FORTRESS_SHIELD"),
+            playerLoadout = PlayerLoadoutConfig(
+                playerId = playerId,
+                unitTypes = listOf("DEFENDER"),
+                ammunitionSlots = listOf("ROCK", "POWDER_BARREL", null),
+                spellTypes = listOf("FORTRESS_SHIELD"),
+            ),
+            playerInventory = PlayerInventoryConfig(
+                playerId = playerId,
+                ammunitionStocks = mapOf("POWDER_BARREL" to 2),
+                specialSpellStocks = emptyMap(),
+            ),
+        )
+        val session = MatchSession(scenario = initialScenario)
+        val matchId = MatchId("inventory-restart")
+        session.dispatch(MatchCommand.Start(CommandId("inventory-start"), matchId, playerId))
+
+        assertEquals(
+            2,
+            session.snapshot().resourcesByTeam[Team.BLUE]?.ammunition?.get("POWDER_BARREL"),
+        )
+        val updatedScenario = initialScenario.copy(
+            playerInventory = initialScenario.playerInventory!!.copy(
+                ammunitionStocks = mapOf("POWDER_BARREL" to 1),
+            ),
+        )
+        session.restart(matchId, playerId, updatedScenario)
+
+        assertEquals(
+            1,
+            session.snapshot().resourcesByTeam[Team.BLUE]?.ammunition?.get("POWDER_BARREL"),
+        )
+        assertEquals(
+            3,
+            session.snapshot().resourcesByTeam[Team.RED]?.ammunition?.get("POWDER_BARREL"),
+        )
+        assertEquals(
+            updatedScenario,
+            session.replay()?.configuration?.scenario,
+        )
     }
 
     @Test

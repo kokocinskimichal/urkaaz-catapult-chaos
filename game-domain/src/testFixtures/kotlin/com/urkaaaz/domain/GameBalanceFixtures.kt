@@ -46,6 +46,7 @@ object GameBalanceFixtures {
                     AmmunitionEffect.DIRECT,
                     ReloadProfile(0f),
                     InventoryProfile(true, 0),
+                    null,
                     FlightProfile(1.5f, 1f, 1f, 0f, 8f, 30f, null),
                     CollisionProfile(
                         setOf(AmmunitionHitLayer.TERRAIN, AmmunitionHitLayer.UNIT, AmmunitionHitLayer.FORTRESS),
@@ -63,6 +64,7 @@ object GameBalanceFixtures {
                     AmmunitionEffect.EXPLOSIVE,
                     ReloadProfile(5.5f),
                     InventoryProfile(true, 0),
+                    null,
                     FlightProfile(2.5f, 0.8f, 1f, 0f, 8f, 30f, null),
                     CollisionProfile(
                         setOf(AmmunitionHitLayer.TERRAIN, AmmunitionHitLayer.FORTRESS),
@@ -80,6 +82,7 @@ object GameBalanceFixtures {
                     AmmunitionEffect.EXPLOSIVE,
                     ReloadProfile(6.5f),
                     InventoryProfile(false, 3),
+                    250,
                     FlightProfile(2f, 0.9f, 1f, 0f, 8f, 30f, null),
                     CollisionProfile(
                         setOf(AmmunitionHitLayer.TERRAIN, AmmunitionHitLayer.FORTRESS),
@@ -97,6 +100,7 @@ object GameBalanceFixtures {
                     AmmunitionEffect.INCENDIARY,
                     ReloadProfile(8f),
                     InventoryProfile(false, 3),
+                    350,
                     FlightProfile(
                         1.2f,
                         1.1f,
@@ -127,6 +131,7 @@ object GameBalanceFixtures {
                     AmmunitionEffect.PLAGUE,
                     ReloadProfile(15f),
                     InventoryProfile(false, 3),
+                    500,
                     FlightProfile(3f, 0.6f, 1f, 0f, 8f, 30f, null),
                     CollisionProfile(
                         setOf(AmmunitionHitLayer.TERRAIN, AmmunitionHitLayer.FORTRESS),

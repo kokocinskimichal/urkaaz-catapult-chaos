@@ -16,11 +16,20 @@ import android.widget.LinearLayout
 import android.widget.CheckBox
 import android.widget.ScrollView
 import android.widget.TextView
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.CoroutineStart
+import kotlinx.coroutines.cancel
+import kotlinx.coroutines.launch
 import com.urkaaaz.android.R
 import com.urkaaaz.campaign.MapDefinitionRepository
 import com.urkaaaz.contracts.MatchEvent
+import com.urkaaaz.contracts.MatchId
 import com.urkaaaz.contracts.MatchOutcome
 import com.urkaaaz.contracts.MatchStatus
+import com.urkaaaz.contracts.PlayerInventoryConfig
 import com.urkaaaz.contracts.PlayerLoadoutConfig
 import com.urkaaaz.application.reward.LevelRewardResult
 import com.urkaaaz.application.reward.RewardTracker
@@ -28,12 +37,17 @@ import com.urkaaaz.campaign.CampaignRewardRegistry
 import com.urkaaaz.screens.match.CampaignCompletionPresentation
 import com.urkaaaz.application.loadout.LoadoutCatalog
 import com.urkaaaz.application.campaign.BundledCampaignBalance
+import com.urkaaaz.application.shop.MatchStockSettlementResult
+import com.urkaaaz.application.shop.MatchStockSettlementUseCase
 
 class MatchScreenController(
     private val activity: Activity,
     private val campaignLevel: Int,
     rewardRegistry: CampaignRewardRegistry = BundledCampaignBalance.rewardRegistry(),
     playerLoadout: PlayerLoadoutConfig? = null,
+    private val playerInventory: PlayerInventoryConfig? = null,
+    matchId: MatchId = MatchId("local-match"),
+    stockSettlementUseCase: MatchStockSettlementUseCase? = null,
     private val loadoutCatalog: LoadoutCatalog = LoadoutCatalog.bundled(),
     private val demoMode: Boolean = false,
     private val onBackClicked: () -> Unit,
@@ -49,6 +63,9 @@ class MatchScreenController(
     private val viewModel = MatchViewModel(
         campaignLevel = campaignLevel,
         playerLoadout = playerLoadout,
+        playerInventory = playerInventory,
+        matchId = matchId,
+        stockSettlementUseCase = stockSettlementUseCase,
         loadoutCatalog = loadoutCatalog,
         demoMode = demoMode,
         mapRepository = MapDefinitionRepository { path -> activity.assets.open(path) },
@@ -63,9 +80,15 @@ class MatchScreenController(
                 lastRenderedState?.let(::render)
             }
         },
+        onStockSettlementRequested = ::settleStockAfterMatchFinished,
         rewardTracker = if (demoMode) null else RewardTracker(campaignLevel, rewardRegistry),
     )
     private val gameHandler = Handler(Looper.getMainLooper())
+    private var screenScope: CoroutineScope? = null
+    private var stockSettlementJob: Job? = null
+    private var stockSettlementUiStatus = MatchStockSettlementUiStatus.NOT_REQUIRED
+    private var pendingStockOperation: (suspend () -> MatchStockSettlementResult?)? = null
+    private var pendingStockSuccess: (() -> Unit)? = null
     private lateinit var battlefieldView: BattlefieldView
     private lateinit var hudView: MatchHudView
     private lateinit var bossHudView: BossHudView
@@ -78,6 +101,9 @@ class MatchScreenController(
     private lateinit var hitboxToggle: CheckBox
     private lateinit var snapshotCloseButton: TextView
     private lateinit var resultPopupView: MatchResultPopupView
+    private lateinit var stockSettlementOverlay: FrameLayout
+    private lateinit var stockSettlementStatusText: TextView
+    private lateinit var stockSettlementRetryButton: TextView
     private var snapshotMode = false
     private var debugPausedMatch = false
     private var campaignCompletionRecorded: Boolean? = null
@@ -217,11 +243,15 @@ class MatchScreenController(
                 action = action,
                 onRetry = ::restartMatch,
                 onRetrySave = ::retryCampaignSave,
-                onNextLevel = { onNextLevelClicked(campaignLevel + 1) },
-                onCampaignReturn = onBackClicked,
-                onDashboardReturn = onBackClicked,
+                onRetryStockSettlement = ::retryStockSettlement,
+                onNextLevel = {
+                    leaveAfterStockSettlement { onNextLevelClicked(campaignLevel + 1) }
+                },
+                onCampaignReturn = { leaveAfterStockSettlement(onBackClicked) },
+                onDashboardReturn = { leaveAfterStockSettlement(onBackClicked) },
             )
         }
+        stockSettlementOverlay = createStockSettlementOverlay()
 
         battlefieldView.onAimChanged = { aim ->
             aimAngle = aim.angleDegrees
@@ -322,6 +352,7 @@ class MatchScreenController(
                 },
             )
             addView(resultPopupView, FrameLayout.LayoutParams(-1, -1))
+            addView(stockSettlementOverlay, FrameLayout.LayoutParams(-1, -1))
             render(viewModel.dispatch(MatchUiAction.StartMatch))
             if (openDebugOnStart) {
                 viewModel.setAiUnitAutomationEnabled(false)
@@ -331,21 +362,41 @@ class MatchScreenController(
     }
 
     fun onResume() {
+        if (screenScope == null) {
+            screenScope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
+        }
         gameHandler.removeCallbacks(gameTick)
         if (::battlefieldView.isInitialized) {
             battlefieldView.setLifecyclePaused(false)
         }
+        lastRenderedState?.let(::render)
         gameHandler.postDelayed(gameTick, 33L)
     }
 
     fun onPause() {
         gameHandler.removeCallbacks(gameTick)
+        if (stockSettlementJob?.isActive == true) {
+            stockSettlementJob?.cancel()
+            stockSettlementJob = null
+            stockSettlementUiStatus = MatchStockSettlementUiStatus.FAILED
+        }
+        screenScope?.cancel()
+        screenScope = null
         if (::battlefieldView.isInitialized) {
             battlefieldView.setLifecyclePaused(true)
         }
         if (::feedbackToast.isInitialized) {
             feedbackToast.hideImmediately()
         }
+    }
+
+    fun onBackPressed(): Boolean {
+        val state = viewModel.renderState
+        if (state.statusLabel == MatchStatus.RUNNING.name) {
+            render(viewModel.dispatch(MatchUiAction.TogglePause))
+        }
+        leaveAfterStockSettlement(onBackClicked)
+        return true
     }
 
     private fun render(state: RenderState) {
@@ -358,6 +409,7 @@ class MatchScreenController(
             demoMode = demoMode,
             campaignCompletionRecorded = campaignCompletionRecorded,
             reward = campaignRewardResult,
+            stockSettlementStatus = stockSettlementUiStatus,
         )
         hudView.render(state)
         bossHudView.render(state.boss)
@@ -373,20 +425,156 @@ class MatchScreenController(
             View.GONE
         }
         resultPopupView.visibility = if (popupState == null) View.GONE else View.VISIBLE
+        updateStockSettlementOverlay(state)
         if (popupState != null) {
             resultPopupView.render(popupState)
             resultPopupView.bringToFront()
         }
     }
 
+    private fun settleStockAfterMatchFinished() {
+        if (playerInventory == null ||
+            stockSettlementUiStatus != MatchStockSettlementUiStatus.NOT_REQUIRED
+        ) return
+        runStockOperation(
+            operation = { viewModel.settleStockUsage() },
+            onSuccess = {},
+        )
+    }
+
     private fun restartMatch() {
-        campaignCompletionRecorded = null
-        campaignRewardResult = null
-        lastMatchFinishedEvent = null
-        lastMatchReward = null
-        aimAngle = loadoutCatalog.initialAimDirectionDegrees
-        aimPower = loadoutCatalog.initialAimPower
-        render(viewModel.dispatch(MatchUiAction.RestartMatch))
+        runStockOperation(
+            operation = { viewModel.restartMatch() },
+            onSuccess = {
+                campaignCompletionRecorded = null
+                campaignRewardResult = null
+                lastMatchFinishedEvent = null
+                lastMatchReward = null
+                aimAngle = loadoutCatalog.initialAimDirectionDegrees
+                aimPower = loadoutCatalog.initialAimPower
+                stockSettlementUiStatus = MatchStockSettlementUiStatus.NOT_REQUIRED
+                render(viewModel.renderState)
+            },
+        )
+    }
+
+    private fun leaveAfterStockSettlement(action: () -> Unit) {
+        if (viewModel.renderState.statusLabel == MatchStatus.RUNNING.name) {
+            render(viewModel.dispatch(MatchUiAction.TogglePause))
+        }
+        runStockOperation(
+            operation = { viewModel.stopMatch() },
+            onSuccess = action,
+        )
+    }
+
+    private fun retryStockSettlement() {
+        val operation = pendingStockOperation ?: { viewModel.settleStockUsage() }
+        val onSuccess = pendingStockSuccess ?: {}
+        runStockOperation(operation, onSuccess)
+    }
+
+    private fun runStockOperation(
+        operation: suspend () -> MatchStockSettlementResult?,
+        onSuccess: () -> Unit,
+    ) {
+        if (stockSettlementJob?.isActive == true) return
+        val scope = screenScope ?: CoroutineScope(
+            SupervisorJob() + Dispatchers.Main.immediate,
+        ).also { screenScope = it }
+        pendingStockOperation = operation
+        pendingStockSuccess = onSuccess
+        stockSettlementUiStatus = MatchStockSettlementUiStatus.PENDING
+        lastRenderedState?.let(::render)
+        val job = scope.launch(start = CoroutineStart.LAZY) {
+            val result = operation()
+            val success = result == null ||
+                result is MatchStockSettlementResult.Settled ||
+                result is MatchStockSettlementResult.AlreadySettled
+            stockSettlementJob = null
+            if (success) {
+                stockSettlementUiStatus = if (playerInventory == null) {
+                    MatchStockSettlementUiStatus.NOT_REQUIRED
+                } else {
+                    MatchStockSettlementUiStatus.SETTLED
+                }
+                val completion = pendingStockSuccess
+                pendingStockOperation = null
+                pendingStockSuccess = null
+                lastRenderedState?.let(::render)
+                completion?.invoke()
+            } else {
+                stockSettlementUiStatus = MatchStockSettlementUiStatus.FAILED
+                lastRenderedState?.let(::render)
+            }
+        }
+        stockSettlementJob = job
+        job.start()
+    }
+
+    private fun createStockSettlementOverlay(): FrameLayout =
+        FrameLayout(activity).apply {
+            setBackgroundColor(Color.argb(175, 0, 0, 0))
+            isClickable = true
+            isFocusable = true
+            setOnClickListener { }
+            val panel = LinearLayout(activity).apply {
+                orientation = LinearLayout.VERTICAL
+                gravity = Gravity.CENTER
+                setPadding(dp(24), dp(18), dp(24), dp(18))
+                background = android.graphics.drawable.GradientDrawable().apply {
+                    cornerRadius = dp(12).toFloat()
+                    setColor(Color.rgb(28, 23, 18))
+                    setStroke(dp(2), Color.rgb(174, 128, 62))
+                }
+                stockSettlementStatusText = TextView(activity).apply {
+                    gravity = Gravity.CENTER
+                    textSize = 14f
+                    setTextColor(Color.rgb(255, 239, 211))
+                }
+                addView(stockSettlementStatusText, LinearLayout.LayoutParams(-1, -2))
+                addView(TextView(activity).apply {
+                    text = activity.getString(R.string.match_result_retry_stock)
+                    gravity = Gravity.CENTER
+                    textSize = 14f
+                    setTextColor(Color.rgb(72, 43, 20))
+                    UiTypography.applyButtonTypeface(this)
+                    setBackgroundResource(R.drawable.loadout_start_match_button)
+                    setPadding(dp(18), dp(8), dp(18), dp(8))
+                    visibility = View.GONE
+                    stockSettlementRetryButton = this
+                    setOnClickListener { retryStockSettlement() }
+                }, LinearLayout.LayoutParams(-1, dp(48)).apply {
+                    topMargin = dp(12)
+                })
+            }
+            addView(panel, FrameLayout.LayoutParams(dp(380), -2, Gravity.CENTER))
+            visibility = View.GONE
+        }
+
+    private fun updateStockSettlementOverlay(state: RenderState) {
+        if (!::stockSettlementOverlay.isInitialized) return
+        val isResult = state.statusLabel == MatchStatus.FINISHED.name
+        val isBlocking = !isResult &&
+            stockSettlementUiStatus in setOf(
+                MatchStockSettlementUiStatus.PENDING,
+                MatchStockSettlementUiStatus.FAILED,
+            )
+        stockSettlementOverlay.visibility = if (isBlocking) View.VISIBLE else View.GONE
+        if (!isBlocking) return
+        stockSettlementStatusText.text = activity.getString(
+            if (stockSettlementUiStatus == MatchStockSettlementUiStatus.PENDING) {
+                R.string.match_result_saving_stock
+            } else {
+                R.string.match_result_stock_settlement_failed
+            },
+        )
+        stockSettlementRetryButton.visibility =
+            if (stockSettlementUiStatus == MatchStockSettlementUiStatus.FAILED) {
+                View.VISIBLE
+            } else {
+                View.GONE
+            }
     }
 
     private fun retryCampaignSave() {

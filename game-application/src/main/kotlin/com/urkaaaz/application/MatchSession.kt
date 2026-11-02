@@ -32,7 +32,7 @@ class MatchSession(
     private val terrainBiome: String = "GREEN_FRONTIER",
     private val initialWind: WindSnapshot = WindSnapshot(),
     private val mapDefinition: MapDefinition? = null,
-    private val scenario: MatchScenario? = null,
+    private var scenario: MatchScenario? = null,
     private val blueFortressMaxHealth: Int? = null,
     private val redFortressMaxHealth: Int? = null,
     private val combatLogSink: CombatLogSink = NoOpCombatLogSink,
@@ -238,14 +238,28 @@ class MatchSession(
         return latestSnapshot
     }
 
-    fun restart(matchId: com.urkaaaz.contracts.MatchId, playerId: com.urkaaaz.contracts.PlayerId): MatchSnapshot =
-        start(
+    fun restart(
+        matchId: com.urkaaaz.contracts.MatchId,
+        playerId: com.urkaaaz.contracts.PlayerId,
+        scenarioOverride: MatchScenario? = null,
+    ): MatchSnapshot {
+        scenarioOverride?.let { nextScenario ->
+            val currentScenario = requireNotNull(scenario) {
+                "cannot replace scenario for a session without a scenario"
+            }
+            require(currentScenario.copy(playerInventory = nextScenario.playerInventory) == nextScenario) {
+                "restart may only update the player inventory snapshot"
+            }
+            scenario = nextScenario
+        }
+        return start(
             MatchCommand.Start(
                 commandId = com.urkaaaz.contracts.CommandId("restart"),
                 matchId = matchId,
                 playerId = playerId,
             ),
         ).also { notifyEventObserver(latestEvents) }
+    }
 
     fun consumeEvents(): List<com.urkaaaz.contracts.MatchEvent> =
         latestEvents.also { latestEvents = emptyList() }
@@ -336,6 +350,7 @@ class MatchSession(
                 balanceRevision = loadedBalance.config.balanceRevision,
                 balanceContentHash = loadedBalance.contentHash,
                 playerLoadout = scenario?.playerLoadout,
+                playerInventory = scenario?.playerInventory,
                 availableAmmunitionTypes = scenario?.availableAmmunition?.toSet().orEmpty(),
                 combatRandomSeed = randomSeed,
                 bossEncounterMatchDurationMilliseconds = resolvedBossDuration,

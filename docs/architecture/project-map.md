@@ -17,7 +17,7 @@ Android jest nazywana **match screen**, a wybrana definicja kampanii —
 | `game-contracts` | stabilne, niemutowalne kontrakty komunikacji | komendy, snapshoty, eventy, scenariusze, identyfikatory |
 | `game-domain` | reguły i stan domeny gry | `Match`, fortece, jednostki, amunicja, obrażenia, konfiguracje |
 | `game-simulation` | deterministyczne wykonywanie meczu | ticki, pociski, kolizje, teren, wiatr, jednostki, eventy |
-| `game-application` | cykl życia meczu, lokalny gateway, loadout, reward tracking i przypadki użycia kampanii | `MatchSession`, `LocalMatchGateway`, `application.loadout`, `application.campaign`, `application.reward` |
+| `game-application` | cykl życia meczu, lokalny gateway, loadout, Shop, reward tracking i przypadki użycia kampanii | `MatchSession`, `LocalMatchGateway`, `application.loadout`, `application.shop`, `application.campaign`, `application.reward` |
 | `game-campaign` | definicje poziomów, nagród, milestone'ów i konfiguracja kampanii | `CampaignLevelDefinition`, `CampaignRewardRegistry`, `CampaignMilestoneRegistry`, biom, wiatr, scenariusz |
 | `game-ai` | decyzje AI na podstawie snapshotu | `AiAgent`, rekrutacja, dobór kontr, wysyłanie fal |
 | `android-app` | lifecycle, nawigacja, input i renderowanie | `MainActivity`, ekrany, ViewModel, HUD, battlefield |
@@ -64,8 +64,8 @@ przez komendy i granice domeny/aplikacji.
 1. `CampaignScreen` przekazuje numer wybranego poziomu do `LoadoutScreen`.
 2. `LoadoutScreen` asynchronicznie odczytuje profil i zapis per-level przez
    `LoadoutUseCases`; błędy lub nieprawidłowe dane blokują start.
-3. Po świeżej walidacji i zapisie `PlayerLoadoutConfig` przechodzi do
-   `MatchScreen` i scenariusza kampanii.
+3. Po świeżej walidacji i zapisie `PlayerLoadoutConfig` oraz
+   `PlayerInventoryConfig` przechodzą do `MatchScreen` i scenariusza kampanii.
 4. `LocalMatchGateway` tworzy `MatchSession` z konfiguracją poziomu i
    opcjonalnym scenariuszem, w tym wiatrem i loadoutem.
 5. `MatchSession` odrzuca niedostępne/niewybrane jednostki i amunicję gracza,
@@ -76,8 +76,10 @@ przez komendy i granice domeny/aplikacji.
 8. Uporządkowane eventy z `MatchSession` zasilają RewardTracker; przy
    `MatchEvent.MatchFinished` wynik trafia do `CampaignSystem` i
    `RewardSettlementUseCase`.
-9. Tylko `BLUE_WIN` atomowo zapisuje złoto, ukończenie, następny poziom,
-   milestone'y i receipt. Demo, porażka, remis i poddanie nie dają nagrody.
+9. Tylko `BLUE_WIN` atomowo zapisuje nagrodę złota, ukończenie, następny poziom,
+   milestone'y i receipt. ShopSystem niezależnie rozlicza użyty stock po każdym
+   `MatchFinished` oraz przed jawnym stopem/restartem; niewykorzystane stocki
+   zostają. Demo, porażka, remis i poddanie nie dają nagrody kampanii.
 10. Etykiety trafieniowych bonusów są prezentacyjne i tymczasowe; popup meczu
     pokazuje zapisany wynik nagrody, a błąd zapisu można ponowić bez
     restartowania meczu. Powrót do CampaignScreen odczytuje trwały postęp,
@@ -100,7 +102,7 @@ Dostępne ekrany:
 - `CampaignScreen` — wybór poziomu kampanii;
 - `LoadoutScreen` — edytuje jednostki, sloty amunicji i czary; wewnętrzne
   szczegóły zachowują draft/scroll, a start wymaga udanego zapisu;
-- `ShopScreen` — placeholder;
+- `ShopScreen` — zakupy za OrCoins, dostępny z Dashboardu i Loadoutu;
 - `MatchScreen` — działający ekran meczu;
 - `ResultScreen` — placeholder.
 
@@ -168,7 +170,10 @@ dostępny od 6) i Heal (ukończenie 7, dostępny od 8).
 `CampaignAwareLoadoutProgressionPort` łączy kampanijne odblokowania z profilem
 wyłącznie w read modelu. Domyślne wybory milestone'ów stosują się do nowego
 loadoutu, nie nadpisują istniejącego. Tutoriale należą do przyszłego
-TutorialSystem.
+TutorialSystem. `ShopUseCases` korzysta z cen w `GameBalanceConfig` i atomowego
+portu profilu. `DataStorePlayerProgressionRepository` oraz
+`DataStoreRewardSettlementAdapter` współdzielą profile codec, a transakcje
+stocku używają tego samego DataStore.
 
 ## Kluczowe pliki
 
@@ -186,7 +191,11 @@ TutorialSystem.
 | `game-application/src/main/kotlin/com/urkaaaz/application/LocalMatchGateway.kt` | lokalny gateway |
 | `game-application/src/main/kotlin/com/urkaaaz/application/loadout/` | loadout, walidacja, jawne porty progresji/zapisu i read-only projekcja katalogów dla Android UI |
 | `game-application/src/main/kotlin/com/urkaaaz/application/progression/PlayerProgressionUseCases.kt` | inicjalizacja i walidacja snapshotu profilu |
+| `game-application/src/main/kotlin/com/urkaaaz/application/shop/ShopUseCases.kt` | katalog ofert i atomowe zakupy |
+| `game-application/src/main/kotlin/com/urkaaaz/application/shop/MatchStockUsageTracker.kt` | zliczanie udanych użyć stocku w generacji meczu |
+| `game-application/src/main/kotlin/com/urkaaaz/application/shop/MatchStockSettlementUseCase.kt` | idempotentne rozliczenie użyć stocku |
 | `android-app/src/main/java/com/urkaaaz/persistence/DataStorePlayerProgressionRepository.kt` | wersjonowany adapter profilu |
+| `android-app/src/main/java/com/urkaaaz/persistence/PlayerProgressionDataStoreCodec.kt` | wspólny codec profilu dla zakupów, nagród i settlementu stocku |
 | `android-app/src/main/java/com/urkaaaz/persistence/DataStoreLoadoutRepository.kt` | wersjonowany adapter loadoutu |
 | `game-simulation/src/main/kotlin/com/urkaaaz/simulation/DeterministicMatchSimulation.kt` | wykonanie symulacji |
 | `game-contracts/src/main/kotlin/com/urkaaaz/contracts/MatchSnapshot.kt` | read model |

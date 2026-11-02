@@ -112,6 +112,7 @@ export interface AmmunitionDefinition {
   effect: AmmunitionEffect;
   reload: { reloadSeconds: number };
   inventory: { unlimited: boolean; startingCount: number };
+  shopCostGold: number | null;
   flight: {
     mass: number;
     windResponse: number;
@@ -264,8 +265,8 @@ export interface RuntimeBalance {
   };
 }
 
-export interface GameBalanceDocumentV3 {
-  schemaVersion: 3;
+export interface GameBalanceDocumentV4 {
+  schemaVersion: 4;
   balanceRevision: string;
   bosses: BossProfile[];
   units: UnitConfiguration[];
@@ -300,7 +301,7 @@ export interface FormIssue {
 }
 
 export type MaterializedDraft =
-  | { valid: true; document: GameBalanceDocumentV3 }
+  | { valid: true; document: GameBalanceDocumentV4 }
   | { valid: false; issues: FormIssue[] };
 
 const ROOT_KEYS = [
@@ -323,7 +324,12 @@ const REQUIRED_BOOLEAN_FIELDS = new Set([
   "followsTerrain",
 ]);
 
-const NULLABLE_VALUE_FIELDS = new Set(["effect", "apexFragmentation", "status"]);
+const NULLABLE_VALUE_FIELDS = new Set([
+  "effect",
+  "apexFragmentation",
+  "status",
+  "shopCostGold",
+]);
 const OPTIONAL_DRAFT_PATH = /^ammunition\[\d+\]\.behavior\.status$/;
 
 export class BalanceDocumentError extends Error {
@@ -333,7 +339,7 @@ export class BalanceDocumentError extends Error {
   }
 }
 
-export function parseBalanceDocument(content: string): GameBalanceDocumentV3 {
+export function parseBalanceDocument(content: string): GameBalanceDocumentV4 {
   let value: unknown;
   try {
     value = JSON.parse(content) as unknown;
@@ -347,7 +353,7 @@ export function parseBalanceDocument(content: string): GameBalanceDocumentV3 {
   if (!isRecord(value)) {
     throw new BalanceDocumentError("The balance document must be a JSON object.");
   }
-  if (value.schemaVersion !== 3) {
+  if (value.schemaVersion !== 4) {
     throw new BalanceDocumentError(
       `Unsupported balance schema version: ${String(value.schemaVersion)}.`,
     );
@@ -371,10 +377,10 @@ export function parseBalanceDocument(content: string): GameBalanceDocumentV3 {
     !isRecord(value.mana) ||
     !isRecord(value.runtime)
   ) {
-    throw new BalanceDocumentError("The balance document does not match schema 3.");
+    throw new BalanceDocumentError("The balance document does not match schema 4.");
   }
 
-  return value as unknown as GameBalanceDocumentV3;
+  return value as unknown as GameBalanceDocumentV4;
 }
 
 export function toBalanceFormDraft<T>(value: T): BalanceFormDraft<T> {
@@ -393,25 +399,25 @@ export function toBalanceFormDraft<T>(value: T): BalanceFormDraft<T> {
 }
 
 export function materializeBalanceDraft(
-  draft: BalanceFormDraft<GameBalanceDocumentV3>,
+  draft: BalanceFormDraft<GameBalanceDocumentV4>,
 ): MaterializedDraft {
   const issues: FormIssue[] = [];
   const document = materializeValue(draft, "", issues);
   if (issues.length > 0 || !isRecord(document)) {
     return { valid: false, issues };
   }
-  return { valid: true, document: document as unknown as GameBalanceDocumentV3 };
+  return { valid: true, document: document as unknown as GameBalanceDocumentV4 };
 }
 
-export function serializeBalanceDocument(document: GameBalanceDocumentV3): string {
+export function serializeBalanceDocument(document: GameBalanceDocumentV4): string {
   return `${JSON.stringify(document, null, 2)}\n`;
 }
 
 export function setBalanceDraftValue(
-  draft: BalanceFormDraft<GameBalanceDocumentV3>,
+  draft: BalanceFormDraft<GameBalanceDocumentV4>,
   path: string,
   value: unknown,
-): BalanceFormDraft<GameBalanceDocumentV3> {
+): BalanceFormDraft<GameBalanceDocumentV4> {
   const segments = parsePath(path);
   if (segments.length === 0) throw new RangeError("Balance draft path must not be empty.");
 
@@ -487,9 +493,9 @@ export function createApexFragmentationDraft(): BalanceFormDraft<ApexFragmentati
 }
 
 export function withIncrementedBalanceRevision(
-  current: GameBalanceDocumentV3,
-  next: GameBalanceDocumentV3,
-): GameBalanceDocumentV3 {
+  current: GameBalanceDocumentV4,
+  next: GameBalanceDocumentV4,
+): GameBalanceDocumentV4 {
   if (current.balanceRevision !== next.balanceRevision) return next;
   const match = /^(.*?)([-.])(\d+)$/.exec(next.balanceRevision);
   const balanceRevision = match
@@ -499,8 +505,8 @@ export function withIncrementedBalanceRevision(
 }
 
 export function balanceDocumentMatches(
-  document: GameBalanceDocumentV3,
-  baseline: GameBalanceDocumentV3,
+  document: GameBalanceDocumentV4,
+  baseline: GameBalanceDocumentV4,
 ): boolean {
   return JSON.stringify(document) === JSON.stringify(baseline);
 }

@@ -43,6 +43,8 @@ class GameBalanceRepositoryTest {
         assertEquals(5, result.balance.config.units.all.size)
         assertEquals(5, result.balance.config.ammunition.all.size)
         assertEquals(11, result.balance.config.spells.all.size)
+        assertEquals(4, result.balance.config.schemaVersion)
+        assertEquals("game-balance-4", result.balance.config.balanceRevision)
         assertEquals(GameBalanceFixtures.balance.units.all, result.balance.config.units.all)
         assertEquals(GameBalanceFixtures.balance.ammunition.all, result.balance.config.ammunition.all)
         assertEquals(GameBalanceFixtures.balance.spells.all, result.balance.config.spells.all)
@@ -74,9 +76,25 @@ class GameBalanceRepositoryTest {
             .bufferedReader()
             .use { it.readText() }
         val invalid = bundled.replace(
-            "\"schemaVersion\": 3,",
-            "\"schemaVersion\": 3,\n  \"extra\": true,",
+            "\"schemaVersion\": 4,",
+            "\"schemaVersion\": 4,\n  \"extra\": true,",
         )
+        val repository = GameBalanceRepository {
+            ByteArrayInputStream(invalid.toByteArray())
+        }
+
+        assertEquals(
+            GameBalanceRead.Failure(GameBalanceFailure.INVALID_DATA),
+            repository.load(),
+        )
+    }
+
+    @Test
+    fun unsupportedBalanceSchemaIsRejected() {
+        val bundled = javaClass.getResourceAsStream("/balance/game-balance.json")!!
+            .bufferedReader()
+            .use { it.readText() }
+        val invalid = bundled.replace("\"schemaVersion\": 4,", "\"schemaVersion\": 3,")
         val repository = GameBalanceRepository {
             ByteArrayInputStream(invalid.toByteArray())
         }
@@ -111,6 +129,11 @@ class GameBalanceRepositoryTest {
         val invalidDocuments = listOf(
             content.replace("\"supplyCost\": 10", "\"supplyCost\": -1"),
             content.replace("\"kind\": \"DIRECT_IMPACT\"", "\"kind\": \"SCRIPT\""),
+            content.replace("\"shopCostGold\": 250", "\"shopCostGold\": -1"),
+            content.replace(
+                "\"type\": \"ROCK\", \"effect\": \"DIRECT\", \"shopCostGold\": null",
+                "\"type\": \"ROCK\", \"effect\": \"DIRECT\", \"shopCostGold\": 1",
+            ),
             content.replace("\"manaCost\": 50", "\"manaCost\": 0"),
             content.replace("\"startingMana\": 100", "\"startingMana\": 101"),
             content.replace("\"initialAimPower\": 50.0", "\"initialAimPower\": 101.0"),
@@ -135,7 +158,7 @@ class GameBalanceRepositoryTest {
         val content = javaClass.getResourceAsStream("/balance/game-balance.json")!!
             .bufferedReader()
             .use { it.readText() }
-        val changed = content.replace("game-balance-3", "game-balance-4")
+        val changed = content.replace("game-balance-4", "game-balance-5")
         val first = assertIs<GameBalanceRead.Available>(repository(content).load()).balance
         val second = assertIs<GameBalanceRead.Available>(repository(changed).load()).balance
 

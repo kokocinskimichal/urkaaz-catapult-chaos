@@ -153,6 +153,10 @@ internal class MatchResultPopupView(
                         R.string.match_result_saving_status
                     MatchResultPopupStatus.COMPLETION_FAILED ->
                         R.string.match_result_completion_failed
+                    MatchResultPopupStatus.SAVING_STOCK ->
+                        R.string.match_result_saving_stock
+                    MatchResultPopupStatus.STOCK_SETTLEMENT_FAILED ->
+                        R.string.match_result_stock_settlement_failed
                 },
             )
         }.orEmpty()
@@ -228,6 +232,8 @@ internal class MatchResultPopupView(
                         R.string.match_result_exit_campaign
                     MatchResultActionType.RETRY -> R.string.match_result_retry
                     MatchResultActionType.RETRY_SAVE -> R.string.match_result_retry_save
+                    MatchResultActionType.RETRY_STOCK_SETTLEMENT ->
+                        R.string.match_result_retry_stock
                     MatchResultActionType.BACK_TO_DASHBOARD ->
                         R.string.match_result_back_dashboard
                 },

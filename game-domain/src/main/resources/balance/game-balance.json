@@ -1,6 +1,6 @@
 {
-  "schemaVersion": 3,
-  "balanceRevision": "game-balance-3",
+  "schemaVersion": 4,
+  "balanceRevision": "game-balance-4",
   "bosses": [
     {
       "id": "boss.central-ancient-war-oak.level-05",
@@ -302,7 +302,7 @@
   ],
   "ammunition": [
     {
-      "type": "ROCK", "effect": "DIRECT",
+      "type": "ROCK", "effect": "DIRECT", "shopCostGold": null,
       "reload": { "reloadSeconds": 0.0 }, "inventory": { "unlimited": true, "startingCount": 0 },
       "flight": { "mass": 1.5, "windResponse": 1.0, "gravityResponse": 1.0, "drag": 0.0, "initialSpeedMultiplier": 8.0, "maximumLifetimeSeconds": 30.0, "apexFragmentation": null },
       "collision": { "hitLayers": ["TERRAIN", "UNIT", "FORTRESS"], "mode": "IMPACT_ON_TERRAIN", "hitRadius": 14.0, "friendlyFire": "ENEMY_ONLY" },
@@ -312,7 +312,7 @@
       "availableLayers": ["TERRAIN", "UNIT", "FORTRESS"]
     },
     {
-      "type": "SIEGE_BOMB", "effect": "EXPLOSIVE",
+      "type": "SIEGE_BOMB", "effect": "EXPLOSIVE", "shopCostGold": null,
       "reload": { "reloadSeconds": 5.5 }, "inventory": { "unlimited": true, "startingCount": 0 },
       "flight": { "mass": 2.5, "windResponse": 0.8, "gravityResponse": 1.0, "drag": 0.0, "initialSpeedMultiplier": 8.0, "maximumLifetimeSeconds": 30.0, "apexFragmentation": null },
       "collision": { "hitLayers": ["TERRAIN", "FORTRESS"], "mode": "IMPACT_ON_TERRAIN", "hitRadius": 57.5, "friendlyFire": "ENEMY_ONLY" },
@@ -322,7 +322,7 @@
       "availableLayers": ["TERRAIN", "FORTRESS"]
     },
     {
-      "type": "POWDER_BARREL", "effect": "EXPLOSIVE",
+      "type": "POWDER_BARREL", "effect": "EXPLOSIVE", "shopCostGold": 250,
       "reload": { "reloadSeconds": 6.5 }, "inventory": { "unlimited": false, "startingCount": 3 },
       "flight": { "mass": 2.0, "windResponse": 0.9, "gravityResponse": 1.0, "drag": 0.0, "initialSpeedMultiplier": 8.0, "maximumLifetimeSeconds": 30.0, "apexFragmentation": null },
       "collision": { "hitLayers": ["TERRAIN", "FORTRESS"], "mode": "IMPACT_ON_TERRAIN", "hitRadius": 110.0, "friendlyFire": "ALL_UNITS" },
@@ -332,7 +332,7 @@
       "availableLayers": ["TERRAIN", "FORTRESS"]
     },
     {
-      "type": "FIRE_RAIN", "effect": "INCENDIARY",
+      "type": "FIRE_RAIN", "effect": "INCENDIARY", "shopCostGold": 350,
       "reload": { "reloadSeconds": 8.0 }, "inventory": { "unlimited": false, "startingCount": 3 },
       "flight": {
         "mass": 1.2, "windResponse": 1.1, "gravityResponse": 1.0, "drag": 0.0, "initialSpeedMultiplier": 8.0, "maximumLifetimeSeconds": 30.0,
@@ -354,7 +354,7 @@
       "availableLayers": ["TERRAIN", "FORTRESS"]
     },
     {
-      "type": "PLAGUE_CAULDRON", "effect": "PLAGUE",
+      "type": "PLAGUE_CAULDRON", "effect": "PLAGUE", "shopCostGold": 500,
       "reload": { "reloadSeconds": 15.0 }, "inventory": { "unlimited": false, "startingCount": 3 },
       "flight": { "mass": 3.0, "windResponse": 0.6, "gravityResponse": 1.0, "drag": 0.0, "initialSpeedMultiplier": 8.0, "maximumLifetimeSeconds": 30.0, "apexFragmentation": null },
       "collision": { "hitLayers": ["TERRAIN", "FORTRESS"], "mode": "IMPACT_ON_TERRAIN", "hitRadius": 130.0, "friendlyFire": "ENEMY_ONLY" },

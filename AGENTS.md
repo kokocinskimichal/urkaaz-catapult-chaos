@@ -76,6 +76,8 @@ do bieżącego zadania według [indeksu dokumentów kontekstu](docs/agent-contex
 - [Plan implementacji systemu nagród](docs/systems/reward-system-implementation-plan.md)
 - [System postępu gracza](docs/systems/player-progression-system.md)
 - [Prompt postępu gracza](docs/systems/player-progression-system-implementation-prompt.md)
+- [ShopSystem](docs/systems/shop-system.md) ·
+  [prompt implementacyjny](docs/systems/shop-system-implementation-prompt.md)
 - [System loadoutu](docs/systems/loadout-system.md)
 - [Prompt loadoutu](docs/systems/loadout-system-implementation-prompt.md)
 - [System reliktów](docs/systems/relic-system.md)
@@ -100,7 +102,8 @@ do bieżącego zadania według [indeksu dokumentów kontekstu](docs/agent-contex
 - [Analiza brakujących mechanik UI](docs/ui/mechanics-gap-analysis.md)
 - [Architektura Dashboardu](docs/systems/dashboard-screen.md) ·
   [prompt implementacyjny](docs/systems/dashboard-screen-implementation-prompt.md)
-- [Brief koncepcji wizualnej Shop](docs/systems/shop-screen-mockup.agp)
+- [Brief koncepcji wizualnej Shop](docs/systems/shop-screen-mockup.agp) ·
+  [referencja układu UI](assets_src/shop/screen-concepts/shop_ui_reference.png)
 - [Prompt systemu definicji poziomów](docs/prompts/IMPLEMENT_LEVEL_DEFINITION_SYSTEM.md)
 - [Prompt systemu reliktów](docs/prompts/IMPLEMENT_RELIC_SYSTEM.md)
 
@@ -153,7 +156,7 @@ Available screens:
   `CampaignProgress`;
 - `LoadoutScreen` — reads profile and campaign spell entitlements, preserves
   saved per-level choices, and starts only after successful validation/save;
-- `ShopScreen` — placeholder;
+- `ShopScreen` — lokalny sklep za OrCoins, otwierany z Dashboardu i Loadoutu;
 - `MatchScreen` — working match screen;
 - `ResultScreen` — placeholder.
 
@@ -214,6 +217,8 @@ trajectory preview, aiming circle and simulation must use the same anchor.
 
 - `AmmunitionCatalog` is the single source of truth for player, AI and
   simulation ammunition definitions.
+- Nullable `AmmunitionDefinition.shopCostGold` is the single source for Shop
+  ammunition prices; `null` means the type is not sold.
 - `AmmunitionType` remains a stable serialized identifier; do not duplicate
   ammunition balance values in Android or AI.
 - Projectile, impact, explosion and lingering-area visuals use world-space

@@ -44,6 +44,33 @@ class MatchViewModelCampaignCompletionTest {
     }
 
     @Test
+    fun stockSettlementIsRequestedOnceForEveryFinalMatchOutcome() {
+        var requests = 0
+        val viewModel = MatchViewModel(
+            campaignLevel = 3,
+            onStockSettlementRequested = { requests += 1 },
+        )
+        val events = listOf(
+            MatchOutcome.BLUE_WIN,
+            MatchOutcome.RED_WIN,
+            MatchOutcome.DRAW,
+            MatchOutcome.SURRENDER,
+        ).mapIndexed { index, outcome ->
+            MatchEvent.MatchFinished(
+                eventId = EventId("stock-finish-$index"),
+                matchId = MatchId("stock-match-$index"),
+                simulationTimeMilliseconds = 10L,
+                outcome = outcome,
+            )
+        }
+
+        viewModel.forwardCampaignCompletionEvents(events)
+        viewModel.forwardCampaignCompletionEvents(events)
+
+        assertEquals(4, requests)
+    }
+
+    @Test
     fun terminalTickRecoveryForwardsQueuedCampaignCompletionEvent() {
         val forwarded = mutableListOf<MatchEvent.MatchFinished>()
         val gateway = LocalMatchGateway(

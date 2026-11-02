@@ -8,9 +8,15 @@ import com.urkaaaz.application.LocalMatchGateway
 import com.urkaaaz.application.MatchReplay
 import com.urkaaaz.application.campaign.BundledCampaignBalance
 import com.urkaaaz.application.reward.LevelRewardResult
+import com.urkaaaz.application.reward.CompositeMatchEventObserver
 import com.urkaaaz.application.reward.MatchEventObserver
 import com.urkaaaz.application.reward.RewardTracker
 import com.urkaaaz.application.loadout.LoadoutCatalog
+import com.urkaaaz.application.shop.MatchStockSettlementFailure
+import com.urkaaaz.application.shop.MatchStockSettlementRejection
+import com.urkaaaz.application.shop.MatchStockSettlementResult
+import com.urkaaaz.application.shop.MatchStockSettlementUseCase
+import com.urkaaaz.application.shop.MatchStockUsageTracker
 import com.urkaaaz.contracts.CommandId
 import com.urkaaaz.contracts.CommandResult
 import com.urkaaaz.contracts.EventId
@@ -20,6 +26,7 @@ import com.urkaaaz.contracts.MatchEvent
 import com.urkaaaz.contracts.MatchId
 import com.urkaaaz.contracts.MatchSnapshot
 import com.urkaaaz.contracts.PlayerId
+import com.urkaaaz.contracts.PlayerInventoryConfig
 import com.urkaaaz.contracts.PlayerLoadoutConfig
 import com.urkaaaz.contracts.MatchScenario
 import com.urkaaaz.contracts.TerrainBiome
@@ -38,6 +45,8 @@ class MatchViewModel(
     private val campaignLevel: Int = 1,
     private val demoMode: Boolean = false,
     playerLoadout: PlayerLoadoutConfig? = null,
+    playerInventory: PlayerInventoryConfig? = null,
+    private val stockSettlementUseCase: MatchStockSettlementUseCase? = null,
     private val loadoutCatalog: LoadoutCatalog = LoadoutCatalog.bundled(),
     mapRepository: MapDefinitionRepository = MapDefinitionRepository.bundled,
     private val combatLogSink: CombatLogSink = NoOpCombatLogSink,
@@ -50,8 +59,11 @@ class MatchViewModel(
         MatchEvent.MatchFinished,
         LevelRewardResult?,
     ) -> Unit = { level, event, _ -> onMatchFinished(level, event) },
+    private val onStockSettlementRequested: () -> Unit = {},
     private val rewardTracker: RewardTracker? =
         if (demoMode) null else RewardTracker(campaignLevel),
+    private val stockUsageTracker: MatchStockUsageTracker? =
+        playerInventory?.let(::MatchStockUsageTracker),
     private val gateway: LocalMatchGateway = LocalMatchGateway(
         loadSelectedDefinition(campaignLevel, demoMode, mapRepository).biome.name,
         loadSelectedDefinition(campaignLevel, demoMode, mapRepository).initialWind,
@@ -63,21 +75,27 @@ class MatchViewModel(
             playerLoadout,
             playerId,
             loadoutCatalog,
+            playerInventory,
         ),
         blueFortressMaxHealth =
             loadoutCatalog.demoBlueFortressMaximumHealth.takeIf { demoMode },
         combatLogSink = combatLogSink,
         ammunitionLogSink = ammunitionLogSink,
-        eventObserver = rewardTracker ?: MatchEventObserver { },
+        eventObserver = CompositeMatchEventObserver(
+            listOfNotNull(rewardTracker, stockUsageTracker)
+                .ifEmpty { listOf(MatchEventObserver { }) },
+        ),
     ),
 ) {
-    private val campaignScenario = loadSelectedScenario(
+    private var currentPlayerInventory = playerInventory
+    private var campaignScenario = loadSelectedScenario(
         campaignLevel,
         demoMode,
         mapRepository,
         playerLoadout,
         playerId,
         loadoutCatalog,
+        playerInventory,
     )
 
     val selectableAmmunitionTypes: List<String> = campaignScenario?.let { scenario ->
@@ -186,13 +204,6 @@ class MatchViewModel(
                     playerId = playerId,
                     ),
                 )
-            }
-            MatchUiAction.RestartMatch -> {
-                paused = false
-                matchGeneration += 1L
-                selectedAmmunition = "ROCK"
-                spellFeedbackLabel = null
-                gateway.restart(matchId, playerId)
             }
             MatchUiAction.FireRock -> gateway.dispatch(
                 MatchCommand.Fire(
@@ -350,6 +361,66 @@ class MatchViewModel(
         return mapRenderState(gateway.snapshot(), events).also { renderState = it }
     }
 
+    suspend fun settleStockUsage(): MatchStockSettlementResult? {
+        val tracker = stockUsageTracker ?: return null
+        val request = tracker.settlementRequest()
+            ?: return if (tracker.hasUsageOverflowed()) {
+                MatchStockSettlementResult.Rejected(
+                    MatchStockSettlementRejection.INVALID_USAGE,
+                )
+            } else {
+                null
+            }
+        val useCase = stockSettlementUseCase
+            ?: return MatchStockSettlementResult.Failure(
+                MatchStockSettlementFailure.STORAGE_UNAVAILABLE,
+            )
+        val result = useCase.settle(request.id, request.usage)
+        val profile = when (result) {
+            is MatchStockSettlementResult.Settled -> result.profile
+            is MatchStockSettlementResult.AlreadySettled -> result.profile
+            is MatchStockSettlementResult.Rejected,
+            is MatchStockSettlementResult.Failure,
+            -> return result
+        }
+        val currentInventory = requireNotNull(currentPlayerInventory) {
+            "stock tracker requires a player inventory snapshot"
+        }
+        val nextInventory = PlayerInventoryConfig(
+            playerId = currentInventory.playerId,
+            ammunitionStocks = profile.ammunitionStocks,
+            specialSpellStocks = profile.specialSpellStocks,
+        )
+        currentPlayerInventory = nextInventory
+        tracker.updateInventoryForNextGeneration(nextInventory)
+        campaignScenario = campaignScenario?.copy(playerInventory = nextInventory)
+        return result
+    }
+
+    suspend fun restartMatch(): MatchStockSettlementResult? {
+        val settlement = settleStockUsage()
+        if (settlement != null && !settlement.isSuccessful()) return settlement
+
+        paused = false
+        matchGeneration += 1L
+        selectedAmmunition = "ROCK"
+        spellFeedbackLabel = null
+        val nextScenario = campaignScenario?.let { scenario ->
+            currentPlayerInventory?.let { scenario.copy(playerInventory = it) } ?: scenario
+        }
+        campaignScenario = nextScenario
+        val snapshot = gateway.restart(matchId, playerId, nextScenario)
+        mapRenderState(snapshot, gateway.consumeEvents()).also { renderState = it }
+        return settlement
+    }
+
+    suspend fun stopMatch(): MatchStockSettlementResult? {
+        val settlement = settleStockUsage()
+        if (settlement != null && !settlement.isSuccessful()) return settlement
+        gateway.stop()
+        return settlement
+    }
+
     private fun spellRejectionLabel(error: MatchError): String = when (error) {
         MatchError.INSUFFICIENT_RESOURCE -> "NOT ENOUGH MANA"
         MatchError.SPELL_ALREADY_ACTIVE -> "SPELL ALREADY ACTIVE"
@@ -366,6 +437,7 @@ class MatchViewModel(
         events.filterIsInstance<MatchEvent.MatchFinished>().forEach { event ->
             val delivery = Triple(matchGeneration, event.matchId, event.eventId)
             if (forwardedCampaignCompletions.add(delivery)) {
+                onStockSettlementRequested()
                 onMatchFinishedWithRewards(campaignLevel, event, gateway.rewardResult())
             }
         }
@@ -400,6 +472,7 @@ private fun loadSelectedScenario(
     playerLoadout: PlayerLoadoutConfig?,
     playerId: PlayerId,
     loadoutCatalog: LoadoutCatalog,
+    playerInventory: PlayerInventoryConfig?,
 ): MatchScenario? {
     if (demoMode && playerLoadout == null) return null
     val definition = BundledCampaignBalance.levelDefinition(
@@ -410,6 +483,7 @@ private fun loadSelectedScenario(
         playerId = playerId,
         opponentId = PlayerId("local-ai"),
         playerLoadout = playerLoadout,
+        playerInventory = playerInventory,
     )
     if (!demoMode) return scenario
 
@@ -423,3 +497,7 @@ private fun loadSelectedScenario(
         wind = demo.initialWind,
     )
 }
+
+private fun MatchStockSettlementResult.isSuccessful(): Boolean =
+    this is MatchStockSettlementResult.Settled ||
+        this is MatchStockSettlementResult.AlreadySettled

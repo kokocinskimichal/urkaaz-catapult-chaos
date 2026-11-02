@@ -1,5 +1,30 @@
 # Changelog
 
+## 2026-11-02
+
+### Added
+
+- Added the local Shop screen with OrCoins purchases for limited ammunition and
+  special-spell stock, opened from Dashboard and Loadout. Purchases atomically
+  update profile balance and stock; the Shop follows the saved UI composition
+  reference while retaining the approved `SPELLS`/`AMMUNITION` tabs.
+- Added profile-backed BLUE ammunition inventory for campaign matches and
+  idempotent settlement of successful uses after every match outcome and
+  before explicit stop/restart. Unused stock remains in the profile.
+- Added ammunition `shopCostGold` to game-balance schema 4 and its Studio
+  Balance form, server validation and tests.
+
+### Changed
+
+- Match replay now includes the immutable player inventory snapshot for the
+  replayed generation. AI/RED and demo ammunition retain their existing
+  balance-defined starting counts.
+- Loadout and Shop explicitly mark special spells without runtime effects as
+  not usable in matches; purchasing them does not implement or bypass their
+  spell effects.
+- The queued debug progression preset now applies campaign level 5 and 5,000
+  gold once on the next debug app launch.
+
 ## 2026-11-01
 
 ### Added

@@ -14,6 +14,7 @@ data class MatchScenario(
     val availableAmmunition: List<String> = emptyList(),
     val availableSpells: List<String> = emptyList(),
     val playerLoadout: PlayerLoadoutConfig? = null,
+    val playerInventory: PlayerInventoryConfig? = null,
     val initialUnits: List<UnitConfig> = emptyList(),
     val wind: WindSnapshot = WindSnapshot(),
     val victoryRules: VictoryRulesConfig = VictoryRulesConfig(),
@@ -45,6 +46,14 @@ data class MatchScenario(
             }
             require(availableAmmunition.containsAll(loadout.ammunitionSlots.filterNotNull())) {
                 "loadout contains ammunition unavailable in the scenario"
+            }
+        }
+        playerInventory?.let { inventory ->
+            require(players.any { it.playerId == inventory.playerId && it.team == Team.BLUE }) {
+                "inventory player must be a blue player in the scenario"
+            }
+            require(playerLoadout?.playerId == inventory.playerId) {
+                "inventory player must match the committed loadout player"
             }
         }
     }
@@ -90,6 +99,28 @@ data class PlayerLoadoutConfig(
         const val AMMUNITION_SLOT_COUNT = 3
         const val MAX_SPELLS = 3
         const val ROCK = "ROCK"
+    }
+}
+
+/** Immutable profile stock supplied to one match generation, separate from the profile itself. */
+data class PlayerInventoryConfig(
+    val playerId: PlayerId,
+    val ammunitionStocks: Map<String, Int>,
+    val specialSpellStocks: Map<String, Int>,
+) {
+    init {
+        require(ammunitionStocks.keys.all(String::isNotBlank)) {
+            "ammunition identifiers must not be blank"
+        }
+        require(specialSpellStocks.keys.all(String::isNotBlank)) {
+            "spell identifiers must not be blank"
+        }
+        require(ammunitionStocks.values.all { it >= 0 }) {
+            "ammunition stock must not be negative"
+        }
+        require(specialSpellStocks.values.all { it >= 0 }) {
+            "special spell stock must not be negative"
+        }
     }
 }
 

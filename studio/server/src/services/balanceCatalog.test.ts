@@ -24,8 +24,51 @@ afterEach(async () => {
 });
 
 describe("game balance catalog", () => {
-  it("validates the supported schema 3 balance document", () => {
+  it("validates the supported schema 4 balance document", () => {
     expect(validateBalanceContent(validBalance)).toEqual({ valid: true, issues: [] });
+  });
+
+  it("validates nullable non-negative shop prices only for limited ammunition", () => {
+    for (const [type, price] of [
+      ["ROCK", null],
+      ["POWDER_BARREL", null],
+      ["POWDER_BARREL", 0],
+      ["POWDER_BARREL", 250],
+      ["FIRE_RAIN", 350],
+      ["PLAGUE_CAULDRON", 500],
+    ] as const) {
+      const document = JSON.parse(validBalance) as Record<string, unknown>;
+      const ammunition = document.ammunition as Record<string, unknown>[];
+      const profile = ammunition.find(item => item.type === type);
+      expect(profile).toBeDefined();
+      profile!.shopCostGold = price;
+      expect(validateBalanceContent(JSON.stringify(document))).toEqual({
+        valid: true,
+        issues: [],
+      });
+    }
+
+    for (const invalidPrice of [-1, 1.5, "250", undefined]) {
+      const document = JSON.parse(validBalance) as Record<string, unknown>;
+      const ammunition = document.ammunition as Record<string, unknown>[];
+      const profile = ammunition.find(item => item.type === "POWDER_BARREL");
+      expect(profile).toBeDefined();
+      if (invalidPrice === undefined) delete profile!.shopCostGold;
+      else profile!.shopCostGold = invalidPrice;
+
+      expect(validateBalanceContent(JSON.stringify(document)).issues).toContainEqual(
+        expect.objectContaining({ path: "ammunition[2].shopCostGold" }),
+      );
+    }
+
+    const unlimited = JSON.parse(validBalance) as Record<string, unknown>;
+    const ammunition = unlimited.ammunition as Record<string, unknown>[];
+    const rock = ammunition.find(item => item.type === "ROCK");
+    expect(rock).toBeDefined();
+    rock!.shopCostGold = 10;
+    expect(validateBalanceContent(JSON.stringify(unlimited)).issues).toContainEqual(
+      expect.objectContaining({ path: "ammunition[0].shopCostGold" }),
+    );
   });
 
   it("rejects unknown fields and archetype-incompatible attacks", () => {

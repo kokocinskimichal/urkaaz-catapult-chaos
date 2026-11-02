@@ -164,6 +164,6 @@ data class GameBalanceConfig(
         bosses.firstOrNull { it.id == id } ?: error("unknown boss profile: $id")
 
     companion object {
-        const val CURRENT_SCHEMA_VERSION = 3
+        const val CURRENT_SCHEMA_VERSION = 4
     }
 }

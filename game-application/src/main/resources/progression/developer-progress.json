@@ -1,9 +1,12 @@
 {
   "schemaVersion": 2,
-  "revision": "developer-progress-3",
+  "revision": "developer-progress-4",
   "currentLevel": 5,
   "lives": 5,
-  "gold": 0,
-  "fieldsToApply": ["currentLevel"],
+  "gold": 5000,
+  "fieldsToApply": [
+    "currentLevel",
+    "gold"
+  ],
   "applyOnNextLaunch": true
 }

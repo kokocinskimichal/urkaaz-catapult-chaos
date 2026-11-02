@@ -107,6 +107,39 @@ class ContractsTest {
     }
 
     @Test
+    fun playerInventoryIsImmutableScenarioInputAssociatedWithCommittedPlayer() {
+        val loadout = PlayerLoadoutConfig(
+            playerId = playerId,
+            unitTypes = listOf("DEFENDER"),
+            ammunitionSlots = listOf("ROCK", "POWDER_BARREL", null),
+            spellTypes = listOf("FORTRESS_SHIELD"),
+        )
+        val inventory = PlayerInventoryConfig(
+            playerId = playerId,
+            ammunitionStocks = mapOf("POWDER_BARREL" to 2),
+            specialSpellStocks = mapOf("CATAPULT_LOCK" to 1),
+        )
+        val scenario = MatchScenario(
+            scenarioId = "player-inventory",
+            battlefield = BattlefieldConfig(width = 100, height = 100),
+            players = listOf(PlayerConfig(playerId, Team.BLUE)),
+            availableUnits = listOf("DEFENDER"),
+            availableAmmunition = listOf("ROCK", "POWDER_BARREL"),
+            availableSpells = listOf("FORTRESS_SHIELD"),
+            playerLoadout = loadout,
+            playerInventory = inventory,
+        )
+
+        assertEquals(inventory, scenario.playerInventory)
+        assertFailsWith<IllegalArgumentException> {
+            scenario.copy(playerInventory = inventory.copy(playerId = PlayerId("other")))
+        }
+        assertFailsWith<IllegalArgumentException> {
+            inventory.copy(ammunitionStocks = mapOf("POWDER_BARREL" to -1))
+        }
+    }
+
+    @Test
     fun playerLoadoutRejectsInvalidSlotsAndDuplicateSelections() {
         assertFailsWith<IllegalArgumentException> {
             PlayerLoadoutConfig(

@@ -94,9 +94,39 @@ class LoadoutViewModelTest {
         viewModel.state.availableSpells.forEach { type ->
             assertTrue(
                 viewModel.optionStatus(LoadoutItemReference.Spell(type)) in
-                    setOf(LoadoutOptionStatus.AVAILABLE, LoadoutOptionStatus.SELECTED),
+                    setOf(
+                        LoadoutOptionStatus.AVAILABLE,
+                        LoadoutOptionStatus.SELECTED,
+                        LoadoutOptionStatus.UNIMPLEMENTED,
+                    ),
             )
         }
+    }
+
+    @Test
+    fun stockedSpecialSpellIsClearlyMarkedAsNotUsableInMatch() = runBlocking {
+        val viewModel = LoadoutViewModel(
+            campaignLevel = 1,
+            useCases = LoadoutUseCases(
+                FakeProgression(
+                    LoadoutProgressionSnapshot(
+                        unlockedSpellTypes = setOf("FORTRESS_SHIELD"),
+                        ammunitionStocks = emptyMap(),
+                        specialSpellStocks = mapOf("CATAPULT_LOCK" to 1),
+                        goldBalance = 0,
+                    ),
+                ),
+                FakeRepository(),
+            ),
+        )
+
+        viewModel.load()
+        viewModel.edit(LoadoutEditAction.ToggleSpell("CATAPULT_LOCK", selected = false))
+
+        assertEquals(
+            LoadoutOptionStatus.UNIMPLEMENTED,
+            viewModel.optionStatus(LoadoutItemReference.Spell("CATAPULT_LOCK")),
+        )
     }
 
     @Test
@@ -209,16 +239,17 @@ class LoadoutViewModelTest {
         assertEquals(draft, viewModel.state.draft)
     }
 
-    private class FakeProgression : LoadoutProgressionPort {
+    private class FakeProgression(
+        private val progressionSnapshot: LoadoutProgressionSnapshot =
+            LoadoutProgressionSnapshot(
+                unlockedSpellTypes = setOf("FORTRESS_SHIELD"),
+                ammunitionStocks = emptyMap(),
+                specialSpellStocks = emptyMap(),
+                goldBalance = 0,
+            ),
+    ) : LoadoutProgressionPort {
         override suspend fun snapshot(level: Int): LoadoutProgressionRead =
-            LoadoutProgressionRead.Available(
-                LoadoutProgressionSnapshot(
-                    unlockedSpellTypes = setOf("FORTRESS_SHIELD"),
-                    ammunitionStocks = emptyMap(),
-                    specialSpellStocks = emptyMap(),
-                    goldBalance = 0,
-                ),
-            )
+            LoadoutProgressionRead.Available(progressionSnapshot)
 
         override suspend fun purchaseSpell(spellType: String): LoadoutPurchaseResult =
             LoadoutPurchaseResult.Blocked

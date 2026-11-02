@@ -353,6 +353,9 @@ class LoadoutUseCasesTest {
         assertEquals(draft, repository.saved)
         assertEquals(listOf("DEFENDER"), result.playerLoadout.unitTypes)
         assertEquals(listOf("FORTRESS_SHIELD"), result.playerLoadout.spellTypes)
+        assertEquals(snapshot().ammunitionStocks, result.playerInventory.ammunitionStocks)
+        assertEquals(snapshot().specialSpellStocks, result.playerInventory.specialSpellStocks)
+        assertEquals(result.playerLoadout.playerId, result.playerInventory.playerId)
     }
 
     @Test

@@ -54,6 +54,24 @@ class MatchResultPopupStateMapperTest {
     }
 
     @Test
+    fun inventorySettlementBlocksResultActionsUntilSavedAndOffersRetryOnFailure() {
+        val saving = popup(
+            stockSettlementStatus = MatchStockSettlementUiStatus.PENDING,
+        )
+        val failed = popup(
+            stockSettlementStatus = MatchStockSettlementUiStatus.FAILED,
+        )
+
+        assertEquals(MatchResultPopupStatus.SAVING_STOCK, saving?.status)
+        assertTrue(requireNotNull(saving).actions.isEmpty())
+        assertEquals(MatchResultPopupStatus.STOCK_SETTLEMENT_FAILED, failed?.status)
+        assertEquals(
+            listOf(MatchResultActionType.RETRY_STOCK_SETTLEMENT),
+            failed?.actions?.map { it.type },
+        )
+    }
+
+    @Test
     fun retrySaveActionInvokesPersistenceCallbackWithoutRestartingMatch() {
         val called = mutableListOf<String>()
         dispatchMatchResultAction(
@@ -142,6 +160,8 @@ class MatchResultPopupStateMapperTest {
         demoMode: Boolean = false,
         completionRecorded: Boolean? = true,
         isFinished: Boolean = true,
+        stockSettlementStatus: MatchStockSettlementUiStatus =
+            MatchStockSettlementUiStatus.NOT_REQUIRED,
     ) = MatchResultPopupStateMapper.map(
         isFinished = isFinished,
         outcome = outcome,
@@ -149,5 +169,6 @@ class MatchResultPopupStateMapperTest {
         biomeName = biome,
         demoMode = demoMode,
         campaignCompletionRecorded = completionRecorded,
+        stockSettlementStatus = stockSettlementStatus,
     )
 }

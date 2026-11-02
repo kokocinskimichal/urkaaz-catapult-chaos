@@ -1,6 +1,7 @@
 package com.urkaaaz.application.loadout
 
 import com.urkaaaz.contracts.PlayerLoadoutConfig
+import com.urkaaaz.contracts.PlayerInventoryConfig
 
 data class LoadoutAvailability(
     val level: Int,
@@ -181,12 +182,18 @@ sealed interface LoadoutCommitResult {
     data class Committed(
         val loadout: MatchLoadout,
         val playerLoadout: PlayerLoadoutConfig,
+        val playerInventory: PlayerInventoryConfig,
     ) : LoadoutCommitResult
 
     data class Rejected(val error: LoadoutError) : LoadoutCommitResult
     data class ProgressionBlocked(val reason: LoadoutProgressionFailure) : LoadoutCommitResult
     data class StorageFailure(val reason: LoadoutStorageFailure) : LoadoutCommitResult
 }
+
+data class LoadoutLaunchConfig(
+    val playerLoadout: PlayerLoadoutConfig,
+    val playerInventory: PlayerInventoryConfig,
+)
 
 sealed interface LoadoutPurchaseOutcome {
     data object Purchased : LoadoutPurchaseOutcome

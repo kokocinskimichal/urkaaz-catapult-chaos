@@ -7,6 +7,7 @@ import androidx.datastore.preferences.core.intPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
 import com.urkaaaz.application.campaign.CampaignProgress
 import com.urkaaaz.application.loadout.LoadoutProgressionSnapshot
+import com.urkaaaz.application.progression.PlayerProgressionRepositoryFailure
 import com.urkaaaz.application.progression.PlayerProgressionUseCases
 import com.urkaaaz.application.reward.EarnedReward
 import com.urkaaaz.application.reward.LevelRewardResult
@@ -76,28 +77,19 @@ class DataStoreRewardSettlementAdapter(
     }
 
     private fun decodeProfile(preferences: Preferences): LoadoutProgressionSnapshot? {
-        val hasKeys = preferences.asMap().keys.any { it.name.startsWith("profile.") }
-        if (!hasKeys) return PlayerProgressionUseCases.INITIAL_PROFILE
-        val version = preferences[PROFILE_VERSION] ?: return null
-        if (version != 1) {
-            throw RewardSettlementDataException(RewardSettlementFailure.UNSUPPORTED_VERSION)
+        val profile = when (val decoded = PlayerProgressionDataStoreCodec.decode(preferences)) {
+            PlayerProgressionProfileDecode.Missing -> PlayerProgressionUseCases.INITIAL_PROFILE
+            is PlayerProgressionProfileDecode.Available -> decoded.snapshot
+            is PlayerProgressionProfileDecode.Failure -> {
+                if (decoded.reason == PlayerProgressionRepositoryFailure.UNSUPPORTED_VERSION) {
+                    throw RewardSettlementDataException(
+                        RewardSettlementFailure.UNSUPPORTED_VERSION,
+                    )
+                }
+                return null
+            }
         }
-        val unlocked = preferences[PROFILE_SPELLS] ?: return null
-        val ammunition = preferences[PROFILE_AMMUNITION] ?: return null
-        val special = preferences[PROFILE_SPECIAL] ?: return null
-        val gold = preferences[PROFILE_GOLD] ?: return null
-        val ammoStocks = decodeStocks(ammunition) ?: return null
-        val specialStocks = decodeStocks(special) ?: return null
-        val unlockedTypes = decodeStringSet(unlocked) ?: return null
-        val profile = runCatching {
-            LoadoutProgressionSnapshot(
-                unlockedSpellTypes = unlockedTypes,
-                ammunitionStocks = ammoStocks,
-                specialSpellStocks = specialStocks,
-                goldBalance = gold,
-            )
-        }.getOrNull()
-        return profile?.takeIf { PlayerProgressionUseCases.isValidProfile(it) }
+        return profile.takeIf { PlayerProgressionUseCases.isValidProfile(it) }
     }
 
     private fun decodeReceipts(preferences: Preferences): Map<String, LevelRewardResult>? {
@@ -142,16 +134,14 @@ class DataStoreRewardSettlementAdapter(
     private fun encodeState(
         preferences: Preferences,
         state: RewardSettlementState,
-    ): Preferences = preferences.toMutablePreferences().apply {
+    ): Preferences = PlayerProgressionDataStoreCodec
+        .encode(preferences, state.profile)
+        .toMutablePreferences()
+        .apply {
         this[CAMPAIGN_VERSION] = 1
         this[CAMPAIGN_HIGHEST] = state.campaign.highestUnlockedLevel
         this[CAMPAIGN_COMPLETED] = state.campaign.completedLevels.sorted().joinToString("|")
         this[CAMPAIGN_MILESTONES] = state.campaign.appliedMilestoneIds.sorted().joinToString("|")
-        this[PROFILE_VERSION] = 1
-        this[PROFILE_SPELLS] = state.profile.unlockedSpellTypes.sorted().joinToString("|")
-        this[PROFILE_AMMUNITION] = encodeStocks(state.profile.ammunitionStocks)
-        this[PROFILE_SPECIAL] = encodeStocks(state.profile.specialSpellStocks)
-        this[PROFILE_GOLD] = state.profile.goldBalance
         this[REWARD_VERSION] = 1
         this[REWARD_RECEIPTS] = state.receipts.toSortedMap().entries.joinToString("\n") { (key, result) ->
             val payload = listOf(
@@ -175,22 +165,6 @@ class DataStoreRewardSettlementAdapter(
         if (values.any(String::isBlank) || values.distinct().size != values.size) return null
         return values.toSet()
     }
-
-    private fun decodeStocks(encoded: String): Map<String, Int>? {
-        if (encoded.isEmpty()) return emptyMap()
-        val result = linkedMapOf<String, Int>()
-        encoded.split('|').forEach { entry ->
-            val separator = entry.lastIndexOf(':')
-            if (separator <= 0 || separator == entry.lastIndex) return null
-            val name = entry.substring(0, separator)
-            val count = entry.substring(separator + 1).toIntOrNull() ?: return null
-            if (name.isBlank() || count < 0 || result.put(name, count) != null) return null
-        }
-        return result
-    }
-
-    private fun encodeStocks(stocks: Map<String, Int>) =
-        stocks.toSortedMap().entries.joinToString("|") { (id, count) -> "$id:$count" }
 
     private fun encodeBase64(value: String): String {
         val bytes = value.toByteArray(Charsets.UTF_8)
@@ -254,11 +228,6 @@ class DataStoreRewardSettlementAdapter(
         val CAMPAIGN_HIGHEST = intPreferencesKey("campaign.highest_unlocked_level")
         val CAMPAIGN_COMPLETED = stringPreferencesKey("campaign.completed_levels")
         val CAMPAIGN_MILESTONES = stringPreferencesKey("campaign.applied_milestones")
-        val PROFILE_VERSION = intPreferencesKey("profile.schema_version")
-        val PROFILE_SPELLS = stringPreferencesKey("profile.unlocked_spells")
-        val PROFILE_AMMUNITION = stringPreferencesKey("profile.ammunition_stocks")
-        val PROFILE_SPECIAL = stringPreferencesKey("profile.special_spell_stocks")
-        val PROFILE_GOLD = intPreferencesKey("profile.gold_balance")
         val REWARD_VERSION = intPreferencesKey("reward.schema_version")
         val REWARD_RECEIPTS = stringPreferencesKey("reward.receipts")
     }

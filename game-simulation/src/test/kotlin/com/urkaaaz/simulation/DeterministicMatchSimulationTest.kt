@@ -17,6 +17,8 @@ import com.urkaaaz.contracts.RunicBastionGeometry
 import com.urkaaaz.contracts.Team
 import com.urkaaaz.contracts.UnitHitboxProfile
 import com.urkaaaz.contracts.PlayerId
+import com.urkaaaz.contracts.PlayerInventoryConfig
+import com.urkaaaz.contracts.PlayerLoadoutConfig
 import com.urkaaaz.contracts.WorldDimensions
 import com.urkaaaz.contracts.WorldScale
 import com.urkaaaz.domain.AmmunitionType
@@ -62,6 +64,67 @@ class DeterministicMatchSimulationTest {
         assertEquals(MatchStatus.RUNNING, snapshot.status)
         assertEquals(MatchPhase.PLAYER_TURN, snapshot.phase)
         assertEquals(Team.BLUE, snapshot.activeTeam)
+    }
+
+    @Test
+    fun campaignBlueInventoryUsesProfileStockWhileRedKeepsBalanceStartingCount() {
+        val playerId = PlayerId("inventory-player")
+        val playerLoadout = PlayerLoadoutConfig(
+            playerId = playerId,
+            unitTypes = listOf(UnitIds.DEFENDER),
+            ammunitionSlots = listOf("ROCK", "POWDER_BARREL", null),
+            spellTypes = listOf("FORTRESS_SHIELD"),
+        )
+        val simulation = DeterministicMatchSimulation(
+            MatchId("profile-ammunition"),
+            config.copy(
+                playerLoadout = playerLoadout,
+                playerInventory = PlayerInventoryConfig(
+                    playerId = playerId,
+                    ammunitionStocks = mapOf("POWDER_BARREL" to 1),
+                    specialSpellStocks = emptyMap(),
+                ),
+                availableAmmunitionTypes = setOf("ROCK", "POWDER_BARREL"),
+            ),
+        )
+        simulation.start()
+
+        assertEquals(
+            1,
+            simulation.snapshot().resourcesByTeam[Team.BLUE]?.ammunition?.get("POWDER_BARREL"),
+        )
+        assertEquals(
+            3,
+            simulation.snapshot().resourcesByTeam[Team.RED]?.ammunition?.get("POWDER_BARREL"),
+        )
+
+        val fired = simulation.fire(
+            EntityId("blue-catapult"),
+            AmmunitionType.POWDER_BARREL,
+            playerId,
+        )
+        assertTrue(fired.any {
+            it is MatchEvent.ProjectileFired &&
+                it.ammunitionType == AmmunitionType.POWDER_BARREL.name &&
+                it.shooterTeam == Team.BLUE
+        })
+        simulation.advance(6_500)
+
+        assertEquals(
+            0,
+            simulation.snapshot().resourcesByTeam[Team.BLUE]?.ammunition?.get("POWDER_BARREL"),
+        )
+        assertFailsWith<IllegalStateException> {
+            simulation.fire(
+                EntityId("blue-catapult"),
+                AmmunitionType.POWDER_BARREL,
+                playerId,
+            )
+        }
+        assertEquals(
+            0,
+            simulation.snapshot().resourcesByTeam[Team.BLUE]?.ammunition?.get("POWDER_BARREL"),
+        )
     }
 
     @Test

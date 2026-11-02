@@ -5,6 +5,12 @@ typowanego formularza zamiast tekstowego pola JSON. Formularz zachowuje format
 balansu i nie zmienia zachowania gry. Ten dokument pozostaje zapisem zakresu i
 kryteriów użytych przy implementacji.
 
+**Aktualny kontrakt:** pierwotny zakres formularza dotyczył schema 3.
+ShopSystem rozszerzył źródło balansu do schema 4 i dodał edytowalne,
+nullable `ammunition[].shopCostGold`; bieżące Studio, walidator i formularz
+obsługują schema 4. Szczegóły zmiany opisuje
+[`shop-system.md`](../systems/shop-system.md).
+
 ## Cel
 
 Umożliwić edycję wszystkich istniejących pól `game-balance.json` schema 3

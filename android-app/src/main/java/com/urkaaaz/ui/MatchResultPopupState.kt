@@ -13,6 +13,15 @@ internal enum class MatchResultKind {
 internal enum class MatchResultPopupStatus {
     SAVING_PROGRESS,
     COMPLETION_FAILED,
+    SAVING_STOCK,
+    STOCK_SETTLEMENT_FAILED,
+}
+
+internal enum class MatchStockSettlementUiStatus {
+    NOT_REQUIRED,
+    PENDING,
+    SETTLED,
+    FAILED,
 }
 
 internal enum class MatchResultActionType {
@@ -20,6 +29,7 @@ internal enum class MatchResultActionType {
     EXIT_TO_CAMPAIGN,
     RETRY,
     RETRY_SAVE,
+    RETRY_STOCK_SETTLEMENT,
     BACK_TO_DASHBOARD,
 }
 
@@ -53,6 +63,8 @@ internal object MatchResultPopupStateMapper {
         demoMode: Boolean,
         campaignCompletionRecorded: Boolean?,
         reward: LevelRewardResult? = null,
+        stockSettlementStatus: MatchStockSettlementUiStatus =
+            MatchStockSettlementUiStatus.NOT_REQUIRED,
     ): MatchResultPopupState? {
         if (!isFinished || outcome == null) return null
 
@@ -62,6 +74,31 @@ internal object MatchResultPopupStateMapper {
             MatchOutcome.DRAW -> MatchResultKind.DRAW
         }
         val normalizedBiomeName = biomeName.replace('_', ' ')
+        if (stockSettlementStatus == MatchStockSettlementUiStatus.PENDING) {
+            return MatchResultPopupState(
+                result = result,
+                campaignLevel = campaignLevel,
+                biomeName = normalizedBiomeName,
+                status = MatchResultPopupStatus.SAVING_STOCK,
+                actions = emptyList(),
+                reward = reward,
+            )
+        }
+        if (stockSettlementStatus == MatchStockSettlementUiStatus.FAILED) {
+            return MatchResultPopupState(
+                result = result,
+                campaignLevel = campaignLevel,
+                biomeName = normalizedBiomeName,
+                status = MatchResultPopupStatus.STOCK_SETTLEMENT_FAILED,
+                actions = listOf(
+                    MatchResultPopupAction(
+                        MatchResultActionType.RETRY_STOCK_SETTLEMENT,
+                        MatchResultButtonStyle.RED,
+                    ),
+                ),
+                reward = reward,
+            )
+        }
 
         val status: MatchResultPopupStatus?
         val actions: List<MatchResultPopupAction>
@@ -159,6 +196,7 @@ internal fun dispatchMatchResultAction(
     action: MatchResultActionType,
     onRetry: () -> Unit,
     onRetrySave: () -> Unit = onRetry,
+    onRetryStockSettlement: () -> Unit = onRetry,
     onNextLevel: () -> Unit,
     onCampaignReturn: () -> Unit,
     onDashboardReturn: () -> Unit,
@@ -168,6 +206,7 @@ internal fun dispatchMatchResultAction(
         MatchResultActionType.EXIT_TO_CAMPAIGN -> onCampaignReturn()
         MatchResultActionType.RETRY -> onRetry()
         MatchResultActionType.RETRY_SAVE -> onRetrySave()
+        MatchResultActionType.RETRY_STOCK_SETTLEMENT -> onRetryStockSettlement()
         MatchResultActionType.BACK_TO_DASHBOARD -> onDashboardReturn()
     }
 }

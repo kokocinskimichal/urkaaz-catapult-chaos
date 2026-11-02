@@ -164,8 +164,8 @@ class DeterministicMatchSimulation(
         accelerationScale = config.windAccelerationScale,
     )
     private val resources = mutableMapOf(
-        Team.BLUE to initialWallet(),
-        Team.RED to initialWallet(),
+        Team.BLUE to initialWallet(Team.BLUE),
+        Team.RED to initialWallet(Team.RED),
     )
     private val reloadRemainingSecondsByAmmunition =
         mutableMapOf<Team, MutableMap<AmmunitionType, Float>>().apply {
@@ -3422,7 +3422,7 @@ class DeterministicMatchSimulation(
         )
     }
 
-    private fun initialWallet(): ResourceWallet = ResourceWallet(
+    private fun initialWallet(team: Team): ResourceWallet = ResourceWallet(
         gold = config.balance.runtime.economy.startingGold,
         supply = config.balance.runtime.economy.startingSupply,
         mana = config.balance.mana.startingMana,
@@ -3432,7 +3432,15 @@ class DeterministicMatchSimulation(
                     (config.availableAmmunitionTypes.isEmpty() ||
                         it.type.name in config.availableAmmunitionTypes)
             }
-            .associate { it.type to it.inventory.startingCount },
+            .associate { ammunition ->
+                val playerInventory = config.playerInventory
+                val startingCount = if (team == Team.BLUE && playerInventory != null) {
+                    playerInventory.ammunitionStocks[ammunition.type.name] ?: 0
+                } else {
+                    ammunition.inventory.startingCount
+                }
+                ammunition.type to startingCount
+            },
     )
 
     private data class LingeringEffect(
