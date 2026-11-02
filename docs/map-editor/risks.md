@@ -1,7 +1,7 @@
 # Ryzyka edytora map
 
-Dokument zawiera decyzje projektowe podejmowane podczas projektowania
-osobnej aplikacji do ręcznego tworzenia map zależnych od biomu.
+Dokument zapisuje ryzyka i decyzje dla authoringu map w zakładce Maps
+Urkaaaz Studio.
 
 ## Ryzyko 1: dwa źródła prawdy dla map
 
@@ -21,7 +21,8 @@ JSON-ie.
 **Pytanie:** Czy edycja terenu może zmieniać fundamenty fortec, kotwice
 katapult, podejścia i korytarze ostrzału?
 
-**Decyzja:** Obszary krytyczne są zablokowane przed edycją terenu.
+**Decyzja:** Obszary krytyczne, w tym fundamenty fortec, pozostają chronione
+przed zwykłą edycją profilu.
 
 **Konsekwencja:** Edytor musi wizualnie oznaczać te obszary i odrzucać
 operacje rysowania lub wygładzania, które próbują je zmienić. Ich parametry
@@ -30,17 +31,15 @@ kontrakt fortec, fundamentów i kotwic.
 
 ## Ryzyko 3: wygładzanie terenu zmienia pozycje dekoracji
 
-**Pytanie:** Czy wygładzanie ma mieć pełne undo/redo, czy wystarczy zapis
-poprzedniej wersji mapy?
+**Decyzja:** Teren i dekoracje są edytowalne w dowolnej kolejności. `Y`
+każdego dekoracyjnego obiektu jest niezależną współrzędną world-space;
+zmiana profilu nie przesuwa obiektów. `Y` można zmienić ręcznie, a każda
+zmiana jest operacją undo/redo. Relics zachowują pozycję; operacja
+naruszająca ich soil footprint jest jawnie odrzucana.
 
-**Decyzja:** Edycja przebiega dwuetapowo. Najpierw ustala się teren i
-wygładza go, a dopiero po zatwierdzeniu geometrii odblokowywane jest
-dodawanie dekoracji.
-
-**Konsekwencja:** Dekoracje nie mogą być rozmieszczane na niezatwierdzonym
-terenie. Zatwierdzenie terenu tworzy stabilną bazę dla późniejszych pozycji
-assetów. Edytor nadal powinien zapewnić możliwość cofnięcia zmian w fazie
-terenu albo zapisu wersji roboczej przed zatwierdzeniem.
+**Konsekwencja:** Nie ma globalnego locka ani fazy dekorowania. Walidacja
+geometrii i Relics nadal blokuje niepoprawny zapis; edycja profilu nie
+przepisuje współrzędnych dekoracji.
 
 ## Ryzyko 4: zmiana biomu po dodaniu dekoracji
 
@@ -79,38 +78,28 @@ wariant z nazwy pliku oraz używać ustalonych domyślnych anchorów i skal.
 To świadomie pozostawia ryzyko niepełnej metadanej; przed dodaniem bardziej
 zróżnicowanych assetów należy wprowadzić manifest bez zmiany formatu map.
 
-## Ryzyko 7: kafelki terenu zamiast ręcznie rysowanej wysokości
+## Ryzyko 7: druga geometria terenu w kafelkach
 
-**Rozważenie:** Kafelki mogą bardzo ułatwić składanie map i zapewnić spójny
-wygląd biomu. Nie powinny jednak stać się jedynym źródłem geometrii. Sama
-grafika kafelka nie wystarcza do fizyki, kolizji, wygładzania, fundamentów ani
-walidacji płaskich fragmentów.
+**Pytanie:** Czy profil wysokości i placementy soil tiles mają być
+serializowane równolegle?
 
-**Rekomendacja do rozstrzygnięcia:** użyć modelu hybrydowego. Edytor składa
-teren z kafelków biomu, ale każdy kafelek ma opis geometrii i wysokości.
-Z tych danych powstaje ciągły profil wysokości używany przez symulację, a
-rendering korzysta z odpowiednich bitmap. Wtedy można wymieniać grafikę bez
-zmiany fizyki, a wygładzanie działa na geometrii, nie na pikselach.
+**Decyzja:** `terrain.heightSamples` jest jedyną geometrią fizyczną mapy.
+Soil i cap są dobierane z biomu i nie mają osobnych placementów.
 
-**Decyzja:** Wybieramy model hybrydowy: kafelki biomu oraz osobna geometria
-wysokości używana przez fizykę i walidację.
+**Konsekwencja:** Random Map i ręczna edycja zmieniają wyłącznie próbki
+istniejącego profilu. Bitmapa ani kafelek nie mogą stać się drugim źródłem
+wysokości lub reguł kolizji.
 
-**Konsekwencja:** Kafelek musi mieć określony profil wejściowy i wyjściowy,
-wysokość, typ powierzchni oraz reguły łączenia z sąsiadami. Edytor nie może
-uznać samego obrazu PNG za dowód poprawnej geometrii.
+## Ryzyko 8: nieciągły profil po generacji lub edycji
 
-## Ryzyko 8: niezgodne krawędzie kafelków
+**Pytanie:** Jak uniknąć ostrych uskoków przy proceduralnym profilu terenu?
 
-**Pytanie:** Czy kafelki mają mieć jawne typy krawędzi i profili, a edytor ma
-blokować niezgodne połączenia?
+**Decyzja:** Zachować istniejący sample step 20 lub 40 i autorytatywny limit
+`MapDefinitionValidator.MAX_TERRAIN_DELTA` równy 200 world units.
 
-**Decyzja:** Tak. Kafelki mają jawne profile krawędzi, a sąsiedztwa muszą być
-kompatybilne.
-
-**Konsekwencja:** Katalog biomu powinien opisywać wejście i wyjście każdego
-kafelka. Automatyczne wygładzanie może poprawiać drobne różnice wewnątrz
-dozwolonego profilu, ale nie może ukrywać nieprawidłowego połączenia dwóch
-różnych typów terenu.
+**Konsekwencja:** Generator używa szerokich, gładkich form; operacje ręczne
+nie mogą po cichu tworzyć profilu niewalidowalnego. Błąd walidacji wskazuje
+konkretną próbkę, a Kotlinowy walidator pozostaje runtime gate.
 
 ## Ryzyko 9: różne rozmiary map i nieprzewidywalny koszt renderowania
 
@@ -121,9 +110,10 @@ osobno dla każdego biomu?
 używany przez grę.
 
 **Konsekwencja:** Edytor może używać stałego viewportu i stałych granic
-świata. Walidacja musi pilnować, aby kafelki, fundamenty i dekoracje mieściły
-się w tym kanonicznym obszarze. Limity liczby dekoracji pozostają osobnym
-tematem do ustalenia, jeśli pojawi się problem wydajności.
+świata. Walidacja musi pilnować, aby teren, fundamenty i dekoracje mieściły
+się w tym kanonicznym obszarze. Random Map ma ograniczone presety gęstości
+z maksimum 18 zwykłych dekoracji; ręczne mapy nie dostają globalnego limitu
+poza obecnym kontraktem i kontrolą wydajności.
 
 ## Ryzyko 10: niestabilne identyfikatory obiektów
 
@@ -145,9 +135,9 @@ mapy?
 **Decyzja:** Tak. Wersja robocza jest zapisywana automatycznie, a eksport
 finalny jest osobną operacją.
 
-**Konsekwencja:** Autosave nie powinien nadpisywać ostatniego zatwierdzonego
-JSON-a. Edytor musi rozróżniać szkic, zatwierdzoną geometrię terenu i finalny
-eksport gotowy do użycia przez grę.
+**Konsekwencja:** Autosave nie powinien nadpisywać ostatniego repozytoryjnego
+JSON-a. Edytor rozróżnia lokalny szkic od jawnie zapisanego Chapter/Level;
+nie przechowuje osobnej fazy zatwierdzenia geometrii.
 
 ## Ryzyko 12: ewolucja formatu JSON
 
@@ -163,15 +153,13 @@ geometrii mapy bez zapisania wyniku jako nowej wersji.
 
 ## Ryzyko 13: zmiana terenu po dodaniu dekoracji
 
-**Pytanie:** Czy ponowne odblokowanie edycji terenu ma powodować ponowną
-walidację lub przesuwanie dekoracji?
+**Decyzja:** Zmiana terenu pozostaje dozwolona i nie zmienia world-space `Y`
+żadnych dekoracji. Autor ręcznie ustawia wysokość.
 
-**Decyzja:** Po dodaniu dekoracji zmiana terenu jest całkowicie zabroniona.
-
-**Konsekwencja:** Edytor ma mieć trwałe przejście do fazy dekorowania.
-Odblokowanie geometrii wymaga utworzenia nowej wersji/mapy albo jawnego
-usunięcia dekoracji przed powrotem do edycji terenu. Nie wolno automatycznie
-przesuwać assetów za zmienioną powierzchnią.
+**Konsekwencja:** Każda operacja terrain musi atomowo przeliczyć pozycje
+Relics pod kątem soil footprintów, ale nie może przesuwać obiektów. Jeśli
+zmiana terenu naruszyłaby footprint Relic, operacja jest odrzucana bez zmiany
+szkicu.
 
 ## Ryzyko 14: zmiana nazw lub usunięcie assetów
 

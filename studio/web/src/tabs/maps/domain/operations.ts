@@ -1,5 +1,7 @@
 import {
   isMapBiome,
+  FOUNDATION_HEIGHT_TOLERANCE,
+  MAX_TERRAIN_DELTA,
   maximumTerrainHeightInRange,
   TERRAIN_CONTROL_SPACING,
   WORLD_HEIGHT,
@@ -8,15 +10,22 @@ import {
 } from "./map.ts";
 import type { EditorDocument, MapBiome, MapObjectType, Team } from "./map.ts";
 import { isKnownMapDecoration } from "./assets.ts";
+import { generateRandomMap } from "./randomMap.ts";
+import type { DecorationDensity } from "./randomMap.ts";
 export type Operation =
  | { type: "CHANGE_BIOME"; biome: MapBiome }
+ | {
+   type: "GENERATE_RANDOM_MAP";
+   seed: number;
+   terrainAmplitude: number;
+   decorationDensity: DecorationDensity;
+ }
  | { type: "DRAW_TERRAIN_PROFILE"; points: {x:number;height:number}[] }
  | { type: "MOVE_TERRAIN_CONTROL_POINT"; x:number; height:number }
  | { type: "SMOOTH_TERRAIN_RANGE"; minX:number; maxX:number }
  | { type: "FLATTEN_TERRAIN_RANGE"; minX:number; maxX:number; height?:number }
  | { type: "CHANGE_FOUNDATION_HEIGHT"; owner:Team; height:number }
  | { type: "SHIFT_SCENE_VERTICALLY"; deltaY:number }
- | { type: "LOCK_TERRAIN" } | { type: "MARK_READY_TO_EXPORT" }
  | { type: "PLACE_OBJECT"; object: {id:string;type:MapObjectType;x:number;y:number;scale:number;rotationDegrees:number;assetKey:string;collision:"NONE"|"SOLID";allowOverlap:boolean;relicSize?:"SMALL"|"MEDIUM"|"LARGE" | null} }
  | { type: "MOVE_OBJECT"; id:string;x:number;y:number } | { type:"ROTATE_OBJECT";id:string;rotationDegrees:number }
  | { type:"SCALE_OBJECT";id:string;scale:number } | { type:"REMOVE_OBJECT";id:string }
@@ -26,25 +35,28 @@ export function applyOperation(
   op: Operation,
   assetKeys?: ReadonlySet<string>,
 ): EditorDocument {
-  const terrainPhase = doc.phase === "TERRAIN_EDITING";
-  if (["DRAW_TERRAIN_PROFILE","MOVE_TERRAIN_CONTROL_POINT","SMOOTH_TERRAIN_RANGE","FLATTEN_TERRAIN_RANGE","CHANGE_FOUNDATION_HEIGHT"].includes(op.type) && !terrainPhase) throw new Error("Terrain is locked");
   const map = structuredClone(doc.map);
   if (op.type === "CHANGE_BIOME") {
     if (!isMapBiome(op.biome)) throw new Error(`Unsupported biome: ${String(op.biome)}`);
     map.biome = op.biome;
     return { ...doc, map, revision: doc.revision + 1 };
   }
-  if (op.type === "LOCK_TERRAIN") {
-    if (!terrainPhase) throw new Error("Terrain is already locked");
-    const issues = validate({ ...doc, map }, assetKeys);
-    if (issues.some(issue => issue.severity === "error")) throw new Error("Fix validation errors before locking terrain");
-    return { ...doc, map, phase: "TERRAIN_LOCKED", revision: doc.revision + 1 };
-  }
-  if (op.type === "MARK_READY_TO_EXPORT") {
-    if (!["TERRAIN_LOCKED", "DECORATION_EDITING"].includes(doc.phase)) throw new Error("Lock terrain before export");
-    const issues = validate({ ...doc, map }, assetKeys);
-    if (issues.some(issue => issue.severity === "error")) throw new Error("Fix validation errors before export");
-    return { ...doc, map, phase: "READY_TO_EXPORT", revision: doc.revision + 1 };
+  if (op.type === "GENERATE_RANDOM_MAP") {
+    if (!assetKeys) throw new Error("Asset catalogue is not loaded");
+    const generatedMap = generateRandomMap(
+      doc.map,
+      op.seed,
+      op.terrainAmplitude,
+      op.decorationDensity,
+      assetKeys,
+    );
+    const candidate = { ...doc, map: generatedMap, revision: doc.revision + 1 };
+    const errors = validate(candidate, assetKeys)
+      .filter(issue => issue.severity === "error");
+    if (errors.length > 0) {
+      throw new Error(`Generated map is invalid: ${errors.map(issue => `${issue.path}: ${issue.message}`).join("; ")}`);
+    }
+    return candidate;
   }
   if (op.type === "DRAW_TERRAIN_PROFILE") {
     const points = op.points.filter(p=>p.x>=0&&p.x<=WORLD_WIDTH&&p.height>=0&&p.height<=WORLD_HEIGHT);
@@ -145,18 +157,20 @@ export function applyOperation(
     }));
     return { ...doc, map, revision: doc.revision + 1 };
   } else if (op.type === "PLACE_OBJECT") {
-    if (!["TERRAIN_LOCKED", "DECORATION_EDITING"].includes(doc.phase)) throw new Error("Lock terrain before placing decorations");
     if (map.objects.some(object => object.id === op.object.id)) throw new Error(`Object id is already used: ${op.object.id}`);
     map.objects.push(op.object);
+    const objectIndex = map.objects.length - 1;
     const placementIssue = validate({ ...doc, map }, assetKeys)
-      .find(issue => issue.severity === "error" && issue.path.startsWith(`objects.${op.object.id}`));
+      .find(issue => issue.severity === "error" && issue.path.startsWith(`decorations[${objectIndex}]`));
     if (placementIssue) throw new Error(`Invalid placement: ${placementIssue.message}`);
   }
   else if (op.type === "REMOVE_OBJECT") map.objects = map.objects.filter(o=>o.id!==op.id);
   else {
-    if (!["TERRAIN_LOCKED", "DECORATION_EDITING", "READY_TO_EXPORT"].includes(doc.phase)) throw new Error("Lock terrain before editing objects");
     const object = map.objects.find(o=>o.id===op.id); if(!object) throw new Error("Object not found");
-    if(op.type==="MOVE_OBJECT"){object.x=op.x;object.y=op.y}
+    if(op.type==="MOVE_OBJECT"){
+      object.x = op.x;
+      object.y = op.y;
+    }
     if(op.type==="ROTATE_OBJECT") object.rotationDegrees=op.rotationDegrees
     if(op.type==="SCALE_OBJECT"){if(op.scale<=0) throw new Error("Scale must be positive");object.scale=op.scale}
     if(op.type==="TRANSFORM_OBJECT"){
@@ -165,10 +179,33 @@ export function applyOperation(
       object.scale=op.scale;object.rotationDegrees=op.rotationDegrees;object.y=op.y;
     }
     const placementIssue = validate({ ...doc, map }, assetKeys)
-      .find(issue => issue.severity === "error" && issue.path.startsWith(`objects.${op.id}`));
+      .find(issue => issue.severity === "error" && issue.path.startsWith(`decorations[${map.objects.indexOf(object)}]`));
     if (placementIssue) throw new Error(`Invalid placement: ${placementIssue.message}`);
   }
-  return {...doc,map,phase: doc.phase === "TERRAIN_LOCKED" && map.objects.length > 0 ? "DECORATION_EDITING" : doc.phase,revision:doc.revision+1};
+  if (isTerrainOperation(op)) {
+    const relicIssues = validateRelics(map);
+    if (relicIssues.length > 0) {
+    throw new Error(`Terrain edit would invalidate ${relicIssues.map(issue => `${issue.path}: ${issue.message}`).join("; ")}`);
+    }
+  }
+  return { ...doc, map, revision: doc.revision + 1 };
+}
+
+function isTerrainOperation(operation: Operation): boolean {
+  return operation.type === "DRAW_TERRAIN_PROFILE" ||
+    operation.type === "MOVE_TERRAIN_CONTROL_POINT" ||
+    operation.type === "SMOOTH_TERRAIN_RANGE" ||
+    operation.type === "FLATTEN_TERRAIN_RANGE" ||
+    operation.type === "CHANGE_FOUNDATION_HEIGHT";
+}
+
+function validateRelics(map: EditorDocument["map"]) {
+  const issues: import("./map.ts").ValidationIssue[] = [];
+  for (const object of map.objects) {
+    if (object.relicSize == null) continue;
+    validateRelicPlacement(map, object, `objects.${object.id}`, issues);
+  }
+  return issues;
 }
 
 function terrainInfluenceRadius(map: EditorDocument["map"]): number {
@@ -231,54 +268,278 @@ function relicWorldFootprint(object: EditorDocument["map"]["objects"][number]) {
 }
 
 export function validate(doc: EditorDocument, assetKeys?: ReadonlySet<string>) {
-  const issues: import("./map.ts").ValidationIssue[] = []; const m=doc.map; const samples=m.terrain.samples;
-  if (m.world.width!==WORLD_WIDTH||m.world.height!==WORLD_HEIGHT) issues.push({severity:"error",path:"world",message:"World must be 7200 × 4800"});
-  if (!samples.length||samples[0].x!==0) issues.push({severity:"error",path:"terrain.samples[0]",message:"Profile must start at x=0",world:{x:0,y:0}});
-  if (!samples.length||samples[samples.length-1].x!==m.world.width) issues.push({severity:"error",path:`terrain.samples[${samples.length-1}]`,message:"Profile must end at world width",world:{x:m.world.width,y:0}});
-  for(let i=1;i<samples.length;i++) if(Math.abs(samples[i].height-samples[i-1].height)>400) issues.push({severity:"error",path:`terrain.samples[${i}]`,message:"Adjacent slope exceeds limit",world:{x:samples[i].x,y:samples[i].height}});
-  for(const f of m.fortresses){const c=m.catapults.find(x=>x.owner===f.owner);if(!c||c.foundationHeight!==f.foundationHeight) issues.push({severity:"error",path:`fortresses.${f.owner}`,message:"Catapult is not synchronized",world:{x:f.x,y:f.foundationHeight}})}
-  const ids = new Set<string>();
-  for (const object of m.objects) {
-    const path = `objects.${object.id}`;
-    if (ids.has(object.id)) {
-      issues.push({ severity: "error", path, message: "Duplicate object id", world: { x: object.x, y: object.y } });
+  const issues: import("./map.ts").ValidationIssue[] = [];
+  const map = doc.map;
+  const samples = map.terrain.samples;
+
+  if (map.schemaVersion !== 1) {
+    issues.push({ severity: "error", path: "schemaVersion", message: "Only schema version 1 is supported" });
+  }
+  if (!map.mapId.trim()) {
+    issues.push({ severity: "error", path: "mapId", message: "Map id must not be blank" });
+  }
+  if (!isMapBiome(map.biome)) {
+    issues.push({ severity: "error", path: "biome", message: `Unsupported map biome '${map.biome}'` });
+  }
+  if (map.world.width !== WORLD_WIDTH || map.world.height !== WORLD_HEIGHT) {
+    issues.push({ severity: "error", path: "world", message: `World must be ${WORLD_WIDTH} × ${WORLD_HEIGHT}` });
+  }
+  if (![20, 40].includes(map.terrain.sampleStep)) {
+    issues.push({ severity: "error", path: "terrain.sampleStep", message: "Sample step must be 20 or 40" });
+  }
+  if (samples.length === 0 || samples[0].x !== 0) {
+    issues.push({
+      severity: "error",
+      path: "terrain.heightSamples[0]",
+      message: "Profile must start at x=0",
+      world: { x: 0, y: 0 },
+    });
+  }
+  if (samples.length === 0 || samples[samples.length - 1].x !== map.world.width) {
+    issues.push({
+      severity: "error",
+      path: `terrain.heightSamples[${Math.max(0, samples.length - 1)}]`,
+      message: `Profile must end at x=${map.world.width}`,
+      world: { x: map.world.width, y: 0 },
+    });
+  }
+  samples.forEach((sample, index) => {
+    if (!Number.isFinite(sample.x) || !Number.isFinite(sample.height)) {
+      issues.push({
+        severity: "error",
+        path: `terrain.heightSamples[${index}]`,
+        message: "Coordinates must be finite",
+      });
+      return;
     }
+    if (sample.x < 0 || sample.x > map.world.width ||
+      sample.height < 0 || sample.height > map.world.height) {
+      issues.push({
+        severity: "error",
+        path: `terrain.heightSamples[${index}]`,
+        message: "Terrain sample must be inside world bounds",
+        world: { x: sample.x, y: sample.height },
+      });
+    }
+    if (index === 0) return;
+
+    const previous = samples[index - 1];
+    if (sample.x - previous.x !== map.terrain.sampleStep) {
+      issues.push({
+        severity: "error",
+        path: `terrain.heightSamples[${index}].x`,
+        message: `Sample spacing must be ${map.terrain.sampleStep}`,
+        world: { x: sample.x, y: sample.height },
+      });
+    }
+    if (Math.abs(sample.height - previous.height) > MAX_TERRAIN_DELTA) {
+      issues.push({
+        severity: "error",
+        path: `terrain.heightSamples[${index}].height`,
+        message: "Adjacent terrain heights must differ by no more than 200",
+        world: { x: sample.x, y: sample.height },
+      });
+    }
+  });
+
+  validateCamera(map, issues);
+  validateProtectedZones(map, issues);
+  validateFortresses(map, issues);
+  validateDecorations(map, assetKeys, issues);
+  return issues;
+}
+
+function validateCamera(
+  map: EditorDocument["map"],
+  issues: import("./map.ts").ValidationIssue[],
+): void {
+  if (!["PLAYER_FORTRESS", "ENEMY_FORTRESS", "CENTER"].includes(map.initialCameraAnchor)) {
+    issues.push({ severity: "error", path: "initialCameraAnchor", message: "Unsupported camera anchor" });
+  } else if (map.initialCameraAnchor === "PLAYER_FORTRESS" &&
+    !map.fortresses.some(fortress => fortress.owner === "BLUE")) {
+    issues.push({
+      severity: "error",
+      path: "initialCameraAnchor",
+      message: "PLAYER_FORTRESS requires a BLUE fortress",
+    });
+  } else if (map.initialCameraAnchor === "ENEMY_FORTRESS" &&
+    !map.fortresses.some(fortress => fortress.owner === "RED")) {
+    issues.push({
+      severity: "error",
+      path: "initialCameraAnchor",
+      message: "ENEMY_FORTRESS requires a RED fortress",
+    });
+  }
+  if (!Number.isFinite(map.initialCameraZoom) || map.initialCameraZoom < 1 || map.initialCameraZoom > 4) {
+    issues.push({ severity: "error", path: "initialCameraZoom", message: "Zoom must be between 1 and 4" });
+  }
+}
+
+function validateProtectedZones(
+  map: EditorDocument["map"],
+  issues: import("./map.ts").ValidationIssue[],
+): void {
+  const ids = new Set<string>();
+  map.protectedTerrainZones.forEach((zone, index) => {
+    const path = `protectedZones[${index}]`;
+    if (!zone.id.trim()) issues.push({ severity: "error", path: `${path}.id`, message: "Zone id must not be blank" });
+    if (ids.has(zone.id)) issues.push({ severity: "error", path: `${path}.id`, message: "Zone ids must be unique" });
+    ids.add(zone.id);
+    if (![zone.minX, zone.maxX, zone.minHeight, zone.maxHeight].every(Number.isFinite) ||
+      zone.minX < 0 || zone.maxX > map.world.width || zone.minX >= zone.maxX ||
+      zone.minHeight < 0 || zone.maxHeight > map.world.height || zone.minHeight > zone.maxHeight
+    ) {
+      issues.push({ severity: "error", path, message: "Protected zone bounds are invalid" });
+    }
+    if (zone.craterPolicy !== undefined && zone.craterPolicy !== "PRESERVE_FOUNDATION") {
+      issues.push({ severity: "error", path: `${path}.craterPolicy`, message: "Unsupported crater policy" });
+    }
+  });
+}
+
+function validateFortresses(
+  map: EditorDocument["map"],
+  issues: import("./map.ts").ValidationIssue[],
+): void {
+  const owners = map.fortresses.map(fortress => fortress.owner);
+  if (map.fortresses.length !== 2 || new Set(owners).size !== 2 ||
+    !owners.includes("BLUE") || !owners.includes("RED")) {
+    issues.push({ severity: "error", path: "fortresses", message: "Exactly one fortress per team is required" });
+  }
+
+  const protectedZoneIds = new Set(map.protectedTerrainZones.map(zone => zone.id));
+  map.fortresses.forEach((fortress, index) => {
+    const path = `fortresses[${index}]`;
+    if (fortress.assetKey !== `fortress.${fortress.owner.toLowerCase()}`) {
+      issues.push({ severity: "error", path: `${path}.assetKey`, message: "Asset key must match fortress owner" });
+    }
+    if (!fortress.hitboxProfile.trim()) {
+      issues.push({ severity: "error", path: `${path}.hitboxProfile`, message: "Hitbox profile must not be blank" });
+    }
+    if (![fortress.x, fortress.foundationHeight, fortress.halfWidth].every(Number.isFinite) ||
+      fortress.x < 0 || fortress.x > map.world.width ||
+      fortress.foundationHeight < 0 || fortress.foundationHeight > map.world.height ||
+      fortress.halfWidth <= 0
+    ) {
+      issues.push({ severity: "error", path, message: "Fortress placement is outside world bounds" });
+    }
+    if (!protectedZoneIds.has(fortress.protectedZoneId)) {
+      issues.push({
+        severity: "error",
+        path: `${path}.protectedZoneId`,
+        message: "Fortress must reference an existing protected zone",
+      });
+    }
+
+    const zone = map.protectedTerrainZones.find(item => item.id === fortress.protectedZoneId);
+    if (zone && (
+      zone.minX > fortress.x - fortress.halfWidth ||
+      zone.maxX < fortress.x + fortress.halfWidth ||
+      fortress.foundationHeight < zone.minHeight ||
+      fortress.foundationHeight > zone.maxHeight
+    )) {
+      issues.push({
+        severity: "error",
+        path: `${path}.protectedZoneId`,
+        message: "Protected zone must cover the fortress foundation",
+      });
+    }
+    validateFoundation(map, fortress, path, issues);
+
+    const catapult = map.catapults.find(item => item.owner === fortress.owner);
+    if (!catapult || catapult.foundationHeight !== fortress.foundationHeight) {
+      issues.push({
+        severity: "error",
+        path,
+        message: "Catapult foundation must match its fortress",
+        world: { x: fortress.x, y: fortress.foundationHeight },
+      });
+    }
+  });
+}
+
+function validateFoundation(
+  map: EditorDocument["map"],
+  fortress: EditorDocument["map"]["fortresses"][number],
+  path: string,
+  issues: import("./map.ts").ValidationIssue[],
+): void {
+  const tolerance = FOUNDATION_HEIGHT_TOLERANCE;
+  const foundationSamples = map.terrain.samples.filter(sample =>
+    sample.x >= fortress.x - tolerance && sample.x <= fortress.x + tolerance,
+  );
+  if (foundationSamples.length < 3) {
+    issues.push({ severity: "error", path, message: "Foundation transition needs at least three terrain samples" });
+    return;
+  }
+  const heights = foundationSamples.map(sample => sample.height);
+  if (Math.max(...heights) - Math.min(...heights) > tolerance) {
+    issues.push({ severity: "error", path, message: "Foundation terrain must be flat" });
+  }
+  if (fortress.foundationHeight < Math.min(...heights) - tolerance ||
+    fortress.foundationHeight > Math.max(...heights) + tolerance) {
+    issues.push({
+      severity: "error",
+      path: `${path}.foundationHeight`,
+      message: "Foundation height is outside the allowed range",
+    });
+  }
+}
+
+function validateDecorations(
+  map: EditorDocument["map"],
+  assetKeys: ReadonlySet<string> | undefined,
+  issues: import("./map.ts").ValidationIssue[],
+): void {
+  const ids = new Set<string>();
+  if (map.objects.filter(object => object.relicSize === "LARGE").length > 1) {
+    issues.push({ severity: "error", path: "decorations", message: "At most one LARGE relic is allowed per map" });
+  }
+  map.objects.forEach((object, index) => {
+    const path = `decorations[${index}]`;
+    if (!object.id.trim()) issues.push({ severity: "error", path: `${path}.id`, message: "Decoration id must not be blank" });
+    if (ids.has(object.id)) issues.push({ severity: "error", path: `${path}.id`, message: "Decoration ids must be unique" });
+    ids.add(object.id);
     if (!assetKeys) {
       issues.push({ severity: "error", path: `${path}.assetKey`, message: "Asset catalogue is not loaded" });
-    } else if (!isKnownMapDecoration(object.assetKey, m.biome, assetKeys) ||
-      (object.relicSize === "SMALL" && !/^relic\.[a-z_]+\.small\.\d+$/.test(object.assetKey)) ||
-      (object.relicSize === "MEDIUM" && !/^relic\.shared\.medium\.[a-z0-9_]+$/.test(object.assetKey)) ||
-      (object.relicSize === "LARGE" && !/^relic\.[a-z_]+\.small\.\d+$/.test(object.assetKey))) {
+    } else if (!isKnownMapDecoration(object.assetKey, map.biome, assetKeys) ||
+      !relicAssetMatchesSize(object, map.biome)) {
       issues.push({
         severity: "error",
         path: `${path}.assetKey`,
-        message: `Unknown decoration asset '${object.assetKey}' for ${m.biome}`,
+        message: `Unknown decoration asset '${object.assetKey}' for ${map.biome}`,
       });
     }
-    ids.add(object.id);
 
-    if (!Number.isFinite(object.x) || !Number.isFinite(object.y) ||
-      !Number.isFinite(object.scale) || object.scale <= 0 ||
-      !Number.isFinite(object.rotationDegrees)
-    ) {
+    function relicAssetMatchesSize(
+      object: EditorDocument["map"]["objects"][number],
+      biome: EditorDocument["map"]["biome"],
+    ): boolean {
+      if (object.relicSize == null) return !object.assetKey.startsWith("relic.");
+      if (object.relicSize === "MEDIUM") return object.assetKey.startsWith("relic.shared.medium.");
+      return object.assetKey.startsWith(`relic.${biome}.small.`);
+    }
+    if (object.collision !== "NONE") {
+      issues.push({ severity: "error", path: `${path}.collision`, message: "Map decorations must be visual-only" });
+    }
+    if (![object.x, object.y, object.scale, object.rotationDegrees].every(Number.isFinite) ||
+      object.scale <= 0) {
       issues.push({ severity: "error", path, message: "Position and transform values must be finite and scale must be positive" });
-      continue;
+      return;
     }
-
-    if (object.relicSize) {
-      validateRelicPlacement(m, object, path, issues);
-    } else {
+    if (object.relicSize == null) {
       validateGroundedPlacement(object, path, issues);
+    } else {
+      validateRelicPlacement(map, object, path, issues);
     }
-  }
-  return issues;
+  });
 }
 
 function validateGroundedPlacement(
   object: EditorDocument["map"]["objects"][number],
   path: string,
   issues: import("./map.ts").ValidationIssue[],
-) {
+): void {
   if (object.x < 0 || object.x > WORLD_WIDTH || object.y < 0 || object.y > WORLD_HEIGHT) {
     issues.push({ severity: "error", path: `${path}.position`, message: "Decoration must be inside world bounds" });
   }
@@ -289,7 +550,7 @@ function validateRelicPlacement(
   object: EditorDocument["map"]["objects"][number],
   path: string,
   issues: import("./map.ts").ValidationIssue[],
-) {
+): void {
   const footprint = relicWorldFootprint(object);
   if (!footprint) return;
   const { left, right, top, bottom } = footprint;
@@ -298,7 +559,9 @@ function validateRelicPlacement(
     return;
   }
   const terrainHeight = maximumTerrainHeightInRange(map, left, right);
-  if (terrainHeight !== undefined && top < terrainHeight) {
+  if (terrainHeight === undefined) {
+    issues.push({ severity: "error", path: `${path}.footprint`, message: "Relic requires a terrain profile" });
+  } else if (top < terrainHeight) {
     issues.push({ severity: "error", path: `${path}.footprint`, message: "Relic footprint must be fully inside soil" });
   }
 }

@@ -10,8 +10,8 @@ import { parseAssetIndex } from "./assets";
 import { decode, encode } from "../format/codec";
 
 describe("map operations", () => {
-  it("changes the biome without changing map layout or phase", () => {
-    const document = { map: defaultMap(), phase: "TERRAIN_LOCKED" as const, revision: 4 };
+  it("changes the biome without changing map layout", () => {
+    const document = { map: defaultMap(), revision: 4 };
     const updated = applyOperation(document, {
       type: "CHANGE_BIOME",
       biome: "copperwood",
@@ -19,12 +19,11 @@ describe("map operations", () => {
     expect(updated.map.biome).toBe("copperwood");
     expect(updated.map.terrain).toEqual(document.map.terrain);
     expect(updated.map.fortresses).toEqual(document.map.fortresses);
-    expect(updated.phase).toBe(document.phase);
     expect(updated.revision).toBe(5);
   });
 
   it("changes foundation height atomically", () => {
-    const document = { map: defaultMap(), phase: "TERRAIN_EDITING" as const, revision: 0 };
+    const document = { map: defaultMap(), revision: 0 };
     const updated = applyOperation(document, {
       type: "CHANGE_FOUNDATION_HEIGHT",
       owner: "BLUE",
@@ -43,7 +42,7 @@ describe("map operations", () => {
     expect(updated.map.terrain.samples.find(sample => sample.x === 6080)?.height).toBe(3180);
   });
 
-  it("moves the whole scene vertically while preserving its relative layout and editor phase", () => {
+  it("moves the whole scene vertically while preserving its relative layout", () => {
     const map = defaultMap();
     map.objects.push({
       id: "tree-1",
@@ -56,7 +55,7 @@ describe("map operations", () => {
       collision: "NONE",
       allowOverlap: false,
     });
-    const document = { map, phase: "DECORATION_EDITING" as const, revision: 2 };
+    const document = { map, revision: 2 };
 
     const updated = applyOperation(document, {
       type: "SHIFT_SCENE_VERTICALLY",
@@ -70,7 +69,6 @@ describe("map operations", () => {
       .toEqual([[3080, 3080], [3080, 3080]]);
     expect(updated.map.objects[0].y).toBe(3100);
     expect(updated.map.fortresses.map(fortress => fortress.x)).toEqual([490, 6710]);
-    expect(updated.phase).toBe("DECORATION_EDITING");
     expect(updated.revision).toBe(3);
     expect(document.map.terrain.samples[0].height).toBe(3180);
     expect(document.map.objects[0].y).toBe(3200);
@@ -99,7 +97,7 @@ describe("map operations", () => {
       allowOverlap: false,
       relicSize: "SMALL",
     });
-    const document = { map, phase: "TERRAIN_LOCKED" as const, revision: 0 };
+    const document = { map, revision: 0 };
 
     expect(() => applyOperation(document, {
       type: "SHIFT_SCENE_VERTICALLY",
@@ -109,7 +107,7 @@ describe("map operations", () => {
   });
 
   it("rejects foundation heights outside the world", () => {
-    const document = { map: defaultMap(), phase: "TERRAIN_EDITING" as const, revision: 0 };
+    const document = { map: defaultMap(), revision: 0 };
     expect(() => applyOperation(document, {
       type: "CHANGE_FOUNDATION_HEIGHT",
       owner: "BLUE",
@@ -153,7 +151,7 @@ describe("map operations", () => {
   });
 
   it("interpolates a drawn profile between its input points", () => {
-    const document = { map: defaultMap(), phase: "TERRAIN_EDITING" as const, revision: 0 };
+    const document = { map: defaultMap(), revision: 0 };
     const updated = applyOperation(document, {
       type: "DRAW_TERRAIN_PROFILE",
       points: [{ x: 1000, height: 3000 }, { x: 2000, height: 3400 }],
@@ -162,7 +160,7 @@ describe("map operations", () => {
   });
 
   it("moves a contour node and proportionally moves nearby terrain", () => {
-    const document = { map: defaultMap(), phase: "TERRAIN_EDITING" as const, revision: 0 };
+    const document = { map: defaultMap(), revision: 0 };
     const before = document.map.terrain.samples.find(sample => sample.x === 2000)?.height;
     const nearBefore = document.map.terrain.samples.find(sample => sample.x === 1800)?.height;
     const fartherBefore = document.map.terrain.samples.find(sample => sample.x === 1600)?.height;
@@ -183,7 +181,7 @@ describe("map operations", () => {
   });
 
   it("does not expose protected foundation positions as control points", () => {
-    const document = { map: defaultMap(), phase: "TERRAIN_EDITING" as const, revision: 0 };
+    const document = { map: defaultMap(), revision: 0 };
     expect(() => applyOperation(document, {
       type: "MOVE_TERRAIN_CONTROL_POINT",
       x: 600,
@@ -192,7 +190,7 @@ describe("map operations", () => {
   });
 
   it("draws across foundations without changing protected samples", () => {
-    const document = { map: defaultMap(), phase: "TERRAIN_EDITING" as const, revision: 0 };
+    const document = { map: defaultMap(), revision: 0 };
     const updated = applyOperation(document, {
       type: "DRAW_TERRAIN_PROFILE",
       points: [{ x: 0, height: 2800 }, { x: 7200, height: 3600 }],
@@ -202,17 +200,43 @@ describe("map operations", () => {
       .toBeCloseTo(3022.222, 2);
   });
 
-  it("rejects terrain edits after locking", () => {
-    const document = { map: defaultMap(), phase: "TERRAIN_LOCKED" as const, revision: 0 };
-    expect(() => applyOperation(document, {
+  it("keeps ordinary decoration world Y independent of terrain and allows manual changes", () => {
+    const assetKeys = parseAssetIndex("terrain_green_frontier_tree_00.png");
+    const document = { map: defaultMap(), revision: 0 };
+    const placed = applyOperation(document, {
+      type: "PLACE_OBJECT",
+      object: {
+        id: "tree-1",
+        type: "DECORATION",
+        x: 3600,
+        y: 3180,
+        scale: 1,
+        rotationDegrees: 0,
+        assetKey: "terrain_green_frontier_tree_00",
+        collision: "NONE",
+        allowOverlap: false,
+      },
+    }, assetKeys);
+    const updated = applyOperation(placed, {
       type: "FLATTEN_TERRAIN_RANGE",
-      minX: 2000,
-      maxX: 2200,
-    })).toThrow();
+      minX: 3560,
+      maxX: 3640,
+      height: 3000,
+    }, assetKeys);
+
+    expect(updated.map.objects[0].y).toBe(3180);
+    const lifted = applyOperation(updated, {
+      type: "MOVE_OBJECT",
+      id: "tree-1",
+      x: 3600,
+      y: 3100,
+    }, assetKeys);
+    expect(lifted.map.objects[0].y).toBe(3100);
+    expect(validate(lifted, assetKeys)).toEqual([]);
   });
 
   it("keeps deterministic sample endpoints", () => {
-    const document = { map: defaultMap(), phase: "TERRAIN_EDITING" as const, revision: 0 };
+    const document = { map: defaultMap(), revision: 0 };
     expect(document.map.terrain.samples[0].x).toBe(0);
     expect(document.map.terrain.samples.at(-1)?.x).toBe(7200);
     expect(document.map.terrain.samples.every(sample => sample.height === 3180)).toBe(true);
@@ -222,7 +246,7 @@ describe("map operations", () => {
   it("keeps imported maps valid and checks registered decoration assets", () => {
     const map = decode(encode(defaultMap()));
     expect(map.catapults.map(catapult => catapult.x)).toEqual([380, 6820]);
-    const document = { map, phase: "TERRAIN_EDITING" as const, revision: 0 };
+    const document = { map, revision: 0 };
     expect(validate(document, new Set())).toEqual([]);
 
     map.objects.push({
@@ -238,25 +262,13 @@ describe("map operations", () => {
     });
     const assetKeys = parseAssetIndex("terrain_green_frontier_tree_00.png");
     expect(validate(document, assetKeys)).toEqual([]);
-    expect(validate(document, new Set()).some(issue => issue.path === "objects.tree-1.assetKey")).toBe(true);
-    expect(() => applyOperation(
-      { ...document, phase: "TERRAIN_LOCKED" },
-      { type: "MARK_READY_TO_EXPORT" },
-    )).toThrow("Fix validation errors");
-    expect(applyOperation(
-      { ...document, phase: "TERRAIN_LOCKED" },
-      { type: "MARK_READY_TO_EXPORT" },
-      assetKeys,
-    ).phase).toBe("READY_TO_EXPORT");
+    expect(validate(document, new Set()).some(issue => issue.path === "decorations[0].assetKey")).toBe(true);
+    expect(validate(document, assetKeys)).toEqual([]);
   });
 
-  it("moves, scales, and rotates decorations without requiring terrain contact or a flat slope", () => {
+  it("moves ordinary decorations to absolute world coordinates while preserving scale and rotation", () => {
     const assetKeys = parseAssetIndex("terrain_green_frontier_tree_00.png");
-    const document = {
-      map: defaultMap(),
-      phase: "TERRAIN_LOCKED" as const,
-      revision: 0,
-    };
+    const document = { map: defaultMap(), revision: 0 };
     const placed = applyOperation(document, {
       type: "PLACE_OBJECT",
       object: {
@@ -296,14 +308,14 @@ describe("map operations", () => {
     });
 
     const slopedMap = structuredClone(moved.map);
-    slopedMap.terrain.samples.find(sample => sample.x === 3560)!.height = 3000;
+    slopedMap.terrain.samples.find(sample => sample.x === 3600)!.height = 3000;
     const movedOnSlope = applyOperation({ ...moved, map: slopedMap }, {
       type: "MOVE_OBJECT",
       id: "tree-1",
       x: 3600,
-      y: 3000,
+      y: 2750,
     }, assetKeys);
-    expect(movedOnSlope.map.objects[0]).toMatchObject({ x: 3600, y: 3000 });
+    expect(movedOnSlope.map.objects[0]).toMatchObject({ x: 3600, y: 2750 });
     expect(validate(movedOnSlope, assetKeys)).toEqual([]);
   });
 
@@ -321,7 +333,7 @@ describe("map operations", () => {
       allowOverlap: false,
     });
     const assetKeys = parseAssetIndex("terrain_green_frontier_tree_00.png");
-    const document = { map, phase: "TERRAIN_LOCKED" as const, revision: 0 };
+    const document = { map, revision: 0 };
 
     const updated = applyOperation(document, {
       type: "TRANSFORM_OBJECT",
@@ -339,15 +351,11 @@ describe("map operations", () => {
     expect(map.objects[0]).toMatchObject({ scale: 1, rotationDegrees: 0, y: 3180 });
   });
 
-  it("places registered Relics inside soil only after terrain is locked", () => {
+  it("places registered Relics inside soil without a terrain lock", () => {
     const relicCatalog = parseAssetIndex(
       "terrain_green_frontier_relic_01_cracked_watering_can.png",
     );
-    const document = {
-      map: defaultMap(),
-      phase: "TERRAIN_LOCKED" as const,
-      revision: 0,
-    };
+    const document = { map: defaultMap(), revision: 0 };
     const relic = {
       id: "relic-1",
       type: "DECORATION" as const,
@@ -365,15 +373,7 @@ describe("map operations", () => {
       type: "PLACE_OBJECT",
       object: relic,
     }, relicCatalog);
-    expect(updated.phase).toBe("DECORATION_EDITING");
     expect(updated.map.objects).toContainEqual(relic);
-    expect(() => applyOperation({
-      ...document,
-      phase: "TERRAIN_EDITING",
-    }, {
-      type: "PLACE_OBJECT",
-      object: relic,
-    }, relicCatalog)).toThrow("Lock terrain before placing decorations");
     expect(() => applyOperation(document, {
       type: "PLACE_OBJECT",
       object: { ...relic, id: "buried-too-shallow", y: 3200 },
@@ -382,11 +382,7 @@ describe("map operations", () => {
 
   it("places shared medium relics with the medium soil footprint", () => {
     const relicCatalog = parseAssetIndex("relic_medium_broken_orc_statue.png");
-    const document = {
-      map: defaultMap(),
-      phase: "TERRAIN_LOCKED" as const,
-      revision: 0,
-    };
+    const document = { map: defaultMap(), revision: 0 };
     const relic = {
       id: "medium-relic-1",
       type: "DECORATION" as const,
@@ -413,6 +409,56 @@ describe("map operations", () => {
         ...updated.map,
         objects: [{ ...relic, relicSize: "SMALL" }],
       },
-    }, relicCatalog).some(issue => issue.path === "objects.medium-relic-1.assetKey")).toBe(true);
+    }, relicCatalog).some(issue => issue.path === "decorations[0].assetKey")).toBe(true);
+  });
+
+  it("applies Random Map as one immutable editor operation", () => {
+    const assetKeys = parseAssetIndex([
+      "terrain_green_frontier_tree_00.png",
+      "terrain_green_frontier_rock_00.png",
+      "terrain_green_frontier_prop_00.png",
+    ].join("\n"));
+    const document = { map: defaultMap("chapter1-level3"), revision: 7 };
+    const original = structuredClone(document);
+    const generated = applyOperation(document, {
+      type: "GENERATE_RANDOM_MAP",
+      seed: 123,
+      terrainAmplitude: 160,
+      decorationDensity: "LOW",
+    }, assetKeys);
+
+    expect(generated.revision).toBe(8);
+    expect(generated.map.mapId).toBe("chapter1-level3");
+    expect(generated.map.generationMetadata.seed).toBe(123);
+    expect(generated.map.objects.length).toBeGreaterThanOrEqual(3);
+    expect(generated.map.objects.length).toBeLessThanOrEqual(6);
+    expect(document).toEqual(original);
+    expect(validate(generated, assetKeys)).toEqual([]);
+  });
+
+  it("rejects terrain edits that uncover a Relic without mutating the draft", () => {
+    const map = defaultMap();
+    map.objects.push({
+      id: "relic-1",
+      type: "DECORATION",
+      x: 3600,
+      y: 3300,
+      scale: 1,
+      rotationDegrees: 0,
+      assetKey: "relic.green_frontier.small.1",
+      collision: "NONE",
+      allowOverlap: false,
+      relicSize: "SMALL",
+    });
+    const document = { map, revision: 0 };
+    const original = structuredClone(document);
+
+    expect(() => applyOperation(document, {
+      type: "FLATTEN_TERRAIN_RANGE",
+      minX: 3560,
+      maxX: 3640,
+      height: 3400,
+    })).toThrow("Terrain edit would invalidate");
+    expect(document).toEqual(original);
   });
 });

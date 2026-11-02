@@ -15,6 +15,14 @@ import {
   WORLD_WIDTH,
 } from "./domain/map";
 import type { EditorDocument, SampleJson } from "./domain/map";
+import {
+  DECORATION_DENSITIES,
+  DEFAULT_DECORATION_DENSITY,
+  DEFAULT_TERRAIN_AMPLITUDE,
+  MAX_TERRAIN_AMPLITUDE,
+  MIN_TERRAIN_AMPLITUDE,
+} from "./domain/randomMap";
+import type { DecorationDensity } from "./domain/randomMap";
 import { applyOperation, validate } from "./domain/operations";
 import { useEditorStore } from "./state/store";
 import {
@@ -29,8 +37,10 @@ import {
   rotatedRectangleCorners,
   screenToWorld,
   transformFromCornerDrag,
+  panViewportFromDrag,
   worldToScreen,
 } from "./rendering/transform";
+import type { Viewport } from "./rendering/transform";
 import {
   ApiError,
   fetchCampaignChapters,
@@ -42,6 +52,11 @@ import {
 import "./ui/styles.css";
 
 const AUTOSAVE = "urkaaz-map-editor-autosave";
+const PRESET_LABELS = {
+  LOW: "Low",
+  MEDIUM: "Medium",
+  HIGH: "High",
+} as const;
 type WorldPoint = { x: number; y: number };
 type CursorPosition = WorldPoint & { screenX: number; screenY: number };
 type ControlDrag = { x: number; originalHeight: number; height: number };
@@ -51,6 +66,12 @@ type ObjectDrag = {
   pointerOffsetY: number;
   x: number;
   y: number;
+};
+type PanDrag = {
+  pointerId: number;
+  startX: number;
+  startY: number;
+  initialView: Viewport;
 };
 type CornerDrag = {
   id: string;
@@ -166,10 +187,15 @@ export function MapsTab() {
   const { state, operation, undo, redo, load, setMapId } = useEditorStore(registeredAssetKeys);
   const canvas = useRef<HTMLCanvasElement>(null);
   const [view, setView] = useState({ zoom: 1, panX: 0, panY: 0 });
+  const [showCap, setShowCap] = useState(false);
+  const [terrainAmplitude, setTerrainAmplitude] = useState(DEFAULT_TERRAIN_AMPLITUDE);
+  const [decorationDensity, setDecorationDensity] = useState<DecorationDensity>(DEFAULT_DECORATION_DENSITY);
   const [issues, setIssues] = useState(validate(state.present));
   const [controlDrag, setControlDrag] = useState<ControlDrag | null>(null);
   const [objectDrag, setObjectDrag] = useState<ObjectDrag | null>(null);
+  const [panDrag, setPanDrag] = useState<PanDrag | null>(null);
   const [cornerDrag, setCornerDrag] = useState<CornerDrag | null>(null);
+  const [previewError, setPreviewError] = useState<string>();
   const [selectedObjectId, setSelectedObjectId] = useState<string>();
   const [showCursorCoordinates, setShowCursorCoordinates] = useState(false);
   const [cursorPosition, setCursorPosition] = useState<CursorPosition | null>(null);
@@ -266,7 +292,7 @@ export function MapsTab() {
             lastSavedContent.current = baseline;
             setSavedHash(hash);
             setSelectedMapId(map.mapId);
-            load({ map, phase: "TERRAIN_EDITING", revision: 0 });
+            load({ map, revision: 0 });
             setStatus(repositoryUnavailable
               ? "Restored local draft; repository version could not be checked"
               : "Restored local draft");
@@ -284,7 +310,7 @@ export function MapsTab() {
             lastSavedContent.current = encode(map);
             setSavedHash(remote.hash);
             setSelectedMapId(remote.id);
-            load({ map, phase: "TERRAIN_EDITING", revision: 0 });
+            load({ map, revision: 0 });
             setStatus(remote.synchronized ? "Loaded from repository" : "Map copies differ; saving will synchronize them");
           } catch (error) {
             if (!cancelled) setStatus(error instanceof Error ? error.message : String(error));
@@ -303,12 +329,18 @@ export function MapsTab() {
     if (!editorReady) return;
     if (canvas.current) {
       let displayDocument = state.present;
+      let nextPreviewError: string | undefined;
       if (controlDrag) {
-        displayDocument = applyOperation(state.present, {
-          type: "MOVE_TERRAIN_CONTROL_POINT",
-          x: controlDrag.x,
-          height: controlDrag.height,
-        }, registeredAssetKeys);
+        try {
+          displayDocument = applyOperation(state.present, {
+            type: "MOVE_TERRAIN_CONTROL_POINT",
+            x: controlDrag.x,
+            height: controlDrag.height,
+          }, registeredAssetKeys);
+        } catch (error) {
+          if (!(error instanceof Error)) throw error;
+          nextPreviewError = error.message;
+        }
       } else if (cornerDrag) {
         const map = structuredClone(state.present.map);
         const object = map.objects.find(item => item.id === cornerDrag.id);
@@ -335,14 +367,26 @@ export function MapsTab() {
         controlDrag ? { x: controlDrag.x, height: controlDrag.height } : undefined,
         registeredAssetKeys,
         selectedObjectId,
+        showCap,
       );
+      setPreviewError(nextPreviewError);
     }
     const validation = validate(state.present, registeredAssetKeys);
     setIssues(validation);
     const content = encode(state.present);
     localStorage.setItem(AUTOSAVE, content);
-    if (lastSavedContent.current !== content) setStatus("Unsaved changes");
-  }, [editorReady, state.present, view, controlDrag, objectDrag, cornerDrag, registeredAssetKeys, selectedObjectId]);
+    if (lastSavedContent.current !== content) {
+      setStatus("Unsaved changes");
+    } else if (status === "Unsaved changes") {
+      setStatus("No unsaved changes");
+    }
+  }, [editorReady, state.present, view, controlDrag, objectDrag, cornerDrag, registeredAssetKeys, selectedObjectId, showCap, status]);
+
+  useEffect(() => {
+    if (selectedObjectId && !state.present.map.objects.some(object => object.id === selectedObjectId)) {
+      setSelectedObjectId(undefined);
+    }
+  }, [selectedObjectId, state.present.map.objects]);
 
   useEffect(() => {
     const key = (event: KeyboardEvent) => {
@@ -353,6 +397,7 @@ export function MapsTab() {
       if (event.key === "Escape") {
         setControlDrag(null);
         setObjectDrag(null);
+        setPanDrag(null);
         setCornerDrag(null);
         setSaveDialogOpen(false);
       }
@@ -366,7 +411,7 @@ export function MapsTab() {
     lastSavedContent.current = null;
     setSavedHash(null);
     setSelectedMapId(mapId);
-    load({ map: defaultMap(mapId), phase: "TERRAIN_EDITING", revision: 0 });
+    load({ map: defaultMap(mapId), revision: 0 });
     setSelectedObjectId(undefined);
     setStatus("New map");
   };
@@ -374,7 +419,6 @@ export function MapsTab() {
     if (!window.confirm("Reset the entire map to a new empty map? This cannot be undone.")) return;
     load({
       map: defaultMap(state.present.map.mapId, state.present.map.biome),
-      phase: "TERRAIN_EDITING",
       revision: 0,
     });
     setSelectedObjectId(undefined);
@@ -388,7 +432,7 @@ export function MapsTab() {
       const map = decode(remote.content);
       lastSavedContent.current = encode(map);
       setSavedHash(remote.hash);
-      load({ map, phase: "TERRAIN_EDITING", revision: 0 });
+      load({ map, revision: 0 });
       setSelectedObjectId(undefined);
       setStatus(remote.synchronized ? "Loaded from repository" : "Map copies differ; saving will synchronize them");
     } catch (error) {
@@ -427,6 +471,7 @@ export function MapsTab() {
       ...state.present,
       map: { ...state.present.map, mapId: saveMapId },
     };
+
     const currentIssues = validate(targetDocument, registeredAssetKeys);
     if (currentIssues.some(issue => issue.severity === "error")) {
       setStatus("Fix validation errors before export");
@@ -472,10 +517,29 @@ export function MapsTab() {
     }
   };
 
+  const randomizeMap = () => {
+    if (!registeredAssetKeys) {
+      setStatus(assetCatalogError ?? "Asset catalogue is still loading");
+      return;
+    }
+    if (!globalThis.crypto?.getRandomValues) {
+      setStatus("Secure random seed generation is unavailable in this browser");
+      return;
+    }
+    const seedValues = new Uint32Array(1);
+    globalThis.crypto.getRandomValues(seedValues);
+    operation({
+      type: "GENERATE_RANDOM_MAP",
+      seed: seedValues[0],
+      terrainAmplitude,
+      decorationDensity,
+    });
+  };
+
   const assetPalette = registeredAssetKeys
     ? paletteAssetsForBiome(registeredAssetKeys, state.present.map.biome)
     : { tree: [], rock: [], prop: [], relic: [] };
-  const canPlaceAssets = ["TERRAIN_LOCKED", "DECORATION_EDITING"].includes(state.present.phase);
+  const canPlaceAssets = registeredAssetKeys !== undefined && !assetCatalogError;
   const cursorCoordinatesStyle = cursorPosition
     ? {
       left: Math.max(
@@ -513,6 +577,14 @@ export function MapsTab() {
         screenX: screen.x,
         screenY: screen.y,
       });
+      if (panDrag?.pointerId === event.pointerId) {
+        setView(panViewportFromDrag(
+          panDrag.initialView,
+          { x: panDrag.startX, y: panDrag.startY },
+          screen,
+        ));
+        return;
+      }
       if (cornerDrag) {
         const object = state.present.map.objects.find(item => item.id === cornerDrag.id);
         if (object) {
@@ -560,22 +632,32 @@ export function MapsTab() {
             0,
             Math.min(WORLD_WIDTH, world.x - objectDrag.pointerOffsetX),
           );
-          const y = Math.max(
+          const desiredY = Math.max(
             0,
             Math.min(WORLD_HEIGHT, world.y - objectDrag.pointerOffsetY),
           );
-          setObjectDrag({ ...objectDrag, x, y });
+          setObjectDrag({ ...objectDrag, x, y: desiredY });
         }
       }
       return;
     }
     if (event.type === "pointerdown") {
-      if (state.present.phase === "TERRAIN_EDITING") {
-        const control = findControlAt(screen, state.present, view, rect.width, rect.height);
-        if (control) {
-          element.setPointerCapture(event.pointerId);
-          setControlDrag({ x: control.x, originalHeight: control.height, height: control.height });
-        }
+      if (event.button === 1 || (event.button === 0 && event.shiftKey)) {
+        event.preventDefault();
+        element.setPointerCapture(event.pointerId);
+        setPanDrag({
+          pointerId: event.pointerId,
+          startX: screen.x,
+          startY: screen.y,
+          initialView: view,
+        });
+        return;
+      }
+      if (event.button !== 0 || panDrag) return;
+      const control = findControlAt(screen, state.present, view, rect.width, rect.height);
+      if (control) {
+        element.setPointerCapture(event.pointerId);
+        setControlDrag({ x: control.x, originalHeight: control.height, height: control.height });
         return;
       }
       const selected = state.present.map.objects.find(item => item.id === selectedObjectId);
@@ -631,7 +713,21 @@ export function MapsTab() {
           x: object.x,
           y: object.y,
         });
+      } else if (!object) {
+        event.preventDefault();
+        element.setPointerCapture(event.pointerId);
+        setPanDrag({
+          pointerId: event.pointerId,
+          startX: screen.x,
+          startY: screen.y,
+          initialView: view,
+        });
       }
+      return;
+    }
+    if (event.type === "pointerup" && panDrag?.pointerId === event.pointerId) {
+      setPanDrag(null);
+      if (element.hasPointerCapture(event.pointerId)) element.releasePointerCapture(event.pointerId);
       return;
     }
     if (event.type === "pointerup" && cornerDrag) {
@@ -774,6 +870,12 @@ export function MapsTab() {
         <button onClick={newMap} disabled={saving}>New map</button>
         <button onClick={resetMap} disabled={saving}>Reset</button>
         <button
+          onClick={randomizeMap}
+          disabled={saving || !editorReady || !registeredAssetKeys}
+        >
+          Random Map
+        </button>
+        <button
           onClick={openSaveDialog}
           disabled={saving || campaignChapters.length === 0 || issues.some(issue => issue.severity === "error")}
         >
@@ -874,6 +976,37 @@ export function MapsTab() {
             ))}
           </select>
           <p>Fortress and catapult sprites are shared between biomes.</p>
+          <section className="random-map-controls">
+            <h3>Random Map settings</h3>
+            <label>
+              Terrain intensity · {terrainAmplitude} world units
+              <input
+                aria-label="Terrain intensity"
+                type="range"
+                min={MIN_TERRAIN_AMPLITUDE}
+                max={MAX_TERRAIN_AMPLITUDE}
+                step="1"
+                value={terrainAmplitude}
+                onChange={event => setTerrainAmplitude(Number(event.currentTarget.value))}
+              />
+            </label>
+            <label>
+              Decoration density
+              <select
+                aria-label="Decoration density"
+                value={decorationDensity}
+                onChange={event => {
+                  const preset = DECORATION_DENSITIES.find(value => value === event.currentTarget.value);
+                  if (preset) setDecorationDensity(preset);
+                }}
+              >
+                {DECORATION_DENSITIES.map(preset => (
+                  <option key={preset} value={preset}>{PRESET_LABELS[preset]}</option>
+                ))}
+              </select>
+            </label>
+            <p>Each click replaces the current terrain and ordinary decorations. Save to the repository separately.</p>
+          </section>
           <section className="foundation-controls">
             <h3>Foundation height</h3>
             <p>Fortress and catapult move together; nearby terrain follows smoothly.</p>
@@ -887,7 +1020,6 @@ export function MapsTab() {
                   max={WORLD_HEIGHT}
                   step="10"
                   value={fortress.foundationHeight}
-                  disabled={state.present.phase !== "TERRAIN_EDITING"}
                   onChange={event => operation({
                     type: "CHANGE_FOUNDATION_HEIGHT",
                     owner: fortress.owner,
@@ -899,7 +1031,10 @@ export function MapsTab() {
           </section>
           <section className="scene-position-controls">
             <h3>Whole map position</h3>
-            <p>Raise or lower terrain, fortresses, catapults, and assets together. The background stays fixed.</p>
+            <p>
+              Raise or lower terrain, fortresses, catapults, and assets together;
+              the world backdrop stays fixed during this adjustment.
+            </p>
             <label>
               Move by (world units)
               <input
@@ -929,6 +1064,13 @@ export function MapsTab() {
               </button>
             </div>
           </section>
+          <h3>Map preview</h3>
+          <button
+            aria-pressed={showCap}
+            onClick={() => setShowCap(visible => !visible)}
+          >
+            {showCap ? "Hide cap" : "Show cap"}
+          </button>
           <h3>Debug</h3>
           <button
             className={showCursorCoordinates ? "active" : ""}
@@ -937,23 +1079,19 @@ export function MapsTab() {
           >
             Cursor coordinates: {showCursorCoordinates ? "On" : "Off"}
           </button>
-          <button
-            disabled={state.present.phase !== "TERRAIN_EDITING"}
-            onClick={() => operation({ type: "LOCK_TERRAIN" })}
-          >
-            Lock terrain
-          </button>
           <p>World<br />{WORLD_WIDTH} × {WORLD_HEIGHT}</p>
         </aside>
         <div className="map-canvas-wrap">
           <canvas
             ref={canvas}
+            className={panDrag ? "is-panning" : undefined}
             onPointerDown={pointer}
             onPointerMove={pointer}
             onPointerUp={pointer}
             onPointerCancel={() => {
               setControlDrag(null);
               setObjectDrag(null);
+              setPanDrag(null);
               setCornerDrag(null);
             }}
             onPointerLeave={() => setCursorPosition(null)}
@@ -964,13 +1102,20 @@ export function MapsTab() {
             }}
             onDrop={dropAsset}
             onWheel={wheel}
+            title="Scroll to zoom · drag empty space or Shift-drag to pan"
           />
+          <div className="map-pan-hint">
+            Scroll to zoom · drag empty space or Shift-drag to pan
+          </div>
           {showCursorCoordinates && cursorPosition && cursorCoordinatesStyle && (
             <div className="cursor-coordinates" style={cursorCoordinatesStyle}>
               X: {cursorPosition.x.toFixed(1)} · Y: {cursorPosition.y.toFixed(1)}
             </div>
           )}
-          {controlDrag && (
+          {previewError && (
+            <div className="hint error" role="status">{previewError}</div>
+          )}
+          {!previewError && controlDrag && (
             <div className="hint">Adjusting contour point · release to commit</div>
           )}
           {cornerDrag && (
@@ -995,6 +1140,28 @@ export function MapsTab() {
               <h3>Selected decoration</h3>
               <p>{selectedObject.assetKey}</p>
               <p>Drag it to move it; drag a corner to scale and rotate around its center.</p>
+              <label>
+                Height (Y, world units)
+                <input
+                  aria-label="Decoration Y"
+                  type="number"
+                  min="0"
+                  max={WORLD_HEIGHT}
+                  step="1"
+                  value={selectedObject.y}
+                  onChange={event => {
+                    const y = Number(event.currentTarget.value);
+                    if (Number.isFinite(y) && y >= 0 && y <= WORLD_HEIGHT) {
+                      operation({
+                        type: "MOVE_OBJECT",
+                        id: selectedObject.id,
+                        x: selectedObject.x,
+                        y,
+                      });
+                    }
+                  }}
+                />
+              </label>
               <label>
                 Scale ({selectedObject.scale.toFixed(2)}×)
                 <input
@@ -1047,7 +1214,7 @@ export function MapsTab() {
           <p>
             {canPlaceAssets
               ? "Drag an asset onto the map. Click and drag a placed decoration to move it."
-              : "Lock terrain before placing assets."}
+              : "Load the terrain asset catalogue to place decorations."}
           </p>
           {ASSET_PALETTE_GROUPS.map(group => (
             <section className="asset-category" key={group.category}>
@@ -1080,7 +1247,7 @@ export function MapsTab() {
         </aside>
       </section>
       <footer className="map-editor-footer">
-        {state.message ?? "Drag yellow contour nodes to shape terrain · Lock terrain to finish"}
+        {state.message ?? "Drag yellow contour nodes to shape terrain · Random Map replaces the current terrain draft"}
       </footer>
     </div>
   );

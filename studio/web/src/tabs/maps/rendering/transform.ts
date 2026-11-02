@@ -25,6 +25,18 @@ export function screenToWorld(x:number,y:number,v:Viewport,w:number,h:number){
   };
 }
 
+export function panViewportFromDrag(
+  initialView: Viewport,
+  dragStart: ScreenPoint,
+  currentPointer: ScreenPoint,
+): Viewport {
+  return {
+    ...initialView,
+    panX: initialView.panX + currentPointer.x - dragStart.x,
+    panY: initialView.panY + currentPointer.y - dragStart.y,
+  };
+}
+
 export function rotatedRectangleCorners(
   center: ScreenPoint,
   width: number,

@@ -1,4 +1,4 @@
-import { terrainControlPoints, terrainHeightAt, WORLD_WIDTH } from "../domain/map.ts";
+import { terrainControlPoints, terrainHeightAt, WORLD_HEIGHT, WORLD_WIDTH } from "../domain/map.ts";
 import type { EditorDocument, SampleJson } from "../domain/map.ts";
 import { relicAssetPath, terrainAssetPath, terrainThemeAssetPaths } from "../domain/assets";
 import { worldHeightToScreen, worldToScreen, worldWidthToScreen } from "./transform";
@@ -12,6 +12,7 @@ export const FORTRESS_RENDER_HEIGHT = 504;
 export const CATAPULT_RENDER_WIDTH = 182.4;
 const CAP_SLICE_COUNT = 96;
 const CAP_TILE_WORLD_WIDTH = 450;
+const canvasRenderVersions = new WeakMap<HTMLCanvasElement, number>();
 export const MAP_DECORATION_RENDER_WIDTH = 94;
 export const MAP_DECORATION_GROUND_SINK = 12;
 export const MAP_RELIC_RENDER_SIZES = { SMALL: 76, MEDIUM: 112, LARGE: 176 } as const;
@@ -62,6 +63,20 @@ export function mapRelicRenderSize(
 ) {
   const width = MAP_RELIC_RENDER_SIZES[relicSize] * scale * zoom / pixelRatio;
   return { width, height: width * aspectRatio };
+}
+
+export function mapBackgroundScreenBounds(
+  view: Viewport,
+  width: number,
+  height: number,
+) {
+  const topLeft = worldToScreen(0, 0, view, width, height);
+  return {
+    x: topLeft.x,
+    y: topLeft.y,
+    width: worldWidthToScreen(WORLD_WIDTH, view, width),
+    height: worldHeightToScreen(WORLD_HEIGHT, view, height),
+  };
 }
 
 function drawTransformFrame(c: CanvasRenderingContext2D, width: number, height: number) {
@@ -135,20 +150,36 @@ export function renderMap(
  controlPreview?: SampleJson,
  assetKeys?: ReadonlySet<string>,
  selectedObjectId?: string,
+ showCap=false,
 ){
+ const renderVersion=(canvasRenderVersions.get(canvas)||0)+1;
+ canvasRenderVersions.set(canvas,renderVersion);
+ const redraw=()=>{
+   if(canvasRenderVersions.get(canvas)!==renderVersion)return;
+   renderMap(canvas,doc,view,debug,controlPreview,assetKeys,selectedObjectId,showCap);
+ };
  const dpr=window.devicePixelRatio||1, rect=canvas.getBoundingClientRect(); canvas.width=rect.width*dpr;canvas.height=rect.height*dpr;
  const c=canvas.getContext("2d")!;c.setTransform(dpr,0,0,dpr,0,0);const w=rect.width,h=rect.height;
  const themeAssets = terrainThemeAssetPaths(doc.map.biome);
- const background = image(themeAssets.background, () => renderMap(canvas, doc, view, debug, controlPreview, assetKeys));
- if (background) c.drawImage(background, 0, 0, w, h);
- else {
-   c.fillStyle="#162537";
-   c.fillRect(0,0,w,h);
+ const background = image(themeAssets.background, redraw);
+ c.fillStyle="#162537";
+ c.fillRect(0,0,w,h);
+ if (background) {
+   const bounds = mapBackgroundScreenBounds(view, w, h);
+   c.drawImage(
+     background,
+     bounds.x,
+     bounds.y,
+     bounds.width,
+     bounds.height,
+   );
  }
  const p=(x:number,y:number)=>worldToScreen(x,y,view,w,h);const samples=doc.map.terrain.samples;
  c.beginPath();samples.forEach((s,i)=>{const q=p(s.x,s.height);i?c.lineTo(q.x,q.y):c.moveTo(q.x,q.y)});const last=p(7200,4800);c.lineTo(last.x,last.y);c.lineTo(p(0,4800).x,p(0,4800).y);c.closePath();
- const soil = image(themeAssets.soil, () => renderMap(canvas, doc, view, debug, controlPreview, assetKeys));
- const cap = image(themeAssets.cap, () => renderMap(canvas, doc, view, debug, controlPreview, assetKeys));
+ const soil = image(themeAssets.soil, redraw);
+ const cap = showCap
+   ? image(themeAssets.cap, redraw)
+   : undefined;
  c.fillStyle="#72543d";c.fill();
  if (soil) {
    c.save();
@@ -167,7 +198,7 @@ export function renderMap(
  for(const cat of doc.map.catapults){
    const q=p(cat.x,cat.foundationHeight+FORTRESS_VERTICAL_OFFSET+CATAPULT_VERTICAL_OFFSET);
    const path = cat.owner === "BLUE" ? "/api/assets/terrain/catapult_left.png" : "/api/assets/terrain/catapult_right.png";
-   const sprite = image(path, () => renderMap(canvas, doc, view, debug, controlPreview, assetKeys, selectedObjectId));
+   const sprite = image(path, redraw);
    const width = worldWidthToScreen(CATAPULT_RENDER_WIDTH, view, w);
    const height = sprite ? width * sprite.height / sprite.width : width;
    if (sprite) c.drawImage(sprite, q.x - width / 2, q.y - height, width, height);
@@ -176,7 +207,7 @@ export function renderMap(
  for(const f of doc.map.fortresses){
    const q=p(f.x,f.foundationHeight+FORTRESS_VERTICAL_OFFSET);
    const path = f.owner === "BLUE" ? "/api/assets/terrain/fortress_chapter_01_left.png" : "/api/assets/terrain/fortress_chapter_01_right.png";
-   const sprite = image(path, () => renderMap(canvas, doc, view, debug, controlPreview, assetKeys, selectedObjectId));
+   const sprite = image(path, redraw);
    const width = worldWidthToScreen(FORTRESS_RENDER_WIDTH, view, w);
    const height = worldHeightToScreen(FORTRESS_RENDER_HEIGHT, view, h);
    if (sprite) c.drawImage(sprite, q.x - width / 2, q.y - height, width, height);
@@ -188,7 +219,7 @@ export function renderMap(
    | undefined;
  for (const object of doc.map.objects.filter(item => item.relicSize == null)) {
    const assetPath = terrainAssetPath(doc.map.biome, object.assetKey);
-   const sprite = image(assetPath, () => renderMap(canvas, doc, view, debug, controlPreview, assetKeys, selectedObjectId));
+   const sprite = image(assetPath, redraw);
    if (!sprite) continue;
    const baseline = p(object.x, object.y);
    const size = mapDecorationRenderSize(
@@ -214,25 +245,23 @@ export function renderMap(
    }
    c.restore();
  }
- if (cap && doc.phase !== "TERRAIN_EDITING") drawDeformedCap(c, cap, doc, view, w, h);
- if (doc.phase === "TERRAIN_EDITING") {
-   for (const control of terrainControlPoints(doc.map)) {
-     const displayed = controlPreview?.x === control.x ? controlPreview : control;
-     const point = p(displayed.x, displayed.height);
-     const isPreview = displayed !== control;
-     c.beginPath();
-     c.arc(point.x, point.y, isPreview ? 8 : 6, 0, Math.PI * 2);
-     c.fillStyle = isPreview ? "#fff3b0" : "#f1cf62";
-     c.fill();
-     c.lineWidth = 2;
-     c.strokeStyle = "#493c25";
-     c.stroke();
-   }
+ if (cap && showCap) drawDeformedCap(c, cap, doc, view, w, h);
+ for (const control of terrainControlPoints(doc.map)) {
+   const displayed = controlPreview?.x === control.x ? controlPreview : control;
+   const point = p(displayed.x, displayed.height);
+   const isPreview = displayed !== control;
+   c.beginPath();
+   c.arc(point.x, point.y, isPreview ? 8 : 6, 0, Math.PI * 2);
+   c.fillStyle = isPreview ? "#fff3b0" : "#f1cf62";
+   c.fill();
+   c.lineWidth = 2;
+   c.strokeStyle = "#493c25";
+   c.stroke();
  }
  for (const relic of doc.map.objects.filter(item => item.relicSize != null)) {
    const assetPath = relicAssetPath(doc.map.biome, relic.assetKey, assetKeys ?? new Set());
    if (!assetPath) continue;
-   const sprite = image(assetPath, () => renderMap(canvas, doc, view, debug, controlPreview, assetKeys, selectedObjectId));
+   const sprite = image(assetPath, redraw);
    if (!sprite) continue;
    const size = mapRelicRenderSize(
      relic.relicSize ?? "SMALL",
@@ -264,5 +293,5 @@ export function renderMap(
    drawTransformFrame(c, selectedTransformFrame.width, selectedTransformFrame.height);
    c.restore();
  }
- if(debug){c.fillStyle="#fff";c.font="12px sans-serif";c.fillText(`${doc.map.mapId} · ${doc.phase} · ${Math.round(view.zoom*100)}%`,12,20)}
+ if(debug){c.fillStyle="#fff";c.font="12px sans-serif";c.fillText(`${doc.map.mapId} · ${Math.round(view.zoom*100)}%`,12,20)}
 }

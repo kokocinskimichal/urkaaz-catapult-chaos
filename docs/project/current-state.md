@@ -114,12 +114,21 @@ kampanię, AI oraz działający match screen. Gałąź robocza: `develop`.
   200 world units między sąsiednimi próbkami.
 - Chapter 1 został zaimportowany z zaakceptowanego eksportu authoringowego:
   wszystkie 10 poziomów ma jawne profile, fundamenty, fortece, katapulty oraz
-  dekoracje drzew, skał i propsów zakotwiczone do terenu. Profile są
+  dekoracje drzew, skał i propsów początkowo umieszczone na powierzchni terenu.
+  Ich zapisane współrzędne `Y` pozostają bezwzględne i nie są kotwiczone do
+  profilu. Profile są
   walidowane przed zapisaniem, a przejścia nie przekraczają 200 world units.
 - Zapis mapy kampanii w Studio Maps wybiera Chapter i globalny numer Level,
   zapisuje identyfikator `chapterN-levelX` w obu kopiach JSON, a kampania
   ładuje mapę danego poziomu, gdy plik istnieje; brakujące mapy nadal używają
   tymczasowego `demo-map`.
+- Studio Maps ma **Random Map** z suwakiem intensywności terenu 100–600
+  world units (domyślnie 160) i presetami gęstości dekoracji. Losowanie
+  zachowuje biom i Relics, zapisuje seed w metadata,
+  jest odwracalne i pozostaje szkicem do czasu jawnego Save. Teren i dekoracje
+  można edytować bez blokady fazowej; wysokość `Y` dekoracji jest niezależna
+  od profilu terenu i może być ustawiana ręcznie, a cap ma wyłącznie
+  przełącznik widoczności podglądu.
 
 ## Ustalony kierunek dalszego rozwoju
 

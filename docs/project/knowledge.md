@@ -309,8 +309,8 @@ Android also bundles the same file at
 `android-app/src/main/assets/maps/demo-map.json` for offline loading.
 `CampaignLevelDefinition` looks for `chapter<ordinal>-level<globalLevel>` and
 uses the bundled map when it exists; missing level maps still use the
-intentional `demo-map` transition fallback. The tracked Chapter 1, Levels 3
-and 4 maps are imported in both resource locations; other levels without a
+intentional `demo-map` transition fallback. Chapter 1 Levels 1, 3 and 4 now
+have map JSON files in both resource locations; other levels without a
 dedicated JSON currently use `demo-map`. The Studio Maps save dialog selects
 the campaign chapter and global level, derives this stable map ID, and saves
 through the paired-map hash guard into both resource locations. Level 4
@@ -331,23 +331,26 @@ validate their size-specific soil footprint. The shared medium set is
 available to every biome.
 
 The web and Kotlin editor codecs read and write the same strict schema-1 JSON.
-Editor phase and selection remain editor-only; production JSON contains no
-catapult placements, terrain tile placements or generic object list. The web
-editor derives its preview catapults from fortress placements, syncs the
-shared terrain asset index for decoration-key validation, and keeps those
-editor-only catapults out of exported JSON. The Android camera consumes
-authored framing data without changing simulation state. Both campaign and
-editor maps are available offline.
+Selection, cap visibility and generator presets remain editor-only; production
+JSON contains no editor phase, catapult placements, terrain tile placements
+or generic object list. The web editor derives its preview catapults from
+fortress placements, syncs the shared terrain asset index for decoration-key
+validation, and keeps those editor-only catapults out of exported JSON. The
+Android camera consumes authored framing data without changing simulation
+state. Both campaign and editor maps are available offline.
 
 The shared terrain catalog now indexes the complete legacy decoration sets:
 Green Frontier (6 trees, 6 rocks, 6 props), Frostbound (6, 6, 12), Copperwood
 (8, 6, 6), and Ashen March (6, 6, 8). Sunken Marshes intentionally shares the
 Green Frontier assets; that alias is recognized by both the editor and
 `AssetCatalog`, so its palette choices also pass campaign map validation.
-Before locking terrain, the editor can change either foundation height. The
-associated fortress and catapult move together, the protected samples remain
-flat at the new height, and adjacent samples use the same smooth falloff as a
-manually moved terrain control point.
+The editor can change either foundation height at any time. The associated
+fortress and catapult move together, the protected samples remain flat at the
+new height, and adjacent samples use the same smooth falloff as a manually
+moved terrain control point. Random Map rerolls a seeded draft with independent
+terrain and decoration-density presets; ordinary decorations keep manually
+editable world-space Y independent from later terrain edits, while Relics
+remain fixed and protected by soil validation.
 The editor can also raise or lower the complete map scene relative to its
 fixed background. Terrain, fortresses, derived catapults, protected zones,
 decorations and Relics move together in one undoable operation; world bounds
@@ -1198,10 +1201,32 @@ The map editor is the Maps tab in Studio, not a standalone Vite app. It shares
 the strict versioned `MapDefinition` JSON shape, stores draft autosaves in
 browser `localStorage`, and saves validated map definitions through Studio's
 local API into both repository copies. It uses `game-assets` directly through
-the server asset routes, terrain locking before decoration placement, and
-TypeScript validation in both the UI and backend. The Debug panel can toggle a
-live world-coordinate readout beside the mouse cursor; coordinates account for
-the current viewport zoom and pan.
+the server asset routes. Terrain and decoration editing are continuous;
+ordinary decorations use independent world-space `Y` values, adjustable by
+drag or the numeric field; terrain edits do not move them. Relics retain their
+positions and soil constraints. The TypeScript validator
+matches the Kotlin runtime limits required by map generation, including
+20/40-unit sample spacing and a maximum 200-unit adjacent-height delta. The
+Debug panel can toggle a live world-coordinate readout beside the mouse cursor;
+coordinates account for the current viewport zoom and pan.
+Wheel zoom applies to the background and world layers together. Dragging empty
+canvas pans the viewport, while Shift-drag or middle-button drag pans over
+objects; Fit restores the default viewport. The separate whole-map vertical
+position adjustment moves map content against the fixed world backdrop.
+
+`studio/web/src/tabs/maps/domain/randomMap.ts` contains the pure seeded
+generator. The Maps toolbar exposes independent Terrain intensity and
+Decoration density controls and **Random Map**. Terrain intensity is a
+world-unit amplitude slider from 100 to 600 with default 160; decoration
+density remains Low/Medium/High (default Medium) with counts 3–6/7–11/12–18.
+The middle third of the world remains within about 40 units of the baseline.
+New ordinary decorations initially use terrain
+surface Y, which remains a freely editable world coordinate. Each generation
+is one undoable draft operation, keeps the selected biome and existing Relics,
+and stores its seed and generator version in `generationMetadata`; it never
+writes files until explicit Save.
+**Show cap**/**Hide cap** is presentation-only state and does not change the
+map document or dirty status.
 
 During terrain editing, the web editor displays draggable terrain contour
 nodes at roughly 200 world-unit intervals. Dragging a node applies a smooth,
@@ -1217,10 +1242,10 @@ the fortress approach on both sides: BLUE reaches `x=0`, RED reaches
 `worldWidth`, and each front edge extends at least 320 world units beyond the
 fortress footprint toward the battlefield center. Front edges are rounded
 outward to the terrain sample grid so the full protected span has flat samples;
-contour control points are omitted throughout both foundations. Legacy
-New editor maps start with a fully flat terrain profile at the fortress
-foundation height. Editor phase and draft bookkeeping do not enter exported
-map JSON.
+contour control points are omitted throughout both foundations. New maps start
+with a fully flat terrain profile at the fortress foundation
+height. Cap visibility, presets and editor selection do not enter exported map
+JSON.
 
 Map decorations are authored only from map object data; the renderer no longer
 adds a second hard-coded decoration layout. Green Frontier tree, rock and prop

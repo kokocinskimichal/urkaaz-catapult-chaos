@@ -4,6 +4,7 @@ import {
   FORTRESS_RENDER_HEIGHT,
   FORTRESS_RENDER_WIDTH,
   isImageDrawable,
+  mapBackgroundScreenBounds,
   MAP_RELIC_RENDER_SIZES,
   MAP_DECORATION_RENDER_WIDTH,
   mapDecorationRenderSize,
@@ -15,6 +16,16 @@ describe("map image loading", () => {
     expect(isImageDrawable({ complete: true, naturalWidth: 128 })).toBe(true);
     expect(isImageDrawable({ complete: false, naturalWidth: 128 })).toBe(false);
     expect(isImageDrawable({ complete: true, naturalWidth: 0 })).toBe(false);
+  });
+});
+
+describe("map background viewport transform", () => {
+  it("uses the same zoom and pan as the world bounds", () => {
+    expect(mapBackgroundScreenBounds(
+      { zoom: 1.5, panX: -100, panY: 45 },
+      1200,
+      800,
+    )).toEqual({ x: -100, y: 45, width: 1800, height: 1200 });
   });
 });
 

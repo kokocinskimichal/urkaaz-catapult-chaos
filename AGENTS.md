@@ -60,6 +60,8 @@ do bieżącego zadania według [indeksu dokumentów kontekstu](docs/agent-contex
 
 - [Projekt edytora](docs/map-editor/design.md)
 - [Ryzyka](docs/map-editor/risks.md)
+- [Plan generatora Random Map](docs/map-editor/random-map-generation-plan.md) ·
+  [prompt implementacyjny](docs/map-editor/random-map-generation-implementation-prompt.md)
 - [Migracja edytora webowego](docs/map-editor/web-migration-plan.md)
 - [Prompt implementacji edytora webowego](docs/map-editor/web-implementation-prompt.md)
 - [README modułu webowego](docs/map-editor/web/README.md)

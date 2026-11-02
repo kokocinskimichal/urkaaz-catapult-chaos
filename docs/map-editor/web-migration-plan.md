@@ -11,6 +11,12 @@ hasha. Walidator Kotlinowy pozostaje autorytatywnym runtime gate.
 Ten dokument opisuje migrację i decyzje, które doprowadziły do obecnej
 implementacji webowej.
 
+Późniejsza zmiana Maps Studio usunęła fazową blokadę `Lock terrain`, dodała
+ciągłą edycję i Random Map. Aktualny workflow opisują
+[`random-map-generation-plan.md`](random-map-generation-plan.md) oraz
+[`random-map-generation-implementation-prompt.md`](random-map-generation-implementation-prompt.md);
+historyczne założenia poniżej nie nadpisują tych nowszych decyzji.
+
 ## Cel
 
 Zastąpić toporny interfejs Swing lokalną aplikacją uruchamianą w przeglądarce.

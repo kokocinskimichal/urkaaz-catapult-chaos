@@ -17,7 +17,6 @@ export type Team = "BLUE" | "RED";
 export type Facing = "LEFT" | "RIGHT";
 export type InitialCameraAnchor = "PLAYER_FORTRESS" | "ENEMY_FORTRESS" | "CENTER";
 export type MapObjectType = "DECORATION";
-export type EditorPhase = "TERRAIN_EDITING" | "TERRAIN_LOCKED" | "DECORATION_EDITING" | "READY_TO_EXPORT";
 
 export interface SampleJson { x: number; height: number }
 export interface TerrainJson { sampleStep: number; samples: SampleJson[] }
@@ -34,11 +33,13 @@ export interface MapDocumentJson {
   fortresses: FortressJson[]; catapults: CatapultJson[]; objects: ObjectJson[];
   generationMetadata: MetadataJson;
 }
-export interface EditorDocument { map: MapDocumentJson; phase: EditorPhase; selectedId?: string; revision: number }
+export interface EditorDocument { map: MapDocumentJson; selectedId?: string; revision: number }
 export interface ValidationIssue { severity: "error" | "warning"; path: string; message: string; world?: { x: number; y: number } }
 
 export const foundationExtension = 320;
 export const DEFAULT_TERRAIN_SAMPLE_STEP = 40;
+export const MAX_TERRAIN_DELTA = 200;
+export const FOUNDATION_HEIGHT_TOLERANCE = 80;
 export const TERRAIN_CONTROL_SPACING = 200;
 
 export function catapultsForFortresses(fortresses: FortressJson[]): CatapultJson[] {

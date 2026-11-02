@@ -10,8 +10,23 @@ npm run build
 
 Edytor jest zakładką **Maps**. Kod, testy, model domenowy, kodek JSON, renderer
 Canvas i transformacje znajdują się w `studio/web/src/tabs/maps`. Canvas
-pokazuje świat 7200 × 4800; teren edytuje się przez przeciąganie węzłów profilu,
-a zablokowanie terenu odsłania cap.
+pokazuje świat 7200 × 4800. Profil terenu, fundamenty i dekoracje są edytowalne
+w dowolnej kolejności. Rolką myszy powiększa się teren i jego tło razem;
+przeciągnięcie pustego obszaru przesuwa mapę, a `Shift` + przeciągnięcie
+pozwala przesuwać ją także nad obiektami. `Y` dekoracji jest niezależną
+współrzędną world-space;
+można ją zmieniać pionowym przeciągnięciem lub polem numerycznym, a edycja
+terenu nie przesuwa obiektów. Relics pozostają ograniczone do gleby. Cap ma
+osobny przełącznik **Show cap**/**Hide cap** i nie jest częścią danych mapy.
+
+**Random Map** losuje profil terenu, niezależne wysokości fundamentów i
+drzewa/skały/propsy dla aktualnego biomu. **Terrain intensity** ma płynny
+suwak 100–600 world units (domyślnie 160), a **Decoration density** ma presety
+Low/Medium/High (domyślnie Medium).
+Każde losowanie używa seeda, zapisuje go w `generationMetadata`, jest jedną
+operacją Undo/Redo i zachowuje istniejące Relics. Generator zmienia wyłącznie
+lokalny szkic; zapis dla wybranego Chapter/Level nadal odbywa się przez
+**Save to repository** i istniejące API z kontrolą hasha.
 
 Mapy wczytuje się z listy repozytorium. Zapis waliduje je po stronie przeglądarki
 i serwera, sprawdza hash obu kopii oraz aktualizuje

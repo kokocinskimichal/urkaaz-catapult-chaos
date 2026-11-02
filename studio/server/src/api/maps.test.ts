@@ -104,7 +104,7 @@ describe("map API", () => {
     expect(validation.status).toBe(200);
     expect(validation.body).toMatchObject({
       valid: false,
-      issues: [{ severity: "error", path: "objects.bad-object.assetKey" }],
+      issues: [{ severity: "error", path: "decorations[0].assetKey" }],
     });
     await expect(call("/api/maps/demo-map")).resolves.toMatchObject({ status: 404 });
   });
@@ -129,10 +129,8 @@ describe("map API", () => {
 
     for (const file of files) {
       const map = decode(await readFile(join(mapsDirectory, file), "utf8"));
-      const issues = validate(
-        { map, phase: "TERRAIN_EDITING", revision: 0 },
-        assetKeys,
-      ).filter(issue => issue.severity === "error");
+      const issues = validate({ map, revision: 0 }, assetKeys)
+        .filter(issue => issue.severity === "error");
       if (issues.length > 0) invalidMaps.push(`${file}: ${issues.map(issue => issue.message).join(", ")}`);
     }
 

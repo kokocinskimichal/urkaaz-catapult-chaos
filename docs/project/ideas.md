@@ -15,6 +15,20 @@ ewentualny status akceptacji podany przez użytkownika.
   wyjątkami dla asymetrycznych postaci. Zacząć od pilota dla jednej jednostki,
   aby ograniczyć rozjazdy animacji i koszt generowania.
 
+### Migracja gry na serwer
+
+- **Propozycja migracji gry na serwer — do omówienia, bez decyzji o wdrożeniu.**
+  Najpierw rozstrzygnąć, czy celem jest wyłącznie chmurowy profil/progresja
+  (symulacja pozostaje lokalna), czy autorytatywny serwer meczu. Przy wariancie
+  autorytatywnym plan zakłada zachowanie wspólnego rdzenia modułów gry,
+  utrwalenie kontraktów komend/eventów/snapshotów i testów deterministyczności,
+  następnie serwer JVM jako modularny monolit, serwerowe prowadzenie meczu,
+  migrację profilu i ekonomii do trwałej persystencji oraz etapowe wdrożenie
+  ze stagingiem, monitoringiem, kopiami zapasowymi i rollbackiem. Najpierw
+  ustalić wymagania offline, multiplayera, opóźnień i ochrony przed
+  manipulacją; nie zakładać mikroserwisów ani nie przenosić symulacji bez
+  uzasadnienia.
+
 ### Testy e2e aplikacji (pomysł, tylko ustalenia)
 
 Status: pomysł; nic nie zaimplementowano ani nie zaakceptowano. Repo ma dziś

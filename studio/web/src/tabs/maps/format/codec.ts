@@ -239,5 +239,5 @@ export function decode(text: string): MapDocumentJson {
 
 export function newDocument(): EditorDocument {
   const map = normalizeMap(JSON.parse(encode(defaultMap())));
-  return { map, phase: "TERRAIN_EDITING", revision: 0 };
+  return { map, revision: 0 };
 }

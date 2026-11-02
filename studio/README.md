@@ -11,6 +11,9 @@ masek (obecnie Defender oraz idle/move Demolishera). Zakładka Maps to edytor
 gameplayowych `MapDefinition`: ładuje mapy przez `GET /api/maps`, zapisuje obie kopie
 JSON przez `PUT /api/maps/{id}` po walidacji TypeScript i kontroli hasha.
 Szkice nadal zapisują się w `localStorage`, niezależnie od plików repozytorium.
+**Random Map** generuje seeded szkic terenu, fundamentów i zwykłych dekoracji
+z presetami; wynik można cofać, edytować i jawnie zapisać dla wybranego levelu.
+Teren nie jest fazowo blokowany, a Show/Hide cap wpływa tylko na podgląd.
 Zakładka Campaign korzysta ze wspólnego katalogu rozdziałów z
 `game-campaign`, pokazuje mapę z ramką i pozwala przesuwać 10 markerów oraz
 wpisywać ich znormalizowane pozycje X/Y. Layouty są zapisywane osobno dla

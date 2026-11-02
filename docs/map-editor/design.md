@@ -18,9 +18,14 @@ assetów i walidacji, a logikę gameplayu pozostawić modułom gry.
 - Edytor działa lokalnie w Studio; backend odczytuje i zapisuje mapy repozytorium.
 - Teren jest profilem wysokości próbkowanym w osi X; edycja węzła wygładza
   sąsiednie próbki bez naruszania chronionych fundamentów.
-- Najpierw ustala się teren i fundamenty, potem blokuje teren, a dopiero
-  później dodaje dekoracje.
-- Po rozpoczęciu fazy dekorowania teren jest zablokowany.
+- Teren, fundamenty i dekoracje pozostają edytowalne w dowolnej kolejności;
+  `Y` dekoracji jest niezależną współrzędną world-space i można ją zmieniać
+  ręcznie, a Relics muszą pozostać w glebie.
+- Widoczność capu jest niezależnym stanem podglądu **Show cap**/**Hide cap**;
+  nie zapisuje się w definicji mapy.
+- **Random Map** generuje deterministyczny szkic z seedem, presety intensywności
+  terenu i gęstości dekoracji oraz jawny zapis wybranego wyniku opisuje
+  [`random-map-generation-plan.md`](random-map-generation-plan.md).
 - Obszary krytyczne są chronione przed przypadkową edycją.
 - Zapis JSON jest blokowany przy błędach walidacji.
 - Wersje JSON są migrowane przez jawne migratory.
@@ -62,14 +67,14 @@ game-assets
 game-campaign
     Walidator map i reguły kampanii.
 
-map-editor-domain
-    Stan edytora, fazy edycji, komendy, undo/redo i reguły przejść.
+studio/web/src/tabs/maps/domain
+    MapDefinition projection, operacje, losowanie oraz walidacja UI.
 
-map-editor-format
-    JSON, schemaVersion, migracje, import i eksport.
+studio/web/src/tabs/maps/format
+    Jawny codec MapDefinition JSON.
 
-map-editor-rendering
-    Współdzielone renderowanie modelu mapy.
+studio/web/src/tabs/maps/rendering + state
+    Canvas, transformacje, draft i undo/redo.
 ```
 
 Edytor wykorzystuje wspólne źródło assetów `game-assets`; Studio udostępnia je
@@ -113,134 +118,50 @@ Katalog assetów odpowiada za:
 - dostarczenie bitmapy do renderera;
 - późniejszą obsługę manifestu z anchorem i geometrią.
 
-## Fazy edycji
+## Ciągły workflow authoringu
 
-### 1. Wybór biomu i nowej mapy
+Maps Studio nie ma fazy `TERRAIN_LOCKED` ani przycisku **Lock terrain**.
+Autor może w każdej chwili zmieniać profil, fundamenty i dekoracje, a każda
+operacja przechodzi przez niemutowalny store i historię undo/redo. Chronione
+fundamenty nadal są wyłączone ze zwykłych operacji profilu; ich wysokość
+zmienia się wyłącznie dedykowaną, atomową operacją.
 
-Autor wybiera biom przed utworzeniem mapy. Biom jest zapisywany w JSON-ie i
-nie może zostać zmieniony po dodaniu dekoracji.
+Nowe mapy zachowują biom w JSON-ie. **Random Map** zastępuje zwykły profil
+terenu, wysokości fundamentów i zwykłe dekoracje w bieżącym szkicu; zachowuje
+biom, map ID, ustawienia kamery oraz istniejące Relics. Użytkownik może dalej
+ręcznie edytować wynik i dopiero jawnie zapisać go przez istniejący dialog
+Chapter/Level. Generator jest authoring-only i nie działa w runtime meczu.
 
-Edytor tworzy mapę o kanonicznym wymiarze świata, z domyślnymi fortecami,
-fundamentami i pustym układem kafelków.
+Wygenerowane drzewa, skały i propsy początkowo umieszcza się na powierzchni,
+ale później ich `Y` jest bezwzględną współrzędną world-space. Ręczna zmiana
+profilu nie przesuwa żadnych obiektów; wysokość dekoracji zmienia się przez
+pionowy drag albo liczbowy input `Y`. Relics także można ręcznie przesuwać,
+lecz operacja naruszająca ich footprint gleby jest odrzucana i zgłasza błąd.
 
-### 2. Edycja terenu
-
-Autor może:
-
-- układać kafelki terenu;
-- podnosić i obniżać dozwolone fragmenty;
-- zastępować kafelki innym profilem;
-- wygładzać przejścia;
-- ustawiać wysokość fundamentów przez dedykowane narzędzie.
-
-Obszary fundamentów, podejść, kotwic i chronionych stref są oznaczone
-wizualnie i zablokowane przed zwykłym rysowaniem.
-
-Wygładzanie działa na geometrii kafelków i profilu wysokości, nie na
-pikselach bitmapy. Kafelki z niekompatybilnymi profilami krawędzi nie mogą
-zostać połączone.
-
-### 3. Zatwierdzenie terenu
-
-Przed zatwierdzeniem edytor pokazuje raport:
-
-- poprawność wymiarów świata;
-- poprawność fundamentów i podejść;
-- zgodność krawędzi kafelków;
-- ciągłość profilu wysokości;
-- brak niedozwolonych obszarów lub przerw.
-
-Po zatwierdzeniu teren przechodzi do stanu `TERRAIN_LOCKED`.
-
-### 4. Dekorowanie
-
-Odblokowuje się panel assetów wybranego biomu. Autor może przeciągać drzewa,
-skały, propsy i relici na mapę oraz ustawiać ich:
-
-- dokładne `x` i `y`;
-- skalę, jeśli jest dozwolona;
-- rotację;
-- wariant assetu.
-
-Pozycja dekoracji jest sprawdzana względem profilu terenu. Dekoracje
-środowiskowe mogą być umieszczane tylko na płaskich fragmentach zgodnie ze
-wspólnym walidatorem gry.
-
-Po dodaniu dekoracji teren nie może zostać odblokowany. Powrót do edycji
-terenu wymaga utworzenia nowej wersji mapy albo usunięcia wszystkich dekoracji.
-
-### 5. Eksport
-
-Eksport finalny jest możliwy tylko wtedy, gdy walidator nie zgłasza błędów.
-Edytor generuje:
-
-- finalny plik JSON;
-- raport walidacji;
-- opcjonalnie podgląd mapy.
-
-Autosave wersji roboczej nie może nadpisywać ostatniego zatwierdzonego eksportu.
+Przycisk **Show cap**/**Hide cap** steruje wyłącznie widocznością capu w
+podglądzie. Cap i presety generatora nie są częścią `MapDefinition`, autosave
+mapy ani walidacji. Save zawsze wykonuje walidację pełnego JSON-a przed
+zapisem obu kopii.
 
 ## Model domenowy edytora
 
-```kotlin
-enum class EditorPhase {
-    TERRAIN_EDITING,
-    TERRAIN_LOCKED,
-    DECORATION_EDITING,
-    READY_TO_EXPORT,
-}
+W aktualnym webowym edytorze stan lokalny zawiera `MapDocumentJson`,
+`selectedId` i `revision`. Nie zawiera `EditorPhase`, cap visibility ani
+ustawień generatora; faza UI nie trafia do MapDefinition/JSON.
 
-data class EditorDocument(
-    val schemaVersion: Int,
-    val map: MapDefinition,
-    val phase: EditorPhase,
-    val revision: Long,
-)
-```
+UI nie mutuje `MapDefinition` bezpośrednio. Każda zmiana przechodzi przez
+typowaną operację w `studio/web/src/tabs/maps/domain/operations.ts`, która
+zwraca nowy niemutowalny dokument. Generowanie Random Map jest jedną operacją
+z własnym seedem; undo/redo obejmuje cały wynik. Nie ma `EditorPhase` ani
+warunku blokującego teren po dodaniu dekoracji.
 
-UI nie modyfikuje `MapDefinition` bezpośrednio. Każda zmiana jest komendą:
+## Profil terenu
 
-```kotlin
-sealed interface EditorCommand {
-    data class PlaceTerrainTile(...) : EditorCommand
-    data class SmoothTerrain(...) : EditorCommand
-    data class SetFoundationHeight(...) : EditorCommand
-    data class LockTerrain : EditorCommand
-    data class PlaceMapObject(...) : EditorCommand
-    data class MoveMapObject(...) : EditorCommand
-    data class RemoveMapObject(...) : EditorCommand
-}
-```
-
-Komendy zwracają nowy niemutowalny stan. Historia komend umożliwia undo/redo
-co najmniej w fazie edycji terenu.
-
-## Geometria kafelków
-
-Każdy kafelek powinien mieć dane niezależne od bitmapy:
-
-```kotlin
-data class TerrainTileGeometry(
-    val tileId: String,
-    val widthWorldUnits: Float,
-    val heightWorldUnits: Float,
-    val leftProfile: EdgeProfile,
-    val rightProfile: EdgeProfile,
-    val heightSamples: List<Float>,
-)
-
-enum class EdgeProfile {
-    FLAT,
-    SLOPE_UP,
-    SLOPE_DOWN,
-    RIDGE,
-    VALLEY,
-}
-```
-
-Pierwszy prototyp może używać stałego profilu wysokości zdefiniowanego dla
-każdego kafelka. Później można dodać ręczne punkty kontrolne, ale nadal muszą
-one zostać znormalizowane do kanonicznej siatki świata.
+Fizyczną powierzchnię mapy opisuje `terrain.sampleStep` oraz pełne
+`terrain.heightSamples` w istniejącym `MapDefinition`; teren nie jest
+serializowany jako kafelki. Ręczne węzły profilu i generator Random Map
+zmieniają te same próbki świata, a walidator sprawdza krok, granice i delta
+wysokości. Cap oraz soil są wyłącznie warstwami renderowania.
 
 ## Interfejs użytkownika
 
@@ -250,29 +171,37 @@ one zostać znormalizowane do kanonicznej siatki świata.
 +----------------------+--------------------------------------------+
 |                      |                                            |
 |  Narzędzia           |                                            |
-|  - kafelki           |                 MAPA                       |
-|  - wysokość          |       zoom / pan / siatka / debug         |
-|  - wygładzanie       |                                            |
-|  - forteca           |                                            |
+|  - profil terenu     |                 MAPA                       |
+|  - wygładzanie       |       zoom / pan / siatka / debug         |
+|  - Random Map        |                                            |
+|  - fundamenty/cap    |                                            |
 |                      |                                            |
 |----------------------+--------------------------------------------|
-| Biom / assety        | Panel właściwości zaznaczonego elementu  |
-| warianty / podgląd   | x, y, rotacja, skala, ID, profil, błędy  |
+| Biom / presety       | Panel właściwości zaznaczonego elementu  |
+| Assety / podgląd     | x, y, rotacja, skala, ID, profil, błędy  |
 +----------------------+--------------------------------------------+
 ```
 
+Podgląd używa jednej transformacji viewportu dla tła i wszystkich warstw mapy.
+Rolka myszy zmienia zoom; przeciągnięcie pustego obszaru przesuwa viewport, a
+`Shift` + przeciągnięcie umożliwia panowanie także nad obiektami. Zoom i pan
+są stanem widoku edytora, niezależnym od definicji mapy.
+
 Mapa powinna mieć osobne warstwy renderowania:
 
-1. tło biomu;
-2. kafelki i geometria terenu;
-3. strefy chronione oraz siatka;
-4. dekoracje;
-5. fortece, katapulty i kotwice;
-6. debugowe granice i raport błędów.
+1. tło biomu i soil;
+2. wypełnienie terenu i profil;
+3. strefy chronione oraz kontrol points;
+4. katapulty i fortece;
+5. zwykłe dekoracje;
+6. cap, Relics i zaznaczone transform handles;
+7. współrzędne/debug overlay.
 
-## JSON
+## Format JSON
 
-Minimalny szkic:
+Poniższy szkic pokazuje nazwy pól, ale nie jest kompletną, zwalidowaną mapą.
+Pełny produkcyjny kontrakt opisuje
+[`map-json-migration-plan.md`](../campaign/map-json-migration-plan.md).
 
 ```json
 {
@@ -280,40 +209,48 @@ Minimalny szkic:
   "mapId": "chapter-1-level-1",
   "biome": "green_frontier",
   "world": {
-    "width": 2560,
-    "height": 4320
+    "width": 7200,
+    "height": 4800
   },
   "terrain": {
-    "tiles": [],
+    "sampleStep": 40,
     "heightSamples": []
   },
+  "protectedZones": [],
   "fortresses": [],
-  "objects": [],
-  "metadata": {
-    "terrainLocked": true
+  "decorations": [],
+  "generationMetadata": {
+    "seed": 12345,
+    "generatorVersion": "studio-random-map/1"
   }
 }
 ```
 
 JSON powinien zachowywać stabilną kolejność tablic i deterministyczne
 formatowanie, aby zmiany były czytelne w Git. ID obiektów nie mogą zależeć od
-kolejności w tablicy.
+kolejności w tablicy. Stan capu, presety i stan UI nie trafiają do
+MapDefinition.
 
 ## Walidacja
 
-Edytor współdzieli lub wywołuje walidator map z `game-campaign`. Walidowane są:
+Edytor waliduje szkic w TypeScript; Kotlinowy
+`MapDefinitionValidator` pozostaje autorytatywnym walidatorem runtime.
+Walidowane są:
 
 - `schemaVersion`;
 - biom i istniejące asset keys;
 - kanoniczny wymiar świata;
-- profile krawędzi kafelków;
-- ciągłość geometrii;
+- sample step, pełne pokrycie świata i limit wysokości sąsiednich próbek;
 - granice świata;
-- fundamenty i chronione strefy;
-- pozycje obiektów;
-- płaskość terenu pod dekoracjami;
-- overlap oraz dozwolone kolizje;
-- unikalność ID.
+- fundamenty, ich lokalne przejścia i chronione strefy;
+- pozycje/transformacje obiektów i unikalne ID;
+- dostępność assetów dla biomu;
+- soil footprint Relics.
+
+Zwykłe dekoracje muszą mieścić się w granicach mapy, ale nie wymagają
+kontaktowania z terenem ani płaskiego podłoża. Edycja profilu automatycznie
+przesuwa je o lokalną deltę powierzchni. Relics pozostają w stałej pozycji;
+terenowa operacja naruszająca ich footprint jest odrzucana.
 
 Korytarze ostrzału i widoczność między fortecami pozostają poza zakresem
 walidatora edytora.
@@ -330,63 +267,28 @@ Każdy format JSON ma jawny `schemaVersion`. Migrator:
 
 Migracje muszą mieć testy dla każdej obsługiwanej wersji.
 
-## Plan implementacji
+## Aktualny status implementacji
 
-### Etap 1: wspólne assety i format
+Maps Studio jest jedynym interfejsem authoringu i zapisuje pełny, zwalidowany
+JSON przez lokalne API. Edycja terenu i dekoracji jest ciągła; nie ma fazowego
+locka terenu. Dekoracje mają niezależne, ręcznie edytowalne `Y`, które nie
+zmienia się wraz z profilem terenu; Relics pozostają w glebie zgodnie z
+walidacją. **Show cap**/
+**Hide cap** steruje wyłącznie warstwą podglądu.
 
-- wydzielić `game-assets`;
-- ustalić jedno źródło PNG-ów;
-- dodać katalog assetów oparty na konwencji nazw;
-- zdefiniować pierwszy JSON i `schemaVersion`;
-- dodać import/eksport oraz test round-trip.
-
-### Etap 2: domena edytora bez UI
-
-- fazy edycji;
-- komendy;
-- undo/redo;
-- blokady obszarów krytycznych;
-- przejście `TERRAIN_EDITING` → `TERRAIN_LOCKED`;
-- walidacja dekoracji.
-
-### Etap 3: interfejs webowy
-
-- aplikacja React/Vite;
-- viewport mapy;
-- zoom i pan;
-- edycja profilu terenu;
-- zapis i odczyt wersji roboczej.
-
-### Etap 4: geometria i wygładzanie
-
-- profile krawędzi;
-- kontrola kompatybilności sąsiadów;
-- generowanie profilu wysokości;
-- narzędzie wygładzania;
-- podgląd stref chronionych;
-- zatwierdzanie terenu.
-
-### Etap 5: dekoracje
-
-- katalog assetów biomu;
-- drag-and-drop;
-- edycja pozycji, rotacji i wariantu;
-- debug bounds;
-- blokada zmiany terenu po dodaniu dekoracji.
-
-### Etap 6: integracja z grą
-
-- loader JSON w `game-campaign`;
-- zastąpienie definicji Kotlinowych plikami JSON;
-- testy zgodności istniejących map;
-- build Androida z assetami z `game-assets`.
+Generator **Random Map** jest operacją authoringową w
+`studio/web/src/tabs/maps/domain/randomMap.ts`. Używa seedowanego PRNG i
+suwaka Terrain intensity 100–600 world units oraz presetów Decoration
+density; generuje próbki, bezpieczne wysokości fundamentów i zwykłe dekoracje.
+Losowanie jest jedną pozycją undo/redo, zachowuje biome, map ID i Relics, a
+pliki repozytorium zmieniają się dopiero po jawnej akcji Save. Szczegóły
+algorytmu, ograniczeń i walidacji opisuje
+[`random-map-generation-plan.md`](random-map-generation-plan.md).
 
 ## Poza pierwszą wersją
 
 - manifest assetów z anchorami i metadanymi;
-- automatyczne generowanie dekoracji;
 - walidacja torów pocisków;
-- proceduralne generowanie terenu;
 - współpraca wielu osób;
 - synchronizacja z chmurą;
 - automatyczne migracje nazw assetów;

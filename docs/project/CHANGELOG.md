@@ -13,9 +13,19 @@
   before explicit stop/restart. Unused stock remains in the profile.
 - Added ammunition `shopCostGold` to game-balance schema 4 and its Studio
   Balance form, server validation and tests.
+- Added seeded **Random Map** generation to Studio Maps, with a continuous
+  terrain-intensity slider (100–600 world units), decoration-density presets,
+  undo/redo, and explicit per-level save through the existing map workflow.
+- Added the generated Chapter 1, Level 1 map definition to both campaign
+  resources and Android assets.
 
 ### Changed
 
+- Maps terrain and decoration editing are now continuous rather than phase
+  locked; decorations keep manually editable world-space Y independent from
+  terrain changes, and a separate Show/Hide cap button controls preview only.
+- Maps viewport wheel zoom now transforms the background with the world;
+  dragging empty canvas pans the view, with Shift-drag available over objects.
 - Match replay now includes the immutable player inventory snapshot for the
   replayed generation. AI/RED and demo ammunition retain their existing
   balance-defined starting counts.

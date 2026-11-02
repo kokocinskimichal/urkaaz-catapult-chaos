@@ -1,5 +1,11 @@
 # Prompt implementacyjny: webowy edytor map Urkaaaz
 
+> Status: migracja do Studio została ukończona. Ten prompt zachowuje
+> historyczny zakres wdrożenia webowego; jego workflow fazowy z `Lock terrain`
+> został zastąpiony ciągłą edycją opisaną w
+> [`random-map-generation-plan.md`](random-map-generation-plan.md) i
+> [`random-map-generation-implementation-prompt.md`](random-map-generation-implementation-prompt.md).
+
 Skopiuj cały tekst od następnej linii do agenta implementującego. Prompt
 realizuje kompletny plan z `docs/map-editor/web-migration-plan.md`.
 

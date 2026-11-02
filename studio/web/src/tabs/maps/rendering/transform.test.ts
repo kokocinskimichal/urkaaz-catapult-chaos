@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   rotatedRectangleCorners,
+  panViewportFromDrag,
   screenToWorld,
   transformFromCornerDrag,
   worldHeightToScreen,
@@ -22,6 +23,14 @@ describe("map viewport transforms", () => {
     const world = screenToWorld(screen.x, screen.y, view, 900, 700);
     expect(world.x).toBeCloseTo(1720);
     expect(world.y).toBeCloseTo(3140);
+  });
+
+  it("pans the viewport by the pointer drag delta from its initial position", () => {
+    expect(panViewportFromDrag(
+      { zoom: 1.5, panX: -20, panY: 10 },
+      { x: 30, y: 40 },
+      { x: 80, y: 25 },
+    )).toEqual({ zoom: 1.5, panX: 30, panY: -5 });
   });
 
   it("scales fortress and catapult dimensions in world coordinates", () => {

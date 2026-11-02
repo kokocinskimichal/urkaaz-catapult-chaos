@@ -183,16 +183,16 @@ class MapDefinitionValidatorTest {
     }
 
     @Test
-    fun chapterOneLevelsThreeAndFourUseTheirImportedMaps() {
+    fun chapterOneBundledMapsAreUsedAndMissingMapsFallBackToDemo() {
         val registry = CampaignLevelRegistry.default(campaignBalance)
         val levels = (1..CampaignLevelDefinition.MAX_LEVELS).map(registry::level)
 
+        assertEquals("chapter1-level1", levels[0].mapDefinition.mapId)
         assertEquals("chapter1-level3", levels[2].mapDefinition.mapId)
         assertEquals("chapter1-level4", levels[3].mapDefinition.mapId)
-        assertEquals("demo-map", levels[0].mapDefinition.mapId)
         assertEquals("demo-map", levels[1].mapDefinition.mapId)
         assertNotEquals(levels[0].availableUnits, levels[99].availableUnits)
-        assertEquals(levels[0].mapDefinition.terrain.samples, levels[1].mapDefinition.terrain.samples)
+        assertNotEquals(levels[0].mapDefinition.terrain.samples, levels[1].mapDefinition.terrain.samples)
         assertNotEquals(levels[0].mapDefinition.terrain.samples, levels[2].mapDefinition.terrain.samples)
     }
 }

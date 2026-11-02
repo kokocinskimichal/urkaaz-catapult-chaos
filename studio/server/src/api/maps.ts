@@ -159,7 +159,7 @@ async function validateMapContent(repoRoot: string, content: string): Promise<Ma
   try {
     const map = decode(content);
     const assetKeys = parseAssetIndex(await readTerrainAssetIndex(repoRoot));
-    const issues = validate({ map, phase: "TERRAIN_EDITING", revision: 0 }, assetKeys);
+    const issues = validate({ map, revision: 0 }, assetKeys);
     return {
       valid: !issues.some(issue => issue.severity === "error"),
       issues: issues.map(({ severity, path, message }) => ({ severity, path, message })),
