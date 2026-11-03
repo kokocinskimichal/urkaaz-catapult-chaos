@@ -105,6 +105,7 @@ class AmmunitionDefinitionsTest {
     fun approvedAmmunitionBalanceIsExplicitInDefinitions() {
         val siegeBomb = GameBalanceFixtures.balance.ammunition.definition(AmmunitionType.SIEGE_BOMB)
 
+        assertEquals(2f, siegeBomb.reloadSeconds)
         assertEquals(72, siegeBomb.damage.unitDamage)
         assertEquals(100, siegeBomb.damage.fortressDamage)
         assertEquals(null, siegeBomb.shopCostGold)

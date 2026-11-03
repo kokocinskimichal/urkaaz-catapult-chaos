@@ -93,35 +93,23 @@ kampanię, AI oraz działający match screen. Gałąź robocza: `develop`.
   obrażeń obszarowych; katapulty nie są celami obrażeń.
 - Testy jednostkowe i integracyjne dla kontraktów, domeny, symulacji,
   aplikacji, AI oraz wybranych granic Android UI.
-- Level Definition System (LDS) jest zaimplementowany w kontraktach,
-  `game-campaign`, symulacji i mapperze Androida. Obejmuje niemutowalne
-  `MapDefinition`, builder authoringu, typowany `MapDefinitionValidator`,
-  registry kampanii, deterministyczny profil terenu, placementy fortec,
-  katapult i obiektów oraz `InitialCameraAnchor`.
-- Każda materializowana definicja znajduje się bezpośrednio w swoim pliku
-  `ChapterXLevelY.kt` jako własny `LevelAuthoringRequest`, z jawnymi próbkami
-  terenu, placementami i metadanymi. Dane przechodzą przez
-  `LevelDefinitionBuilder`, `CampaignLevelDefinition` i `MatchScenario`, a
-  symulacja nie losuje geometrii runtime.
-- Wszystkie 100 poziomów kampanii mają osobne typowane pliki Kotlin
-  pogrupowane w chapterach 1–10 oraz jawny `CampaignMapDefinitions` index.
-  `DemoLevelDefinitions.default` jest niezależną od kampanii mapą `demo-map`,
-  która korzysta z tych samych kontraktów i produkcyjnego validatora LDS.
-  Poziomy kampanii mają deterministycznie różne profile terenu, wysokości
-  fundamentów i kotwice obiektów; strefy fortec pozostają płaskie i chronione.
-  Profile terenu są zapisane jawnie w plikach poziomów; szerokie, gładkie
-  wzgórza i doliny zostały zmaterializowane podczas authoringu przy limicie
-  200 world units między sąsiednimi próbkami.
-- Chapter 1 został zaimportowany z zaakceptowanego eksportu authoringowego:
-  wszystkie 10 poziomów ma jawne profile, fundamenty, fortece, katapulty oraz
-  dekoracje drzew, skał i propsów początkowo umieszczone na powierzchni terenu.
-  Ich zapisane współrzędne `Y` pozostają bezwzględne i nie są kotwiczone do
-  profilu. Profile są
-  walidowane przed zapisaniem, a przejścia nie przekraczają 200 world units.
+- Level Definition System (LDS) używa niemutowalnego kontraktu
+  `MapDefinition`, ścisłego `MapDefinitionRepository` i typowanego
+  `MapDefinitionValidator`. `CampaignLevelDefinition` nadal składa typowaną
+  konfigurację gameplayową poziomu, natomiast geometria map kampanii jest
+  ładowana z JSON schema 1, nie z per-level Kotlin `LevelAuthoringRequest`.
+- Chapter 1 Levels 1–5 mają dedykowane JSON-y w `game-campaign` resources i
+  `android-app` assets. Runtime wybiera plik `chapterN-levelX`, jeśli istnieje;
+  poziomy bez dedykowanej mapy używają przejściowego `demo-map`. Geometria nie
+  jest losowana podczas meczu, a definicje demo i kampanii korzystają ze
+  wspólnego kontraktu oraz walidatora.
 - Zapis mapy kampanii w Studio Maps wybiera Chapter i globalny numer Level,
   zapisuje identyfikator `chapterN-levelX` w obu kopiach JSON, a kampania
   ładuje mapę danego poziomu, gdy plik istnieje; brakujące mapy nadal używają
   tymczasowego `demo-map`.
+- W standardowym świecie fortecy mają środki `x=600` i `x=6600`; katapulty
+  są wyprowadzane odpowiednio w `x=490` i `x=6710`, a chronione fundamenty,
+  launch/aim anchors oraz pozycje garnizonu zachowują relację do nowych środków.
 - Studio Maps ma **Random Map** z suwakiem intensywności terenu 100–600
   world units (domyślnie 160) i presetami gęstości dekoracji. Losowanie
   zachowuje biom i Relics, zapisuje seed w metadata,

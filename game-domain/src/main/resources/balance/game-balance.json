@@ -1,53 +1,67 @@
 {
   "schemaVersion": 4,
-  "balanceRevision": "game-balance-4",
+  "balanceRevision": "game-balance-6",
   "bosses": [
     {
       "id": "boss.central-ancient-war-oak.level-05",
       "presentationKey": "ancient_war_oak",
       "archetype": "CENTRAL_OBJECTIVE",
       "maxHealth": 12000,
-      "collision": { "width": 432.0, "height": 576.0 },
-      "movement": { "kind": "STATIC", "speedWorldUnitsPerSecond": 0.0 },
+      "collision": {
+        "width": 432,
+        "height": 576
+      },
+      "movement": {
+        "kind": "STATIC",
+        "speedWorldUnitsPerSecond": 0
+      },
       "attacks": [
         {
           "target": "UNIT",
           "damage": 150,
           "minimumDamage": 35,
-          "rangeWorldUnits": 780.0,
-          "cooldownSeconds": 4.0,
+          "rangeWorldUnits": 780,
+          "cooldownSeconds": 4,
           "initialCooldownSeconds": 2.5,
           "windupSeconds": 2.291
         }
       ],
       "specialAbilities": [],
-      "immuneAmmunitionTypes": ["PLAGUE_CAULDRON"]
+      "immuneAmmunitionTypes": [
+        "PLAGUE_CAULDRON"
+      ]
     },
     {
       "id": "boss.mobile-thorncrown.level-10",
       "presentationKey": "thorncrown",
       "archetype": "MOBILE_SIEGE_BOSS",
       "maxHealth": 9000,
-      "collision": { "width": 431.0, "height": 518.4 },
-      "movement": { "kind": "ADVANCE", "speedWorldUnitsPerSecond": 36.4 },
+      "collision": {
+        "width": 431,
+        "height": 518.4
+      },
+      "movement": {
+        "kind": "ADVANCE",
+        "speedWorldUnitsPerSecond": 36.4
+      },
       "attacks": [
         {
           "target": "UNIT",
           "damage": 180,
           "minimumDamage": 45,
-          "rangeWorldUnits": 287.0,
+          "rangeWorldUnits": 287,
           "cooldownSeconds": 4.5,
           "initialCooldownSeconds": 2.5,
-          "windupSeconds": 0.0
+          "windupSeconds": 0
         },
         {
           "target": "FORTRESS_GATE",
           "damage": 45,
           "minimumDamage": 45,
-          "rangeWorldUnits": 80.0,
-          "cooldownSeconds": 1.0,
-          "initialCooldownSeconds": 1.0,
-          "windupSeconds": 0.0
+          "rangeWorldUnits": 80,
+          "cooldownSeconds": 1,
+          "initialCooldownSeconds": 1,
+          "windupSeconds": 0
         }
       ],
       "specialAbilities": [
@@ -58,54 +72,70 @@
           "attackCooldownMultiplier": 0.666667
         }
       ],
-      "immuneAmmunitionTypes": ["PLAGUE_CAULDRON"]
+      "immuneAmmunitionTypes": [
+        "PLAGUE_CAULDRON"
+      ]
     },
     {
       "id": "boss.central-frozen-troll.level-15",
       "presentationKey": "frozen_troll",
       "archetype": "CENTRAL_OBJECTIVE",
       "maxHealth": 360,
-      "collision": { "width": 1440.0, "height": 2016.0 },
-      "movement": { "kind": "STATIC", "speedWorldUnitsPerSecond": 0.0 },
+      "collision": {
+        "width": 1440,
+        "height": 2016
+      },
+      "movement": {
+        "kind": "STATIC",
+        "speedWorldUnitsPerSecond": 0
+      },
       "attacks": [
         {
           "target": "UNIT",
           "damage": 150,
           "minimumDamage": 35,
-          "rangeWorldUnits": 780.0,
-          "cooldownSeconds": 4.0,
+          "rangeWorldUnits": 780,
+          "cooldownSeconds": 4,
           "initialCooldownSeconds": 2.5,
-          "windupSeconds": 0.0
+          "windupSeconds": 0
         }
       ],
       "specialAbilities": [],
-      "immuneAmmunitionTypes": ["PLAGUE_CAULDRON"]
+      "immuneAmmunitionTypes": [
+        "PLAGUE_CAULDRON"
+      ]
     },
     {
       "id": "boss.mobile-old-yeti-sovereign.level-20",
       "presentationKey": "old_yeti_sovereign",
       "archetype": "MOBILE_SIEGE_BOSS",
       "maxHealth": 9000,
-      "collision": { "width": 431.0, "height": 518.4 },
-      "movement": { "kind": "ADVANCE", "speedWorldUnitsPerSecond": 36.4 },
+      "collision": {
+        "width": 431,
+        "height": 518.4
+      },
+      "movement": {
+        "kind": "ADVANCE",
+        "speedWorldUnitsPerSecond": 36.4
+      },
       "attacks": [
         {
           "target": "UNIT",
           "damage": 180,
           "minimumDamage": 45,
-          "rangeWorldUnits": 287.0,
+          "rangeWorldUnits": 287,
           "cooldownSeconds": 4.5,
           "initialCooldownSeconds": 2.5,
-          "windupSeconds": 0.0
+          "windupSeconds": 0
         },
         {
           "target": "FORTRESS_GATE",
           "damage": 45,
           "minimumDamage": 45,
-          "rangeWorldUnits": 80.0,
-          "cooldownSeconds": 1.0,
-          "initialCooldownSeconds": 1.0,
-          "windupSeconds": 0.0
+          "rangeWorldUnits": 80,
+          "cooldownSeconds": 1,
+          "initialCooldownSeconds": 1,
+          "windupSeconds": 0
         }
       ],
       "specialAbilities": [
@@ -116,54 +146,70 @@
           "attackCooldownMultiplier": 0.666667
         }
       ],
-      "immuneAmmunitionTypes": ["PLAGUE_CAULDRON"]
+      "immuneAmmunitionTypes": [
+        "PLAGUE_CAULDRON"
+      ]
     },
     {
       "id": "boss.central-copperwood-siege-lord.level-25",
       "presentationKey": "copperwood_siege_lord",
       "archetype": "CENTRAL_OBJECTIVE",
       "maxHealth": 10000,
-      "collision": { "width": 1440.0, "height": 2016.0 },
-      "movement": { "kind": "STATIC", "speedWorldUnitsPerSecond": 0.0 },
+      "collision": {
+        "width": 1440,
+        "height": 2016
+      },
+      "movement": {
+        "kind": "STATIC",
+        "speedWorldUnitsPerSecond": 0
+      },
       "attacks": [
         {
           "target": "UNIT",
           "damage": 150,
           "minimumDamage": 35,
-          "rangeWorldUnits": 780.0,
-          "cooldownSeconds": 4.0,
+          "rangeWorldUnits": 780,
+          "cooldownSeconds": 4,
           "initialCooldownSeconds": 2.5,
-          "windupSeconds": 0.0
+          "windupSeconds": 0
         }
       ],
       "specialAbilities": [],
-      "immuneAmmunitionTypes": ["PLAGUE_CAULDRON"]
+      "immuneAmmunitionTypes": [
+        "PLAGUE_CAULDRON"
+      ]
     },
     {
       "id": "boss.mobile-copperwood-final-boss.level-30",
       "presentationKey": "copperwood_final_boss",
       "archetype": "MOBILE_SIEGE_BOSS",
       "maxHealth": 9000,
-      "collision": { "width": 431.0, "height": 518.4 },
-      "movement": { "kind": "ADVANCE", "speedWorldUnitsPerSecond": 36.4 },
+      "collision": {
+        "width": 431,
+        "height": 518.4
+      },
+      "movement": {
+        "kind": "ADVANCE",
+        "speedWorldUnitsPerSecond": 36.4
+      },
       "attacks": [
         {
           "target": "UNIT",
           "damage": 180,
           "minimumDamage": 45,
-          "rangeWorldUnits": 287.0,
+          "rangeWorldUnits": 287,
           "cooldownSeconds": 4.5,
           "initialCooldownSeconds": 2.5,
-          "windupSeconds": 0.0
+          "windupSeconds": 0
         },
         {
           "target": "FORTRESS_GATE",
           "damage": 45,
           "minimumDamage": 45,
-          "rangeWorldUnits": 80.0,
-          "cooldownSeconds": 1.0,
-          "initialCooldownSeconds": 1.0,
-          "windupSeconds": 0.0
+          "rangeWorldUnits": 80,
+          "cooldownSeconds": 1,
+          "initialCooldownSeconds": 1,
+          "windupSeconds": 0
         }
       ],
       "specialAbilities": [
@@ -174,54 +220,70 @@
           "attackCooldownMultiplier": 0.666667
         }
       ],
-      "immuneAmmunitionTypes": ["PLAGUE_CAULDRON"]
+      "immuneAmmunitionTypes": [
+        "PLAGUE_CAULDRON"
+      ]
     },
     {
       "id": "boss.central-burntwood-warden.level-35",
       "presentationKey": "burntwood_warden",
       "archetype": "CENTRAL_OBJECTIVE",
       "maxHealth": 12000,
-      "collision": { "width": 1440.0, "height": 2016.0 },
-      "movement": { "kind": "STATIC", "speedWorldUnitsPerSecond": 0.0 },
+      "collision": {
+        "width": 1440,
+        "height": 2016
+      },
+      "movement": {
+        "kind": "STATIC",
+        "speedWorldUnitsPerSecond": 0
+      },
       "attacks": [
         {
           "target": "UNIT",
           "damage": 150,
           "minimumDamage": 35,
-          "rangeWorldUnits": 780.0,
-          "cooldownSeconds": 4.0,
+          "rangeWorldUnits": 780,
+          "cooldownSeconds": 4,
           "initialCooldownSeconds": 2.5,
-          "windupSeconds": 0.0
+          "windupSeconds": 0
         }
       ],
       "specialAbilities": [],
-      "immuneAmmunitionTypes": ["PLAGUE_CAULDRON"]
+      "immuneAmmunitionTypes": [
+        "PLAGUE_CAULDRON"
+      ]
     },
     {
       "id": "boss.mobile-scorchbound-king.level-40",
       "presentationKey": "scorchbound_king",
       "archetype": "MOBILE_SIEGE_BOSS",
       "maxHealth": 12150,
-      "collision": { "width": 431.0, "height": 518.4 },
-      "movement": { "kind": "ADVANCE", "speedWorldUnitsPerSecond": 36.4 },
+      "collision": {
+        "width": 431,
+        "height": 518.4
+      },
+      "movement": {
+        "kind": "ADVANCE",
+        "speedWorldUnitsPerSecond": 36.4
+      },
       "attacks": [
         {
           "target": "UNIT",
           "damage": 180,
           "minimumDamage": 45,
-          "rangeWorldUnits": 287.0,
+          "rangeWorldUnits": 287,
           "cooldownSeconds": 4.5,
           "initialCooldownSeconds": 2.5,
-          "windupSeconds": 0.0
+          "windupSeconds": 0
         },
         {
           "target": "FORTRESS_GATE",
           "damage": 45,
           "minimumDamage": 45,
-          "rangeWorldUnits": 80.0,
-          "cooldownSeconds": 1.0,
-          "initialCooldownSeconds": 1.0,
-          "windupSeconds": 0.0
+          "rangeWorldUnits": 80,
+          "cooldownSeconds": 1,
+          "initialCooldownSeconds": 1,
+          "windupSeconds": 0
         }
       ],
       "specialAbilities": [
@@ -232,54 +294,70 @@
           "attackCooldownMultiplier": 0.666667
         }
       ],
-      "immuneAmmunitionTypes": ["PLAGUE_CAULDRON"]
+      "immuneAmmunitionTypes": [
+        "PLAGUE_CAULDRON"
+      ]
     },
     {
       "id": "boss.central-ancient-war-oak.level-45",
       "presentationKey": "ancient_war_oak",
       "archetype": "CENTRAL_OBJECTIVE",
       "maxHealth": 12000,
-      "collision": { "width": 432.0, "height": 576.0 },
-      "movement": { "kind": "STATIC", "speedWorldUnitsPerSecond": 0.0 },
+      "collision": {
+        "width": 432,
+        "height": 576
+      },
+      "movement": {
+        "kind": "STATIC",
+        "speedWorldUnitsPerSecond": 0
+      },
       "attacks": [
         {
           "target": "UNIT",
           "damage": 150,
           "minimumDamage": 35,
-          "rangeWorldUnits": 780.0,
-          "cooldownSeconds": 4.0,
+          "rangeWorldUnits": 780,
+          "cooldownSeconds": 4,
           "initialCooldownSeconds": 2.5,
           "windupSeconds": 2.291
         }
       ],
       "specialAbilities": [],
-      "immuneAmmunitionTypes": ["PLAGUE_CAULDRON"]
+      "immuneAmmunitionTypes": [
+        "PLAGUE_CAULDRON"
+      ]
     },
     {
       "id": "boss.mobile-thorncrown.level-50",
       "presentationKey": "thorncrown",
       "archetype": "MOBILE_SIEGE_BOSS",
       "maxHealth": 9000,
-      "collision": { "width": 431.0, "height": 518.4 },
-      "movement": { "kind": "ADVANCE", "speedWorldUnitsPerSecond": 36.4 },
+      "collision": {
+        "width": 431,
+        "height": 518.4
+      },
+      "movement": {
+        "kind": "ADVANCE",
+        "speedWorldUnitsPerSecond": 36.4
+      },
       "attacks": [
         {
           "target": "UNIT",
           "damage": 180,
           "minimumDamage": 45,
-          "rangeWorldUnits": 287.0,
+          "rangeWorldUnits": 287,
           "cooldownSeconds": 4.5,
           "initialCooldownSeconds": 2.5,
-          "windupSeconds": 0.0
+          "windupSeconds": 0
         },
         {
           "target": "FORTRESS_GATE",
           "damage": 45,
           "minimumDamage": 45,
-          "rangeWorldUnits": 80.0,
-          "cooldownSeconds": 1.0,
-          "initialCooldownSeconds": 1.0,
-          "windupSeconds": 0.0
+          "rangeWorldUnits": 80,
+          "cooldownSeconds": 1,
+          "initialCooldownSeconds": 1,
+          "windupSeconds": 0
         }
       ],
       "specialAbilities": [
@@ -290,97 +368,478 @@
           "attackCooldownMultiplier": 0.666667
         }
       ],
-      "immuneAmmunitionTypes": ["PLAGUE_CAULDRON"]
+      "immuneAmmunitionTypes": [
+        "PLAGUE_CAULDRON"
+      ]
     }
   ],
   "units": [
-    { "id": "SAPPER", "supplyCost": 10, "maxHealth": 20, "speed": 260.0, "attackDamage": 180, "attackCooldownSeconds": 1.75, "attackRange": 0.0, "fortressDamage": 180, "incomingDamageMultiplier": 0.45, "contactMovementSpeedMultiplier": 0.45 },
-    { "id": "DEFENDER", "supplyCost": 5, "maxHealth": 50, "speed": 150.0, "attackDamage": 30, "attackCooldownSeconds": 0.8, "attackRange": 0.0, "fortressDamage": 30, "incomingDamageMultiplier": 1.0, "contactMovementSpeedMultiplier": 1.0 },
-    { "id": "DEMOLISHER", "supplyCost": 10, "maxHealth": 25, "speed": 110.0, "attackDamage": 0, "attackCooldownSeconds": 0.8, "attackRange": 0.0, "fortressDamage": 0, "incomingDamageMultiplier": 1.0, "contactMovementSpeedMultiplier": 1.0 },
-    { "id": "RAGING_BOAR", "supplyCost": 10, "maxHealth": 80, "speed": 240.0, "attackDamage": 52, "attackCooldownSeconds": 0.8, "attackRange": 0.0, "fortressDamage": 52, "incomingDamageMultiplier": 1.0, "contactMovementSpeedMultiplier": 1.0 },
-    { "id": "SLINGMASTER", "supplyCost": 5, "maxHealth": 25, "speed": 120.0, "attackDamage": 20, "attackCooldownSeconds": 1.2, "attackRange": 260.0, "fortressDamage": 20, "incomingDamageMultiplier": 1.0, "contactMovementSpeedMultiplier": 1.0 }
+    {
+      "id": "SAPPER",
+      "supplyCost": 10,
+      "maxHealth": 20,
+      "speed": 260,
+      "attackDamage": 180,
+      "attackCooldownSeconds": 1.75,
+      "attackRange": 0,
+      "fortressDamage": 180,
+      "incomingDamageMultiplier": 0.45,
+      "contactMovementSpeedMultiplier": 0.45
+    },
+    {
+      "id": "DEFENDER",
+      "supplyCost": 5,
+      "maxHealth": 50,
+      "speed": 150,
+      "attackDamage": 30,
+      "attackCooldownSeconds": 0.8,
+      "attackRange": 0,
+      "fortressDamage": 30,
+      "incomingDamageMultiplier": 1,
+      "contactMovementSpeedMultiplier": 1
+    },
+    {
+      "id": "DEMOLISHER",
+      "supplyCost": 10,
+      "maxHealth": 25,
+      "speed": 110,
+      "attackDamage": 0,
+      "attackCooldownSeconds": 0.8,
+      "attackRange": 0,
+      "fortressDamage": 0,
+      "incomingDamageMultiplier": 1,
+      "contactMovementSpeedMultiplier": 1
+    },
+    {
+      "id": "RAGING_BOAR",
+      "supplyCost": 10,
+      "maxHealth": 80,
+      "speed": 240,
+      "attackDamage": 52,
+      "attackCooldownSeconds": 0.8,
+      "attackRange": 0,
+      "fortressDamage": 52,
+      "incomingDamageMultiplier": 1,
+      "contactMovementSpeedMultiplier": 1
+    },
+    {
+      "id": "SLINGMASTER",
+      "supplyCost": 5,
+      "maxHealth": 25,
+      "speed": 120,
+      "attackDamage": 20,
+      "attackCooldownSeconds": 1.2,
+      "attackRange": 260,
+      "fortressDamage": 20,
+      "incomingDamageMultiplier": 1,
+      "contactMovementSpeedMultiplier": 1
+    }
   ],
   "ammunition": [
     {
-      "type": "ROCK", "effect": "DIRECT", "shopCostGold": null,
-      "reload": { "reloadSeconds": 0.0 }, "inventory": { "unlimited": true, "startingCount": 0 },
-      "flight": { "mass": 1.5, "windResponse": 1.0, "gravityResponse": 1.0, "drag": 0.0, "initialSpeedMultiplier": 8.0, "maximumLifetimeSeconds": 30.0, "apexFragmentation": null },
-      "collision": { "hitLayers": ["TERRAIN", "UNIT", "FORTRESS"], "mode": "IMPACT_ON_TERRAIN", "hitRadius": 14.0, "friendlyFire": "ENEMY_ONLY" },
-      "damage": { "unitDamage": 50, "fortressDamage": 50, "unitRadius": 28.0, "fortressRadius": 28.0, "falloff": "LINEAR", "minimumDamage": 50 },
-      "terrain": { "deformsTerrain": true, "craterRadius": 24.0, "craterDepth": 14.0 },
-      "behavior": { "kind": "DIRECT_IMPACT" },
-      "availableLayers": ["TERRAIN", "UNIT", "FORTRESS"]
-    },
-    {
-      "type": "SIEGE_BOMB", "effect": "EXPLOSIVE", "shopCostGold": null,
-      "reload": { "reloadSeconds": 5.5 }, "inventory": { "unlimited": true, "startingCount": 0 },
-      "flight": { "mass": 2.5, "windResponse": 0.8, "gravityResponse": 1.0, "drag": 0.0, "initialSpeedMultiplier": 8.0, "maximumLifetimeSeconds": 30.0, "apexFragmentation": null },
-      "collision": { "hitLayers": ["TERRAIN", "FORTRESS"], "mode": "IMPACT_ON_TERRAIN", "hitRadius": 57.5, "friendlyFire": "ENEMY_ONLY" },
-      "damage": { "unitDamage": 72, "fortressDamage": 100, "unitRadius": 115.0, "fortressRadius": 115.0, "falloff": "LINEAR", "minimumDamage": 0 },
-      "terrain": { "deformsTerrain": true, "craterRadius": 82.0, "craterDepth": 48.0 },
-      "behavior": { "kind": "EXPLOSION", "radius": 115.0, "lifetimeSeconds": 0.8 },
-      "availableLayers": ["TERRAIN", "FORTRESS"]
-    },
-    {
-      "type": "POWDER_BARREL", "effect": "EXPLOSIVE", "shopCostGold": 250,
-      "reload": { "reloadSeconds": 6.5 }, "inventory": { "unlimited": false, "startingCount": 3 },
-      "flight": { "mass": 2.0, "windResponse": 0.9, "gravityResponse": 1.0, "drag": 0.0, "initialSpeedMultiplier": 8.0, "maximumLifetimeSeconds": 30.0, "apexFragmentation": null },
-      "collision": { "hitLayers": ["TERRAIN", "FORTRESS"], "mode": "IMPACT_ON_TERRAIN", "hitRadius": 110.0, "friendlyFire": "ALL_UNITS" },
-      "damage": { "unitDamage": 120, "fortressDamage": 120, "unitRadius": 220.0, "fortressRadius": 220.0, "falloff": "LINEAR", "minimumDamage": 0 },
-      "terrain": { "deformsTerrain": true, "craterRadius": 150.0, "craterDepth": 90.0 },
-      "behavior": { "kind": "EXPLOSION", "radius": 220.0, "lifetimeSeconds": 0.8 },
-      "availableLayers": ["TERRAIN", "FORTRESS"]
-    },
-    {
-      "type": "FIRE_RAIN", "effect": "INCENDIARY", "shopCostGold": 350,
-      "reload": { "reloadSeconds": 8.0 }, "inventory": { "unlimited": false, "startingCount": 3 },
+      "type": "ROCK",
+      "effect": "DIRECT",
+      "shopCostGold": null,
+      "reload": {
+        "reloadSeconds": 0
+      },
+      "inventory": {
+        "unlimited": true,
+        "startingCount": 0
+      },
       "flight": {
-        "mass": 1.2, "windResponse": 1.1, "gravityResponse": 1.0, "drag": 0.0, "initialSpeedMultiplier": 8.0, "maximumLifetimeSeconds": 30.0,
+        "mass": 1.5,
+        "windResponse": 1,
+        "gravityResponse": 1,
+        "drag": 0,
+        "initialSpeedMultiplier": 8,
+        "maximumLifetimeSeconds": 30,
+        "apexFragmentation": null
+      },
+      "collision": {
+        "hitLayers": [
+          "TERRAIN",
+          "UNIT",
+          "FORTRESS"
+        ],
+        "mode": "IMPACT_ON_TERRAIN",
+        "hitRadius": 14,
+        "friendlyFire": "ENEMY_ONLY"
+      },
+      "damage": {
+        "unitDamage": 50,
+        "fortressDamage": 50,
+        "unitRadius": 28,
+        "fortressRadius": 28,
+        "falloff": "LINEAR",
+        "minimumDamage": 50
+      },
+      "terrain": {
+        "deformsTerrain": true,
+        "craterRadius": 24,
+        "craterDepth": 14
+      },
+      "behavior": {
+        "kind": "DIRECT_IMPACT"
+      },
+      "availableLayers": [
+        "TERRAIN",
+        "UNIT",
+        "FORTRESS"
+      ]
+    },
+    {
+      "type": "SIEGE_BOMB",
+      "effect": "EXPLOSIVE",
+      "shopCostGold": null,
+      "reload": {
+        "reloadSeconds": 2
+      },
+      "inventory": {
+        "unlimited": true,
+        "startingCount": 0
+      },
+      "flight": {
+        "mass": 2.5,
+        "windResponse": 0.8,
+        "gravityResponse": 1,
+        "drag": 0,
+        "initialSpeedMultiplier": 8,
+        "maximumLifetimeSeconds": 30,
+        "apexFragmentation": null
+      },
+      "collision": {
+        "hitLayers": [
+          "TERRAIN",
+          "FORTRESS"
+        ],
+        "mode": "IMPACT_ON_TERRAIN",
+        "hitRadius": 57.5,
+        "friendlyFire": "ENEMY_ONLY"
+      },
+      "damage": {
+        "unitDamage": 72,
+        "fortressDamage": 100,
+        "unitRadius": 115,
+        "fortressRadius": 115,
+        "falloff": "LINEAR",
+        "minimumDamage": 0
+      },
+      "terrain": {
+        "deformsTerrain": true,
+        "craterRadius": 82,
+        "craterDepth": 48
+      },
+      "behavior": {
+        "kind": "EXPLOSION",
+        "radius": 115,
+        "lifetimeSeconds": 0.8
+      },
+      "availableLayers": [
+        "TERRAIN",
+        "FORTRESS"
+      ]
+    },
+    {
+      "type": "POWDER_BARREL",
+      "effect": "EXPLOSIVE",
+      "shopCostGold": 250,
+      "reload": {
+        "reloadSeconds": 6.5
+      },
+      "inventory": {
+        "unlimited": false,
+        "startingCount": 3
+      },
+      "flight": {
+        "mass": 2,
+        "windResponse": 0.9,
+        "gravityResponse": 1,
+        "drag": 0,
+        "initialSpeedMultiplier": 8,
+        "maximumLifetimeSeconds": 30,
+        "apexFragmentation": null
+      },
+      "collision": {
+        "hitLayers": [
+          "TERRAIN",
+          "FORTRESS"
+        ],
+        "mode": "IMPACT_ON_TERRAIN",
+        "hitRadius": 110,
+        "friendlyFire": "ALL_UNITS"
+      },
+      "damage": {
+        "unitDamage": 120,
+        "fortressDamage": 120,
+        "unitRadius": 220,
+        "fortressRadius": 220,
+        "falloff": "LINEAR",
+        "minimumDamage": 0
+      },
+      "terrain": {
+        "deformsTerrain": true,
+        "craterRadius": 150,
+        "craterDepth": 90
+      },
+      "behavior": {
+        "kind": "EXPLOSION",
+        "radius": 220,
+        "lifetimeSeconds": 0.8
+      },
+      "availableLayers": [
+        "TERRAIN",
+        "FORTRESS"
+      ]
+    },
+    {
+      "type": "FIRE_RAIN",
+      "effect": "INCENDIARY",
+      "shopCostGold": 350,
+      "reload": {
+        "reloadSeconds": 8
+      },
+      "inventory": {
+        "unlimited": false,
+        "startingCount": 3
+      },
+      "flight": {
+        "mass": 1.2,
+        "windResponse": 1.1,
+        "gravityResponse": 1,
+        "drag": 0,
+        "initialSpeedMultiplier": 8,
+        "maximumLifetimeSeconds": 30,
         "apexFragmentation": {
-          "fragmentsPerSide": 3, "minimumReferenceSpeed": 120.0,
-          "horizontalSpreadPerStep": 0.09, "initialDownwardSpeed": 0.1,
+          "fragmentsPerSide": 3,
+          "minimumReferenceSpeed": 120,
+          "horizontalSpreadPerStep": 0.09,
+          "initialDownwardSpeed": 0.1,
           "downwardSpreadPerStep": 0.025
         }
       },
-      "collision": { "hitLayers": ["TERRAIN", "FORTRESS"], "mode": "IMPACT_ON_TERRAIN", "hitRadius": 34.0, "friendlyFire": "ENEMY_ONLY" },
-      "damage": { "unitDamage": 4, "fortressDamage": 4, "unitRadius": 68.0, "fortressRadius": 68.0, "falloff": "LINEAR", "minimumDamage": 0 },
-      "terrain": { "deformsTerrain": true, "craterRadius": 36.0, "craterDepth": 10.0 },
-      "behavior": {
-        "kind": "LINGERING_AREA", "radius": 68.0, "durationSeconds": 9.0,
-        "tickIntervalSeconds": 0.5, "damagePerTick": 4, "fortressDamagePerTick": 4,
-        "driftsWithWind": false, "windDriftMultiplier": 1.0, "followsTerrain": false,
-        "status": "BURNING", "unitFriendlyFire": "ALL_UNITS"
+      "collision": {
+        "hitLayers": [
+          "TERRAIN",
+          "FORTRESS"
+        ],
+        "mode": "IMPACT_ON_TERRAIN",
+        "hitRadius": 34,
+        "friendlyFire": "ENEMY_ONLY"
       },
-      "availableLayers": ["TERRAIN", "FORTRESS"]
+      "damage": {
+        "unitDamage": 4,
+        "fortressDamage": 4,
+        "unitRadius": 68,
+        "fortressRadius": 68,
+        "falloff": "LINEAR",
+        "minimumDamage": 0
+      },
+      "terrain": {
+        "deformsTerrain": true,
+        "craterRadius": 36,
+        "craterDepth": 10
+      },
+      "behavior": {
+        "kind": "LINGERING_AREA",
+        "radius": 68,
+        "durationSeconds": 9,
+        "tickIntervalSeconds": 0.5,
+        "damagePerTick": 4,
+        "fortressDamagePerTick": 4,
+        "driftsWithWind": false,
+        "windDriftMultiplier": 1,
+        "followsTerrain": false,
+        "status": "BURNING",
+        "unitFriendlyFire": "ALL_UNITS"
+      },
+      "availableLayers": [
+        "TERRAIN",
+        "FORTRESS"
+      ]
     },
     {
-      "type": "PLAGUE_CAULDRON", "effect": "PLAGUE", "shopCostGold": 500,
-      "reload": { "reloadSeconds": 15.0 }, "inventory": { "unlimited": false, "startingCount": 3 },
-      "flight": { "mass": 3.0, "windResponse": 0.6, "gravityResponse": 1.0, "drag": 0.0, "initialSpeedMultiplier": 8.0, "maximumLifetimeSeconds": 30.0, "apexFragmentation": null },
-      "collision": { "hitLayers": ["TERRAIN", "FORTRESS"], "mode": "IMPACT_ON_TERRAIN", "hitRadius": 130.0, "friendlyFire": "ENEMY_ONLY" },
-      "damage": { "unitDamage": 8, "fortressDamage": 0, "unitRadius": 300.0, "fortressRadius": 300.0, "falloff": "LINEAR", "minimumDamage": 0 },
-      "terrain": { "deformsTerrain": false, "craterRadius": 0.0, "craterDepth": 0.0 },
-      "behavior": {
-        "kind": "LINGERING_AREA", "radius": 300.0, "durationSeconds": 6.0,
-        "tickIntervalSeconds": 1.0, "damagePerTick": 8, "fortressDamagePerTick": 0,
-        "driftsWithWind": true, "windDriftMultiplier": 0.75, "followsTerrain": true,
-        "status": "POISONED", "unitFriendlyFire": "ENEMY_ONLY"
+      "type": "PLAGUE_CAULDRON",
+      "effect": "PLAGUE",
+      "shopCostGold": 500,
+      "reload": {
+        "reloadSeconds": 15
       },
-      "availableLayers": ["TERRAIN", "FORTRESS"]
+      "inventory": {
+        "unlimited": false,
+        "startingCount": 3
+      },
+      "flight": {
+        "mass": 3,
+        "windResponse": 0.6,
+        "gravityResponse": 1,
+        "drag": 0,
+        "initialSpeedMultiplier": 8,
+        "maximumLifetimeSeconds": 30,
+        "apexFragmentation": null
+      },
+      "collision": {
+        "hitLayers": [
+          "TERRAIN",
+          "FORTRESS"
+        ],
+        "mode": "IMPACT_ON_TERRAIN",
+        "hitRadius": 130,
+        "friendlyFire": "ENEMY_ONLY"
+      },
+      "damage": {
+        "unitDamage": 8,
+        "fortressDamage": 0,
+        "unitRadius": 300,
+        "fortressRadius": 300,
+        "falloff": "LINEAR",
+        "minimumDamage": 0
+      },
+      "terrain": {
+        "deformsTerrain": false,
+        "craterRadius": 0,
+        "craterDepth": 0
+      },
+      "behavior": {
+        "kind": "LINGERING_AREA",
+        "radius": 300,
+        "durationSeconds": 6,
+        "tickIntervalSeconds": 1,
+        "damagePerTick": 8,
+        "fortressDamagePerTick": 0,
+        "driftsWithWind": true,
+        "windDriftMultiplier": 0.75,
+        "followsTerrain": true,
+        "status": "POISONED",
+        "unitFriendlyFire": "ENEMY_ONLY"
+      },
+      "availableLayers": [
+        "TERRAIN",
+        "FORTRESS"
+      ]
     }
   ],
   "spells": [
-    { "type": "ICE_TRAP", "goldCost": 500, "category": "BATTLEFIELD_CONTROL", "targetCategory": "ENEMY_FORCE", "special": false, "manaCost": 50, "effect": null, "recastableWhileActive": false },
-    { "type": "RUNIC_BASTION", "goldCost": 1200, "category": "DEFENSIVE", "targetCategory": "OWN_GATE", "special": false, "manaCost": 70, "effect": { "kind": "RUNIC_BASTION", "hitPoints": 360 }, "recastableWhileActive": false },
-    { "type": "HASTE", "goldCost": 900, "category": "SUPPORT", "targetCategory": "ALLIED_FORCE", "special": false, "manaCost": 50, "effect": { "kind": "HASTE", "durationMilliseconds": 15000, "movementSpeedMultiplier": 2.0 }, "recastableWhileActive": true },
-    { "type": "HEAL", "goldCost": 900, "category": "SUPPORT", "targetCategory": "ALLIED_FORCE", "special": false, "manaCost": 50, "effect": null, "recastableWhileActive": false },
-    { "type": "FORTRESS_SHIELD", "goldCost": 0, "category": "DEFENSIVE", "targetCategory": "OWN_FORTRESS", "special": false, "manaCost": 80, "effect": { "kind": "FORTRESS_SHIELD", "hitPoints": 150 }, "recastableWhileActive": false },
-    { "type": "CATAPULT_LOCK", "goldCost": 1000, "category": "SIEGE", "targetCategory": "ENEMY_SIEGE_ENGINE", "special": true, "manaCost": 60, "effect": null, "recastableWhileActive": false },
-    { "type": "SLOWING_FIELD", "goldCost": 1000, "category": "BATTLEFIELD_CONTROL", "targetCategory": "ENEMY_FORCE", "special": true, "manaCost": 50, "effect": null, "recastableWhileActive": false },
-    { "type": "VAMPIRIC_BANNER", "goldCost": 1100, "category": "SUPPORT", "targetCategory": "ALLIED_FORCE", "special": true, "manaCost": 60, "effect": null, "recastableWhileActive": false },
-    { "type": "STONE_SKIN", "goldCost": 1100, "category": "DEFENSIVE", "targetCategory": "ALLIED_FORCE", "special": true, "manaCost": 60, "effect": null, "recastableWhileActive": false },
-    { "type": "SIEGE_FRENZY", "goldCost": 1200, "category": "OFFENSIVE", "targetCategory": "ALLIED_FORCE", "special": true, "manaCost": 60, "effect": null, "recastableWhileActive": false },
-    { "type": "BERSERKER", "goldCost": 2000, "category": "OFFENSIVE", "targetCategory": "ALLIED_UNIT", "special": true, "manaCost": 100, "effect": null, "recastableWhileActive": false }
+    {
+      "type": "ICE_TRAP",
+      "goldCost": 500,
+      "category": "BATTLEFIELD_CONTROL",
+      "targetCategory": "ENEMY_FORCE",
+      "special": false,
+      "manaCost": 50,
+      "effect": null,
+      "recastableWhileActive": false
+    },
+    {
+      "type": "RUNIC_BASTION",
+      "goldCost": 1200,
+      "category": "DEFENSIVE",
+      "targetCategory": "OWN_GATE",
+      "special": false,
+      "manaCost": 70,
+      "effect": {
+        "kind": "RUNIC_BASTION",
+        "hitPoints": 360
+      },
+      "recastableWhileActive": false
+    },
+    {
+      "type": "HASTE",
+      "goldCost": 900,
+      "category": "SUPPORT",
+      "targetCategory": "ALLIED_FORCE",
+      "special": false,
+      "manaCost": 50,
+      "effect": {
+        "kind": "HASTE",
+        "durationMilliseconds": 15000,
+        "movementSpeedMultiplier": 2
+      },
+      "recastableWhileActive": true
+    },
+    {
+      "type": "HEAL",
+      "goldCost": 900,
+      "category": "SUPPORT",
+      "targetCategory": "ALLIED_FORCE",
+      "special": false,
+      "manaCost": 50,
+      "effect": null,
+      "recastableWhileActive": false
+    },
+    {
+      "type": "FORTRESS_SHIELD",
+      "goldCost": 0,
+      "category": "DEFENSIVE",
+      "targetCategory": "OWN_FORTRESS",
+      "special": false,
+      "manaCost": 80,
+      "effect": {
+        "kind": "FORTRESS_SHIELD",
+        "hitPoints": 150
+      },
+      "recastableWhileActive": false
+    },
+    {
+      "type": "CATAPULT_LOCK",
+      "goldCost": 1000,
+      "category": "SIEGE",
+      "targetCategory": "ENEMY_SIEGE_ENGINE",
+      "special": true,
+      "manaCost": 60,
+      "effect": null,
+      "recastableWhileActive": false
+    },
+    {
+      "type": "SLOWING_FIELD",
+      "goldCost": 1000,
+      "category": "BATTLEFIELD_CONTROL",
+      "targetCategory": "ENEMY_FORCE",
+      "special": true,
+      "manaCost": 50,
+      "effect": null,
+      "recastableWhileActive": false
+    },
+    {
+      "type": "VAMPIRIC_BANNER",
+      "goldCost": 1100,
+      "category": "SUPPORT",
+      "targetCategory": "ALLIED_FORCE",
+      "special": true,
+      "manaCost": 60,
+      "effect": null,
+      "recastableWhileActive": false
+    },
+    {
+      "type": "STONE_SKIN",
+      "goldCost": 1100,
+      "category": "DEFENSIVE",
+      "targetCategory": "ALLIED_FORCE",
+      "special": true,
+      "manaCost": 60,
+      "effect": null,
+      "recastableWhileActive": false
+    },
+    {
+      "type": "SIEGE_FRENZY",
+      "goldCost": 1200,
+      "category": "OFFENSIVE",
+      "targetCategory": "ALLIED_FORCE",
+      "special": true,
+      "manaCost": 60,
+      "effect": null,
+      "recastableWhileActive": false
+    },
+    {
+      "type": "BERSERKER",
+      "goldCost": 2000,
+      "category": "OFFENSIVE",
+      "targetCategory": "ALLIED_UNIT",
+      "special": true,
+      "manaCost": 100,
+      "effect": null,
+      "recastableWhileActive": false
+    }
   ],
   "mana": {
     "startingMana": 100,
@@ -393,29 +852,29 @@
       "startingGold": 100,
       "startingSupply": 20,
       "maximumSupply": 20,
-      "supplyRegenerationIntervalSeconds": 3.0
+      "supplyRegenerationIntervalSeconds": 3
     },
     "fortresses": {
       "standardMaximumHealth": 500,
       "demoBlueMaximumHealth": 5000
     },
     "catapult": {
-      "initialAimDirectionDegrees": 45.0,
-      "initialAimPower": 50.0
+      "initialAimDirectionDegrees": 45,
+      "initialAimPower": 50
     },
     "match": {
       "durationMilliseconds": 300000,
       "bossEncounterDurationMilliseconds": 300000
     },
     "physics": {
-      "gravityAccelerationY": 420.0,
-      "windAccelerationScale": 390.0
+      "gravityAccelerationY": 420,
+      "windAccelerationScale": 390
     },
     "wind": {
-      "initialDelaySeconds": 8.0,
-      "transitionSeconds": 3.0,
-      "minimumChangeIntervalSeconds": 18.0,
-      "maximumChangeIntervalSeconds": 24.0,
+      "initialDelaySeconds": 8,
+      "transitionSeconds": 3,
+      "minimumChangeIntervalSeconds": 18,
+      "maximumChangeIntervalSeconds": 24,
       "minimumStrength": 0.35,
       "maximumStrength": 0.9
     },
@@ -424,22 +883,22 @@
       "maximumDamageVarianceFactor": 1.2,
       "unitLuckBiasMaximumMagnitude": 0.04,
       "maximumInitialAttackDelayRatio": 0.5,
-      "unitMovementSpeedMultiplier": 2.0,
+      "unitMovementSpeedMultiplier": 2,
       "unitMovementSpeedScale": 0.45,
       "garrisonMovementSpeedScale": 0.22,
-      "unitInteractionRange": 260.0,
-      "fortressAttackRange": 82.0,
-      "sapperFortressStandoffDistance": 200.0,
+      "unitInteractionRange": 260,
+      "fortressAttackRange": 82,
+      "sapperFortressStandoffDistance": 200,
       "sapperContactSpeedMultiplier": 0.45,
-      "meleeAttackStandoffDistance": 150.0,
-      "attackFormationSpacing": 55.0,
+      "meleeAttackStandoffDistance": 150,
+      "attackFormationSpacing": 55,
       "meleeSynergyDamagePerAdditionalUnit": 0.35,
-      "maximumMeleeSynergyMultiplier": 2.0,
+      "maximumMeleeSynergyMultiplier": 2,
       "demolisher": {
         "explosionDamage": 300,
-        "blastRadius": 260.0,
+        "blastRadius": 260,
         "throwDurationSeconds": 0.5,
-        "throwForwardDistance": 90.0
+        "throwForwardDistance": 90
       }
     },
     "bossCombat": {
@@ -447,31 +906,55 @@
       "maximumDistanceFalloff": 0.7
     },
     "aiProfiles": [
-      { "profileId": "CADET", "angleErrorDegrees": 28.0, "powerError": 45.0, "reactionIntervalMilliseconds": 1100, "unitRecruitmentIntervalMilliseconds": 8000, "progressionErrorReduction": 0.0, "progressionReactionReduction": 0.0 },
-      { "profileId": "VETERAN", "angleErrorDegrees": 3.0, "powerError": 6.0, "reactionIntervalMilliseconds": 700, "unitRecruitmentIntervalMilliseconds": 0, "progressionErrorReduction": 0.0, "progressionReactionReduction": 0.0 },
-      { "profileId": "ELITE", "angleErrorDegrees": 1.25, "powerError": 2.5, "reactionIntervalMilliseconds": 400, "unitRecruitmentIntervalMilliseconds": 0, "progressionErrorReduction": 0.5, "progressionReactionReduction": 0.5 }
+      {
+        "profileId": "CADET",
+        "angleErrorDegrees": 28,
+        "powerError": 45,
+        "reactionIntervalMilliseconds": 1100,
+        "unitRecruitmentIntervalMilliseconds": 8000,
+        "progressionErrorReduction": 0,
+        "progressionReactionReduction": 0
+      },
+      {
+        "profileId": "VETERAN",
+        "angleErrorDegrees": 3,
+        "powerError": 6,
+        "reactionIntervalMilliseconds": 700,
+        "unitRecruitmentIntervalMilliseconds": 0,
+        "progressionErrorReduction": 0,
+        "progressionReactionReduction": 0
+      },
+      {
+        "profileId": "ELITE",
+        "angleErrorDegrees": 1.25,
+        "powerError": 2.5,
+        "reactionIntervalMilliseconds": 400,
+        "unitRecruitmentIntervalMilliseconds": 0,
+        "progressionErrorReduction": 0.5,
+        "progressionReactionReduction": 0.5
+      }
     ],
     "aiStrategy": {
-      "aimAngleOffsetDegrees": 42.0,
-      "horizontalDistancePerPowerPercent": 12.0,
+      "aimAngleOffsetDegrees": 42,
+      "horizontalDistancePerPowerPercent": 12,
       "ammunitionScoring": {
         "situationalFortressDamageWeight": 1.25,
-        "situationalUnitDamageWeight": 1.0,
+        "situationalUnitDamageWeight": 1,
         "situationalFortressRadiusWeight": 0.1,
         "situationalUnitRadiusWeight": 0.1,
         "counterplayUnitDamageWeight": 1.5,
-        "counterplayUnitRadiusWeight": 1.0,
+        "counterplayUnitRadiusWeight": 1,
         "counterplayFortressDamageWeight": 0.5,
         "counterplayFortressRadiusWeight": 0.1
       },
       "unitScoring": {
-        "sapperPriorityScore": 1000.0,
-        "demolisherPriorityScore": 900.0,
-        "attackDamageWeight": 2.0,
-        "speedWeight": 1.0,
-        "defenderVsSapperRoleBonus": 1000.0,
-        "rangedVsRangedRoleBonus": 100.0,
-        "rangedVsMeleeRoleBonus": 50.0,
+        "sapperPriorityScore": 1000,
+        "demolisherPriorityScore": 900,
+        "attackDamageWeight": 2,
+        "speedWeight": 1,
+        "defenderVsSapperRoleBonus": 1000,
+        "rangedVsRangedRoleBonus": 100,
+        "rangedVsMeleeRoleBonus": 50,
         "supplyCostPenaltyWeight": 0.25
       },
       "waveDispatch": {
@@ -496,9 +979,27 @@
       "initialWindStrengthBands": 4,
       "demoInitialWindStrength": 0.25,
       "aiDifficultyBands": [
-        { "firstLevel": 1, "lastLevel": 10, "profileId": "CADET", "progressionStartPercent": 0, "progressionEndPercent": 0 },
-        { "firstLevel": 11, "lastLevel": 30, "profileId": "VETERAN", "progressionStartPercent": 0, "progressionEndPercent": 0 },
-        { "firstLevel": 31, "lastLevel": 100, "profileId": "ELITE", "progressionStartPercent": 0, "progressionEndPercent": 100 }
+        {
+          "firstLevel": 1,
+          "lastLevel": 10,
+          "profileId": "CADET",
+          "progressionStartPercent": 0,
+          "progressionEndPercent": 0
+        },
+        {
+          "firstLevel": 11,
+          "lastLevel": 30,
+          "profileId": "VETERAN",
+          "progressionStartPercent": 0,
+          "progressionEndPercent": 0
+        },
+        {
+          "firstLevel": 31,
+          "lastLevel": 100,
+          "profileId": "ELITE",
+          "progressionStartPercent": 0,
+          "progressionEndPercent": 100
+        }
       ]
     }
   }

@@ -38,6 +38,8 @@ export interface ValidationIssue { severity: "error" | "warning"; path: string; 
 
 export const foundationExtension = 320;
 export const DEFAULT_TERRAIN_SAMPLE_STEP = 40;
+export const FORTRESS_CENTER_MARGIN = 600;
+export const FORTRESS_HALF_WIDTH = 240;
 export const MAX_TERRAIN_DELTA = 200;
 export const FOUNDATION_HEIGHT_TOLERANCE = 80;
 export const TERRAIN_CONTROL_SPACING = 200;
@@ -95,20 +97,22 @@ export function terrainControlPoints(map: MapDocumentJson): SampleJson[] {
 }
 export function defaultMap(id = "web-map", biome: MapBiome = "green_frontier"): MapDocumentJson {
   const foundationHeight = 3180;
+  const blueFortressX = FORTRESS_CENTER_MARGIN;
+  const redFortressX = WORLD_WIDTH - FORTRESS_CENTER_MARGIN;
   const samples = sampleXs(DEFAULT_TERRAIN_SAMPLE_STEP)
     .map(x => ({ x, height: foundationHeight }));
   const foundationZones = [
     {
       id: "blue-foundation",
       minX: 0,
-      maxX: Math.ceil((490 + 240 + foundationExtension) / DEFAULT_TERRAIN_SAMPLE_STEP) * DEFAULT_TERRAIN_SAMPLE_STEP,
+      maxX: Math.ceil((blueFortressX + FORTRESS_HALF_WIDTH + foundationExtension) / DEFAULT_TERRAIN_SAMPLE_STEP) * DEFAULT_TERRAIN_SAMPLE_STEP,
       minHeight: foundationHeight,
       maxHeight: foundationHeight,
       craterPolicy: "PRESERVE_FOUNDATION" as const,
     },
     {
       id: "red-foundation",
-      minX: Math.floor((6710 - 240 - foundationExtension) / DEFAULT_TERRAIN_SAMPLE_STEP) * DEFAULT_TERRAIN_SAMPLE_STEP,
+      minX: Math.floor((redFortressX - FORTRESS_HALF_WIDTH - foundationExtension) / DEFAULT_TERRAIN_SAMPLE_STEP) * DEFAULT_TERRAIN_SAMPLE_STEP,
       maxX: WORLD_WIDTH,
       minHeight: foundationHeight,
       maxHeight: foundationHeight,
@@ -119,8 +123,8 @@ export function defaultMap(id = "web-map", biome: MapBiome = "green_frontier"): 
     if (sample.x >= zone.minX && sample.x <= zone.maxX) sample.height = zone.minHeight;
   }));
   const fortresses: FortressJson[] = [
-    { owner: "BLUE", x: 490, foundationHeight: 3180, halfWidth: 240, assetKey: "fortress.blue", hitboxProfile: "fortress.default", protectedZoneId: "blue-foundation" },
-    { owner: "RED", x: 6710, foundationHeight: 3180, halfWidth: 240, assetKey: "fortress.red", hitboxProfile: "fortress.default", protectedZoneId: "red-foundation" }
+    { owner: "BLUE", x: blueFortressX, foundationHeight: 3180, halfWidth: FORTRESS_HALF_WIDTH, assetKey: "fortress.blue", hitboxProfile: "fortress.default", protectedZoneId: "blue-foundation" },
+    { owner: "RED", x: redFortressX, foundationHeight: 3180, halfWidth: FORTRESS_HALF_WIDTH, assetKey: "fortress.red", hitboxProfile: "fortress.default", protectedZoneId: "red-foundation" }
   ];
   return {
     schemaVersion: 1, mapId: id, biome, world: { width: WORLD_WIDTH, height: WORLD_HEIGHT },

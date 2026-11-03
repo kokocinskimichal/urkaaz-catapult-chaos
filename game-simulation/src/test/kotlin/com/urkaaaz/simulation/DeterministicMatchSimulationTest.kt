@@ -678,8 +678,8 @@ class DeterministicMatchSimulationTest {
         val blueFortress = snapshot.fortresses.first { it.team == Team.BLUE }
         val redFortress = snapshot.fortresses.first { it.team == Team.RED }
 
-        assertEquals(490f, blueFortress.x)
-        assertEquals(6_710f, redFortress.x)
+        assertEquals(600f, blueFortress.x)
+        assertEquals(6_600f, redFortress.x)
         val expectedFortressFoundationY =
             3_456f + CatapultPresentationContract.FORTRESS_VERTICAL_OFFSET
         assertEquals(
@@ -696,12 +696,12 @@ class DeterministicMatchSimulationTest {
         val redCatapult = snapshot.catapults.first { it.team == Team.RED }
         val expectedCatapultY =
             expectedFortressFoundationY + CatapultPresentationContract.CATAPULT_VERTICAL_OFFSET
-        assertEquals(380f, blueCatapult.x, 0.01f)
-        assertEquals(6_820f, redCatapult.x, 0.01f)
+        assertEquals(490f, blueCatapult.x, 0.01f)
+        assertEquals(6_710f, redCatapult.x, 0.01f)
         assertEquals(expectedCatapultY, blueCatapult.y, 0.01f)
         assertEquals(expectedCatapultY, redCatapult.y, 0.01f)
-        assertEquals(450f, blueCatapult.anchorX, 0.01f)
-        assertEquals(6_750f, redCatapult.anchorX, 0.01f)
+        assertEquals(560f, blueCatapult.anchorX, 0.01f)
+        assertEquals(6_640f, redCatapult.anchorX, 0.01f)
         assertEquals(
             CatapultPresentationContract.anchorY(expectedFortressFoundationY, 4_800f),
             blueCatapult.anchorY,
@@ -741,7 +741,7 @@ class DeterministicMatchSimulationTest {
         )
         simulation.start()
         simulation.fire(EntityId("blue-catapult"), AmmunitionType.SIEGE_BOMB)
-        simulation.advance(2_000)
+        simulation.advance(1_000)
 
         val snapshotAfterImpact = simulation.snapshot()
         assertTrue(
@@ -1128,9 +1128,9 @@ class DeterministicMatchSimulationTest {
                 .filter { it.team == team }
                 .map { it.x }
             val expectedPositions = if (team == Team.BLUE) {
-                listOf(830f, 760f, 690f)
+                listOf(940f, 870f, 800f)
             } else {
-                listOf(6_370f, 6_440f, 6_510f)
+                listOf(6_260f, 6_330f, 6_400f)
             }
 
             expectedPositions.zip(positions).forEach { (expected, actual) ->

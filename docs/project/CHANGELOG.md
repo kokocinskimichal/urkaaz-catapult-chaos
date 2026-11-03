@@ -9,8 +9,17 @@
 
 ### Changed
 
+- Shifted both fortress centers inward by 110 world units across campaign maps,
+  map-editor defaults and mapless simulation; kept catapults, protected
+  foundations, projectile anchors and garrison slots aligned.
 - Updated the saved Chapter 1 maps for Levels 1, 3, 4 and 5 in both resource
   locations with the latest Studio-authored terrain and decoration data.
+- Reduced the SIEGE_BOMB reload from 5.5 seconds to 2 seconds.
+
+### Removed
+
+- Removed the unused legacy Kotlin `map-editor-domain`, `map-editor-format`
+  and `map-editor-rendering` modules; Studio Maps is the sole authoring UI.
 
 ## 2026-11-02
 

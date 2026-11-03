@@ -62,7 +62,7 @@ object GameBalanceFixtures {
                 AmmunitionDefinition(
                     AmmunitionType.SIEGE_BOMB,
                     AmmunitionEffect.EXPLOSIVE,
-                    ReloadProfile(5.5f),
+                    ReloadProfile(2f),
                     InventoryProfile(true, 0),
                     null,
                     FlightProfile(2.5f, 0.8f, 1f, 0f, 8f, 30f, null),

@@ -127,7 +127,7 @@ class AiMatchCoordinatorTest {
 
         val reloadingSnapshot = snapshot.copy(
             reloadRemainingSecondsByAmmunition = mapOf(
-                Team.RED to mapOf("SIEGE_BOMB" to 5.5f),
+                Team.RED to mapOf("SIEGE_BOMB" to 2f),
             ),
         )
         assertTrue(

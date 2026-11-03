@@ -7,7 +7,8 @@ package com.urkaaaz.contracts
  * across maps; only the foundation height comes from the selected map.
  */
 object CatapultPresentationContract {
-    const val FORTRESS_CENTER_MARGIN = 490f
+    const val FORTRESS_CENTER_MARGIN = 600f
+    private const val COMPACT_WORLD_CENTER_MARGIN = 490f
     /** Positive world Y lowers both fortresses. */
     const val FORTRESS_VERTICAL_OFFSET = 35f
     const val CATAPULT_CENTER_OFFSET_FROM_FORTRESS = 110f
@@ -16,19 +17,27 @@ object CatapultPresentationContract {
     const val CATAPULT_VERTICAL_OFFSET = -200f
     const val ANCHOR_VERTICAL_OFFSET_FROM_FOUNDATION = -360f
 
-    fun catapultCenterX(team: Team, worldWidth: Float): Float =
-        if (team == Team.BLUE) {
-            FORTRESS_CENTER_MARGIN - CATAPULT_CENTER_OFFSET_FROM_FORTRESS
+    fun catapultCenterX(team: Team, worldWidth: Float): Float {
+        val centerMargin = presentationCenterMargin(worldWidth)
+        return if (team == Team.BLUE) {
+            centerMargin - CATAPULT_CENTER_OFFSET_FROM_FORTRESS
         } else {
-            worldWidth - FORTRESS_CENTER_MARGIN + CATAPULT_CENTER_OFFSET_FROM_FORTRESS
+            worldWidth - centerMargin + CATAPULT_CENTER_OFFSET_FROM_FORTRESS
         }
+    }
 
-    fun projectileAnchorX(team: Team, worldWidth: Float): Float =
-        if (team == Team.BLUE) {
-            FORTRESS_CENTER_MARGIN - PROJECTILE_ANCHOR_OFFSET_FROM_FORTRESS
+    fun projectileAnchorX(team: Team, worldWidth: Float): Float {
+        val centerMargin = presentationCenterMargin(worldWidth)
+        return if (team == Team.BLUE) {
+            centerMargin - PROJECTILE_ANCHOR_OFFSET_FROM_FORTRESS
         } else {
-            worldWidth - FORTRESS_CENTER_MARGIN + PROJECTILE_ANCHOR_OFFSET_FROM_FORTRESS
+            worldWidth - centerMargin + PROJECTILE_ANCHOR_OFFSET_FROM_FORTRESS
         }
+    }
+
+    private fun presentationCenterMargin(worldWidth: Float): Float =
+        // Compact simulation fixtures retain their historical layout.
+        if (worldWidth < 2_000f) COMPACT_WORLD_CENTER_MARGIN else FORTRESS_CENTER_MARGIN
 
     fun anchorY(foundationHeight: Float, worldHeight: Float): Float =
         foundationHeight +

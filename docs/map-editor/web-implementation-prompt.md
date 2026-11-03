@@ -5,6 +5,9 @@
 > został zastąpiony ciągłą edycją opisaną w
 > [`random-map-generation-plan.md`](random-map-generation-plan.md) i
 > [`random-map-generation-implementation-prompt.md`](random-map-generation-implementation-prompt.md).
+> Wymienione niżej moduły Kotlin `map-editor-domain`, `map-editor-format` i
+> `map-editor-rendering` zostały od tego czasu usunięte; ich lista jest
+> historycznym opisem stanu sprzed migracji.
 
 Skopiuj cały tekst od następnej linii do agenta implementującego. Prompt
 realizuje kompletny plan z `docs/map-editor/web-migration-plan.md`.

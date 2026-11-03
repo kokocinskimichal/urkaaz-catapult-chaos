@@ -125,11 +125,11 @@
       },
       {
         "x": 1120,
-        "height": 3306.1306946835593
+        "height": 3307.151162303053
       },
       {
         "x": 1160,
-        "height": 3305.2443603137385
+        "height": 3307.151162303053
       },
       {
         "x": 1200,
@@ -617,11 +617,11 @@
       },
       {
         "x": 6040,
-        "height": 3081.3689714326774
+        "height": 3169.4958923524246
       },
       {
         "x": 6080,
-        "height": 3144.7849872935535
+        "height": 3169.4958923524246
       },
       {
         "x": 6120,
@@ -741,14 +741,14 @@
     {
       "id": "blue-foundation",
       "minX": 0,
-      "maxX": 1080,
+      "maxX": 1160,
       "minHeight": 3307.151162303053,
       "maxHeight": 3307.151162303053,
       "craterPolicy": "PRESERVE_FOUNDATION"
     },
     {
       "id": "red-foundation",
-      "minX": 6120,
+      "minX": 6040,
       "maxX": 7200,
       "minHeight": 3169.4958923524246,
       "maxHeight": 3169.4958923524246,
@@ -758,7 +758,7 @@
   "fortresses": [
     {
       "owner": "BLUE",
-      "x": 490,
+      "x": 600,
       "foundationHeight": 3307.151162303053,
       "halfWidth": 240,
       "assetKey": "fortress.blue",
@@ -767,7 +767,7 @@
     },
     {
       "owner": "RED",
-      "x": 6710,
+      "x": 6600,
       "foundationHeight": 3169.4958923524246,
       "halfWidth": 240,
       "assetKey": "fortress.red",

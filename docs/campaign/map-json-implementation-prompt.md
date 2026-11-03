@@ -3,6 +3,9 @@
 > Status: implementacja tego promptu znajduje się w repozytorium. Wynik i
 > aktualne przypisanie map opisano w
 > [`map-json-migration-plan.md`](map-json-migration-plan.md).
+> To historyczny prompt migracyjny. Wspomniane w nim `map-editor-web` i
+> `map-editor-format` nie są już bieżącymi modułami; edytor map działa w
+> zakładce Maps aplikacji Studio.
 
 Skopiuj cały prompt z następnej linii do agenta implementującego. Ma on
 zrealizować plan z

@@ -7,6 +7,9 @@ skrypt kopiujący assety i duplikaty PNG zostały usunięte. Zakładka Maps
 zachowuje wspólny model, format JSON, renderer i testy; lokalny backend
 udostępnia indeks assetów, walidację oraz zapis dwóch kopii map z kontrolą
 hasha. Walidator Kotlinowy pozostaje autorytatywnym runtime gate.
+Pozostałe moduły Kotlin dawnego edytora (`map-editor-domain`, `map-editor-format`
+i `map-editor-rendering`) zostały usunięte; aktywne authoring i preview należą
+do `studio/web`.
 
 Ten dokument opisuje migrację i decyzje, które doprowadziły do obecnej
 implementacji webowej.
@@ -240,6 +243,8 @@ loader i walidator map.
 
 - usunięto moduł Swing `map-editor-desktop`;
 - usunięto używany wyłącznie przez niego moduł `map-editor-assets`;
+- po migracji do Studio usunięto także pozostałe moduły Kotlin
+  `map-editor-domain`, `map-editor-format` i `map-editor-rendering`;
 - zaktualizowano konfigurację Gradle i dokumentację;
 - webowy edytor pozostał jedynym interfejsem do authoringu map.
 

@@ -1,6 +1,9 @@
 package com.urkaaaz.ui
 
+import com.urkaaaz.contracts.CatapultPresentationContract
 import com.urkaaaz.contracts.FortressHitboxProfile
+import com.urkaaaz.contracts.Team
+import com.urkaaaz.contracts.WorldDimensions
 import com.urkaaaz.contracts.WorldScale
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
@@ -81,13 +84,27 @@ class SapperBombFlightClockTest {
         terrainRevision = 0L,
         terrainBiome = "GREEN_FRONTIER",
         projectiles = emptyList(),
-        blueCatapultX = 450f,
+        blueCatapultX = CatapultPresentationContract.catapultCenterX(
+            Team.BLUE,
+            WorldDimensions.WIDTH,
+        ),
         blueCatapultY = 3_600f,
-        redCatapultX = 6_750f,
+        blueCatapultAnchorX = CatapultPresentationContract.projectileAnchorX(
+            Team.BLUE,
+            WorldDimensions.WIDTH,
+        ),
+        redCatapultX = CatapultPresentationContract.catapultCenterX(
+            Team.RED,
+            WorldDimensions.WIDTH,
+        ),
         redCatapultY = 3_600f,
-        blueFortressX = 450f,
+        redCatapultAnchorX = CatapultPresentationContract.projectileAnchorX(
+            Team.RED,
+            WorldDimensions.WIDTH,
+        ),
+        blueFortressX = CatapultPresentationContract.FORTRESS_CENTER_MARGIN,
         blueFortressFoundationY = 3_600f,
-        redFortressX = 6_750f,
+        redFortressX = WorldDimensions.WIDTH - CatapultPresentationContract.FORTRESS_CENTER_MARGIN,
         redFortressFoundationY = 3_600f,
         playerAngleDegrees = 45f,
         playerPower = 50f,

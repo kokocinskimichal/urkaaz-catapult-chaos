@@ -3479,13 +3479,12 @@ class DeterministicMatchSimulation(
     )
 
     companion object {
-        private const val GARRISON_FIRST_SLOT_FROM_SCREEN_EDGE = 690f
+        private const val SMALL_WORLD_GARRISON_SLOT_MARGIN = 690f
+        private const val GARRISON_FIRST_SLOT_OFFSET_FROM_FORTRESS = 200f
         private const val GARRISON_SPACING = 70f
         private const val NEW_UNIT_REAR_OFFSET = 20f
         private const val DEATH_ANIMATION_SECONDS = 0.8f
         private const val ALLIED_UNIT_MIN_SEPARATION = 16f
-        private const val FORTRESS_CENTER_MARGIN = 490f
-        private const val CATAPULT_CENTER_MARGIN = 450f
         // Keep default foundations wide enough for the scaled fortress footprint.
         private val FORTRESS_FLAT_HALF_WIDTH = WorldScale.FORTRESS_HALF_WIDTH
         private const val APEX_TIME_SEARCH_ITERATIONS = 16
@@ -3493,16 +3492,14 @@ class DeterministicMatchSimulation(
         private const val TERRAIN_COLLISION_SAMPLE_SECONDS = 1f / 60f
 
         private fun fortressMarginFor(worldWidth: Float): Float =
-            if (worldWidth < 2_000f) 160f else FORTRESS_CENTER_MARGIN
-
-        private fun catapultMarginFor(worldWidth: Float): Float =
-            if (worldWidth < 2_000f) 120f else CATAPULT_CENTER_MARGIN
+            if (worldWidth < 2_000f) 160f else CatapultPresentationContract.FORTRESS_CENTER_MARGIN
 
         private fun garrisonFirstSlotFromScreenEdge(worldWidth: Float): Float =
             if (worldWidth < 2_000f) {
-                minOf(GARRISON_FIRST_SLOT_FROM_SCREEN_EDGE, worldWidth / 2f - 60f)
+                minOf(SMALL_WORLD_GARRISON_SLOT_MARGIN, worldWidth / 2f - 60f)
             } else {
-                GARRISON_FIRST_SLOT_FROM_SCREEN_EDGE
+                CatapultPresentationContract.FORTRESS_CENTER_MARGIN +
+                    GARRISON_FIRST_SLOT_OFFSET_FROM_FORTRESS
             }
 
         private fun defaultCatapult(

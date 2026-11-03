@@ -9,6 +9,8 @@ import android.os.SystemClock
 import android.view.View
 import android.view.MotionEvent
 import android.view.ScaleGestureDetector
+import com.urkaaaz.contracts.CatapultPresentationContract
+import com.urkaaaz.contracts.Team
 import com.urkaaaz.contracts.WorldDimensions
 import com.urkaaaz.contracts.WorldScale
 import java.util.Locale
@@ -50,10 +52,24 @@ class BattlefieldView(context: Context) : View(context) {
         terrainRevision = 0,
         terrainBiome = "GREEN_FRONTIER",
         projectiles = emptyList(),
-        blueCatapultX = 450f,
+        blueCatapultX = CatapultPresentationContract.catapultCenterX(
+            Team.BLUE,
+            WorldDimensions.WIDTH,
+        ),
         blueCatapultY = 648f,
-        redCatapultX = 6750f,
+        blueCatapultAnchorX = CatapultPresentationContract.projectileAnchorX(
+            Team.BLUE,
+            WorldDimensions.WIDTH,
+        ),
+        redCatapultX = CatapultPresentationContract.catapultCenterX(
+            Team.RED,
+            WorldDimensions.WIDTH,
+        ),
         redCatapultY = 648f,
+        redCatapultAnchorX = CatapultPresentationContract.projectileAnchorX(
+            Team.RED,
+            WorldDimensions.WIDTH,
+        ),
         playerAngleDegrees = 0f,
         playerPower = 0f,
         blueFortressHealth = 0,
@@ -953,7 +969,6 @@ class BattlefieldView(context: Context) : View(context) {
         private const val RELOAD_INDICATOR_RADIUS = 12f
         private const val RELOAD_INDICATOR_DURATION = 5.5f
         private const val FORTRESS_RENDER_WIDTH = 280f
-        private const val FORTRESS_CENTER_MARGIN = 490f
         private const val AIM_CIRCLE_EDGE_MARGIN = 8f
         private const val MIN_VISUAL_PULL_RADIUS = 24f
         private const val TRAJECTORY_PREVIEW_POINTS = 42

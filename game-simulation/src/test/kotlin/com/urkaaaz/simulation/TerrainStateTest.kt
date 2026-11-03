@@ -32,10 +32,10 @@ class TerrainStateTest {
             baselineHeight = 3_744f,
             worldWidth = 7_200f,
             worldHeight = 4_800f,
-        ).flattenFoundation(centerX = 490f, halfWidth = 196f)
+        ).flattenFoundation(centerX = 600f, halfWidth = 196f)
 
-        assertEquals(terrain.heightAt(490f), terrain.heightAt(294f), 0.1f)
-        assertEquals(terrain.heightAt(490f), terrain.heightAt(686f), 0.1f)
+        assertEquals(terrain.heightAt(600f), terrain.heightAt(404f), 0.1f)
+        assertEquals(terrain.heightAt(600f), terrain.heightAt(796f), 0.1f)
     }
 
     @Test
@@ -44,11 +44,11 @@ class TerrainStateTest {
             baselineHeight = 3_744f,
             worldWidth = 7_200f,
             worldHeight = 4_800f,
-        ).flattenFoundation(490f, 196f)
-            .flattenFoundation(6_710f, 196f)
+        ).flattenFoundation(600f, 196f)
+            .flattenFoundation(6_600f, 196f)
 
-        assertEquals(terrain.heightAt(490f), terrain.heightAt(294f), 0.1f)
-        assertEquals(terrain.heightAt(6_710f), terrain.heightAt(6_514f), 0.1f)
-        assertEquals(terrain.heightAt(6_710f), terrain.heightAt(6_906f), 0.1f)
+        assertEquals(terrain.heightAt(600f), terrain.heightAt(404f), 0.1f)
+        assertEquals(terrain.heightAt(6_600f), terrain.heightAt(6_404f), 0.1f)
+        assertEquals(terrain.heightAt(6_600f), terrain.heightAt(6_796f), 0.1f)
     }
 }

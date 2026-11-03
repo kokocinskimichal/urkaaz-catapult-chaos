@@ -282,8 +282,9 @@ Vitest. Podmieniono wyłącznie warstwę IO. Edytor, assety i testy są w
 fortec/katapult z `AGENTS.md` obowiązuje bez zmian i nadal wymaga równoległej
 aktualizacji symulacji, rendera Androida, podglądu w edytorze i testów.
 
-Moduły Kotlin `map-editor-domain/-format/-rendering` (pozostałość po edytorze
-desktopowym) są poza zakresem Studio; ich status należy ocenić osobno.
+Pozostałe po edytorze desktopowym moduły Kotlin `map-editor-domain`,
+`map-editor-format` i `map-editor-rendering` zostały usunięte. Studio Maps
+korzysta wyłącznie z aktywnego modelu TypeScript i rendererów Canvas.
 
 ## 10. Zakładka: Campaign — edytor map rozdziałów
 

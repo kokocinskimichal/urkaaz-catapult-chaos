@@ -200,6 +200,8 @@ presentation offset from the authored foundation. Catapult sprites are
 center and at `foundation + 35 - 200` on world Y. Render catapults before
 fortresses and the terrain cap after fortresses, so the fortresses occlude the
 catapults and the cap can conceal the fortresses' lower edges.
+Fortress centers are `600` and `worldWidth - 600` (`6600` in the standard
+7200-unit world); each is 600 world units from its nearest map edge.
 
 Do not change this baseline unless the user asks. Every later fortress movement
 must apply the same world-space translation to its catapult, FHP and associated

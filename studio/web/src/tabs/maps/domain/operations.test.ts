@@ -33,12 +33,12 @@ describe("map operations", () => {
     expect(updated.map.catapults[0].foundationHeight).toBe(3000);
     expect(updated.map.protectedTerrainZones[0].minHeight).toBe(3000);
     expect(updated.map.protectedTerrainZones[0].maxHeight).toBe(3000);
-    expect(updated.map.terrain.samples.find(sample => sample.x === 1080)?.height).toBe(3000);
-    expect(updated.map.terrain.samples.find(sample => sample.x === 1120)?.height)
-      .toBeCloseTo(3002.3, 1);
+    expect(updated.map.terrain.samples.find(sample => sample.x === 1160)?.height).toBe(3000);
     expect(updated.map.terrain.samples.find(sample => sample.x === 1200)?.height)
+      .toBeCloseTo(3002.3, 1);
+    expect(updated.map.terrain.samples.find(sample => sample.x === 1280)?.height)
       .toBeCloseTo(3018.7, 1);
-    expect(updated.map.terrain.samples.find(sample => sample.x === 1680)?.height).toBe(3180);
+    expect(updated.map.terrain.samples.find(sample => sample.x === 1760)?.height).toBe(3180);
     expect(updated.map.terrain.samples.find(sample => sample.x === 6080)?.height).toBe(3180);
   });
 
@@ -68,7 +68,7 @@ describe("map operations", () => {
     expect(updated.map.protectedTerrainZones.map(zone => [zone.minHeight, zone.maxHeight]))
       .toEqual([[3080, 3080], [3080, 3080]]);
     expect(updated.map.objects[0].y).toBe(3100);
-    expect(updated.map.fortresses.map(fortress => fortress.x)).toEqual([490, 6710]);
+    expect(updated.map.fortresses.map(fortress => fortress.x)).toEqual([600, 6600]);
     expect(updated.revision).toBe(3);
     expect(document.map.terrain.samples[0].height).toBe(3180);
     expect(document.map.objects[0].y).toBe(3200);
@@ -123,13 +123,13 @@ describe("map operations", () => {
   it("keeps front foundation extensions fixed", () => {
     const map = defaultMap();
     expect(map.protectedTerrainZones.find(zone => zone.id === "blue-foundation")?.maxX)
-      .toBe(1080);
+      .toBe(1160);
     expect(map.protectedTerrainZones.find(zone => zone.id === "red-foundation")?.minX)
-      .toBe(6120);
+      .toBe(6040);
     expect(map.protectedTerrainZones.find(zone => zone.id === "blue-foundation")?.minX).toBe(0);
     expect(map.protectedTerrainZones.find(zone => zone.id === "red-foundation")?.maxX).toBe(7200);
-    expect(map.fortresses.map(fortress => fortress.x)).toEqual([490, 6710]);
-    expect(map.catapults.map(catapult => catapult.x)).toEqual([380, 6820]);
+    expect(map.fortresses.map(fortress => fortress.x)).toEqual([600, 6600]);
+    expect(map.catapults.map(catapult => catapult.x)).toEqual([490, 6710]);
     expect(foundationExtension).toBe(320);
     for (const zone of map.protectedTerrainZones) {
       expect(zone.minX % map.terrain.sampleStep).toBe(0);
@@ -245,7 +245,7 @@ describe("map operations", () => {
 
   it("keeps imported maps valid and checks registered decoration assets", () => {
     const map = decode(encode(defaultMap()));
-    expect(map.catapults.map(catapult => catapult.x)).toEqual([380, 6820]);
+    expect(map.catapults.map(catapult => catapult.x)).toEqual([490, 6710]);
     const document = { map, revision: 0 };
     expect(validate(document, new Set())).toEqual([]);
 

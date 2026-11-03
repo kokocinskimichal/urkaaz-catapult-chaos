@@ -746,6 +746,11 @@ damage and the debug preview use the same rectangle.
 Fortress presentation and collision share `WorldScale`: the current fortress
 dimensions are 672x504 world units, with a 470.4-unit half-width for protected
 terrain. Demo-map protected foundations cover that full half-width.
+In the standard 7200-unit world, fortress centers are x=600 and x=6600;
+derived catapult centers are x=490 and x=6710, and fortress-relative projectile
+anchors are x=560 and x=6640. The first mapless garrison slot remains 200
+world units toward center from its fortress, at x=800 for BLUE and x=6400 for
+RED.
 Catapult sprites use the fortress presentation scale with a 0.8 size multiplier
 in both the match and map editor, giving a render width of 182.4 world units;
 the presentation contract positions them 110 world units outward from fortress
@@ -852,8 +857,9 @@ must go through commands and domain/application boundaries.
   uses 1dp image padding for the Slingmaster (4dp for the others) so its
   smaller artwork has a matching visible size without cropping the icon.
 - **Map JSON campaign migration:** campaign geometry is loaded from the
-  bundled schema-1 map repository. The temporary explicit assignment maps all
-  campaign levels to `demo-map`; there is no fallback to old Kotlin geometry.
+  bundled schema-1 map repository. Chapter 1 Levels 1–5 have dedicated JSON
+  maps; levels without a dedicated map use the intentional `demo-map`
+  transition fallback. There is no fallback to old Kotlin geometry.
 - **Map editor export:** the web and Kotlin codecs export only the shared map
   contract. Editing phase, terrain tiles, catapult positions and camera
   anchors are not serialized.
@@ -911,11 +917,11 @@ must go through commands and domain/application boundaries.
 - The ammunition catalog contains Rock, Siege Bomb, Powder Barrel, Fire Rain
   and Plague Cauldron; Cluster Bomb and its fragment-only projectile metadata
   and rendering have been removed. Rock deals 50 damage to units and
-  fortresses, Siege Bomb deals 100 fortress damage, Fire Rain ticks for 4
-  damage, and Plague Cauldron ticks for 8 unit damage without harming
-  fortresses. Fire Rain splits at its flight apex into its continuing parent
-  projectile and six independently simulated fragments; the split profile is
-  defined in the ammunition flight catalog and published as a
+  fortresses, Siege Bomb deals 100 fortress damage and has a 2-second reload,
+  Fire Rain ticks for 4 damage, and Plague Cauldron ticks for 8 unit damage
+  without harming fortresses. Fire Rain splits at its flight apex into its
+  continuing parent projectile and six independently simulated fragments; the
+  split profile is defined in the ammunition flight catalog and published as a
   `ProjectileSplit` event.
 - FIRE_RAIN uses one neutral AnimGen presentation set shared by both teams:
   24 container-flight frames (`anim_ammunition_fire_rain_flight_000`–`23`), 12 split-flash
@@ -1291,10 +1297,9 @@ Map authoring uses the shared `MapDefinition` contract and
 `MapDefinitionValidator`, and stores schema-1 JSON. Studio keeps autosaved
 drafts in browser `localStorage`; saving through its API updates the campaign
 resource and Android asset map together after TypeScript validation and a
-pair-hash check. The sole editor is the Maps tab in `studio/web/src/tabs/maps`;
-shared Kotlin map-editor domain, format and rendering modules remain available
-for contract and tooling use, but there is no desktop UI or desktop asset
-adapter.
+pair-hash check. The sole editor is the Maps tab in `studio/web/src/tabs/maps`. The former
+Kotlin map-editor domain, format and Java2D rendering modules were removed
+after migration; there is no desktop UI or desktop asset adapter.
 The map canvas projects world X and Y independently to the viewport, matching
 the match renderer rather than letterboxing the canonical world aspect ratio.
 It draws fortresses at `672 × 504` world units and catapults at `182.4` world

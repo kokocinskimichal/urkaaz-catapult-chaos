@@ -35,7 +35,7 @@ class BossMatchSessionTest {
         )
         assertEquals("ancient_war_oak", snapshot.boss?.presentationKey)
         assertEquals(scenario.mapDefinition, snapshot.mapDefinition)
-        assertEquals("game-balance-4", snapshot.balanceRevision)
+        assertEquals("game-balance-6", snapshot.balanceRevision)
         assertTrue(snapshot.balanceContentHash?.matches(Regex("[a-f0-9]{64}")) == true)
         assertTrue(session.consumeEvents().any { it is MatchEvent.BossSpawned })
 

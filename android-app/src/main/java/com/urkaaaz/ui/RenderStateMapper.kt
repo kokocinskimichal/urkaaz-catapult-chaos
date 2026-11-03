@@ -272,16 +272,30 @@ object RenderStateMapper {
                 collisionRadius = it.collisionRadius,
             )
         },
-        blueCatapultX = snapshot.catapults.firstOrNull { it.team.name == "BLUE" }?.x ?: 450f,
+        blueCatapultX = snapshot.catapults.firstOrNull { it.team.name == "BLUE" }?.x
+            ?: CatapultPresentationContract.catapultCenterX(
+                Team.BLUE,
+                snapshot.terrain.worldWidth,
+            ),
         blueCatapultY = snapshot.catapults.firstOrNull { it.team.name == "BLUE" }?.y ?: 3648f,
         blueCatapultAnchorX = snapshot.catapults.firstOrNull { it.team.name == "BLUE" }?.anchorX
-            ?: 450f,
+            ?: CatapultPresentationContract.projectileAnchorX(
+                Team.BLUE,
+                snapshot.terrain.worldWidth,
+            ),
         blueCatapultAnchorY = snapshot.catapults.firstOrNull { it.team.name == "BLUE" }?.anchorY
             ?: CatapultPresentationContract.anchorY(3648f, WorldDimensions.HEIGHT),
-        redCatapultX = snapshot.catapults.firstOrNull { it.team.name == "RED" }?.x ?: 6750f,
+        redCatapultX = snapshot.catapults.firstOrNull { it.team.name == "RED" }?.x
+            ?: CatapultPresentationContract.catapultCenterX(
+                Team.RED,
+                snapshot.terrain.worldWidth,
+            ),
         redCatapultY = snapshot.catapults.firstOrNull { it.team.name == "RED" }?.y ?: 3648f,
         redCatapultAnchorX = snapshot.catapults.firstOrNull { it.team.name == "RED" }?.anchorX
-            ?: 6750f,
+            ?: CatapultPresentationContract.projectileAnchorX(
+                Team.RED,
+                snapshot.terrain.worldWidth,
+            ),
         redCatapultAnchorY = snapshot.catapults.firstOrNull { it.team.name == "RED" }?.anchorY
             ?: CatapultPresentationContract.anchorY(3648f, WorldDimensions.HEIGHT),
         blueFortressX = blueFortressX,
