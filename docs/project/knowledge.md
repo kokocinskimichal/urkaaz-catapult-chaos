@@ -48,12 +48,13 @@ limits campaign AI units to the level's `availableUnits`; the player's
 committed loadout may narrow that set further for BLUE. AI ammunition choices,
 RED ammunition commands, and both teams' limited ammunition inventories are
 restricted to the scenario's `availableAmmunition`. Campaign
-`availableSpells` are level-wide in the scenario, but AI spell casting is not
-implemented yet. The match ammunition selector is filtered to level
-availability and the committed player's equipped slots.
+`availableSpells` are level-wide in the scenario. AI has situational policies
+for HASTE, FORTRESS_SHIELD and RUNIC_BASTION, and only emits a cast when the
+spell is available, funded and useful. The match ammunition selector is
+filtered to level availability and the committed player's equipped slots.
 
-`game-ai` separates catapult/ammunition, recruitment and wave decisions into
-registry-selected strategies. `AiProfileCatalog` maps `CADET` to simple
+`game-ai` separates catapult/ammunition, recruitment, wave and spell decisions
+into registry-selected strategies. `AiProfileCatalog` maps `CADET` to simple
 heuristics, `VETERAN` to situational evaluation and `ELITE` to counterplay.
 `AiMatchCoordinator` in `game-application` owns the agent lifecycle and
 simulation-time reaction cadence; `MatchViewModel` dispatches the resulting
@@ -61,14 +62,27 @@ commands through `LocalMatchGateway`. Campaign profile assignment preserves
 the previous level mapping: levels 3, 4, 6, 7 and 11–30 use VETERAN; 8–9 and
 31–100 use ELITE; remaining levels use CADET. ELITE progression is 0% at
 level 31 and 100% at level 100, with bounded interpolation between. AI uses
-the match seed, leads moving counterplay targets by movement speed times its
-reaction interval, gets no resource or unit-stat bonuses, and does not cast
-spells. The unused campaign enemy health/fortress multipliers and separate
-aim-error/reaction overrides were removed; profile tuning is the single source
-for those AI parameters. Base aim errors are ±18°/±30 power for CADET, ±3°/±6
-for VETERAN, and ±1.25°/±2.5 for ELITE.
+the match seed and leads moving counterplay targets by movement speed times its
+reaction interval. Against a live central objective, it evaluates candidate
+ballistic trajectories with the shared `Projectile.advance` step, terrain and
+boss hitbox; mobile siege bosses retain their existing target behavior. AI
+receives no resource/stat bonuses except the configured RED special-spell
+stock. Its spell policies handle each runtime-implemented effect, with at
+most one cast per decision. The unused campaign enemy health/fortress
+multipliers and separate aim-error/reaction overrides were removed; profile
+tuning is the single source for those AI parameters. Base aim errors are
+±18°/±30 power for CADET, ±3°/±6 for VETERAN, and ±1.25°/±2.5 for ELITE.
 The match unit panel hides unit icons not available to the campaign level or
 committed player loadout; insufficient supply still disables available units.
+
+The implementation rationale and acceptance criteria for boss targeting and
+spell use are documented in
+[`docs/systems/ai-boss-spell-improvement-plan.md`](../systems/ai-boss-spell-improvement-plan.md)
+and its implementation prompt. An integration test verifies a RED
+`BossDamaged` event for a central boss. `MatchSession` and the simulation own
+spell validation and stock consumption; RED stock comes from
+`runtime.aiStrategy.specialSpellStockPerMatch` for each available special
+spell, while BLUE stock remains profile inventory.
 
 `game-application/application/loadout` owns the canonical immutable
 `MatchLoadout`, deterministic defaults, stored-selection normalization,
@@ -163,8 +177,9 @@ Haste is awarded for level 5 and Heal for level 7; their availability starts
 at levels 6 and 8. Campaign rewards are projected into Loadout progression,
 and preferred spells affect only newly generated defaults. Tutorials remain
 deferred to the future game-wide TutorialSystem. The SpellSystem has implemented
-runtime effects for `FORTRESS_SHIELD`, HASTE and `RUNIC_BASTION`; the other
-eight spell effects and AI spell casting remain unimplemented. HASTE costs 50
+runtime effects for `FORTRESS_SHIELD`, HASTE and `RUNIC_BASTION`; AI uses these
+three effects situationally, while the other eight spell effects remain
+unimplemented. HASTE costs 50
 mana and catalogues at 900 gold, lasts 15 seconds (an approved change from the legacy 5-second
 baseline), doubles movement speed for deployed allies only, includes units
 deployed while active, refreshes on recast without stacking, and
@@ -879,6 +894,7 @@ must go through commands and domain/application boundaries.
 | `game-ai/.../AiAgent.kt` | Profile tuning and strategy composition |
 | `game-ai/.../AiStrategies.kt` | Strategy contracts, registry and built-in strategies |
 | `game-contracts/.../AiProfile.kt` | Typed AI profile selection |
+| `docs/systems/ai-boss-spell-improvement-plan.md` and prompt | Implemented central-boss trajectory targeting and spell-use policies for AI |
 | `game-simulation/.../DeterministicMatchSimulation.kt` | Deterministic match execution |
 | `game-contracts/.../MatchSnapshot.kt` | Immutable gameplay read model |
 
@@ -1058,7 +1074,8 @@ must go through commands and domain/application boundaries.
   over a dark scrim.
 - `CastSpell` is implemented for `FORTRESS_SHIELD`, HASTE and `RUNIC_BASTION`,
   including mana validation, replay, typed results and Android presentation.
-  The other eight spell effects and AI casting are not implemented. HASTE's
+  The other eight spell effects are not implemented; AI can use the three
+  implemented effects situationally. HASTE's
   approved AnimGen world-space visual is integrated into Android and rendered
   behind moving HASTED units.
 - ShopScreen is a functional local shop; ResultScreen remains a placeholder.
@@ -1147,7 +1164,7 @@ when their target is listed in `runtimeBossIdleTargets`. Other boss states are
 runtime-loaded only when their exact sequence id is listed in
 `runtimeBossSequences` (currently `anim_boss_ancient_war_oak_attack_right`).
 
-The Balance tab edits the single schema 5 source
+The Balance tab edits the single schema 6 source
 `game-domain/src/main/resources/balance/game-balance.json`, which owns boss,
 unit, ammunition, spell and mana profiles plus shared runtime economy, physics,
 combat, AI strategy/profile, reward and campaign values. Limited ammunition
@@ -1160,7 +1177,7 @@ strict structural, range and stable-ID coverage validation, and
 `PUT /api/balance` writes atomically only when `expectedHash` is current. A changed
 document must advance `balanceRevision`; the editor automatically bumps a
 trailing revision number.
-The Balance UI presents all existing schema 5 fields through Bosses, Units,
+The Balance UI presents all existing schema 6 fields through Bosses, Units,
 Ammunition, Spells & Mana and Runtime tabs; it does not expose a JSON text
 editor. Profile identifiers and list structure remain fixed. Incomplete
 numeric drafts do not become zero values, validation errors are linked to
@@ -1174,6 +1191,9 @@ progression and Android presentation projections. `UnitIds`, `AmmunitionType`
 and `SpellType` retain stable identifiers only; balance values are not copied
 into those enums or behavior classes. Match snapshots and replay configuration
 retain the loaded revision and file hash; there is no hot reload.
+`runtime.aiStrategy.specialSpellStockPerMatch` sets RED's per-match stock for
+each level-available special spell. Runtime wallet snapshots expose remaining
+stock, while BLUE inventory remains independent.
 
 The Progress tab edits
 `game-application/src/main/resources/progression/developer-progress.json`.

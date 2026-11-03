@@ -709,6 +709,7 @@ private data class AiProfileBalanceDto(
 private data class AiStrategyBalanceDto(
     val aimAngleOffsetDegrees: Float,
     val horizontalDistancePerPowerPercent: Float,
+    val specialSpellStockPerMatch: Int,
     val ammunitionScoring: AiAmmunitionScoringBalanceDto,
     val unitScoring: AiUnitScoringBalanceDto,
     val waveDispatch: AiWaveDispatchBalanceDto,
@@ -716,6 +717,7 @@ private data class AiStrategyBalanceDto(
     fun toDomain() = AiStrategyBalance(
         aimAngleOffsetDegrees = aimAngleOffsetDegrees,
         horizontalDistancePerPowerPercent = horizontalDistancePerPowerPercent,
+        specialSpellStockPerMatch = specialSpellStockPerMatch,
         ammunitionScoring = ammunitionScoring.toDomain(),
         unitScoring = unitScoring.toDomain(),
         waveDispatch = waveDispatch.toDomain(),

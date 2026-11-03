@@ -1,6 +1,6 @@
 {
-  "schemaVersion": 5,
-  "balanceRevision": "game-balance-7",
+  "schemaVersion": 6,
+  "balanceRevision": "game-balance-8",
   "bosses": [
     {
       "id": "boss.central-ancient-war-oak.level-05",
@@ -937,6 +937,7 @@
     "aiStrategy": {
       "aimAngleOffsetDegrees": 42,
       "horizontalDistancePerPowerPercent": 12,
+      "specialSpellStockPerMatch": 1,
       "ammunitionScoring": {
         "situationalFortressDamageWeight": 1.25,
         "situationalUnitDamageWeight": 1,

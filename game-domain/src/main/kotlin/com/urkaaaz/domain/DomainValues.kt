@@ -54,12 +54,16 @@ data class ResourceWallet(
     val supply: Int = 0,
     val mana: Int = 0,
     val ammunition: Map<AmmunitionType, Int> = emptyMap(),
+    val specialSpellStocks: Map<SpellType, Int> = emptyMap(),
 ) {
     init {
         require(gold >= 0) { "gold must not be negative" }
         require(supply >= 0) { "supply must not be negative" }
         require(mana >= 0) { "mana must not be negative" }
         require(ammunition.values.all { it >= 0 }) { "ammunition counts must not be negative" }
+        require(specialSpellStocks.values.all { it >= 0 }) {
+            "special spell stocks must not be negative"
+        }
     }
 
     fun canSpendGold(amount: Int): Boolean = amount >= 0 && gold >= amount
@@ -81,6 +85,16 @@ data class ResourceWallet(
     fun spendMana(amount: Int): ResourceWallet {
         require(canSpendMana(amount)) { "insufficient mana" }
         return copy(mana = mana - amount)
+    }
+
+    fun specialSpellStock(type: SpellType): Int = specialSpellStocks[type] ?: 0
+
+    fun canUseSpecialSpell(type: SpellType): Boolean =
+        specialSpellStock(type) > 0
+
+    fun consumeSpecialSpell(type: SpellType): ResourceWallet {
+        require(canUseSpecialSpell(type)) { "special spell is unavailable" }
+        return copy(specialSpellStocks = specialSpellStocks + (type to specialSpellStock(type) - 1))
     }
 
     fun restoreMana(amount: Int, maximum: Int): ResourceWallet {

@@ -81,8 +81,8 @@ export function validateBalanceContent(content: string): BalanceValidationRespon
     ],
     issues,
   );
-  if (root.schemaVersion !== 5) {
-    issues.push(issue("schemaVersion", "must be the supported schema version 5"));
+  if (root.schemaVersion !== 6) {
+    issues.push(issue("schemaVersion", "must be the supported schema version 6"));
   }
   if (typeof root.balanceRevision !== "string" || root.balanceRevision.trim() === "") {
     issues.push(issue("balanceRevision", "must be a non-empty string"));
@@ -1121,7 +1121,7 @@ function validateAiStrategy(value: unknown, issues: BalanceValidationIssue[]): v
     "runtime.aiStrategy",
     [
       "aimAngleOffsetDegrees", "horizontalDistancePerPowerPercent",
-      "ammunitionScoring", "unitScoring", "waveDispatch",
+      "specialSpellStockPerMatch", "ammunitionScoring", "unitScoring", "waveDispatch",
     ],
     issues,
   );
@@ -1134,6 +1134,12 @@ function validateAiStrategy(value: unknown, issues: BalanceValidationIssue[]): v
     issues.push(issue(
       "runtime.aiStrategy.horizontalDistancePerPowerPercent",
       "must be positive",
+    ));
+  }
+  if (!nonNegativeInteger(strategy.specialSpellStockPerMatch)) {
+    issues.push(issue(
+      "runtime.aiStrategy.specialSpellStockPerMatch",
+      "must be a non-negative integer",
     ));
   }
 

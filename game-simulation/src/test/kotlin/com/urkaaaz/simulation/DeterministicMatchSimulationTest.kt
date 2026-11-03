@@ -494,6 +494,57 @@ class DeterministicMatchSimulationTest {
     }
 
     @Test
+    fun specialSpellStocksUsePlayerInventoryForBlueAndBalanceForRedAi() {
+        val playerId = PlayerId("special-stock-player")
+        val balance = GameBalanceFixtures.balance.copy(
+            runtime = GameBalanceFixtures.balance.runtime.copy(
+                aiStrategy = GameBalanceFixtures.balance.runtime.aiStrategy.copy(
+                    specialSpellStockPerMatch = 2,
+                ),
+            ),
+        )
+        val simulation = DeterministicMatchSimulation(
+            MatchId("special-spell-stock"),
+            config.copy(
+                balance = balance,
+                playerLoadout = PlayerLoadoutConfig(
+                    playerId = playerId,
+                    unitTypes = listOf(UnitIds.DEFENDER),
+                    ammunitionSlots = listOf("ROCK", null, null),
+                    spellTypes = listOf("CATAPULT_LOCK", "SLOWING_FIELD"),
+                ),
+                playerInventory = PlayerInventoryConfig(
+                    playerId = playerId,
+                    ammunitionStocks = emptyMap(),
+                    specialSpellStocks = mapOf(
+                        "CATAPULT_LOCK" to 3,
+                        "SLOWING_FIELD" to 0,
+                    ),
+                ),
+                availableSpellTypes = setOf("CATAPULT_LOCK", "SLOWING_FIELD"),
+            ),
+        )
+        simulation.start()
+
+        val resources = simulation.snapshot().resourcesByTeam
+        assertEquals(3, resources[Team.BLUE]?.specialSpellStocks?.get("CATAPULT_LOCK"))
+        assertEquals(0, resources[Team.BLUE]?.specialSpellStocks?.get("SLOWING_FIELD"))
+        assertEquals(2, resources[Team.RED]?.specialSpellStocks?.get("CATAPULT_LOCK"))
+        assertEquals(2, resources[Team.RED]?.specialSpellStocks?.get("SLOWING_FIELD"))
+        assertTrue(
+            simulation.consumeSpecialSpellStock(
+                Team.RED,
+                com.urkaaaz.domain.SpellType.CATAPULT_LOCK,
+            ),
+        )
+        assertEquals(
+            1,
+            simulation.snapshot().resourcesByTeam[Team.RED]
+                ?.specialSpellStocks?.get("CATAPULT_LOCK"),
+        )
+    }
+
+    @Test
     fun demolisherDetonatesOnRunicBastionContact() {
         val simulation = DeterministicMatchSimulation(
             MatchId("demolisher-runic-bastion"),

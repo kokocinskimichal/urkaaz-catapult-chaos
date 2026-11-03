@@ -36,7 +36,7 @@ od razu, ale pozostają oznaczone jako bez runtime loadera, dopóki Android nie
 zacznie ich odtwarzać.
 
 Balance używa pełnego formularza dla kanonicznego
-`game-domain/src/main/resources/balance/game-balance.json` schema 5. Zakładki
+`game-domain/src/main/resources/balance/game-balance.json` schema 6. Zakładki
 Bosses, Units, Ammunition, Spells & Mana i Runtime udostępniają wszystkie
 istniejące pola przez typowane inputy i selektory, w tym nullable cenę
 `shopCostGold` dla amunicji oraz globalny mnożnik tempa; stabilne ID, rozmiary

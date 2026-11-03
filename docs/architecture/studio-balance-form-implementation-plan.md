@@ -8,7 +8,8 @@ kryteriów użytych przy implementacji.
 **Aktualny kontrakt:** pierwotny zakres formularza dotyczył schema 3.
 ShopSystem rozszerzył źródło balansu do schema 4 i dodał edytowalne,
 nullable `ammunition[].shopCostGold`; globalny mnożnik tempa podniósł obecny
-kontrakt do schema 5. Bieżące Studio, walidator i formularz obsługują schema 5.
+kontrakt do schema 5, a stock specjalnych czarów AI do schema 6. Bieżące
+Studio, walidator i formularz obsługują schema 6.
 Szczegóły ShopSystem opisuje
 [`shop-system.md`](../systems/shop-system.md).
 

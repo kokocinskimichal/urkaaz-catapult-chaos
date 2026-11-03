@@ -43,8 +43,8 @@ class GameBalanceRepositoryTest {
         assertEquals(5, result.balance.config.units.all.size)
         assertEquals(5, result.balance.config.ammunition.all.size)
         assertEquals(11, result.balance.config.spells.all.size)
-        assertEquals(5, result.balance.config.schemaVersion)
-        assertEquals("game-balance-7", result.balance.config.balanceRevision)
+        assertEquals(6, result.balance.config.schemaVersion)
+        assertEquals("game-balance-8", result.balance.config.balanceRevision)
         assertEquals(1.2f, result.balance.config.runtime.combat.gameplaySpeedMultiplier)
         assertEquals(0.9f, result.balance.config.runtime.combat.unitMovementSpeedScale)
         assertEquals(0.44f, result.balance.config.runtime.combat.garrisonMovementSpeedScale)
@@ -79,8 +79,8 @@ class GameBalanceRepositoryTest {
             .bufferedReader()
             .use { it.readText() }
         val invalid = bundled.replace(
-            "\"schemaVersion\": 5,",
-            "\"schemaVersion\": 5,\n  \"extra\": true,",
+            "\"schemaVersion\": 6,",
+            "\"schemaVersion\": 6,\n  \"extra\": true,",
         )
         val repository = GameBalanceRepository {
             ByteArrayInputStream(invalid.toByteArray())
@@ -97,7 +97,7 @@ class GameBalanceRepositoryTest {
         val bundled = javaClass.getResourceAsStream("/balance/game-balance.json")!!
             .bufferedReader()
             .use { it.readText() }
-        val invalid = bundled.replace("\"schemaVersion\": 5,", "\"schemaVersion\": 4,")
+        val invalid = bundled.replace("\"schemaVersion\": 6,", "\"schemaVersion\": 5,")
         val repository = GameBalanceRepository {
             ByteArrayInputStream(invalid.toByteArray())
         }
@@ -191,7 +191,7 @@ class GameBalanceRepositoryTest {
         val content = javaClass.getResourceAsStream("/balance/game-balance.json")!!
             .bufferedReader()
             .use { it.readText() }
-        val changed = content.replace("game-balance-7", "game-balance-8")
+        val changed = content.replace("game-balance-8", "game-balance-9")
         val first = assertIs<GameBalanceRead.Available>(repository(content).load()).balance
         val second = assertIs<GameBalanceRead.Available>(repository(changed).load()).balance
 

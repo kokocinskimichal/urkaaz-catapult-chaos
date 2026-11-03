@@ -346,7 +346,7 @@ kontraktu efektów.
 | Dostępność poziomu | `CampaignLevelDefinition` |
 | Wybór loadoutu | istniejący LoadoutSystem |
 | Złoto, odblokowania, trwały stock | warstwa aplikacyjnej progresji/persystencji |
-| Mana i tarcza fortecy; bieżący stock meczu, pozostałe aktywne timery, pułapki i bastiony | runtime `DeterministicMatchSimulation`; mana i tarcza są wdrożone, reszta pozostaje w planie |
+| Mana, bieżący stock specjalnych czarów, timery, tarcza fortecy i bastiony | runtime `DeterministicMatchSimulation`; stock BLUE pochodzi z inventory, stock RED z balansu i dostępności poziomu |
 | Snapshot/render state | kontrakty i mapper Androida jako niemutowalny odczyt |
 
 Trwały stock w progresji jest oddzielony od stocku przekazanego do meczu.
@@ -482,11 +482,12 @@ sojuszniczy cel; UI nie może deklarować, że Haste przyspiesza przeciwnika.
 Stan pionowego wycinka: etapy 2–5 są częściowo wdrożone dla katalogu,
 kontraktów, HASTE i `FORTRESS_SHIELD`; mana, timer HASTE, ruch, tarcza i jej
 prezentacja w match screenie działają. Battlefield VFX HASTE jest zintegrowany
-z zatwierdzonego assetu AnimGen. Pozostałe efekty, prezentacja kategorii celu, AI
-oraz runtime stock gate dla niezaimplementowanych czarów specjalnych są jeszcze
-poza implementacją. ShopSystem już zapisuje zakupiony stock i rozlicza udane
-zdarzenia stockowanych użyć po meczu; obecnie specjalne czary nie emitują
-`SpellCast`, bo runtime je odrzuca.
+z zatwierdzonego assetu AnimGen. AI sytuacyjnie używa trzech efektów
+runtime-zaimplementowanych; runtime stock gate działa dla specjalnych czarów,
+a RED dostaje balance-driven stock dostępnych czarów na mecz. Pozostałe efekty
+i ich prezentacja są jeszcze poza implementacją. ShopSystem zapisuje zakupiony
+stock i rozlicza udane zdarzenia stockowanych użyć po meczu; specjalne czary
+bez efektu runtime nadal nie emitują udanego `SpellCast`.
 
 1. **Baseline i parytet.** Wartości kosztów i targetów są zapisane w
    `game-balance.json` przez `SpellCatalog`; pozostałe reguły efektów nadal wymagają porównania z
@@ -589,8 +590,8 @@ LoadoutSystemu.
   zasobów; ilustracje kart zaklęć są dostępne, natomiast mapowanie wizualizacji
   world-effectów pozostaje do rozstrzygnięcia dla kolejnych efektów.
 
-Nadal trzeba domknąć pozostałe efekty, runtime zużycie stocku czarów
-specjalnych oraz ich prezentację. Zrealizowana tarcza i HASTE nie zmieniają
+Nadal trzeba domknąć pozostałe efekty oraz ich prezentację. Zrealizowana tarcza,
+HASTE i RUNIC_BASTION nie zmieniają
 przyjętych zasad: Haste działa tylko na sojuszników, LoadoutSystem pozostaje
 właścicielem loadoutu, a SpellSystem nie posiada persystencji.
 
@@ -599,7 +600,7 @@ właścicielem loadoutu, a SpellSystem nie posiada persystencji.
 Lista pozostałych prac:
 
 - `game-domain/.../Spells.kt` i `SpellCatalog.kt` — stabilne ID oraz typowany
-  dostęp do schema 5 są wdrożone; uzupełniać definicje efektów wyłącznie po
+  dostęp do schema 6 są wdrożone; uzupełniać definicje efektów wyłącznie po
   osobnej decyzji o ich implementacji;
 - `game-domain/.../SpellRules.kt` lub wyspecjalizowane reguły — tylko jeśli
   potrzebne po analizie istniejących helperów;

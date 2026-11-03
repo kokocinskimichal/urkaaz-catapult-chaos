@@ -1,21 +1,28 @@
 package com.urkaaaz.application
 
 import com.urkaaaz.domain.GameBalanceFixtures
+import com.urkaaaz.application.balance.GameBalanceRead
+import com.urkaaaz.application.balance.GameBalanceRepository
+import com.urkaaaz.campaign.CampaignLevelDefinition
 import com.urkaaaz.contracts.AiProfileId
 import com.urkaaaz.contracts.AiProfileSelection
 import com.urkaaaz.contracts.BattlefieldConfig
 import com.urkaaaz.contracts.CatapultSnapshot
+import com.urkaaaz.contracts.CommandId
 import com.urkaaaz.contracts.EntityId
+import com.urkaaaz.contracts.FortressSnapshot
 import com.urkaaaz.contracts.MatchId
 import com.urkaaaz.contracts.MatchPhase
 import com.urkaaaz.contracts.MatchScenario
 import com.urkaaaz.contracts.MatchSnapshot
 import com.urkaaaz.contracts.MatchStatus
 import com.urkaaaz.contracts.MatchCommand
+import com.urkaaaz.contracts.MatchEvent
 import com.urkaaaz.contracts.PlayerConfig
 import com.urkaaaz.contracts.PlayerId
 import com.urkaaaz.contracts.ResourceSnapshot
 import com.urkaaaz.contracts.Team
+import com.urkaaaz.contracts.WindSnapshot
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
@@ -106,6 +113,39 @@ class AiMatchCoordinatorTest {
     }
 
     @Test
+    fun coordinatorPassesScenarioSpellAvailabilityToRedAi() {
+        val spellScenario = scenario.copy(availableSpells = listOf("FORTRESS_SHIELD"))
+        val coordinator = AiMatchCoordinator(spellScenario).apply {
+            setUnitAutomationEnabled(false)
+            start(randomSeed = 17L, balance = GameBalanceFixtures.balance)
+        }
+        val spellSnapshot = snapshot.copy(
+            fortresses = listOf(
+                FortressSnapshot(
+                    entityId = EntityId("red-fortress"),
+                    team = Team.RED,
+                    health = 100,
+                    maxHealth = 500,
+                ),
+            ),
+            resourcesByTeam = mapOf(
+                Team.RED to ResourceSnapshot(
+                    supply = 20,
+                    mana = 100,
+                    ammunition = mapOf("ROCK" to 1),
+                ),
+            ),
+        )
+
+        assertEquals(
+            "FORTRESS_SHIELD",
+            coordinator.decide(spellSnapshot, elapsedMilliseconds = 33)
+                .filterIsInstance<MatchCommand.CastSpell>()
+                .single().spellType,
+        )
+    }
+
+    @Test
     fun switchingAmmunitionStartsItsReloadBeforeTheAiFires() {
         val coordinator = AiMatchCoordinator(
             scenario.copy(availableAmmunition = listOf("SIEGE_BOMB")),
@@ -173,5 +213,53 @@ class AiMatchCoordinatorTest {
         coordinator.setAllowedUnitIds(setOf("SAPPER"))
 
         assertEquals(setOf("SAPPER"), coordinator.allowedUnitIds())
+    }
+
+    @Test
+    fun bossLevelAiFireDamagesTheCentralObjective() {
+        val balance = (GameBalanceRepository.bundled.load() as GameBalanceRead.Available)
+            .balance.config
+        val scenario = CampaignLevelDefinition.forLevel(5, balance.runtime.campaign)
+            .toMatchScenario()
+            .copy(
+                wind = WindSnapshot(),
+                aiProfile = AiProfileSelection(AiProfileId.ELITE),
+            )
+        val bluePlayerId = scenario.players.single { it.team == Team.BLUE }.playerId
+        val matchId = MatchId("ai-central-boss-hit")
+        val session = MatchSession(scenario = scenario, randomSeedProvider = { 44L })
+        val coordinator = AiMatchCoordinator(scenario).apply {
+            setUnitAutomationEnabled(false)
+            start(randomSeed = 44L, balance = balance)
+        }
+        var snapshot = session.dispatch(
+            MatchCommand.Start(
+                CommandId("ai-central-boss-start"),
+                matchId,
+                bluePlayerId,
+            ),
+        )
+        var bossDamagedByAi = false
+
+        for (index in 0 until 300) {
+            coordinator.decide(snapshot, elapsedMilliseconds = 100L).forEach { command ->
+                session.dispatch(command)
+                session.consumeEvents()
+            }
+            snapshot = session.dispatch(
+                MatchCommand.AdvanceSimulation(
+                    CommandId("ai-central-boss-advance-$index"),
+                    matchId,
+                    bluePlayerId,
+                    100L,
+                ),
+            )
+            bossDamagedByAi = session.consumeEvents()
+                .filterIsInstance<MatchEvent.BossDamaged>()
+                .any { it.sourceTeam == Team.RED }
+            if (bossDamagedByAi) break
+        }
+
+        assertTrue(bossDamagedByAi, "RED AI should deal damage to the central boss")
     }
 }

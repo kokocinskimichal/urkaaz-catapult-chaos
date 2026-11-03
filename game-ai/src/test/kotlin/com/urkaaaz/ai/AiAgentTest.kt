@@ -12,6 +12,7 @@ import com.urkaaaz.contracts.BossPhase
 import com.urkaaaz.contracts.BossSnapshot
 import com.urkaaaz.contracts.CommandId
 import com.urkaaaz.contracts.EntityId
+import com.urkaaaz.contracts.FortressSnapshot
 import com.urkaaaz.contracts.MatchCommand
 import com.urkaaaz.contracts.MatchId
 import com.urkaaaz.contracts.MatchPhase
@@ -20,8 +21,11 @@ import com.urkaaaz.contracts.MatchStatus
 import com.urkaaaz.contracts.PlayerId
 import com.urkaaaz.contracts.ResourceSnapshot
 import com.urkaaaz.contracts.Team
+import com.urkaaaz.contracts.TerrainSnapshot
 import com.urkaaaz.contracts.UnitSnapshot
 import com.urkaaaz.domain.AmmunitionType
+import com.urkaaaz.domain.SpellCatalog
+import com.urkaaaz.domain.SpellType
 import com.urkaaaz.domain.UnitDefinition
 import com.urkaaaz.domain.UnitFactory
 import kotlin.test.Test
@@ -95,24 +99,7 @@ class AiAgentTest {
                 profile = AiProfileSelection(AiProfileId.VETERAN),
                 randomSeed = 42L,
             ),
-        ).decide(
-            snapshot.copy(
-                boss = BossSnapshot(
-                    entityId = EntityId("boss-oak"),
-                    profileId = "boss.central-oak.level-05",
-                    presentationKey = "ancient_war_oak",
-                    archetype = BossArchetype.CENTRAL_OBJECTIVE,
-                    phase = BossPhase.IDLE,
-                    x = 500f,
-                    groundY = 350f,
-                    collisionWidth = 100f,
-                    collisionHeight = 200f,
-                    health = 10_000,
-                    maxHealth = 12_000,
-                ),
-            ),
-            includeUnitActions = false,
-        )
+        ).decide(centralObjectiveSnapshot(), includeUnitActions = false)
         val aim = commands.filterIsInstance<MatchCommand.Aim>().single()
         val normalAim = AiAgent(
             AiConfiguration(
@@ -127,6 +114,245 @@ class AiAgentTest {
             .single()
 
         assertNotEquals(normalAim.directionDegrees, aim.directionDegrees)
+    }
+
+    @Test
+    fun mobileBossDoesNotOverrideTheExistingCatapultTarget() {
+        fun aim(snapshot: MatchSnapshot) = AiAgent(
+            AiConfiguration(
+                balance = GameBalanceFixtures.balance,
+                playerId = PlayerId("ai-player"),
+                team = Team.RED,
+                profile = AiProfileSelection(AiProfileId.VETERAN),
+                randomSeed = 42L,
+            ),
+        ).decide(snapshot, includeUnitActions = false)
+            .filterIsInstance<MatchCommand.Aim>()
+            .single()
+
+        val ordinaryAim = aim(snapshot)
+        val mobileBossAim = aim(
+            centralObjectiveSnapshot().copy(
+                boss = requireNotNull(centralObjectiveSnapshot().boss).copy(
+                    archetype = BossArchetype.MOBILE_SIEGE_BOSS,
+                ),
+            ),
+        )
+
+        assertEquals(ordinaryAim.directionDegrees, mobileBossAim.directionDegrees)
+        assertEquals(ordinaryAim.power, mobileBossAim.power)
+    }
+
+    @Test
+    fun centralObjectiveSkipsReloadingAmmoBeforeScoring() {
+        val commands = AiAgent(
+            AiConfiguration(
+                balance = GameBalanceFixtures.balance,
+                playerId = PlayerId("ai-player"),
+                team = Team.RED,
+                profile = AiProfileSelection(AiProfileId.VETERAN),
+                randomSeed = 42L,
+            ),
+        ).decide(
+            centralObjectiveSnapshot().copy(
+                reloadRemainingSecondsByAmmunition = mapOf(
+                    Team.RED to mapOf("SIEGE_BOMB" to 2f),
+                ),
+            ),
+            includeUnitActions = false,
+        )
+
+        assertEquals(
+            "ROCK",
+            commands.filterIsInstance<MatchCommand.SelectAmmo>().single().ammunitionType,
+        )
+    }
+
+    @Test
+    fun aiCastsOneUsefulSpellFromTheScenarioAvailability() {
+        val spellSnapshot = snapshot.copy(
+            fortresses = listOf(
+                FortressSnapshot(
+                    entityId = EntityId("red-fortress"),
+                    team = Team.RED,
+                    health = 100,
+                    maxHealth = 500,
+                ),
+                FortressSnapshot(
+                    entityId = EntityId("blue-fortress"),
+                    team = Team.BLUE,
+                    health = 500,
+                    maxHealth = 500,
+                ),
+            ),
+            units = listOf(
+                UnitSnapshot(
+                    entityId = EntityId("red-unit"),
+                    team = Team.RED,
+                    unitType = UnitIds.DEFENDER,
+                    x = 700f,
+                    y = 400f,
+                    health = 100,
+                    moving = true,
+                    actionState = "ADVANCING",
+                ),
+                UnitSnapshot(
+                    entityId = EntityId("blue-unit"),
+                    team = Team.BLUE,
+                    unitType = UnitIds.DEFENDER,
+                    x = 800f,
+                    y = 400f,
+                    health = 100,
+                    moving = true,
+                    actionState = "ADVANCING",
+                    targetId = EntityId("red-fortress"),
+                ),
+            ),
+            resourcesByTeam = mapOf(
+                Team.RED to ResourceSnapshot(mana = 100),
+                Team.BLUE to ResourceSnapshot(mana = 100),
+            ),
+        )
+        val commands = AiAgent(
+            AiConfiguration(
+                balance = GameBalanceFixtures.balance,
+                playerId = PlayerId("ai-player"),
+                team = Team.RED,
+                allowedSpells = setOf(
+                    SpellType.FORTRESS_SHIELD,
+                    SpellType.RUNIC_BASTION,
+                    SpellType.HASTE,
+                ),
+            ),
+        ).decide(spellSnapshot)
+
+        assertEquals(1, commands.filterIsInstance<MatchCommand.CastSpell>().size)
+    }
+
+    @Test
+    fun specialSpellPolicyRequiresTheMatchStock() {
+        val balance = GameBalanceFixtures.balance.copy(
+            spells = SpellCatalog(
+                GameBalanceFixtures.balance.spells.all.map { definition ->
+                    if (definition.type == SpellType.FORTRESS_SHIELD) {
+                        definition.copy(special = true)
+                    } else {
+                        definition
+                    }
+                },
+            ),
+        )
+        val spellSnapshot = snapshot.copy(
+            fortresses = listOf(
+                FortressSnapshot(
+                    entityId = EntityId("red-fortress"),
+                    team = Team.RED,
+                    health = 100,
+                    maxHealth = 500,
+                ),
+            ),
+            resourcesByTeam = mapOf(Team.RED to ResourceSnapshot(mana = 100)),
+        )
+        val agent = AiAgent(
+            AiConfiguration(
+                balance = balance,
+                playerId = PlayerId("ai-player"),
+                team = Team.RED,
+                allowedSpells = setOf(SpellType.FORTRESS_SHIELD),
+            ),
+        )
+
+        assertTrue(agent.decide(spellSnapshot).none { it is MatchCommand.CastSpell })
+        val stocked = spellSnapshot.copy(
+            resourcesByTeam = mapOf(
+                Team.RED to ResourceSnapshot(
+                    mana = 100,
+                    specialSpellStocks = mapOf(SpellType.FORTRESS_SHIELD.name to 1),
+                ),
+            ),
+        )
+        assertEquals(
+            SpellType.FORTRESS_SHIELD.name,
+            agent.decide(stocked).filterIsInstance<MatchCommand.CastSpell>().single().spellType,
+        )
+    }
+
+    @Test
+    fun everyImplementedSpellHasAnAiUsePolicy() {
+        val implementedSpells = GameBalanceFixtures.balance.spells.all
+            .filter { it.isImplemented }
+            .map { it.type }
+            .toSet()
+
+        assertEquals(implementedSpells, AiStrategyRegistry.standard().spellTypes())
+    }
+
+    @Test
+    fun spellPoliciesRequireTheirSituationalTriggers() {
+        val redFortress = FortressSnapshot(
+            entityId = EntityId("red-fortress"),
+            team = Team.RED,
+            health = 100,
+            maxHealth = 500,
+        )
+        val manaResources = mapOf(Team.RED to ResourceSnapshot(mana = 100))
+        val shieldSnapshot = snapshot.copy(
+            fortresses = listOf(redFortress),
+            resourcesByTeam = manaResources,
+        )
+        val hasteSnapshot = snapshot.copy(
+            units = listOf(
+                UnitSnapshot(
+                    entityId = EntityId("red-unit"),
+                    team = Team.RED,
+                    unitType = UnitIds.DEFENDER,
+                    x = 700f,
+                    y = 400f,
+                    health = 100,
+                    moving = true,
+                ),
+            ),
+            resourcesByTeam = manaResources,
+        )
+        val bastionSnapshot = snapshot.copy(
+            fortresses = listOf(redFortress),
+            units = listOf(
+                UnitSnapshot(
+                    entityId = EntityId("blue-unit"),
+                    team = Team.BLUE,
+                    unitType = UnitIds.DEFENDER,
+                    x = 800f,
+                    y = 400f,
+                    health = 100,
+                    targetId = redFortress.entityId,
+                ),
+            ),
+            resourcesByTeam = manaResources,
+        )
+
+        assertEquals(
+            SpellType.FORTRESS_SHIELD.name,
+            spellCasts(SpellType.FORTRESS_SHIELD, shieldSnapshot).single().spellType,
+        )
+        assertTrue(
+            spellCasts(
+                SpellType.FORTRESS_SHIELD,
+                shieldSnapshot.copy(
+                    fortresses = listOf(redFortress.copy(health = 450)),
+                ),
+            ).isEmpty(),
+        )
+        assertEquals(SpellType.HASTE.name, spellCasts(SpellType.HASTE, hasteSnapshot).single().spellType)
+        assertTrue(
+            spellCasts(SpellType.HASTE, hasteSnapshot.copy(units = emptyList())).isEmpty(),
+        )
+        assertEquals(
+            SpellType.RUNIC_BASTION.name,
+            spellCasts(SpellType.RUNIC_BASTION, bastionSnapshot).single().spellType,
+        )
+        assertTrue(
+            spellCasts(SpellType.RUNIC_BASTION, bastionSnapshot.copy(units = emptyList())).isEmpty(),
+        )
     }
 
     @Test
@@ -398,4 +624,37 @@ class AiAgentTest {
 
         assertTrue(agent.decide(MatchSnapshot()).isEmpty())
     }
+
+    private fun centralObjectiveSnapshot(): MatchSnapshot = snapshot.copy(
+        boss = BossSnapshot(
+            entityId = EntityId("boss-oak"),
+            profileId = "boss.central-test.level-05",
+            presentationKey = "ancient_war_oak",
+            archetype = BossArchetype.CENTRAL_OBJECTIVE,
+            phase = BossPhase.IDLE,
+            x = 500f,
+            groundY = 350f,
+            collisionWidth = 100f,
+            collisionHeight = 200f,
+            health = 10_000,
+            maxHealth = 12_000,
+        ),
+        terrain = TerrainSnapshot(
+            worldWidth = 1_600f,
+            sampleSpacing = 8f,
+            heightSamples = List(202) { 500f },
+        ),
+    )
+
+    private fun spellCasts(
+        spellType: SpellType,
+        snapshot: MatchSnapshot,
+    ): List<MatchCommand.CastSpell> = AiAgent(
+        AiConfiguration(
+            balance = GameBalanceFixtures.balance,
+            playerId = PlayerId("ai-player"),
+            team = Team.RED,
+            allowedSpells = setOf(spellType),
+        ),
+    ).decide(snapshot).filterIsInstance<MatchCommand.CastSpell>()
 }

@@ -76,6 +76,8 @@ do bieżącego zadania według [indeksu dokumentów kontekstu](docs/agent-contex
 - [Projekt systemu amunicji](docs/systems/ammunition-design.md)
 - [Projekt systemu walki](docs/systems/combat-design.md)
 - [BossSystem](docs/systems/boss-system.md)
+- [Plan poprawy AI: bossy i czary](docs/systems/ai-boss-spell-improvement-plan.md) ·
+  [prompt implementacyjny](docs/systems/ai-boss-spell-improvement-implementation-prompt.md)
 - [System kampanii](docs/systems/campaign-system.md)
 - [Plan kamieni milowych kampanii](docs/systems/campaign-milestones-plan.md)
 - [Prompt kamieni milowych kampanii](docs/systems/campaign-milestones-implementation-prompt.md)
@@ -238,6 +240,21 @@ trajectory preview, aiming circle and simulation must use the same anchor.
   coordinates and the battlefield camera transform. HUD reload and inventory
   controls remain screen-space.
 - Ammunition logging is host-independent and must never change gameplay state.
+
+## Spell and AI rules
+
+- AI reads `MatchSnapshot` and emits ordinary `MatchCommand`s; it never
+  implements spell effects or mutates simulation state.
+- Every `SpellDefinition` with an implemented runtime effect needs an AI use
+  policy. Policies must respect scenario availability, mana, active effects
+  and stock, and may emit at most one cast per decision.
+- Simulation owns runtime special-spell stock and exposes it in snapshots.
+  BLUE stock comes from `PlayerInventoryConfig`; RED receives the configured
+  per-match amount for each available special spell. Consume stock only after
+  the cast succeeds.
+- Central-objective boss aiming predicts trajectories with the shared
+  `Projectile.advance` step and stays within the normal ammunition and command
+  validation paths. RED must not target a mobile boss allied with RED.
 
 ## Animation asset naming
 

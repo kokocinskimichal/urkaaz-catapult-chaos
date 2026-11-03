@@ -199,6 +199,7 @@ object GameBalanceFixtures {
             aiStrategy = AiStrategyBalance(
                 aimAngleOffsetDegrees = 42f,
                 horizontalDistancePerPowerPercent = 12f,
+                specialSpellStockPerMatch = 1,
                 ammunitionScoring = AiAmmunitionScoringBalance(
                     situationalFortressDamageWeight = 1.25f,
                     situationalUnitDamageWeight = 1f,

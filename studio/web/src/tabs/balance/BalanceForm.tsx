@@ -26,7 +26,7 @@ import type {
   BossArchetype,
   BossMovementKind,
   FriendlyFirePolicy,
-  GameBalanceDocumentV5,
+  GameBalanceDocumentV6,
   NumericInputDraft,
   SpellCategory,
   SpellDefinition,
@@ -54,9 +54,9 @@ type RuntimeSection =
   | "campaign";
 
 interface BalanceFormProps {
-  draft: BalanceFormDraft<GameBalanceDocumentV5>;
+  draft: BalanceFormDraft<GameBalanceDocumentV6>;
   validation: { valid: boolean; issues: BalanceValidationIssue[] } | null;
-  onChange: (draft: BalanceFormDraft<GameBalanceDocumentV5>) => void;
+  onChange: (draft: BalanceFormDraft<GameBalanceDocumentV6>) => void;
 }
 
 const SECTIONS: Array<{ id: BalanceSection; label: string }> = [
@@ -1166,7 +1166,7 @@ function ManaFields({
   draft,
   numberField,
 }: {
-  draft: BalanceFormDraft<GameBalanceDocumentV5>;
+  draft: BalanceFormDraft<GameBalanceDocumentV6>;
   numberField: (
     path: string,
     label: string,
@@ -1207,10 +1207,10 @@ function RuntimeFields({
   numberField,
   selectField,
 }: {
-  draft: BalanceFormDraft<GameBalanceDocumentV5>;
+  draft: BalanceFormDraft<GameBalanceDocumentV6>;
   section: RuntimeSection;
   profileIndex: number;
-  aiProfile: BalanceFormDraft<GameBalanceDocumentV5["runtime"]["aiProfiles"][number]> | undefined;
+  aiProfile: BalanceFormDraft<GameBalanceDocumentV6["runtime"]["aiProfiles"][number]> | undefined;
   setAiProfileId: (id: AiProfileId) => void;
   numberField: (
     path: string,
@@ -1530,7 +1530,7 @@ function CombatFields({
   runtime,
   numberField,
 }: {
-  runtime: BalanceFormDraft<GameBalanceDocumentV5["runtime"]>;
+  runtime: BalanceFormDraft<GameBalanceDocumentV6["runtime"]>;
   numberField: (
     path: string,
     label: string,
@@ -1645,7 +1645,7 @@ function AiStrategyFields({
   runtime,
   numberField,
 }: {
-  runtime: BalanceFormDraft<GameBalanceDocumentV5["runtime"]>;
+  runtime: BalanceFormDraft<GameBalanceDocumentV6["runtime"]>;
   numberField: (
     path: string,
     label: string,
@@ -1668,6 +1668,12 @@ function AiStrategyFields({
           "Horizontal distance per power percent",
           strategy.horizontalDistancePerPowerPercent,
           { unit: "world units", min: 0.01, step: 0.1 },
+        )}
+        {numberField(
+          "runtime.aiStrategy.specialSpellStockPerMatch",
+          "Special spell stock per match",
+          strategy.specialSpellStockPerMatch,
+          { min: 0, step: 1 },
         )}
       </FieldGroup>
       <FieldGroup title="Ammunition scoring">

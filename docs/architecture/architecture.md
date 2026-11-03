@@ -378,9 +378,10 @@ czarów od opcjonalnego `PlayerLoadoutConfig`. `MatchSession` egzekwuje wybrane
 jednostki gracza i poziomową dostępność jednostek obu drużyn przed przekazaniem
 komend do symulacji. Dostępność amunicji poziomu ogranicza wybory obu drużyn
 oraz początkowe zapasy amunicji limitowanej. Lista `availableSpells` jest
-poziomowa i wspólna dla obu drużyn; AI nie obsługuje jeszcze ich aktywacji.
-`SimulationConfig` przenosi zatwierdzony loadout gracza i dostępność amunicji
-poziomu.
+poziomowa i wspólna dla obu drużyn; `AiMatchCoordinator` przekazuje dostępne
+czary RED do polityk agenta.
+`SimulationConfig` przenosi zatwierdzony loadout gracza, dostępność amunicji i
+czarów poziomu oraz balance-driven stock specjalnych czarów RED.
 
 `MatchSession` tworzy jawny seed przy każdym uruchomieniu i restarcie oraz
 przekazuje go do `SimulationConfig`. `MatchStarted` publikuje seed, a warstwa
@@ -546,14 +547,18 @@ AI nie ma specjalnej ścieżki omijającej walidację. Jeżeli AI ma wykonać st
 wysyła dokładnie taką samą komendę jak gracz.
 
 `game-ai` podejmuje decyzje wyłącznie na podstawie `MatchSnapshot` i składa
-strategie katapulty/amunicji, rekrutacji oraz fal przez `AiStrategyRegistry`.
+strategie katapulty/amunicji, rekrutacji, fal oraz czarów przez
+`AiStrategyRegistry`.
 Profil jest wybierany przez typowane `MatchScenario.aiProfile`; `AiProfileCatalog`
 mapuje profil na zarejestrowane strategie i parametry jakości decyzji.
 `AiMatchCoordinator` w `game-application` posiada lifecycle agenta i zegar
 reakcji, a Android jedynie pobiera jego komendy i wysyła je przez
 `LocalMatchGateway`. Seed meczu inicjalizuje losowość AI, a wygenerowane komendy
 zostają zapisane w replayu. AI nie otrzymuje dodatkowych zasobów ani bonusów
-statystyk.
+statystyk poza balance-driven stockiem specjalnych czarów RED.
+Centralny boss jest celem katapulty damage-race; trajektoria korzysta ze
+wspólnego kroku `Projectile.advance`. AI może wybrać najwyżej jeden sytuacyjny
+cast na decyzję i emituje zwykły `MatchCommand.CastSpell`.
 
 Tutorial również wysyła zwykłe komendy. Specjalne ograniczenia tutoriala są
 częścią `MatchScenario` albo konfiguracji reguł, a nie bezpośrednim dostępem
@@ -1486,8 +1491,12 @@ częstotliwość decyzji 1100/700/400 ms. Postęp ELITE do poziomu 100 zmniejsza
 błąd o maksymalnie 50% i reakcję do minimum 200 ms.
 
 Kampania nie przechowuje już nieużywanych mnożników zdrowia/rozmiaru fortecy
-ani osobnych nadpisań błędu i opóźnienia AI. AI nie rzuca czarów; dodanie
-strategii zaklęć jest przyszłym rozszerzeniem registry.
+ani osobnych nadpisań błędu i opóźnienia AI. Polityki spell AI w `game-ai`
+obsługują każdy efekt oznaczony jako runtime-zaimplementowany; nowe efekty
+wymagają równoczesnej polityki. Symulacja jest właścicielem bieżącego stocku:
+RED dostaje go z `runtime.aiStrategy.specialSpellStockPerMatch` i dostępności
+poziomu, a BLUE z `PlayerInventoryConfig`. `MatchSession` egzekwuje i zużywa
+special stock po zaakceptowanym castcie.
 
 ---
 

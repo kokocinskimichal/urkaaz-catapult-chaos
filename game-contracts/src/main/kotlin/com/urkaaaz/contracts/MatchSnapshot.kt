@@ -141,6 +141,7 @@ data class ResourceSnapshot(
     val supply: Int = 0,
     val mana: Int = 0,
     val ammunition: Map<String, Int> = emptyMap(),
+    val specialSpellStocks: Map<String, Int> = emptyMap(),
 )
 
 data class EffectSnapshot(

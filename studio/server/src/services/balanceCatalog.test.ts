@@ -24,7 +24,7 @@ afterEach(async () => {
 });
 
 describe("game balance catalog", () => {
-  it("validates the supported schema 5 balance document", () => {
+  it("validates the supported schema 6 balance document", () => {
     expect(validateBalanceContent(validBalance)).toEqual({ valid: true, issues: [] });
   });
 
@@ -56,6 +56,31 @@ describe("game balance catalog", () => {
       combat.gameplaySpeedMultiplier = multiplier;
       expect(validateBalanceContent(JSON.stringify(document)).issues).toContainEqual(
         expect.objectContaining({ path: "runtime.combat.gameplaySpeedMultiplier" }),
+      );
+    }
+  });
+
+  it("validates AI special spell stock as a non-negative integer", () => {
+    for (const stock of [0, 1, 3]) {
+      const document = JSON.parse(validBalance) as Record<string, unknown>;
+      const runtime = document.runtime as Record<string, unknown>;
+      const aiStrategy = runtime.aiStrategy as Record<string, unknown>;
+      aiStrategy.specialSpellStockPerMatch = stock;
+      expect(validateBalanceContent(JSON.stringify(document))).toEqual({
+        valid: true,
+        issues: [],
+      });
+    }
+
+    for (const stock of [-1, 1.5, "1"]) {
+      const document = JSON.parse(validBalance) as Record<string, unknown>;
+      const runtime = document.runtime as Record<string, unknown>;
+      const aiStrategy = runtime.aiStrategy as Record<string, unknown>;
+      aiStrategy.specialSpellStockPerMatch = stock;
+      expect(validateBalanceContent(JSON.stringify(document)).issues).toContainEqual(
+        expect.objectContaining({
+          path: "runtime.aiStrategy.specialSpellStockPerMatch",
+        }),
       );
     }
   });

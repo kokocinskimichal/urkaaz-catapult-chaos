@@ -33,6 +33,7 @@ data class SimulationConfig(
     val playerLoadout: PlayerLoadoutConfig? = null,
     val playerInventory: PlayerInventoryConfig? = null,
     val availableAmmunitionTypes: Set<String> = emptySet(),
+    val availableSpellTypes: Set<String> = emptySet(),
     val combatRandomSeed: Long = 0L,
 ) {
     init {
@@ -83,6 +84,9 @@ data class SimulationConfig(
             }) {
                 "inventory spells must use known special spell IDs"
             }
+        }
+        require(availableSpellTypes.all { balance.spells.find(it) != null }) {
+            "available spells must use known spell IDs"
         }
     }
 

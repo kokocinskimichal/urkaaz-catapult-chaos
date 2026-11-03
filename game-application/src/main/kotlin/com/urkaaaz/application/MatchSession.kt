@@ -178,6 +178,9 @@ class MatchSession(
             }
         }
         if (!spell.isImplemented) return rejected(MatchError.SPELL_NOT_IMPLEMENTED)
+        if (spell.special && !runningSimulation.hasSpecialSpellStock(team, spell.type)) {
+            return rejected(MatchError.NO_SPELL_STOCK)
+        }
 
         val error = when (spell.type) {
             SpellType.FORTRESS_SHIELD ->
@@ -189,6 +192,11 @@ class MatchSession(
             else -> MatchError.SPELL_NOT_IMPLEMENTED
         }
         if (error != null) return rejected(error)
+        if (spell.special) {
+            check(runningSimulation.consumeSpecialSpellStock(team, spell.type)) {
+                "special spell stock changed while dispatching a spell"
+            }
+        }
 
         latestEvents = runningSimulation.drainEvents()
         latestSnapshot = runningSimulation.snapshot()
@@ -352,6 +360,7 @@ class MatchSession(
                 playerLoadout = scenario?.playerLoadout,
                 playerInventory = scenario?.playerInventory,
                 availableAmmunitionTypes = scenario?.availableAmmunition?.toSet().orEmpty(),
+                availableSpellTypes = scenario?.availableSpells?.toSet().orEmpty(),
                 combatRandomSeed = randomSeed,
                 bossEncounterMatchDurationMilliseconds = resolvedBossDuration,
             ),

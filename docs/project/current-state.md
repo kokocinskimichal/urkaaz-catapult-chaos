@@ -50,16 +50,20 @@ kampanię, AI oraz działający match screen. Gałąź robocza: `develop`.
 - Wybór amunicji w popup gridzie; niedostępna/depleted amunicja jest
   przygaszona i zablokowana.
 - Profile jednostek, amunicji, czarów, many, bossów i pozostałe parametry
-  runtime pochodzą ze ścisłego `game-balance.json` schema 5. Aplikacyjny loader
+  runtime pochodzą ze ścisłego `game-balance.json` schema 6. Aplikacyjny loader
   przekazuje jeden typowany `GameBalanceConfig` do symulacji, AI, kampanii,
   nagród, loadoutu i projekcji Androida.
 - `runtime.combat.gameplaySpeedMultiplier` ma zakres `1.0–1.5` i wartość
   domyślną `1.2`; skaluje ruch jednostek/mobilego bossa oraz czas lotu
   pocisków i odłamków, nie zegary meczu, przeładowania ani cooldowny.
-- Studio Balance edytuje wszystkie istniejące pola schema 5, w tym nullable
+- Studio Balance edytuje wszystkie istniejące pola schema 6, w tym nullable
   `shopCostGold` i mnożnik tempa, przez zakładki i typowane kontrolki; surowy
   JSON nie jest prezentowany, a stabilne ID i struktura profili pozostają stałe. Walidacja i zapis używają istniejącego
   API z kontrolą SHA-256 i `expectedHash`.
+- AI RED rozwiązuje strzały do żywych central objectives z trajektorią
+  uwzględniającą balistykę, wiatr i teren. AI sytuacyjnie używa HASTE,
+  FORTRESS_SHIELD i RUNIC_BASTION; stock specjalnych czarów RED jest
+  balance-driven i odseparowany od inventory BLUE.
 - Dedykowane jednostki: Defender, Sapper, Demolisher, Raging Boar,
   Slingmaster; `UnitCatalog` tworzy ich definicje zachowań z profili JSON.
 - `BossSystem` obsługuje central objectives oraz mobile siege bossy na

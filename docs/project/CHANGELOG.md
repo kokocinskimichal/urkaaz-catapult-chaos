@@ -14,6 +14,12 @@
 - Added the global gameplay-speed multiplier to balance schema 5. It speeds up
   unit and mobile-boss movement plus projectile flight without changing
   projectile trajectories or match clocks.
+- Added the AI improvement plan and implementation prompt, then implemented
+  central-objective trajectory targeting and situation-aware spell policies
+  for HASTE/FORTRESS_SHIELD/RUNIC_BASTION, with at most one cast per decision.
+- Added balance-driven RED special-spell stock and match runtime stock
+  validation/consumption; advanced the balance document and Studio validator
+  to schema 6.
 
 ### Changed
 

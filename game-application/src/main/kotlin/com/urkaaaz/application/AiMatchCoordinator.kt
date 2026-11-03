@@ -52,6 +52,10 @@ class AiMatchCoordinator(
             ?.toSet()
             ?: scenarioAmmunitionIds?.map(::ammunitionById)?.toSet()
             ?: AmmunitionType.entries.toSet()
+        val allowedSpells = scenario?.availableSpells?.map { identifier ->
+            balance.spells.find(identifier)?.type
+                ?: error("unknown AI spell identifier: $identifier")
+        }?.toSet().orEmpty()
         agent = AiAgent(
             configuration = AiConfiguration(
                 playerId = aiPlayerId,
@@ -61,6 +65,7 @@ class AiMatchCoordinator(
                 allowedUnits = allowedUnits,
                 randomSeed = randomSeed,
                 allowedAmmunition = allowedAmmunition,
+                allowedSpells = allowedSpells,
             ),
             strategies = registry,
         )
@@ -104,10 +109,12 @@ class AiMatchCoordinator(
                 }
             }
         }
-        val selectedReload = snapshot.reloadRemainingSecondsByAmmunition[Team.RED]
-            ?.get(selectedAmmunition.name)
-            ?: snapshot.reloadRemainingSeconds[Team.RED]
-            ?: 0f
+        val reloadsByAmmunition = snapshot.reloadRemainingSecondsByAmmunition[Team.RED]
+        val selectedReload = if (reloadsByAmmunition != null) {
+            reloadsByAmmunition[selectedAmmunition.name] ?: 0f
+        } else {
+            snapshot.reloadRemainingSeconds[Team.RED] ?: 0f
+        }
         if (selectedReload > 0f) {
             commands = commands.filterNot {
                 it is MatchCommand.Aim || it is MatchCommand.Fire

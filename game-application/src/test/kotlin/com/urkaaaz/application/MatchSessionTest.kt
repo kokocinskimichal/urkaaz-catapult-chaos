@@ -26,6 +26,8 @@ import kotlin.test.assertTrue
 import com.urkaaaz.application.loadout.LoadoutCommandRejectedException
 import com.urkaaaz.application.loadout.LoadoutError
 import com.urkaaaz.application.reward.MatchEventObserver
+import com.urkaaaz.application.balance.GameBalanceRepository
+import java.io.ByteArrayInputStream
 
 class MatchSessionTest {
     @Test
@@ -211,6 +213,82 @@ class MatchSessionTest {
         assertEquals(
             CommandResult.Rejected(CommandId("unavailable-spell"), MatchError.SPELL_NOT_AVAILABLE),
             cast("unavailable-spell", "ICE_TRAP"),
+        )
+    }
+
+    @Test
+    fun specialSpellStockIsConsumedOnlyAfterAnAcceptedCast() {
+        val bundledBalance = javaClass.getResourceAsStream("/balance/game-balance.json")!!
+            .bufferedReader()
+            .use { it.readText() }
+        val balanceWithSpecialShield = bundledBalance.replace(
+            "\"type\": \"FORTRESS_SHIELD\",\n" +
+                "      \"goldCost\": 0,\n" +
+                "      \"category\": \"DEFENSIVE\",\n" +
+                "      \"targetCategory\": \"OWN_FORTRESS\",\n" +
+                "      \"special\": false,",
+            "\"type\": \"FORTRESS_SHIELD\",\n" +
+                "      \"goldCost\": 0,\n" +
+                "      \"category\": \"DEFENSIVE\",\n" +
+                "      \"targetCategory\": \"OWN_FORTRESS\",\n" +
+                "      \"special\": true,",
+        )
+        assertNotEquals(bundledBalance, balanceWithSpecialShield)
+        val playerId = PlayerId("spell-player")
+        val scenario = spellScenario().copy(
+            playerInventory = PlayerInventoryConfig(
+                playerId = playerId,
+                ammunitionStocks = emptyMap(),
+                specialSpellStocks = mapOf("FORTRESS_SHIELD" to 1),
+            ),
+        )
+        val session = MatchSession(
+            scenario = scenario,
+            balanceRepository = GameBalanceRepository {
+                ByteArrayInputStream(balanceWithSpecialShield.toByteArray())
+            },
+        )
+        val matchId = MatchId("special-stock-match")
+        session.dispatch(MatchCommand.Start(CommandId("special-stock-start"), matchId, playerId))
+
+        assertEquals(
+            1,
+            session.snapshot().resourcesByTeam[Team.BLUE]
+                ?.specialSpellStocks?.get("FORTRESS_SHIELD"),
+        )
+        assertEquals(
+            1,
+            session.snapshot().resourcesByTeam[Team.RED]
+                ?.specialSpellStocks?.get("FORTRESS_SHIELD"),
+        )
+        assertIs<CommandResult.Accepted>(
+            session.dispatchResult(
+                MatchCommand.CastSpell(
+                    CommandId("special-stock-cast"),
+                    matchId,
+                    playerId,
+                    "FORTRESS_SHIELD",
+                ),
+            ),
+        )
+        assertEquals(
+            0,
+            session.snapshot().resourcesByTeam[Team.BLUE]
+                ?.specialSpellStocks?.get("FORTRESS_SHIELD"),
+        )
+        assertEquals(
+            CommandResult.Rejected(
+                CommandId("special-stock-repeat"),
+                MatchError.NO_SPELL_STOCK,
+            ),
+            session.dispatchResult(
+                MatchCommand.CastSpell(
+                    CommandId("special-stock-repeat"),
+                    matchId,
+                    playerId,
+                    "FORTRESS_SHIELD",
+                ),
+            ),
         )
     }
 

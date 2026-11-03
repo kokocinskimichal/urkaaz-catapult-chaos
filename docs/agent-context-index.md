@@ -29,6 +29,7 @@ zadanie obejmuje kilka obszarów, wczytaj dokumenty dla każdego z nich.
 
 | Obszar zadania | Dokumenty do wczytania |
 |---|---|
+| AI bossów i używanie czarów przez AI | `docs/systems/ai-boss-spell-improvement-plan.md` i `docs/systems/ai-boss-spell-improvement-implementation-prompt.md`. |
 | Kontrakty poziomów, teren lub authoring map | `docs/architecture/level-definition-architecture.md`; dla migracji map JSON również `docs/campaign/map-json-migration-plan.md` i `docs/campaign/map-json-implementation-prompt.md`. |
 | Konkretne poziomy kampanii | `docs/campaign/maps/chapter1/README.md` i `docs/campaign/maps/chapter1/COMPARISON.md` tylko dla rozdziału 1; dla innych rozdziałów odczytaj README i dokumenty danego rozdziału, jeśli istnieją. |
 | Edytor map | `docs/map-editor/design.md`; dla generatora Random Map dołącz `docs/map-editor/random-map-generation-plan.md` i `docs/map-editor/random-map-generation-implementation-prompt.md`; przy zmianach ryzyk, migracji lub webowej implementacji dołącz odpowiednio `docs/map-editor/risks.md`, `docs/map-editor/web-migration-plan.md`, `docs/map-editor/web-implementation-prompt.md` i `docs/map-editor/web/README.md`. |

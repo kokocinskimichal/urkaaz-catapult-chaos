@@ -1073,6 +1073,8 @@ class DeterministicMatchSimulation(
         resources = ResourceSnapshot(
             gold = resources.getValue(Team.BLUE).gold,
             mana = resources.getValue(Team.BLUE).mana,
+            specialSpellStocks = resources.getValue(Team.BLUE).specialSpellStocks
+                .mapKeys { (type, _) -> type.name },
         ),
         resourcesByTeam = resources.mapValues { (_, wallet) ->
             ResourceSnapshot(
@@ -1080,6 +1082,8 @@ class DeterministicMatchSimulation(
                 supply = wallet.supply,
                 mana = wallet.mana,
                 ammunition = wallet.ammunition.mapKeys { (type, _) -> type.name },
+                specialSpellStocks = wallet.specialSpellStocks
+                    .mapKeys { (type, _) -> type.name },
             )
         },
         effects = lingeringEffects.map {
@@ -1116,6 +1120,16 @@ class DeterministicMatchSimulation(
         balanceContentHash = config.balanceContentHash,
         gameplaySpeedMultiplier = config.balance.runtime.combat.gameplaySpeedMultiplier,
     )
+
+    fun hasSpecialSpellStock(team: Team, spellType: SpellType): Boolean =
+        resources.getValue(team).canUseSpecialSpell(spellType)
+
+    fun consumeSpecialSpellStock(team: Team, spellType: SpellType): Boolean {
+        val wallet = resources.getValue(team)
+        if (!wallet.canUseSpecialSpell(spellType)) return false
+        resources[team] = wallet.consumeSpecialSpell(spellType)
+        return true
+    }
 
     private fun advanceBoss(deltaSeconds: Float): BossTickResult {
         val boss = bossSystem ?: return BossTickResult()
@@ -3486,6 +3500,17 @@ class DeterministicMatchSimulation(
                 }
                 ammunition.type to startingCount
             },
+        specialSpellStocks = config.availableSpellTypes.mapNotNull { identifier ->
+            val definition = config.balance.spells.find(identifier)
+                ?.takeIf { it.special }
+                ?: return@mapNotNull null
+            val stock = if (team == Team.BLUE) {
+                config.playerInventory?.specialSpellStocks?.get(identifier) ?: 0
+            } else {
+                config.balance.runtime.aiStrategy.specialSpellStockPerMatch
+            }
+            definition.type to stock
+        }.toMap(),
     )
 
     private data class LingeringEffect(

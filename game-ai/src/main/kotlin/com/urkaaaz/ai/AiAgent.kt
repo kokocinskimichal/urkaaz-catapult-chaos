@@ -14,6 +14,7 @@ import com.urkaaaz.domain.UnitDefinition
 import com.urkaaaz.domain.UnitFactory
 import com.urkaaaz.domain.GameBalanceConfig
 import com.urkaaaz.domain.AiProfileBalance
+import com.urkaaaz.domain.SpellType
 import kotlin.random.Random
 
 @JvmInline
@@ -123,6 +124,7 @@ data class AiConfiguration(
     val allowedUnits: Set<UnitDefinition> = UnitFactory.all(balance.units),
     val randomSeed: Long = 0L,
     val allowedAmmunition: Set<AmmunitionType> = AmmunitionType.entries.toSet(),
+    val allowedSpells: Set<SpellType> = emptySet(),
 ) {
     init {
         require(allowedUnits.isNotEmpty()) { "AI must have at least one allowed unit" }
@@ -143,6 +145,17 @@ class AiAgent(
     private val catapultStrategy = strategies.catapult(tuning.catapultStrategy)
     private val recruitmentStrategy = strategies.recruitment(tuning.recruitmentStrategy)
     private val waveStrategy = strategies.wave(tuning.waveStrategy)
+    private val missingSpellPolicies = configuration.balance.spells.all
+        .filter { it.isImplemented }
+        .map { it.type }
+        .toSet() - strategies.spellTypes()
+
+    init {
+        require(missingSpellPolicies.isEmpty()) {
+            "AI spell policies are missing for implemented spells: " +
+                missingSpellPolicies.joinToString { it.name }
+        }
+    }
 
     val reactionIntervalMilliseconds: Long
         get() = tuning.reactionIntervalMilliseconds
@@ -190,6 +203,7 @@ class AiAgent(
             balance = configuration.balance,
             tuning = tuning,
             random = random,
+            allowedSpells = configuration.allowedSpells,
             commandIdFactory = { action ->
                 CommandId("ai-${matchId.value}-$action-${++commandSequence}")
             },
@@ -217,6 +231,37 @@ class AiAgent(
                     )
                 }
             }
+            chooseSpell(context)?.let { candidate ->
+                add(
+                    MatchCommand.CastSpell(
+                        commandId = context.commandId("cast-${candidate.spellType.name.lowercase()}"),
+                        matchId = matchId,
+                        playerId = configuration.playerId,
+                        spellType = candidate.spellType.name,
+                        target = candidate.target,
+                    ),
+                )
+            }
         }
+    }
+
+    private fun chooseSpell(context: AiStrategyContext): AiSpellCandidate? {
+        val resources = context.snapshot.resourcesByTeam[configuration.team] ?: return null
+        return strategies.spellUseStrategies()
+            .asSequence()
+            .filter { it.spellType in configuration.allowedSpells }
+            .mapNotNull { strategy -> strategy.decide(context) }
+            .filter { candidate ->
+                val definition = configuration.balance.spells.definition(candidate.spellType)
+                definition.isImplemented &&
+                    resources.mana >= definition.manaCost &&
+                    (!definition.special ||
+                        (resources.specialSpellStocks[candidate.spellType.name] ?: 0) > 0)
+            }
+            .sortedWith(
+                compareByDescending<AiSpellCandidate>(AiSpellCandidate::utilityScore)
+                    .thenBy { it.spellType.name },
+            )
+            .firstOrNull()
     }
 }

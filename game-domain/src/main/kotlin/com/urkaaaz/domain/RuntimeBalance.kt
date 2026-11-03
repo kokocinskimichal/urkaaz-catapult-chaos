@@ -268,12 +268,16 @@ data class AiProfileBalance(
 data class AiStrategyBalance(
     val aimAngleOffsetDegrees: Float,
     val horizontalDistancePerPowerPercent: Float,
+    val specialSpellStockPerMatch: Int,
     val ammunitionScoring: AiAmmunitionScoringBalance,
     val unitScoring: AiUnitScoringBalance,
     val waveDispatch: AiWaveDispatchBalance,
 ) {
     init {
         require(aimAngleOffsetDegrees.isFinite()) { "AI aim angle offset must be finite" }
+        require(specialSpellStockPerMatch >= 0) {
+            "AI special spell stock must not be negative"
+        }
         require(
             horizontalDistancePerPowerPercent.isFinite() &&
                 horizontalDistancePerPowerPercent > 0f,

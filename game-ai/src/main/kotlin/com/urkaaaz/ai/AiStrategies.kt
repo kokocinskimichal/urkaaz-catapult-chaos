@@ -9,11 +9,13 @@ import com.urkaaaz.contracts.PlayerId
 import com.urkaaaz.contracts.Team
 import com.urkaaaz.contracts.UnitSnapshot
 import com.urkaaaz.domain.AmmunitionType
+import com.urkaaaz.domain.AmmunitionHitLayer
 import com.urkaaaz.domain.SapperUnit
 import com.urkaaaz.domain.UnitDefinition
 import com.urkaaaz.domain.UnitFactory
 import com.urkaaaz.domain.GameBalanceConfig
 import com.urkaaaz.domain.AiUnitScoringBalance
+import com.urkaaaz.domain.SpellType
 import com.urkaaaz.domain.UnitIds
 import kotlin.math.abs
 import kotlin.math.atan2
@@ -28,6 +30,7 @@ data class AiStrategyContext(
     val balance: GameBalanceConfig,
     val tuning: AiProfileTuning,
     val random: Random,
+    val allowedSpells: Set<SpellType>,
     private val commandIdFactory: (String) -> CommandId,
 ) {
     fun commandId(action: String) = commandIdFactory(action)
@@ -56,11 +59,14 @@ class AiStrategyRegistry(
     recruitmentStrategies: List<UnitRecruitmentStrategy>,
     waveStrategies: List<WaveDispatchStrategy>,
     val profiles: AiProfileCatalog = AiProfileCatalog.standard(),
+    spellUseStrategies: List<AiSpellUseStrategy> = standardAiSpellUseStrategies(),
 ) {
     private val catapultStrategiesById = catapultStrategies.associateBy(CatapultDecisionStrategy::id)
     private val recruitmentStrategiesById =
         recruitmentStrategies.associateBy(UnitRecruitmentStrategy::id)
     private val waveStrategiesById = waveStrategies.associateBy(WaveDispatchStrategy::id)
+    private val spellUseStrategiesByType =
+        spellUseStrategies.associateBy(AiSpellUseStrategy::spellType)
 
     init {
         require(catapultStrategiesById.size == catapultStrategies.size) {
@@ -72,6 +78,9 @@ class AiStrategyRegistry(
         require(waveStrategiesById.size == waveStrategies.size) {
             "wave strategy IDs must be unique"
         }
+        require(spellUseStrategiesByType.size == spellUseStrategies.size) {
+            "AI spell policies must have unique spell types"
+        }
     }
 
     fun catapult(id: AiStrategyId): CatapultDecisionStrategy =
@@ -82,6 +91,11 @@ class AiStrategyRegistry(
 
     fun wave(id: AiStrategyId): WaveDispatchStrategy =
         waveStrategiesById[id] ?: error("unknown wave strategy '${id.value}'")
+
+    fun spellUseStrategies(): List<AiSpellUseStrategy> =
+        spellUseStrategiesByType.values.toList()
+
+    fun spellTypes(): Set<SpellType> = spellUseStrategiesByType.keys
 
     companion object {
         fun standard() = AiStrategyRegistry(
@@ -149,21 +163,43 @@ private fun fireAt(
     val team = context.team
     val catapult = context.snapshot.catapults.firstOrNull { it.team == team } ?: return emptyList()
     val enemyCatapult = context.snapshot.catapults.firstOrNull { it.team != team } ?: return emptyList()
-    val ammunition = availableAmmunition(context)
-        .maxByOrNull(ammunitionScore)
-        ?: return emptyList()
-    val reloadRemaining = context.snapshot
-        .reloadRemainingSecondsByAmmunition[team]
-        ?.get(ammunition.name)
-        ?: context.snapshot.reloadRemainingSeconds[team]
-        ?: 0f
-    if (reloadRemaining > 0f || team in context.snapshot.activeProjectileTeams) return emptyList()
+    if (team in context.snapshot.activeProjectileTeams) return emptyList()
 
     val boss = context.snapshot.boss
-    val target = if (boss?.archetype == BossArchetype.CENTRAL_OBJECTIVE) {
+    val centralObjective = boss?.takeIf {
+        it.archetype == BossArchetype.CENTRAL_OBJECTIVE && it.health > 0
+    }
+    val selectedAmmunitionAndAim = if (centralObjective != null) {
+        val bossProfile = context.balance.bossProfile(centralObjective.profileId)
+        availableAmmunition(context)
+            .filter { ammunition ->
+                val definition = context.balance.ammunition.definition(ammunition)
+                AmmunitionHitLayer.FORTRESS in definition.collision.hitLayers &&
+                    definition.damage.fortressDamage > 0 &&
+                    ammunition.name !in bossProfile.immuneAmmunitionTypes &&
+                    definition.flight.apexFragmentation == null &&
+                    !isAmmunitionReloading(context, ammunition)
+            }
+            .sortedByDescending {
+                context.balance.ammunition.definition(it).damage.fortressDamage
+            }
+            .firstNotNullOfOrNull { ammunition ->
+                CentralObjectiveAimSolver.solve(context, catapult, ammunition, centralObjective)
+                    ?.let { ammunition to it }
+            }
+            ?: return emptyList()
+    } else {
+        val ammunition = availableAmmunition(context).maxByOrNull(ammunitionScore)
+            ?: return emptyList()
+        if (isAmmunitionReloading(context, ammunition)) return emptyList()
+        ammunition to null
+    }
+    val selectedAmmunition = selectedAmmunitionAndAim.first
+    val predictedAim = selectedAmmunitionAndAim.second
+    val target = if (centralObjective != null) {
         TargetPoint(
-            x = boss.x,
-            y = boss.groundY - boss.collisionHeight / 2f,
+            x = centralObjective.x,
+            y = centralObjective.groundY - centralObjective.collisionHeight / 2f,
         )
     } else {
         preferredTarget(context, enemyCatapult)
@@ -173,15 +209,32 @@ private fun fireAt(
         atan2(abs(target.y - catapult.y).toDouble(), horizontalDistance.toDouble()),
     ).toFloat()
     val strategyBalance = context.balance.runtime.aiStrategy
-    val angle = (angleFromHorizontal + strategyBalance.aimAngleOffsetDegrees + randomOffset(
-        context.random,
-        context.tuning.angleErrorDegrees,
-    )).coerceIn(0f, 180f)
-    val power = (horizontalDistance / strategyBalance.horizontalDistancePerPowerPercent +
-        randomOffset(
-        context.random,
-        context.tuning.powerError,
-    )).coerceIn(0f, 100f)
+    val angle = predictedAim?.let {
+        (
+            it.directionDegrees + randomOffset(
+                context.random,
+                context.tuning.angleErrorDegrees,
+            )
+        ).coerceIn(0f, 180f)
+    }
+        ?: (angleFromHorizontal + strategyBalance.aimAngleOffsetDegrees + randomOffset(
+            context.random,
+            context.tuning.angleErrorDegrees,
+        )).coerceIn(0f, 180f)
+    val power = predictedAim?.let {
+        (
+            it.power + randomOffset(
+                context.random,
+                context.tuning.powerError,
+            )
+        ).coerceIn(0f, 100f)
+    } ?: (
+        horizontalDistance / strategyBalance.horizontalDistancePerPowerPercent +
+            randomOffset(
+                context.random,
+                context.tuning.powerError,
+            )
+        ).coerceIn(0f, 100f)
     val matchId = requireNotNull(context.snapshot.matchId)
 
     return listOf(
@@ -189,7 +242,7 @@ private fun fireAt(
             commandId = context.commandId("select-ammo"),
             matchId = matchId,
             playerId = context.playerId,
-            ammunitionType = ammunition.name,
+            ammunitionType = selectedAmmunition.name,
         ),
         MatchCommand.Aim(
             commandId = context.commandId("aim"),
@@ -206,6 +259,20 @@ private fun fireAt(
             catapultId = catapult.entityId,
         ),
     )
+}
+
+private fun isAmmunitionReloading(
+    context: AiStrategyContext,
+    ammunition: AmmunitionType,
+): Boolean {
+    val reloadsByAmmunition =
+        context.snapshot.reloadRemainingSecondsByAmmunition[context.team]
+    val remaining = if (reloadsByAmmunition != null) {
+        reloadsByAmmunition[ammunition.name] ?: 0f
+    } else {
+        context.snapshot.reloadRemainingSeconds[context.team] ?: 0f
+    }
+    return remaining > 0f
 }
 
 private fun availableAmmunition(context: AiStrategyContext): List<AmmunitionType> {
