@@ -40,12 +40,14 @@ class RenderStateMapperTest {
                 status = MatchStatus.RUNNING,
                 phase = MatchPhase.PLAYER_TURN,
                 activeTeam = Team.BLUE,
+                gameplaySpeedMultiplier = 1.2f,
             ),
         )
 
         assertEquals("RUNNING", state.statusLabel)
         assertEquals("PLAYER_TURN", state.phaseLabel)
         assertEquals("BLUE", state.activeTeamLabel)
+        assertEquals(1.2f, state.gameplaySpeedMultiplier)
         assertEquals(0, state.projectileCount)
         assertEquals("GREEN_FRONTIER", state.terrainBiome)
         assertEquals(0, state.projectiles.size)

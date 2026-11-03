@@ -62,6 +62,23 @@ class SapperReturnAnimationClockTest {
         assertFrame(clock, sapper, SapperReturnAnimationFrame.Phase.TURN, 0)
     }
 
+    @Test
+    fun gameplaySpeedMultiplierAcceleratesSapperLocomotionAnimation() {
+        val clock = SapperReturnAnimationClock()
+        val sapper = sapper("blue-sapper")
+
+        clock.advance(listOf(sapper), isPaused = false)
+        repeat(10) {
+            clock.advance(
+                units = listOf(sapper),
+                isPaused = false,
+                gameplaySpeedMultiplier = 1.2f,
+            )
+        }
+
+        assertFrame(clock, sapper, SapperReturnAnimationFrame.Phase.TURN, 4)
+    }
+
     private fun assertFrame(
         clock: SapperReturnAnimationClock,
         sapper: UnitRenderState,

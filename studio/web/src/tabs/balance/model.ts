@@ -191,7 +191,7 @@ export interface RuntimeBalance {
     maximumDamageVarianceFactor: number;
     unitLuckBiasMaximumMagnitude: number;
     maximumInitialAttackDelayRatio: number;
-    unitMovementSpeedMultiplier: number;
+    gameplaySpeedMultiplier: number;
     unitMovementSpeedScale: number;
     garrisonMovementSpeedScale: number;
     unitInteractionRange: number;
@@ -265,8 +265,8 @@ export interface RuntimeBalance {
   };
 }
 
-export interface GameBalanceDocumentV4 {
-  schemaVersion: 4;
+export interface GameBalanceDocumentV5 {
+  schemaVersion: 5;
   balanceRevision: string;
   bosses: BossProfile[];
   units: UnitConfiguration[];
@@ -301,7 +301,7 @@ export interface FormIssue {
 }
 
 export type MaterializedDraft =
-  | { valid: true; document: GameBalanceDocumentV4 }
+  | { valid: true; document: GameBalanceDocumentV5 }
   | { valid: false; issues: FormIssue[] };
 
 const ROOT_KEYS = [
@@ -339,7 +339,7 @@ export class BalanceDocumentError extends Error {
   }
 }
 
-export function parseBalanceDocument(content: string): GameBalanceDocumentV4 {
+export function parseBalanceDocument(content: string): GameBalanceDocumentV5 {
   let value: unknown;
   try {
     value = JSON.parse(content) as unknown;
@@ -353,7 +353,7 @@ export function parseBalanceDocument(content: string): GameBalanceDocumentV4 {
   if (!isRecord(value)) {
     throw new BalanceDocumentError("The balance document must be a JSON object.");
   }
-  if (value.schemaVersion !== 4) {
+  if (value.schemaVersion !== 5) {
     throw new BalanceDocumentError(
       `Unsupported balance schema version: ${String(value.schemaVersion)}.`,
     );
@@ -377,10 +377,10 @@ export function parseBalanceDocument(content: string): GameBalanceDocumentV4 {
     !isRecord(value.mana) ||
     !isRecord(value.runtime)
   ) {
-    throw new BalanceDocumentError("The balance document does not match schema 4.");
+    throw new BalanceDocumentError("The balance document does not match schema 5.");
   }
 
-  return value as unknown as GameBalanceDocumentV4;
+  return value as unknown as GameBalanceDocumentV5;
 }
 
 export function toBalanceFormDraft<T>(value: T): BalanceFormDraft<T> {
@@ -399,25 +399,25 @@ export function toBalanceFormDraft<T>(value: T): BalanceFormDraft<T> {
 }
 
 export function materializeBalanceDraft(
-  draft: BalanceFormDraft<GameBalanceDocumentV4>,
+  draft: BalanceFormDraft<GameBalanceDocumentV5>,
 ): MaterializedDraft {
   const issues: FormIssue[] = [];
   const document = materializeValue(draft, "", issues);
   if (issues.length > 0 || !isRecord(document)) {
     return { valid: false, issues };
   }
-  return { valid: true, document: document as unknown as GameBalanceDocumentV4 };
+  return { valid: true, document: document as unknown as GameBalanceDocumentV5 };
 }
 
-export function serializeBalanceDocument(document: GameBalanceDocumentV4): string {
+export function serializeBalanceDocument(document: GameBalanceDocumentV5): string {
   return `${JSON.stringify(document, null, 2)}\n`;
 }
 
 export function setBalanceDraftValue(
-  draft: BalanceFormDraft<GameBalanceDocumentV4>,
+  draft: BalanceFormDraft<GameBalanceDocumentV5>,
   path: string,
   value: unknown,
-): BalanceFormDraft<GameBalanceDocumentV4> {
+): BalanceFormDraft<GameBalanceDocumentV5> {
   const segments = parsePath(path);
   if (segments.length === 0) throw new RangeError("Balance draft path must not be empty.");
 
@@ -493,9 +493,9 @@ export function createApexFragmentationDraft(): BalanceFormDraft<ApexFragmentati
 }
 
 export function withIncrementedBalanceRevision(
-  current: GameBalanceDocumentV4,
-  next: GameBalanceDocumentV4,
-): GameBalanceDocumentV4 {
+  current: GameBalanceDocumentV5,
+  next: GameBalanceDocumentV5,
+): GameBalanceDocumentV5 {
   if (current.balanceRevision !== next.balanceRevision) return next;
   const match = /^(.*?)([-.])(\d+)$/.exec(next.balanceRevision);
   const balanceRevision = match
@@ -505,8 +505,8 @@ export function withIncrementedBalanceRevision(
 }
 
 export function balanceDocumentMatches(
-  document: GameBalanceDocumentV4,
-  baseline: GameBalanceDocumentV4,
+  document: GameBalanceDocumentV5,
+  baseline: GameBalanceDocumentV5,
 ): boolean {
   return JSON.stringify(document) === JSON.stringify(baseline);
 }

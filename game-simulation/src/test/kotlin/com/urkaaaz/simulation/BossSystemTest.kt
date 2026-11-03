@@ -283,13 +283,54 @@ class BossSystemTest {
             blueGateX = 100f,
             random = Random(5),
         )
-        assertEquals(beforeAdvance - 49.14f, boss.snapshot().x, 0.01f)
+        assertEquals(beforeAdvance - 58.968f, boss.snapshot().x, 0.01f)
 
         val gateBoss = system(mobileProfile(), spawnRatio = 0.2f)
         gateBoss.advance(1f, emptyList(), emptySet(), 100f, Random(5))
         assertEquals(BossPhase.AT_GATE, gateBoss.snapshot().phase)
         val strike = gateBoss.advance(1f, emptyList(), emptySet(), 100f, Random(5))
         assertEquals(45, strike.fortressDamage)
+    }
+
+    @Test
+    fun mobileBossMovementUsesGameplayTempoButStaticBossDoesNotMove() {
+        fun mobileDistance(multiplier: Float): Float {
+            val boss = system(
+                profile = mobileProfile(),
+                spawnRatio = 0.78f,
+                worldWidth = 7_200f,
+                gameplaySpeedMultiplier = multiplier,
+            )
+            val startX = boss.snapshot().x
+
+            boss.advance(
+                deltaSeconds = 0.5f,
+                units = emptyList(),
+                movingTeams = emptySet(),
+                blueGateX = 100f,
+                random = Random(5),
+            )
+
+            return startX - boss.snapshot().x
+        }
+
+        val baselineDistance = mobileDistance(1f)
+        val fasterDistance = mobileDistance(1.2f)
+        assertEquals(baselineDistance * 1.2f, fasterDistance, 0.01f)
+
+        val staticBoss = system(
+            profile = centralProfile(health = 1_000),
+            gameplaySpeedMultiplier = 1.2f,
+        )
+        val staticStartX = staticBoss.snapshot().x
+        staticBoss.advance(
+            deltaSeconds = 0.5f,
+            units = emptyList(),
+            movingTeams = emptySet(),
+            blueGateX = 100f,
+            random = Random(5),
+        )
+        assertEquals(staticStartX, staticBoss.snapshot().x)
     }
 
     @Test
@@ -426,6 +467,7 @@ class BossSystemTest {
         profile: BossBalanceProfile,
         spawnRatio: Float = 0.5f,
         worldWidth: Float = 1_000f,
+        gameplaySpeedMultiplier: Float = 1.2f,
     ) = BossSystem(
         profile = profile,
         encounter = BossEncounterConfig(
@@ -437,7 +479,9 @@ class BossSystemTest {
                 BossVictoryRule.DEFEAT_BOSS
             },
         ),
-        combatBalance = GameBalanceFixtures.balance.runtime.combat,
+        combatBalance = GameBalanceFixtures.balance.runtime.combat.copy(
+            gameplaySpeedMultiplier = gameplaySpeedMultiplier,
+        ),
         bossCombatBalance = GameBalanceFixtures.balance.runtime.bossCombat,
         worldWidth = worldWidth,
         groundHeightAt = { 200f },

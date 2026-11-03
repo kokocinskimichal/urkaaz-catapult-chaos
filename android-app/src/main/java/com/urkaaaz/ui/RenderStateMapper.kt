@@ -58,6 +58,7 @@ data class RenderState(
     val projectileWindResponse: Float = 0f,
     val projectileGravityResponse: Float = 0f,
     val projectileDrag: Float = 0f,
+    val gameplaySpeedMultiplier: Float = 1f,
     val impact: ImpactRenderState?,
     val outcomeLabel: String?,
     val playerReloadRemainingSeconds: Float,
@@ -317,6 +318,7 @@ object RenderStateMapper {
         redFortressShieldHealth = redFortressSnapshot?.shieldHealth,
         redFortressShieldMaxHealth = redFortressSnapshot?.shieldMaxHealth,
         windStrength = snapshot.wind.strength,
+        gameplaySpeedMultiplier = snapshot.gameplaySpeedMultiplier,
         impact = events.lastOrNull {
             it is MatchEvent.TerrainDeformed ||
                 it is MatchEvent.ProjectileHitEntity ||

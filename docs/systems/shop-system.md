@@ -391,7 +391,7 @@ zakończeniu, poza tickiem.
 - DataStore aktualizuje saldo i stock w jednym `updateData`, zachowuje
   niepowiązane klucze i współdzieli poprawny codec z rozliczeniem nagród;
 - ponowne rozliczenie tego samego meczu jest idempotentne;
-- validator Studio akceptuje schema 4, waliduje nullable `shopCostGold` i
+- validator Studio akceptuje schema 5, waliduje nullable `shopCostGold` i
   odrzuca wartość ujemną/niecałkowitą; formularz odczytuje, edytuje i zapisuje
   pole bez utraty innych danych;
 - nawigacja z Dashboardu i Loadoutu wraca do poprawnego źródła; Loadout
@@ -409,7 +409,7 @@ zakończeniu, poza tickiem.
    respektuje dokładny stock profilu, a niewykorzystane ilości pozostają.
 3. Wszystkie zakończenia i jawne przerwania rozliczają stock raz; błąd zapisu
    jest widoczny i możliwy do ponowienia.
-4. Studio i walidator balansu obsługują schema 4 oraz `shopCostGold`.
+4. Studio i walidator balansu obsługują schema 5 oraz `shopCostGold`.
 5. UI zachowuje wskazaną nawigację, nie autoekwipuje zakupu i nie sugeruje,
    że niezaimplementowane zaklęcie można już rzucić.
 6. Replay pozostaje deterministyczny i nie zmienia trwałego profilu.

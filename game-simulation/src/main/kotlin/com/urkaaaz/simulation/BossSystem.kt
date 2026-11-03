@@ -281,7 +281,12 @@ class BossSystem(
         val targets = unitsInRange(BossAttackTarget.UNIT, units, movingTeams)
         if (targets.isEmpty()) {
             val speedMultiplier = if (enraged) profile.enrage()?.speedMultiplier ?: 1f else 1f
-            x = (x - profile.movement.speedWorldUnitsPerSecond * speedMultiplier * deltaSeconds)
+            x = (
+                x - profile.movement.speedWorldUnitsPerSecond *
+                    speedMultiplier *
+                    combatBalance.gameplaySpeedMultiplier *
+                    deltaSeconds
+                )
                 .coerceAtLeast(gateStopX)
             groundY = groundHeightAt(x)
             phase = if (x <= gateStopX) BossPhase.AT_GATE else {

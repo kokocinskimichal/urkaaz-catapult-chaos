@@ -219,7 +219,11 @@ class BattlefieldView(context: Context) : View(context) {
             lastFortressShieldHitEventId = null
         }
         sapperBombFlights = sapperBombFlightClock.update(presentationState, nowMilliseconds)
-        sapperReturnAnimationClock.advance(newState.units, presentationState.isPaused)
+        sapperReturnAnimationClock.advance(
+            units = newState.units,
+            isPaused = presentationState.isPaused,
+            gameplaySpeedMultiplier = newState.gameplaySpeedMultiplier,
+        )
         sapperMoveAnimationClock.advance(newState.units, presentationState.isPaused)
         val demolisherAttackFrameCount = assets.unitAnimationFrames(
             unitType = "DEMOLISHER",

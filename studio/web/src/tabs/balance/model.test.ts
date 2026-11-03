@@ -12,11 +12,11 @@ import {
   toBalanceFormDraft,
   withIncrementedBalanceRevision,
 } from "./model";
-import type { GameBalanceDocumentV4 } from "./model";
+import type { GameBalanceDocumentV5 } from "./model";
 import type { BalanceFormDraft } from "./model";
 
 let originalContent: string;
-let original: GameBalanceDocumentV4;
+let original: GameBalanceDocumentV5;
 
 beforeAll(async () => {
   const root = await resolveRepoRoot();
@@ -56,7 +56,7 @@ it("preserves nullable shop prices and materializes an enabled price", () => {
 });
 
 describe("Balance form model", () => {
-  it("round-trips the complete checked-in schema 4 document", () => {
+  it("round-trips the complete checked-in schema 5 document", () => {
     const form = toBalanceFormDraft(original);
     const materialized = materializeBalanceDraft(form);
 
@@ -66,7 +66,7 @@ describe("Balance form model", () => {
   });
 
   it("rejects unknown schemas and unsupported root fields", () => {
-    expect(() => parseBalanceDocument(JSON.stringify({ schemaVersion: 3 })))
+    expect(() => parseBalanceDocument(JSON.stringify({ schemaVersion: 4 })))
       .toThrow("Unsupported balance schema version");
 
     const invalid = JSON.parse(originalContent) as Record<string, unknown>;
@@ -144,13 +144,13 @@ describe("Balance form model", () => {
     };
     const revised = withIncrementedBalanceRevision(original, edited);
 
-    expect(revised.balanceRevision).toBe("game-balance-7");
+    expect(revised.balanceRevision).toBe("game-balance-8");
     expect(balanceDocumentMatches(original, original)).toBe(true);
   });
 });
 
 function setBalanceFormNumbers(
-  form: BalanceFormDraft<GameBalanceDocumentV4>,
+  form: BalanceFormDraft<GameBalanceDocumentV5>,
   fields: Record<string, string>,
 ) {
   return Object.entries(fields).reduce(

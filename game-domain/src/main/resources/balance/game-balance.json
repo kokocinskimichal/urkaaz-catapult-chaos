@@ -1,6 +1,6 @@
 {
-  "schemaVersion": 4,
-  "balanceRevision": "game-balance-6",
+  "schemaVersion": 5,
+  "balanceRevision": "game-balance-7",
   "bosses": [
     {
       "id": "boss.central-ancient-war-oak.level-05",
@@ -883,9 +883,9 @@
       "maximumDamageVarianceFactor": 1.2,
       "unitLuckBiasMaximumMagnitude": 0.04,
       "maximumInitialAttackDelayRatio": 0.5,
-      "unitMovementSpeedMultiplier": 2,
-      "unitMovementSpeedScale": 0.45,
-      "garrisonMovementSpeedScale": 0.22,
+      "gameplaySpeedMultiplier": 1.2,
+      "unitMovementSpeedScale": 0.9,
+      "garrisonMovementSpeedScale": 0.44,
       "unitInteractionRange": 260,
       "fortressAttackRange": 82,
       "sapperFortressStandoffDistance": 200,

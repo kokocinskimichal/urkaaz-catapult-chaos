@@ -81,8 +81,8 @@ export function validateBalanceContent(content: string): BalanceValidationRespon
     ],
     issues,
   );
-  if (root.schemaVersion !== 4) {
-    issues.push(issue("schemaVersion", "must be the supported schema version 4"));
+  if (root.schemaVersion !== 5) {
+    issues.push(issue("schemaVersion", "must be the supported schema version 5"));
   }
   if (typeof root.balanceRevision !== "string" || root.balanceRevision.trim() === "") {
     issues.push(issue("balanceRevision", "must be a non-empty string"));
@@ -834,7 +834,7 @@ function validateRuntime(value: unknown, issues: BalanceValidationIssue[]): void
     "runtime.combat",
     [
       "minimumDamageVarianceFactor", "maximumDamageVarianceFactor",
-      "unitLuckBiasMaximumMagnitude", "maximumInitialAttackDelayRatio", "unitMovementSpeedMultiplier",
+      "unitLuckBiasMaximumMagnitude", "maximumInitialAttackDelayRatio", "gameplaySpeedMultiplier",
       "unitMovementSpeedScale", "garrisonMovementSpeedScale", "unitInteractionRange",
       "fortressAttackRange", "sapperFortressStandoffDistance",
       "sapperContactSpeedMultiplier", "meleeAttackStandoffDistance",
@@ -869,8 +869,15 @@ function validateRuntime(value: unknown, issues: BalanceValidationIssue[]): void
         "must be between 0 and 1",
       ));
     }
-    if (!positiveNumber(combat.unitMovementSpeedMultiplier)) {
-      issues.push(issue("runtime.combat.unitMovementSpeedMultiplier", "must be positive"));
+    if (
+      !positiveNumber(combat.gameplaySpeedMultiplier) ||
+      combat.gameplaySpeedMultiplier < 1 ||
+      combat.gameplaySpeedMultiplier > 1.5
+    ) {
+      issues.push(issue(
+        "runtime.combat.gameplaySpeedMultiplier",
+        "must be between 1 and 1.5",
+      ));
     }
     for (const key of [
       "unitMovementSpeedScale", "garrisonMovementSpeedScale", "unitInteractionRange",

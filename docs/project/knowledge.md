@@ -1147,22 +1147,27 @@ when their target is listed in `runtimeBossIdleTargets`. Other boss states are
 runtime-loaded only when their exact sequence id is listed in
 `runtimeBossSequences` (currently `anim_boss_ancient_war_oak_attack_right`).
 
-The Balance tab edits the single schema 4 source
+The Balance tab edits the single schema 5 source
 `game-domain/src/main/resources/balance/game-balance.json`, which owns boss,
 unit, ammunition, spell and mana profiles plus shared runtime economy, physics,
 combat, AI strategy/profile, reward and campaign values. Limited ammunition
-prices are the nullable `shopCostGold` field. `GET /api/balance`
+prices are the nullable `shopCostGold` field. The global
+`runtime.combat.gameplaySpeedMultiplier` defaults to 1.2 (range 1.0–1.5) and
+scales unit/mobile-boss movement and projectile flight time, including
+fragments, without scaling match clocks, reloads or cooldowns. `GET /api/balance`
 returns exact file content and SHA-256, `POST /api/balance/validate` performs
 strict structural, range and stable-ID coverage validation, and
 `PUT /api/balance` writes atomically only when `expectedHash` is current. A changed
 document must advance `balanceRevision`; the editor automatically bumps a
 trailing revision number.
-The Balance UI presents all existing schema 4 fields through Bosses, Units,
+The Balance UI presents all existing schema 5 fields through Bosses, Units,
 Ammunition, Spells & Mana and Runtime tabs; it does not expose a JSON text
 editor. Profile identifiers and list structure remain fixed. Incomplete
 numeric drafts do not become zero values, validation errors are linked to
 field paths, and an external-write `409` preserves the draft until explicit
-reload.
+reload. `MatchSnapshot` exposes the validated multiplier to Android's
+`RenderState` so locomotion animations can follow movement speed; attack/death
+animations and the Sapper bomb-flight overlay remain on their existing clocks.
 The application loader creates one immutable `GameBalanceConfig` for the
 bundled resource and passes its typed catalogs to simulation, AI, loadout,
 progression and Android presentation projections. `UnitIds`, `AmmunitionType`

@@ -50,12 +50,15 @@ kampanię, AI oraz działający match screen. Gałąź robocza: `develop`.
 - Wybór amunicji w popup gridzie; niedostępna/depleted amunicja jest
   przygaszona i zablokowana.
 - Profile jednostek, amunicji, czarów, many, bossów i pozostałe parametry
-  runtime pochodzą ze ścisłego `game-balance.json` schema 4. Aplikacyjny loader
+  runtime pochodzą ze ścisłego `game-balance.json` schema 5. Aplikacyjny loader
   przekazuje jeden typowany `GameBalanceConfig` do symulacji, AI, kampanii,
   nagród, loadoutu i projekcji Androida.
-- Studio Balance edytuje wszystkie istniejące pola schema 4, w tym nullable
-  `shopCostGold`, przez zakładki i typowane kontrolki; surowy JSON nie jest
-  prezentowany, a stabilne ID i struktura profili pozostają stałe. Walidacja i zapis używają istniejącego
+- `runtime.combat.gameplaySpeedMultiplier` ma zakres `1.0–1.5` i wartość
+  domyślną `1.2`; skaluje ruch jednostek/mobilego bossa oraz czas lotu
+  pocisków i odłamków, nie zegary meczu, przeładowania ani cooldowny.
+- Studio Balance edytuje wszystkie istniejące pola schema 5, w tym nullable
+  `shopCostGold` i mnożnik tempa, przez zakładki i typowane kontrolki; surowy
+  JSON nie jest prezentowany, a stabilne ID i struktura profili pozostają stałe. Walidacja i zapis używają istniejącego
   API z kontrolą SHA-256 i `expectedHash`.
 - Dedykowane jednostki: Defender, Sapper, Demolisher, Raging Boar,
   Slingmaster; `UnitCatalog` tworzy ich definicje zachowań z profili JSON.

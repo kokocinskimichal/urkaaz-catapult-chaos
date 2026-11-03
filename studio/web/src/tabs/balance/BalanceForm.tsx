@@ -26,7 +26,7 @@ import type {
   BossArchetype,
   BossMovementKind,
   FriendlyFirePolicy,
-  GameBalanceDocumentV4,
+  GameBalanceDocumentV5,
   NumericInputDraft,
   SpellCategory,
   SpellDefinition,
@@ -54,9 +54,9 @@ type RuntimeSection =
   | "campaign";
 
 interface BalanceFormProps {
-  draft: BalanceFormDraft<GameBalanceDocumentV4>;
+  draft: BalanceFormDraft<GameBalanceDocumentV5>;
   validation: { valid: boolean; issues: BalanceValidationIssue[] } | null;
-  onChange: (draft: BalanceFormDraft<GameBalanceDocumentV4>) => void;
+  onChange: (draft: BalanceFormDraft<GameBalanceDocumentV5>) => void;
 }
 
 const SECTIONS: Array<{ id: BalanceSection; label: string }> = [
@@ -1166,7 +1166,7 @@ function ManaFields({
   draft,
   numberField,
 }: {
-  draft: BalanceFormDraft<GameBalanceDocumentV4>;
+  draft: BalanceFormDraft<GameBalanceDocumentV5>;
   numberField: (
     path: string,
     label: string,
@@ -1207,10 +1207,10 @@ function RuntimeFields({
   numberField,
   selectField,
 }: {
-  draft: BalanceFormDraft<GameBalanceDocumentV4>;
+  draft: BalanceFormDraft<GameBalanceDocumentV5>;
   section: RuntimeSection;
   profileIndex: number;
-  aiProfile: BalanceFormDraft<GameBalanceDocumentV4["runtime"]["aiProfiles"][number]> | undefined;
+  aiProfile: BalanceFormDraft<GameBalanceDocumentV5["runtime"]["aiProfiles"][number]> | undefined;
   setAiProfileId: (id: AiProfileId) => void;
   numberField: (
     path: string,
@@ -1530,7 +1530,7 @@ function CombatFields({
   runtime,
   numberField,
 }: {
-  runtime: BalanceFormDraft<GameBalanceDocumentV4["runtime"]>;
+  runtime: BalanceFormDraft<GameBalanceDocumentV5["runtime"]>;
   numberField: (
     path: string,
     label: string,
@@ -1562,9 +1562,12 @@ function CombatFields({
         })}
       </FieldGroup>
       <FieldGroup title="Movement and range">
-        {numberField(`${path}.unitMovementSpeedMultiplier`, "Unit movement speed multiplier", combat.unitMovementSpeedMultiplier, {
-          min: 0.01,
-          step: 0.01,
+        {numberField(`${path}.gameplaySpeedMultiplier`, "Gameplay speed multiplier", combat.gameplaySpeedMultiplier, {
+          unit: "×",
+          min: 1,
+          max: 1.5,
+          step: 0.05,
+          hint: "Scales unit and mobile-boss movement plus projectile flight time.",
         })}
         {numberField(`${path}.unitMovementSpeedScale`, "Unit movement speed scale", combat.unitMovementSpeedScale, {
           min: 0,
@@ -1642,7 +1645,7 @@ function AiStrategyFields({
   runtime,
   numberField,
 }: {
-  runtime: BalanceFormDraft<GameBalanceDocumentV4["runtime"]>;
+  runtime: BalanceFormDraft<GameBalanceDocumentV5["runtime"]>;
   numberField: (
     path: string,
     label: string,

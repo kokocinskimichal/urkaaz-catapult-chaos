@@ -43,8 +43,11 @@ class GameBalanceRepositoryTest {
         assertEquals(5, result.balance.config.units.all.size)
         assertEquals(5, result.balance.config.ammunition.all.size)
         assertEquals(11, result.balance.config.spells.all.size)
-        assertEquals(4, result.balance.config.schemaVersion)
-        assertEquals("game-balance-6", result.balance.config.balanceRevision)
+        assertEquals(5, result.balance.config.schemaVersion)
+        assertEquals("game-balance-7", result.balance.config.balanceRevision)
+        assertEquals(1.2f, result.balance.config.runtime.combat.gameplaySpeedMultiplier)
+        assertEquals(0.9f, result.balance.config.runtime.combat.unitMovementSpeedScale)
+        assertEquals(0.44f, result.balance.config.runtime.combat.garrisonMovementSpeedScale)
         assertEquals(GameBalanceFixtures.balance.units.all, result.balance.config.units.all)
         assertEquals(GameBalanceFixtures.balance.ammunition.all, result.balance.config.ammunition.all)
         assertEquals(GameBalanceFixtures.balance.spells.all, result.balance.config.spells.all)
@@ -76,8 +79,8 @@ class GameBalanceRepositoryTest {
             .bufferedReader()
             .use { it.readText() }
         val invalid = bundled.replace(
-            "\"schemaVersion\": 4,",
-            "\"schemaVersion\": 4,\n  \"extra\": true,",
+            "\"schemaVersion\": 5,",
+            "\"schemaVersion\": 5,\n  \"extra\": true,",
         )
         val repository = GameBalanceRepository {
             ByteArrayInputStream(invalid.toByteArray())
@@ -94,7 +97,7 @@ class GameBalanceRepositoryTest {
         val bundled = javaClass.getResourceAsStream("/balance/game-balance.json")!!
             .bufferedReader()
             .use { it.readText() }
-        val invalid = bundled.replace("\"schemaVersion\": 4,", "\"schemaVersion\": 3,")
+        val invalid = bundled.replace("\"schemaVersion\": 5,", "\"schemaVersion\": 4,")
         val repository = GameBalanceRepository {
             ByteArrayInputStream(invalid.toByteArray())
         }
@@ -103,6 +106,28 @@ class GameBalanceRepositoryTest {
             GameBalanceRead.Failure(GameBalanceFailure.INVALID_DATA),
             repository.load(),
         )
+    }
+
+    @Test
+    fun gameplaySpeedMultiplierOutsideTheSupportedRangeIsRejected() {
+        val bundled = javaClass.getResourceAsStream("/balance/game-balance.json")!!
+            .bufferedReader()
+            .use { it.readText() }
+
+        listOf("0.99", "1.51").forEach { multiplier ->
+            val invalid = bundled.replace(
+                "\"gameplaySpeedMultiplier\": 1.2,",
+                "\"gameplaySpeedMultiplier\": $multiplier,",
+            )
+            val repository = GameBalanceRepository {
+                ByteArrayInputStream(invalid.toByteArray())
+            }
+
+            assertEquals(
+                GameBalanceRead.Failure(GameBalanceFailure.INVALID_DATA),
+                repository.load(),
+            )
+        }
     }
 
     @Test
@@ -166,7 +191,7 @@ class GameBalanceRepositoryTest {
         val content = javaClass.getResourceAsStream("/balance/game-balance.json")!!
             .bufferedReader()
             .use { it.readText() }
-        val changed = content.replace("game-balance-6", "game-balance-7")
+        val changed = content.replace("game-balance-7", "game-balance-8")
         val first = assertIs<GameBalanceRead.Available>(repository(content).load()).balance
         val second = assertIs<GameBalanceRead.Available>(repository(changed).load()).balance
 

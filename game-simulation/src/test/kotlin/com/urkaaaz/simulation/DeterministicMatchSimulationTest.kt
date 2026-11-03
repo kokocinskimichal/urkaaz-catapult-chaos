@@ -53,6 +53,20 @@ class DeterministicMatchSimulationTest {
     private fun durableDefender() =
         UnitFactory.create(GameBalanceFixtures.balance.units.configuration(UnitIds.DEFENDER).copy(maxHealth = 260, supplyCost = 0))
 
+    private fun balanceWithGameplaySpeed(multiplier: Float) =
+        GameBalanceFixtures.balance.copy(
+            runtime = GameBalanceFixtures.balance.runtime.copy(
+                combat = GameBalanceFixtures.balance.runtime.combat.copy(
+                    gameplaySpeedMultiplier = multiplier,
+                ),
+            ),
+        )
+
+    private fun configWithGameplaySpeed(multiplier: Float) = config.copy(
+        balance = balanceWithGameplaySpeed(multiplier),
+        bounds = WorldBounds(width = 7_200f, height = 4_800f),
+    )
+
     @Test
     fun startProducesDeterministicLifecycleEventsAndSnapshot() {
         val simulation = DeterministicMatchSimulation(MatchId("match-1"), config)
@@ -783,7 +797,7 @@ class DeterministicMatchSimulationTest {
             val simulation = DeterministicMatchSimulation(
                 MatchId("terrain-impact-${team.name.lowercase()}"),
                 SimulationConfig(
-                    balance = GameBalanceFixtures.balance,
+                    balance = balanceWithGameplaySpeed(1.5f),
                     bounds = WorldBounds(width = 2_000f, height = 600f),
                     gravityAccelerationY = 1_000f,
                     windAccelerationX = 0f,
@@ -997,6 +1011,87 @@ class DeterministicMatchSimulationTest {
     }
 
     @Test
+    fun gameplayTempoPreservesProjectileImpactAndFragmentationGeometry() {
+        fun rockImpact(multiplier: Float): MatchEvent.TerrainDeformed {
+            val simulation = DeterministicMatchSimulation(
+                MatchId("rock-tempo-${multiplier.toString().replace('.', '-')}"),
+                SimulationConfig(
+                    balance = balanceWithGameplaySpeed(multiplier),
+                    bounds = WorldBounds(width = 2_000f, height = 600f),
+                    gravityAccelerationY = 1_000f,
+                    windAccelerationX = 0.2f,
+                ),
+            )
+            simulation.start()
+            simulation.aim(EntityId("blue-catapult"), directionDegrees = 0f, power = 50f)
+            simulation.fire(EntityId("blue-catapult"))
+
+            var impact: MatchEvent.TerrainDeformed? = null
+            var elapsedMilliseconds = 0
+            while (impact == null && elapsedMilliseconds < 10_000) {
+                impact = simulation.advance(10L)
+                    .filterIsInstance<MatchEvent.TerrainDeformed>()
+                    .firstOrNull()
+                elapsedMilliseconds += 10
+            }
+            return requireNotNull(impact) { "projectile did not reach terrain" }
+        }
+
+        fun fireRainSplit(multiplier: Float): MatchEvent.ProjectileSplit {
+            val simulation = DeterministicMatchSimulation(
+                MatchId("fire-rain-tempo-${multiplier.toString().replace('.', '-')}"),
+                SimulationConfig(
+                    balance = balanceWithGameplaySpeed(multiplier),
+                    bounds = WorldBounds(
+                        width = WorldDimensions.WIDTH,
+                        height = WorldDimensions.HEIGHT,
+                    ),
+                    gravityAccelerationY = 420f,
+                    windAccelerationX = 0.2f,
+                ),
+            )
+            simulation.start()
+            simulation.fire(EntityId("blue-catapult"), AmmunitionType.FIRE_RAIN)
+
+            var split: MatchEvent.ProjectileSplit? = null
+            var elapsedMilliseconds = 0
+            while (split == null && elapsedMilliseconds < 10_000) {
+                split = simulation.advance(10L)
+                    .filterIsInstance<MatchEvent.ProjectileSplit>()
+                    .firstOrNull()
+                elapsedMilliseconds += 10
+            }
+            return requireNotNull(split) { "Fire Rain did not split at its apex" }
+        }
+
+        val normalImpact = rockImpact(1f)
+        val fasterImpact = rockImpact(1.2f)
+        assertTrue(fasterImpact.simulationTimeMilliseconds < normalImpact.simulationTimeMilliseconds)
+        assertTrue(
+            abs(
+                fasterImpact.simulationTimeMilliseconds -
+                    normalImpact.simulationTimeMilliseconds / 1.2f,
+            ) <= 20f,
+        )
+        assertEquals(normalImpact.centerX, fasterImpact.centerX, 2f)
+        assertEquals(normalImpact.centerY, fasterImpact.centerY, 2f)
+
+        val normalSplit = fireRainSplit(1f)
+        val fasterSplit = fireRainSplit(1.2f)
+        assertEquals(6, normalSplit.fragmentProjectileIds.size)
+        assertEquals(normalSplit.fragmentProjectileIds.size, fasterSplit.fragmentProjectileIds.size)
+        assertTrue(fasterSplit.simulationTimeMilliseconds < normalSplit.simulationTimeMilliseconds)
+        assertTrue(
+            abs(
+                fasterSplit.simulationTimeMilliseconds -
+                    normalSplit.simulationTimeMilliseconds / 1.2f,
+            ) <= 20f,
+        )
+        assertEquals(normalSplit.x, fasterSplit.x, 2f)
+        assertEquals(normalSplit.y, fasterSplit.y, 2f)
+    }
+
+    @Test
     fun bothTeamsStartWithTwentySupplyAndRegenerateUpToTwenty() {
         val simulation = DeterministicMatchSimulation(MatchId("supply-match"), config)
         simulation.start()
@@ -1039,6 +1134,58 @@ class DeterministicMatchSimulationTest {
         assertTrue(after.units[0].x > before.units[0].x)
         assertTrue(after.units[1].x > before.units[1].x)
         assertTrue(after.units.last().x > before.units.last().x)
+    }
+
+    @Test
+    fun gameplaySpeedMultiplierScalesWaveAndGarrisonMovement() {
+        fun waveDistance(multiplier: Float): Float {
+            val simulation = DeterministicMatchSimulation(
+                MatchId("wave-tempo-${multiplier.toString().replace('.', '-')}"),
+                configWithGameplaySpeed(multiplier),
+            )
+            simulation.start()
+            simulation.deployUnit(freeUnit(GameBalanceFixtures.unit(UnitIds.DEFENDER)), Team.BLUE)
+            simulation.sendWave(Team.BLUE)
+            val startX = simulation.snapshot().units.single().x
+
+            simulation.advance(100L)
+
+            return simulation.snapshot().units.single().x - startX
+        }
+
+        fun garrisonDisplacements(multiplier: Float): List<Float> {
+            val simulation = DeterministicMatchSimulation(
+                MatchId("garrison-tempo-${multiplier.toString().replace('.', '-')}"),
+                configWithGameplaySpeed(multiplier),
+            )
+            simulation.start()
+            repeat(3) {
+                simulation.deployUnit(
+                    freeUnit(GameBalanceFixtures.unit(UnitIds.DEFENDER)),
+                    Team.BLUE,
+                )
+            }
+            val before = simulation.snapshot().units.associate { it.entityId to it.x }
+
+            simulation.advance(100L)
+
+            return simulation.snapshot().units.map { unit ->
+                unit.x - requireNotNull(before[unit.entityId])
+            }
+        }
+
+        val baselineWaveDistance = waveDistance(1f)
+        val fasterWaveDistance = waveDistance(1.2f)
+        assertTrue(baselineWaveDistance > 0f)
+        assertEquals(baselineWaveDistance * 1.2f, fasterWaveDistance, 0.02f)
+
+        val baselineGarrisonDisplacements = garrisonDisplacements(1f)
+        val fasterGarrisonDisplacements = garrisonDisplacements(1.2f)
+        assertTrue(baselineGarrisonDisplacements.any { it != 0f })
+        baselineGarrisonDisplacements.zip(fasterGarrisonDisplacements).forEach {
+                (baseline, faster) ->
+            assertEquals(baseline * 1.2f, faster, 0.02f)
+        }
     }
 
     @Test
@@ -1575,11 +1722,22 @@ class DeterministicMatchSimulationTest {
             simulation.deployUnit(GameBalanceFixtures.unit(UnitIds.DEFENDER), Team.BLUE)
             simulation.sendWave(Team.BLUE)
 
-            return buildList {
-                repeat(1_500) {
-                    addAll(simulation.advance(10))
-                }
-            }.filterIsInstance<MatchEvent.AttackStarted>()
+            val events = mutableListOf<MatchEvent>()
+            var attackCount = 0
+            var steps = 0
+            while (
+                steps < 1_500 &&
+                simulation.snapshot().status == MatchStatus.RUNNING &&
+                attackCount < 3
+            ) {
+                val nextEvents = simulation.advance(10)
+                events.addAll(nextEvents)
+                attackCount += nextEvents
+                    .filterIsInstance<MatchEvent.AttackStarted>()
+                    .count { it.attackType == "SIEGE_MISSION" }
+                steps += 1
+            }
+            return events.filterIsInstance<MatchEvent.AttackStarted>()
                 .filter { it.attackType == "SIEGE_MISSION" }
                 .map { it.simulationTimeMilliseconds }
         }

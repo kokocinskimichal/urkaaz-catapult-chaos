@@ -11,8 +11,9 @@
 - Added a short runic splash intro with the AFACODE logo as a separate overlay.
 - Added a measured battlefield-rendering optimization plan and a copy-ready
   implementation prompt, prioritizing repeated map-decoration PNG decoding.
-- Added a proposed global gameplay-speed plan and implementation prompt; the
-  balance and runtime behavior are not changed by those documents.
+- Added the global gameplay-speed multiplier to balance schema 5. It speeds up
+  unit and mobile-boss movement plus projectile flight without changing
+  projectile trajectories or match clocks.
 
 ### Changed
 

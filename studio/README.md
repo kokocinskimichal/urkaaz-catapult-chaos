@@ -36,11 +36,11 @@ od razu, ale pozostają oznaczone jako bez runtime loadera, dopóki Android nie
 zacznie ich odtwarzać.
 
 Balance używa pełnego formularza dla kanonicznego
-`game-domain/src/main/resources/balance/game-balance.json` schema 4. Zakładki
+`game-domain/src/main/resources/balance/game-balance.json` schema 5. Zakładki
 Bosses, Units, Ammunition, Spells & Mana i Runtime udostępniają wszystkie
 istniejące pola przez typowane inputy i selektory, w tym nullable cenę
-`shopCostGold` dla amunicji; stabilne ID, rozmiary i kolejność list pozostają
-stałe. Raw JSON nie jest wyświetlany ani edytowalny.
+`shopCostGold` dla amunicji oraz globalny mnożnik tempa; stabilne ID, rozmiary
+i kolejność list pozostają stałe. Raw JSON nie jest wyświetlany ani edytowalny.
 `GET /api/balance` zwraca treść i SHA-256, `POST /api/balance/validate`
 raportuje błędy ze ścieżkami, a `PUT /api/balance` wymaga aktualnego hasha,
 waliduje profile i atomowo zapisuje zmianę. Puste albo niekompletne pola

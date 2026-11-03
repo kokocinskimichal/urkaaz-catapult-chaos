@@ -25,6 +25,7 @@ data class MatchSnapshot(
     val boss: BossSnapshot? = null,
     val balanceRevision: String? = null,
     val balanceContentHash: String? = null,
+    val gameplaySpeedMultiplier: Float = 1f,
 ) {
     init {
         require(status != MatchStatus.FINISHED || outcome != null) {

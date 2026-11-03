@@ -646,12 +646,14 @@ class DeterministicMatchSimulation(
         resolveUnitInteractions(deltaSeconds)
         applyBossTick(bossTick)
         finishIfFortressDestroyed()
+        val projectileDeltaSeconds = deltaSeconds *
+            config.balance.runtime.combat.gameplaySpeedMultiplier
         val resolved = mutableListOf<Projectile>()
         projectiles.forEach { projectile ->
-            val apexTime = timeToApex(projectile, deltaSeconds)
+            val apexTime = timeToApex(projectile, projectileDeltaSeconds)
             if (apexTime == null) {
                 fragmentAtApex(projectile).forEach { fragment ->
-                    advanceProjectile(fragment, deltaSeconds)?.let(resolved::add)
+                    advanceProjectile(fragment, projectileDeltaSeconds)?.let(resolved::add)
                 }
             } else {
                 val atApex = advanceProjectile(projectile, apexTime)
@@ -659,7 +661,7 @@ class DeterministicMatchSimulation(
                     val splitProjectile = atApex.copy(
                         velocity = atApex.velocity.copy(y = 0f),
                     )
-                    val remainingSeconds = deltaSeconds - apexTime
+                    val remainingSeconds = projectileDeltaSeconds - apexTime
                     fragmentAtApex(splitProjectile).forEach { fragment ->
                         advanceProjectile(fragment, remainingSeconds)?.let(resolved::add)
                     }
@@ -690,14 +692,8 @@ class DeterministicMatchSimulation(
             projectile.gravityResponse
         if (gravityAcceleration <= 0f) return null
 
-        fun verticalVelocityAfter(seconds: Float): Float = projectile.advance(
-            deltaSeconds = seconds,
-            windAccelerationX = wind.accelerationX(),
-            gravityAccelerationY = config.gravityAccelerationY * worldPhysicsScale,
-            windResponse = projectile.windResponse,
-            gravityResponse = projectile.gravityResponse,
-            drag = projectile.drag,
-        ).velocity.y
+        fun verticalVelocityAfter(seconds: Float): Float =
+            advanceProjectilePhysics(projectile, seconds).velocity.y
 
         if (verticalVelocityAfter(deltaSeconds) < 0f) return null
 
@@ -718,14 +714,26 @@ class DeterministicMatchSimulation(
         projectile: Projectile,
         deltaSeconds: Float,
     ): Projectile? {
-        val advanced = projectile.advance(
-            deltaSeconds = deltaSeconds,
-            windAccelerationX = wind.accelerationX(),
-            gravityAccelerationY = config.gravityAccelerationY * worldPhysicsScale,
-            windResponse = projectile.windResponse,
-            gravityResponse = projectile.gravityResponse,
-            drag = projectile.drag,
-        )
+        val substepCount = projectileSubstepCount(deltaSeconds)
+        val substepSeconds = deltaSeconds / substepCount
+        val nonStoppingTargetIds = mutableSetOf<EntityId>()
+        var current = projectile
+        repeat(substepCount) {
+            current = advanceProjectileSubstep(
+                projectile = current,
+                deltaSeconds = substepSeconds,
+                nonStoppingTargetIds = nonStoppingTargetIds,
+            ) ?: return null
+        }
+        return current
+    }
+
+    private fun advanceProjectileSubstep(
+        projectile: Projectile,
+        deltaSeconds: Float,
+        nonStoppingTargetIds: MutableSet<EntityId>,
+    ): Projectile? {
+        val advanced = advanceProjectilePhysics(projectile, deltaSeconds)
         val terrainImpact = terrainImpactPosition(
             previous = projectile,
             deltaSeconds = deltaSeconds,
@@ -737,7 +745,11 @@ class DeterministicMatchSimulation(
         val impactProjectile = terrainImpact?.let {
             advanced.copy(position = it)
         } ?: advanced
-        val shieldImpact = shieldImpactBy(projectile.position, impactProjectile.position, projectile.firedBy)
+        val shieldImpact = shieldImpactBy(
+            projectile.position,
+            impactProjectile.position,
+            projectile.firedBy,
+        )
         if (shieldImpact != null) {
             resolveShieldImpact(
                 impactProjectile.copy(position = shieldImpact.position),
@@ -746,36 +758,62 @@ class DeterministicMatchSimulation(
             emitProjectileResolved(projectile.id, ProjectileResolution.SHIELD_IMPACT)
             return null
         }
-        val target = targetHitBy(impactProjectile)
-        return when {
-            target != null -> {
-                resolveEntityImpact(impactProjectile, target)
-                if (target.stopsProjectile) {
-                    emitProjectileResolved(projectile.id, ProjectileResolution.ENTITY_IMPACT)
-                    null
-                } else {
-                    impactProjectile
-                }
+        val target = targetHitBy(impactProjectile, nonStoppingTargetIds)
+        if (target != null) {
+            resolveEntityImpact(impactProjectile, target)
+            if (target.stopsProjectile) {
+                emitProjectileResolved(projectile.id, ProjectileResolution.ENTITY_IMPACT)
+                return null
             }
-            terrainImpact != null -> {
-                resolveTerrainImpact(impactProjectile)
-                emitProjectileResolved(projectile.id, ProjectileResolution.TERRAIN_IMPACT)
-                null
-            }
-            outsideBounds(advanced.position) -> {
-                emitProjectileResolved(projectile.id, ProjectileResolution.OUT_OF_BOUNDS)
-                null
-            }
+            nonStoppingTargetIds += target.id
+            return impactProjectile
+        }
+        if (terrainImpact != null) {
+            resolveTerrainImpact(impactProjectile)
+            emitProjectileResolved(projectile.id, ProjectileResolution.TERRAIN_IMPACT)
+            return null
+        }
+        if (outsideBounds(advanced.position)) {
+            emitProjectileResolved(projectile.id, ProjectileResolution.OUT_OF_BOUNDS)
+            return null
+        }
+        if (
             advanced.ageSeconds >= config.balance.ammunition
                 .definition(advanced.ammunition)
                 .flight
-                .maximumLifetimeSeconds -> {
-                emitProjectileResolved(projectile.id, ProjectileResolution.LIFETIME_EXPIRED)
-                null
-            }
-            else -> advanced
+                .maximumLifetimeSeconds
+        ) {
+            emitProjectileResolved(projectile.id, ProjectileResolution.LIFETIME_EXPIRED)
+            return null
         }
+        return advanced
     }
+
+    private fun advanceProjectilePhysics(
+        projectile: Projectile,
+        deltaSeconds: Float,
+    ): Projectile {
+        if (deltaSeconds <= 0f) return projectile
+        val substepCount = projectileSubstepCount(deltaSeconds)
+        val substepSeconds = deltaSeconds / substepCount
+        var current = projectile
+        repeat(substepCount) {
+            current = current.advance(
+                deltaSeconds = substepSeconds,
+                windAccelerationX = wind.accelerationX(),
+                gravityAccelerationY = config.gravityAccelerationY * worldPhysicsScale,
+                windResponse = current.windResponse,
+                gravityResponse = current.gravityResponse,
+                drag = current.drag,
+            )
+        }
+        return current
+    }
+
+    private fun projectileSubstepCount(deltaSeconds: Float): Int =
+        kotlin.math.ceil(deltaSeconds / TERRAIN_COLLISION_SAMPLE_SECONDS)
+            .toInt()
+            .coerceAtLeast(1)
 
     private fun fragmentAtApex(projectile: Projectile): List<Projectile> {
         val profile = projectile.apexFragmentation
@@ -1076,6 +1114,7 @@ class DeterministicMatchSimulation(
         boss = bossSystem?.snapshot(),
         balanceRevision = config.balanceRevision,
         balanceContentHash = config.balanceContentHash,
+        gameplaySpeedMultiplier = config.balance.runtime.combat.gameplaySpeedMultiplier,
     )
 
     private fun advanceBoss(deltaSeconds: Float): BossTickResult {
@@ -1572,14 +1611,11 @@ class DeterministicMatchSimulation(
             val hasteMultiplier = hasteMovementMultiplier(unit, deltaMilliseconds)
             val movementSpeed = config.balance.runtime.combat
             val movementScale = if (waveMoving) {
-                movementSpeed.unitMovementSpeedScale * movementSpeed.unitMovementSpeedMultiplier
+                movementSpeed.unitMovementSpeedScale
             } else {
-                movementSpeed.garrisonMovementSpeedScale * movementSpeed.unitMovementSpeedMultiplier
+                movementSpeed.garrisonMovementSpeedScale
             }
-            val step = unit.type.speed * UnitMovementSpeed.statusMultiplier(
-                statuses = statusAdvanced.statuses,
-                hasteMultiplier = hasteMultiplier,
-            ) * movementScale * if (
+            val contactSpeedMultiplier = if (
                 waveMoving &&
                 unit.type is SapperUnit &&
                 units.any { other ->
@@ -1593,7 +1629,12 @@ class DeterministicMatchSimulation(
                 unit.type.configuration.contactMovementSpeedMultiplier
             } else {
                 1f
-            } * deltaSeconds
+            }
+            val step = unit.type.speed * UnitMovementSpeed.statusMultiplier(
+                statuses = statusAdvanced.statuses,
+                hasteMultiplier = hasteMultiplier,
+            ) * movementScale * contactSpeedMultiplier *
+                movementSpeed.gameplaySpeedMultiplier * deltaSeconds
             val nextX = if (direction >= 0f) {
                 minOf(unit.position.x + step, movementTargetX)
             } else {
@@ -3156,7 +3197,10 @@ class DeterministicMatchSimulation(
         friendlyFire != FriendlyFirePolicy.ENEMY_ONLY ||
         targetTeam != sourceTeam
 
-    private fun targetHitBy(projectile: Projectile): EntityTarget? {
+    private fun targetHitBy(
+        projectile: Projectile,
+        ignoredUnitIds: Set<EntityId> = emptySet(),
+    ): EntityTarget? {
         val definition = config.balance.ammunition.definition(projectile.ammunition)
         val targetUnit = if (com.urkaaaz.domain.AmmunitionHitLayer.UNIT in definition.collision.hitLayers) {
             if (definition.collision.mode ==
@@ -3167,6 +3211,7 @@ class DeterministicMatchSimulation(
             units.asSequence()
                 .filter { unit ->
                     unit.isAlive &&
+                        unit.id !in ignoredUnitIds &&
                         canHitUnit(
                             sourceTeam = projectile.firedBy,
                             targetTeam = unit.team,

@@ -6,29 +6,28 @@ Plan jest źródłem decyzji o zachowaniu. Przeczytaj go w całości przed zmian
 Ten prompt nie zleca innych zmian balansu, nowych mechanik ani redesignu UI.
 
 Przed edycją sprawdź branch i `git status --short`. Zachowaj wszystkie
-zastane zmiany worktree;
-nie nadpisuj plików i nie formatuj hurtowo zakresu poza zadaniem.
-Nie commituj ani nie pushuj bez jawnego polecenia użytkownika.
+zastane zmiany worktree; nie nadpisuj plików i nie formatuj hurtowo zakresu
+poza zadaniem. Nie commituj ani nie pushuj bez jawnego polecenia użytkownika.
 
 ## Potwierdzone decyzje
 
-- Jeden globalny mnożnik w balansie ma sterować ruchem jednostek oraz
-  czasem lotu pocisków katapult i ich fragmentów. Nie dodawaj osobnego
-  per-ammo mnożnika tempa.
-- Mnożnik ma przyspieszać lot, ale zachować przestrzenny tor i zasięg przy
-  tych samych warunkach startowych. Nie zwiększaj `initialSpeedMultiplier`
+- Jeden globalny mnożnik balansu steruje ruchem jednostek oraz czasem lotu
+  pocisków katapult i ich fragmentów. Nie dodawaj osobnego mnożnika pocisków.
+- Reużyj istniejącego pola ruchu jako jedynego globalnego slotu, nazywając je
+  `runtime.combat.gameplaySpeedMultiplier`.
+- Domyślna wartość po normalizacji to `1.2`; dopuszczalny zakres to `1.0–1.5`
+  z krokiem `0.05`.
+- Mnożnik ma skracać czas lotu, zachowując przestrzenny tor i zasięg przy tych
+  samych warunkach startowych. Nie zwiększaj `initialSpeedMultiplier`
   amunicji.
-- Wartość domyślna po normalizacji to `1.2`, około 20% szybciej niż obecny
-  ruch jednostek.
 - Nie przyspieszaj osobnego, 500 ms overlayu wizualnego lotu bomby Sappera.
 - Nie zmieniaj zegara meczu, przeładowań, cooldownów, obrażeń, zdrowia,
   kosztów, fal AI, czasu trwania statusów, warunków wygranej/przegranej ani
-  trudności per poziom.
+  krzywej trudności per poziom.
 
 ## Audyt przed zmianami
 
-Sprawdź `git status --short` i rozdziel istniejące zmiany użytkownika od
-zakresu tej implementacji. Przeczytaj:
+Przeczytaj:
 
 ```text
 AGENTS.md
@@ -62,82 +61,89 @@ studio/web/src/tabs/balance/model.ts
 studio/web/src/tabs/balance/BalanceForm.tsx
 ```
 
-## Kontrakt balansu i migracja
+## Balance schema i normalizacja ruchu
 
-1. Reużyj istniejącego pola `runtime.combat.unitMovementSpeedMultiplier` jako
-   jedynego globalnego slotu. Zmień jego nazwę na
-   `runtime.combat.gameplaySpeedMultiplier`, aby nazwa opisywała także lot
-   pocisków; nie dodawaj drugiego mnożnika.
-2. Ponieważ walidator servera i formularz wymagają dokładnego zestawu kluczy,
-   podnieś balance schema z 4 do 5. Zaktualizuj `balanceRevision`, typowane DTO,
-   parser domenowy, fixture, walidację servera i model/formularz Studio razem.
-   Nie akceptuj schema 4 przez cichy fallback.
-3. Zachowaj obecne tempo jako punkt `1.0`, przenosząc stary czynnik `2.0` do
-   bazowych skal ruchu: `unitMovementSpeedScale` z `0.45` na `0.90`, a
-   `garrisonMovementSpeedScale` z `0.22` na `0.44`. Przy `1.2` obie kategorie
-   mają być około 20% szybsze od obecnego zachowania.
+1. Obecny balance jest schema 4. Podnieś go do schema 5 i zmień
+   `balanceRevision` na kolejną rewizję. Zaktualizuj typowany model domeny,
+   DTO/loader aplikacyjny, model formularza, walidator servera i testy w
+   jednym spójnym kroku.
+2. Reużyj dotychczasowy slot `runtime.combat.unitMovementSpeedMultiplier`,
+   zmieniając jego nazwę na `runtime.combat.gameplaySpeedMultiplier`.
+   Nie pozostawiaj starego pola jako drugiego edytowalnego mnożnika i nie
+   akceptuj schema 4 przez cichy fallback.
+3. Przenieś dotychczasowy czynnik `2.0` do bazowych skal ruchu, zachowując
+   obecne tempo przy mnożniku `1.0`:
+   - `unitMovementSpeedScale`: `0.45` → `0.90`;
+   - `garrisonMovementSpeedScale`: `0.22` → `0.44`;
+   - `gameplaySpeedMultiplier`: domyślnie `1.2`.
 4. W Studio pokaż jedno pole numeryczne w **Balance → Runtime → Combat**,
-   opisane jako **Gameplay speed multiplier** i z jednostką `×`. Proponowany
-   zakres to `1.0–1.5`, krok `0.05`, domyślnie `1.2`. Górny limit jest
-   propozycją planu: jeśli wymaga zmiany, zapytaj użytkownika przed
-   implementacją zamiast samodzielnie wybierać inną granicę.
-5. Zachowaj strict validation, hash-guard, atomowy zapis i zasadę braku hot
-   reloadu. Zmiana zapisanej wartości obowiązuje nowe sesje po rebuildzie/
-   restarcie zgodnie z obecnym przepływem Studio.
+   opisane jako **Gameplay speed multiplier** i z jednostką `×`. Użyj
+   uzgodnionego zakresu `1.0–1.5`, kroku `0.05` i wartości domyślnej `1.2`.
+5. Zachowaj ścisłą walidację, `balanceRevision`, hash-guard, atomowy zapis
+   oraz brak hot reloadu. Zmiana zapisanej wartości obowiązuje nowe sesje po
+   rebuildzie/restarcie zgodnie z obecnym przepływem Studio.
 
-## Ruch jednostek i bossów
+## Ruch jednostek i mobilego bossa
 
-- Zastosuj mnożnik dokładnie raz do końcowego kroku ruchu jednostki, po
-  istniejących bazowych skalach i statusach HASTE/SLOWED. Zachowaj
-  multiplikatywne działanie kontaktowego spowolnienia Sappera.
-- Zastosuj ten sam mnożnik do prędkości garnizonu; nie zmieniaj slotów,
-  rozstawu formacji ani celów ruchu.
-- Ruch mobilego bossa również korzysta z globalnego mnożnika. `STATIC` boss
-  pozostaje nieruchomy; enrage nadal działa jako lokalny mnożnik prędkości.
-- Nie skaluj attack windupów, cooldownów, status-duration timerów, animatorów
-  ataku/śmierci, zegara meczu ani AI decision interval.
-- Utrzymaj synchronizację animacji lokomocji z nową prędkością rzeczywistą.
-  Nie przyspieszaj animacji innych stanów.
+- Stosuj mnożnik dokładnie raz do końcowego kroku ruchu, po bazowej skali
+  jednostki/garnizonu i statusach HASTE/SLOWED. Zachowaj multiplikatywne
+  działanie kontaktowego spowolnienia Sappera.
+- Zastosuj go do ruchu wysłanych jednostek, garnizonu i mobilego bossa.
+  Boss `STATIC` pozostaje nieruchomy; enrage nadal działa jako lokalny
+  mnożnik prędkości.
+- Nie zmieniaj celów ruchu, slotów ani rozstawu formacji.
+- Synchronizuj animację lokomocji z nowym tempem ruchu. Nie przyspieszaj
+  animacji ataków, śmierci, HUD-u ani zegarów.
 
 ## Pociski: krótszy czas, ten sam tor
 
-- Globalny mnożnik skaluje efektywny czas integracji pocisku, a nie
-  `ammunition[].flight.initialSpeedMultiplier`. W tym samym czasie skaluje
-  integrację grawitacji, wiatru, drag, wieku lotu, czasu do apogeum i
-  fragmentacji, tak aby dla stałego wiatru zachować tę samą geometrię toru.
-- Przy `1.2` lot ma trwać w przybliżeniu `1 / 1.2` dotychczasowego czasu.
-  Nie zmieniaj zasięgu, celu ani punktu apogeum dla identycznego startu i
-  niezmiennego wiatru.
-- Stosuj tę samą logikę do wszystkich symulowanych pocisków katapult i
-  odłamków. AI i BLUE muszą używać tego samego mechanizmu.
-- Przeliczaj `timeToApex` oraz pozostały krok po fragmentacji w tej samej
-  skali czasu pocisku. Simulation/match clock pozostaje w czasie rzeczywistym;
-  zmieniają się czasy zdarzeń lotu, nie globalne timery meczu.
-- Zachowaj adaptacyjne collision substeps. Przy maksymalnym mnożniku nie może
-  dojść do przenikania przez teren, fortyfikację ani Runic Bastion.
-- Wiatr pozostaje dynamicznym stanem meczu i nie jest zamrażany przy wystrzale.
-  Równość toru dotyczy tych samych warunków wiatru; lot trwający krócej może
-  mieć mniejszą ekspozycję na późniejszą zmianę wiatru.
+- Nie zmieniaj per-ammo `initialSpeedMultiplier`. Dla każdego kroku lotu
+  oblicz efektywny czas pocisku jako `simulationDelta × gameplaySpeedMultiplier`.
+- W tę samą skalę czasu włącz całe kinematics pocisku: grawitację, wiatr,
+  drag, `ageSeconds`, wyszukiwanie apogeum, fragmentację i test kolizji.
+  Pocisk ma przejść po tej samej przestrzennej trajektorii i trafić w to samo
+  miejsce, ale zrobić to szybciej.
+- Przy `1.2` czas lotu przy stałych warunkach wynosi w przybliżeniu
+  `1 / 1.2` dotychczasowego czasu. Zegar symulacji, zegar meczu i czasy
+  reload/cooldown nadal używają rzeczywistego kroku.
+- Zaktualizuj obsługę `timeToApex`, pozostałego kroku po fragmencie,
+  `terrainImpactPosition` oraz wszystkich punktów integracji tak, by każdy
+  pocisk i każdy odłamek otrzymały identyczną skalę.
+- Zwiększony efektywny krok nie może powodować przenikania przez teren,
+  fortyfikację ani Runic Bastion. Użyj adaptacyjnych substeps, zachowując
+  dotychczasową maksymalną precyzję kolizji przy mnożniku `1.5`.
+- Nie zamrażaj ani nie zmieniaj harmonogramu wiatru. Dla stałego wiatru tor
+  ma być zgodny; przy zmianie wiatru w czasie lotu skrócenie ekspozycji może
+  wpłynąć na dryf.
 - Androidowy statyczny preview trajektorii ma nadal zgadzać się geometrycznie
-  z symulacją. SapperBombFlightClock pozostaje poza zakresem.
+  z symulacją. `SapperBombFlightClock` pozostaje bez zmian.
+
+## Zakres architektury
+
+- `game-domain` przechowuje tylko typowaną konfigurację balansu i jej
+  niezmienniki; nie zna Androida, Studio ani rendererów.
+- `game-application` ładuje jeden niemutowalny `GameBalanceConfig` dla sesji.
+- `game-simulation` jest jedynym właścicielem ruchu, projectile clock,
+  fragmentacji i kolizji.
+- AI i BLUE używają tej samej deterministycznej symulacji; nie dodawaj osobnej
+  logiki prędkości w AI ani Android UI.
+- Studio edytuje to samo kanoniczne `game-balance.json` przez istniejący API;
+  nie twórz drugiego endpointu, pliku balansu ani per-ammo override.
 
 ## Testy i kryteria akceptacji
 
-Dodaj/zmień testy tak, aby sprawdzały zachowanie, nie prywatną implementację:
-
-- schema 5, migrację/normalizację wartości, walidację granic mnożnika i round
-  trip przez `GameBalanceRepository` oraz Studio balance API/form;
-- przy mnożniku `1.0` unit/garrison movement zachowuje dotychczasowe tempo;
-  przy `1.2` dystans w stałym czasie rośnie o 20%, z HASTE/SLOWED i
-  contact-speed modifier zachowującymi dotychczasowe proporcje;
-- mobile boss porusza się zgodnie z mnożnikiem, static boss nie;
+- schema 5, migracja wartości, serializacja/deserializacja, ścisła walidacja
+  zakresu oraz zapis przez istniejący balance API/form;
+- przy mnożniku `1.0` ruch jednostek i garnizonu zachowuje dotychczasowe
+  tempo; przy `1.2` dystans w stałym czasie rośnie o 20%, z HASTE/SLOWED,
+  kontaktem i garnizonem zachowującymi dotychczasowe proporcje;
+- mobile boss porusza się zgodnie z globalnym mnożnikiem, static boss nie;
 - dla stałego wiatru i identycznego seed/aim/amunicji tor, apogeum, punkty
-  fragmentacji i miejsce trafienia są zgodne przy `1.0` i `1.2`, a czas lotu
-  jest krótszy zgodnie z mnożnikiem;
-- wszystkie ammo typy i fragmenty zachowują poprawne kolizje przy wartości
-  maksymalnej; nie ma tunnelingu;
-- czas meczu, reload, cooldowny, obrażenia, efekty/statusy i warunki
-  zwycięstwa pozostają niezmienione przez globalny mnożnik;
+  fragmentacji i miejsce trafienia są zgodne przy `1.0` i `1.2`;
+- czas lotu przy `1.2` jest krótszy, a przy `1.5` nie występuje tunneling;
+- AI, fragmenty i wszystkie typy amunicji korzystają z jednego mnożnika;
+- czas meczu, ataki, reload, cooldowny, obrażenia, efekty/statusy i warunki
+  zwycięstwa pozostają niezmienione;
 - preview Androida pozostaje zgodny z symulowanym torem.
 
 Uruchom:
@@ -152,3 +158,5 @@ cd ..
 git diff --check
 git status --short
 ```
+
+Nie commituj ani nie pushuj.

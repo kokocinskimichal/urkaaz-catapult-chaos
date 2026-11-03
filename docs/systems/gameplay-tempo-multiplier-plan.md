@@ -1,6 +1,7 @@
 # Plan: globalny mnożnik tempa rozgrywki
 
-**Status: plan do przeglądu; implementacja nie została rozpoczęta.**
+**Status: zaimplementowano.** Bieżący kontrakt używa balance schema 5,
+`gameplaySpeedMultiplier: 1.2` i znormalizowanych skal ruchu.
 
 Prompt implementacyjny:
 [`gameplay-tempo-multiplier-implementation-prompt.md`](gameplay-tempo-multiplier-implementation-prompt.md).
@@ -17,8 +18,10 @@ statusów.
 
 ## Decyzje uzgodnione
 
-- Wykorzystać istniejący slot `runtime.combat.unitMovementSpeedMultiplier`
-  jako jeden globalny mnożnik, zamiast dodawać niezależny mnożnik pocisków.
+- Wykorzystać istniejący slot
+  `runtime.combat.unitMovementSpeedMultiplier` jako jeden globalny mnożnik,
+  zmieniając jego nazwę na `runtime.combat.gameplaySpeedMultiplier` zamiast
+  dodawać niezależny mnożnik pocisków.
 - Domyślne tempo po normalizacji ma wynosić **1.2×**, czyli około 20% szybciej
   niż obecne zachowanie.
 - Przyspieszenie pocisków ma skrócić czas lotu przy zachowaniu tego samego
@@ -26,7 +29,7 @@ statusów.
 - Zakres pocisków obejmuje pociski katapult i ich fragmenty. Osobny, 500 ms
   wizualny lot bomby Sappera pozostaje poza zakresem.
 
-## Obecny stan
+## Stan przed implementacją
 
 - `game-balance.json` jest w schema 4. `runtime.combat` zawiera
   `unitMovementSpeedMultiplier: 2`, `unitMovementSpeedScale: 0.45` oraz
@@ -41,12 +44,22 @@ statusów.
 - Plik balansu jest ładowany raz dla sesji. Zmiana zapisanej wartości działa
   po ponownym uruchomieniu aplikacji; nie ma hot reloadu.
 
-## Proponowany kontrakt balansu
+## Wdrożenie
+
+- `runtime.combat.gameplaySpeedMultiplier` ma zakres 1.0–1.5 i domyślną
+  wartość 1.2; skale ruchu wysłanych jednostek i garnizonu wynoszą odpowiednio
+  0.90 i 0.44.
+- Efektywny czas pocisku jest mnożony w symulacji, z adaptacyjnymi substeps,
+  zachowującymi precyzję kolizji dla pocisków i fragmentów.
+- Mobilny boss i animacje lokomocji korzystają z tego samego mnożnika; match,
+  reload, cooldown i status clocks nie są przyspieszane.
+
+## Zaimplementowany kontrakt balansu
 
 Zachować jeden parametr, ale nazwać go zgodnie z szerszą odpowiedzialnością:
 `runtime.combat.gameplaySpeedMultiplier`. Jest to migracja istniejącego pola,
-a nie drugi, niezależny mnożnik. Zalecana zmiana schematu to schema 5, ponieważ
-serwerowy walidator i formularz Balance ściśle sprawdzają klucze schema 4.
+a nie drugi, niezależny mnożnik. Balance podniesiono z schema 4 do schema 5,
+ponieważ serwerowy walidator i formularz Balance ściśle sprawdzają klucze.
 
 Przenieść obecny czynnik ruchu jednostek do bazowych skal, aby mnożnik równy
 1.0 zachował aktualne tempo:
@@ -61,9 +74,8 @@ profile prędkości jednostek i enrage mobilego bossa nadal zachowują swoje
 względne działanie. Globalny mnożnik stosuje się raz, na końcu obliczenia
 prędkości ruchu. Static bosses nie są przesuwane.
 
-Wartość początkowa **1.2** jest uzgodniona. Proponowane ograniczenia pola to
-**1.0–1.5**, z krokiem 0.05; górny limit należy potwierdzić testami czytelności
-i kolizji. Studio może użyć istniejącego pola numerycznego w **Balance →
+Wartość początkowa **1.2** oraz zakres **1.0–1.5** z krokiem **0.05** są
+uzgodnione. Studio może użyć istniejącego pola numerycznego w **Balance →
 Runtime → Combat**, z etykietą **Gameplay speed multiplier** i jednostką `×`.
 
 ## Własność i przepływ danych

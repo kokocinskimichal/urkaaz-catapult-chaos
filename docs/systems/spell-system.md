@@ -599,7 +599,7 @@ właścicielem loadoutu, a SpellSystem nie posiada persystencji.
 Lista pozostałych prac:
 
 - `game-domain/.../Spells.kt` i `SpellCatalog.kt` — stabilne ID oraz typowany
-  dostęp do schema 4 są wdrożone; uzupełniać definicje efektów wyłącznie po
+  dostęp do schema 5 są wdrożone; uzupełniać definicje efektów wyłącznie po
   osobnej decyzji o ich implementacji;
 - `game-domain/.../SpellRules.kt` lub wyspecjalizowane reguły — tylko jeśli
   potrzebne po analizie istniejących helperów;

@@ -1152,8 +1152,13 @@ internal class BattlefieldRenderer(
                 } else {
                     DEFAULT_UNIT_ANIMATION_RENDER_FRAMES_PER_FRAME
                 }
+                val unitAnimationFrame = if (unit.moving || sapperUsesMoveAnimation) {
+                    (animationFrame * state.gameplaySpeedMultiplier).toInt()
+                } else {
+                    animationFrame
+                }
                 frames.bitmapIfReady(
-                    (animationFrame / renderFramesPerAnimationFrame +
+                    (unitAnimationFrame / renderFramesPerAnimationFrame +
                         Math.floorMod(unit.entityId.hashCode(), frames.frameCount)) %
                         frames.frameCount,
                 )

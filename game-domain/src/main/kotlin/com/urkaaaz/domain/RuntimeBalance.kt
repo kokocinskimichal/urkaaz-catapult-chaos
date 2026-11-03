@@ -156,7 +156,7 @@ data class CombatBalance(
     val maximumDamageVarianceFactor: Float,
     val unitLuckBiasMaximumMagnitude: Float,
     val maximumInitialAttackDelayRatio: Float,
-    val unitMovementSpeedMultiplier: Float,
+    val gameplaySpeedMultiplier: Float,
     val unitMovementSpeedScale: Float,
     val garrisonMovementSpeedScale: Float,
     val unitInteractionRange: Float,
@@ -183,8 +183,8 @@ data class CombatBalance(
         require(maximumInitialAttackDelayRatio in 0f..1f) {
             "initial attack delay ratio must be between 0 and 1"
         }
-        require(unitMovementSpeedMultiplier.isFinite() && unitMovementSpeedMultiplier > 0f) {
-            "unit movement speed multiplier must be finite and positive"
+        require(gameplaySpeedMultiplier.isFinite() && gameplaySpeedMultiplier in 1f..1.5f) {
+            "gameplay speed multiplier must be finite and between 1 and 1.5"
         }
         require(unitMovementSpeedScale.isFinite() && unitMovementSpeedScale >= 0f) {
             "unit movement speed scale must be finite and non-negative"

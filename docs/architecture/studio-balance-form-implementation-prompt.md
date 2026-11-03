@@ -1,8 +1,8 @@
 # Prompt implementacyjny — formularz balansu w Studio
 
 > Ten prompt opisuje zakończony zakres bazowego formularza schema 3. Bieżące
-> Studio obsługuje schema 4 z nullable `ammunition[].shopCostGold`, dodanym w
-> ramach ShopSystem; aktualnym źródłem prawdy jest
+> Studio obsługuje schema 5 z nullable `ammunition[].shopCostGold` i globalnym
+> mnożnikiem tempa; aktualnym źródłem prawdy jest
 > [`shop-system.md`](../systems/shop-system.md).
 
 Zaimplementuj formularz edycji balansu w Urkaaaz Studio zgodnie z

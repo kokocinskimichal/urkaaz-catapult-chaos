@@ -24,8 +24,40 @@ afterEach(async () => {
 });
 
 describe("game balance catalog", () => {
-  it("validates the supported schema 4 balance document", () => {
+  it("validates the supported schema 5 balance document", () => {
     expect(validateBalanceContent(validBalance)).toEqual({ valid: true, issues: [] });
+  });
+
+  it("rejects schema 4 instead of applying an implicit migration", () => {
+    const document = JSON.parse(validBalance) as Record<string, unknown>;
+    document.schemaVersion = 4;
+
+    expect(validateBalanceContent(JSON.stringify(document)).issues).toContainEqual(
+      expect.objectContaining({ path: "schemaVersion" }),
+    );
+  });
+
+  it("accepts only gameplay speed multipliers from 1 through 1.5", () => {
+    for (const multiplier of [1, 1.2, 1.5]) {
+      const document = JSON.parse(validBalance) as Record<string, unknown>;
+      const runtime = document.runtime as Record<string, unknown>;
+      const combat = runtime.combat as Record<string, unknown>;
+      combat.gameplaySpeedMultiplier = multiplier;
+      expect(validateBalanceContent(JSON.stringify(document))).toEqual({
+        valid: true,
+        issues: [],
+      });
+    }
+
+    for (const multiplier of [0.99, 1.51, "1.2", Number.NaN]) {
+      const document = JSON.parse(validBalance) as Record<string, unknown>;
+      const runtime = document.runtime as Record<string, unknown>;
+      const combat = runtime.combat as Record<string, unknown>;
+      combat.gameplaySpeedMultiplier = multiplier;
+      expect(validateBalanceContent(JSON.stringify(document)).issues).toContainEqual(
+        expect.objectContaining({ path: "runtime.combat.gameplaySpeedMultiplier" }),
+      );
+    }
   });
 
   it("validates nullable non-negative shop prices only for limited ammunition", () => {
