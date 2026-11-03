@@ -125,6 +125,11 @@ class MatchResultPopupStateMapperTest {
     }
 
     @Test
+    fun resultPopupWaitsForBossDeathPresentation() {
+        assertNull(popup(bossDeathPresentationPending = true))
+    }
+
+    @Test
     fun resultContextUsesTheCurrentLevelAndBiome() {
         val state = popup(biome = "GREEN_FRONTIER")
 
@@ -160,10 +165,12 @@ class MatchResultPopupStateMapperTest {
         demoMode: Boolean = false,
         completionRecorded: Boolean? = true,
         isFinished: Boolean = true,
+        bossDeathPresentationPending: Boolean = false,
         stockSettlementStatus: MatchStockSettlementUiStatus =
             MatchStockSettlementUiStatus.NOT_REQUIRED,
     ) = MatchResultPopupStateMapper.map(
         isFinished = isFinished,
+        bossDeathPresentationPending = bossDeathPresentationPending,
         outcome = outcome,
         campaignLevel = level,
         biomeName = biome,

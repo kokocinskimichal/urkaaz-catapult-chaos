@@ -381,8 +381,9 @@ Wybrane przez użytkownika legacy artwork zostaje przeniesione do
 `assets_src/` oraz `android-app/src/main/res/drawable-nodpi/` zgodnie z
 istniejącymi zasadami assetów. Profile encounterów nadal korzystają z tych
 samych neutralnych grafik; Ancient War Oak ma dodatkowo zaakceptowany,
-75-klatkowy idle wygenerowany w AnimGen. Pozostałe bossy zachowują statyczny
-sprite, a animacje ruchu, walki, enrage i śmierci pozostają osobnymi zadaniami.
+75-klatkowy idle, dwa kierunkowe ataki po 60 klatek i 60-klatkową animację
+śmierci wygenerowane w AnimGen. Pozostałe bossy zachowują statyczne grafiki;
+ich własne sekwencje śmierci pozostają przyszłą zawartością.
 
 Animacje są prezentacją-only i nie zmieniają kontraktów gameplayu. Ancient War
 Oak odtwarza zapętlony `idle` we wszystkich fazach; `BossPresentationCatalog`
@@ -405,13 +406,15 @@ fallbacku. Zegar prezentacji i timing ataku pozostają bez zmian.
 
 ### Atak na jednostki z wind-upem
 
-Atak Ancient War Oak na jednostki (`UNIT`) ma zaakceptowaną, 60-klatkową
-sekwencję AnimGen `attack_right` (4,042 s, canvas 4:3 512×384): boss unosi
-gałąź-rękę z prawej strony nad głowę i uderza nią w prawo, uderzenie przypada
-na klatkę 34. Sekwencja jest odtwarzana w całości od początku, więc symulacja
-opóźnia obrażenia o skonfigurowany `windupSeconds` (2,291 s dla Oaka), aby
-trafienie zgrało się z klatką uderzenia. Współdzielone liczby (liczba klatek,
-czas, klatka uderzenia, wind-up) trzyma `BossAttackAnimationTiming` w
+Atak Ancient War Oak na jednostki (`UNIT`) ma dwie zaakceptowane, 60-klatkowe
+sekwencje AnimGen w canvasie 4:3 512×384. `attack_right` (4,042 s) unosi
+gałąź-rękę z prawej strony nad głowę i uderza nią w prawo; `attack_left`
+wykonuje zwarty poziomy zamach w lewo prawą ręką Oaka (po lewej stronie dla
+widza), bez poszerzania kadru. Obie sekwencje używają klatki uderzenia 34.
+Sekwencja jest odtwarzana w całości od początku, więc symulacja opóźnia
+obrażenia o skonfigurowany `windupSeconds` (2,291 s dla Oaka), aby trafienie
+zgrało się z klatką uderzenia. Współdzielone liczby (liczba klatek, czas,
+klatka uderzenia, wind-up) trzyma `BossAttackAnimationTiming` w
 `game-contracts`.
 
 Przebieg w `BossSystem`:
@@ -445,10 +448,20 @@ Prezentacja: `RenderStateMapper` mapuje `BossUnitAttackStarted` na
 `BossPresentationClock` startuje sekwencję raz na `eventId`, odtwarza ją bez
 pętli i wraca do `idle`; `BossPresentationCatalog` przechowuje sekwencje
 ataku per kierunek, a `BattlefieldRenderer` dopasowuje referencyjny sprite do
-hitboxa, więc szerszy canvas ataku nie zmienia rozmiaru ciała względem idle.
-Obecnie istnieje tylko sekwencja `RIGHT`; atak w lewo nie ma jeszcze animacji
-i jest pokazywany klatkami `idle`. Oryginały (video, ZIP klatek, contact
-sheet) są w `assets_src/animgen/bosses/ancient_war_oak/attack-right/`.
+hitboxa, więc canvas ataku nie zmienia rozmiaru ciała względem idle. Obie
+sekwencje są wymienione w `runtimeBossSequences`. Oryginały (video, ZIP
+klatek, contact sheet) znajdują się w
+`assets_src/animgen/bosses/ancient_war_oak/attack-right/` i
+`assets_src/animgen/bosses/ancient_war_oak/attack-left/`.
+
+Gdy dowolny boss zostaje pokonany, `BattlefieldCameraController` łagodnie
+centruje kadr na bossie i zwiększa zoom do 1.18×. Wynik meczu pozostaje
+ustalony przez symulację, ale popup podsumowania czeka na zakończenie
+prezentacji śmierci. Oak odtwarza całą 4-sekundową sekwencję; boss bez własnej
+animacji pozostaje na ostatniej dostępnej grafice przez ten sam czas. Kadr,
+pan i zoom ręczny pozostają zablokowane podczas tej prezentacji.
+Oryginały death (video, ZIP klatek, contact sheet) są w
+`assets_src/animgen/bosses/ancient_war_oak/death/`.
 
 `BattlefieldRenderer` rysuje bossa w world-space przed terrain capem.
 `RenderStateMapper` tworzy niemutowalny boss render state, a match screen
@@ -496,7 +509,9 @@ Oak jako 75-klatkowy `idle`. Jednoklatkowy `idle` ma loader; wieloklatkowe
 sekwencje są oznaczane jako runtime-loaded tylko dla celów z
 `runtimeBossIdleTargets`. Inne stany bossów są runtime-loaded tylko, gdy ich
 dokładny identyfikator sekwencji jest wymieniony w `runtimeBossSequences`
-(obecnie `anim_boss_ancient_war_oak_attack_right`). Zakładka pozostaje
+(obecnie `anim_boss_ancient_war_oak_attack_left`,
+`anim_boss_ancient_war_oak_attack_right` i
+`anim_boss_ancient_war_oak_death`). Zakładka pozostaje
 read-only i nie zapisuje assetów. Nowy boss idle wymaga wpisu w
 `BossPresentationCatalog` z liczbą klatek i granicami obrazu oraz wpisu w
 `runtimeBossIdleTargets`; nowa sekwencja ataku — wpisu w
@@ -683,7 +698,7 @@ profilu nie wybiera domyślnego bossa.
   boss-only;
 - profile i assety dla poziomów 55–100 są przyszłą zawartością i dopiero po
   ich walidacji można przesunąć frontier kampanii;
-- animacje bossów (ruch, walka, enrage, śmierć) są dokładane stopniowo po
-  pierwszym etapie; do tego czasu obowiązują statyczne grafiki;
+- animacje kolejnych bossów (ruch, walka, enrage, śmierć) są dokładane
+  stopniowo; bossy bez własnych sekwencji zachowują statyczne grafiki;
 - szersza migracja katalogów jednostek, amunicji i czarów pozostaje kolejnymi
   etapami wspólnego pliku balansu.

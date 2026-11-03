@@ -541,20 +541,33 @@ internal class BattlefieldRenderer(
         viewportWidth: Float,
         viewportHeight: Float,
     ) {
-        if (boss == null || boss.health <= 0) {
+        if (boss == null || (boss.health <= 0 && !presentation.deathPresentationActive)) {
             bossAnimationFrameHold.clear()
             return
         }
         val definition = BossPresentationCatalog.definition(boss.presentationKey)
+        val deathAnimation = if (presentation.deathPresentationActive) {
+            definition.deathAnimation()
+        } else {
+            null
+        }
         val attackDirection = presentation.attackDirection
         val attackFrameIndex = presentation.attackFrameIndex
-        val attackAnimation = if (attackDirection != null && attackFrameIndex != null) {
+        val attackAnimation = if (
+            deathAnimation == null &&
+            attackDirection != null &&
+            attackFrameIndex != null
+        ) {
             definition.attackAnimation(attackDirection)
         } else {
             null
         }
-        val requestedAnimation = attackAnimation ?: definition.idleAnimation
+        val requestedAnimation = deathAnimation ?: attackAnimation ?: definition.idleAnimation
         val requestedFrame = when {
+            deathAnimation != null -> assets.bossDeathFrame(
+                presentationKey = boss.presentationKey,
+                frameIndex = requireNotNull(presentation.deathAnimationFrameIndex),
+            )
             attackAnimation != null -> assets.bossAttackFrame(
                 presentationKey = boss.presentationKey,
                 direction = requireNotNull(attackDirection),

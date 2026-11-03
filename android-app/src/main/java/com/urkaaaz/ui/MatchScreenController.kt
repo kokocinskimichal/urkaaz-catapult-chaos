@@ -392,6 +392,13 @@ class MatchScreenController(
 
     fun onBackPressed(): Boolean {
         val state = viewModel.renderState
+        if (
+            !snapshotMode &&
+            ::battlefieldView.isInitialized &&
+            battlefieldView.isBossDeathPresentationPending(state)
+        ) {
+            return true
+        }
         if (state.statusLabel == MatchStatus.RUNNING.name) {
             render(viewModel.dispatch(MatchUiAction.TogglePause))
         }
@@ -401,8 +408,15 @@ class MatchScreenController(
 
     private fun render(state: RenderState) {
         lastRenderedState = state
+        val bossDeathPresentationPending =
+            !snapshotMode &&
+                state.statusLabel == MatchStatus.FINISHED.name &&
+                state.boss?.health?.let { it <= 0 } == true &&
+                ::battlefieldView.isInitialized &&
+                battlefieldView.isBossDeathPresentationPending(state)
         val popupState = MatchResultPopupStateMapper.map(
             isFinished = state.statusLabel == MatchStatus.FINISHED.name && !snapshotMode,
+            bossDeathPresentationPending = bossDeathPresentationPending,
             outcome = state.outcomeLabel?.let(MatchOutcome::valueOf),
             campaignLevel = campaignLevel,
             biomeName = state.terrainBiome,
@@ -416,7 +430,10 @@ class MatchScreenController(
         ammunitionPanel.render(state)
         unitPanel.render(state)
         spellPanel.render(state)
-        battlefieldView.render(state, showOutcomeLabel = popupState == null)
+        battlefieldView.render(
+            state,
+            showOutcomeLabel = popupState == null && !bossDeathPresentationPending,
+        )
         debugButton.visibility = if (
             openDebugOnStart && state.statusLabel == "RUNNING" && !snapshotMode
         ) {

@@ -23,10 +23,22 @@ describe("animations API", () => {
     const catalog = (await response.json()) as AnimationCatalogResponse;
     expect(response.status).toBe(200);
     expect(catalog.catalogIssues).toEqual([]);
-    expect(catalog.sequences.filter(sequence => sequence.category === "boss")).toHaveLength(9);
+    expect(catalog.sequences.filter(sequence => sequence.category === "boss")).toHaveLength(11);
     expect(catalog.sequences.find(sequence => sequence.id === "anim_boss_thorncrown_idle"))
       .toMatchObject({
         frameIndices: [0],
+        targetConfigured: true,
+        hasRuntimeLoader: true,
+      });
+    expect(catalog.sequences.find(sequence => sequence.id === "anim_boss_ancient_war_oak_attack_left"))
+      .toMatchObject({
+        frameIndices: Array.from({ length: 60 }, (_, index) => index),
+        targetConfigured: true,
+        hasRuntimeLoader: true,
+      });
+    expect(catalog.sequences.find(sequence => sequence.id === "anim_boss_ancient_war_oak_death"))
+      .toMatchObject({
+        frameIndices: Array.from({ length: 60 }, (_, index) => index),
         targetConfigured: true,
         hasRuntimeLoader: true,
       });

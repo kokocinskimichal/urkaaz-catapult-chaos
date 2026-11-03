@@ -54,22 +54,36 @@ class BossPresentationCatalogTest {
     }
 
     @Test
-    fun ancientWarOakHasOnlyTheApprovedRightwardAttackSequence() {
+    fun ancientWarOakHasBothApprovedDirectionalAttackSequences() {
         val presentation = BossPresentationCatalog.definition("ancient_war_oak")
         val attack = requireNotNull(presentation.attackAnimation(BossAttackDirection.RIGHT))
+        val leftAttack = requireNotNull(presentation.attackAnimation(BossAttackDirection.LEFT))
 
-        assertEquals(null, presentation.attackAnimation(BossAttackDirection.LEFT))
         assertEquals(false, attack.loops)
+        assertEquals(false, leftAttack.loops)
         assertEquals(
             BossAttackAnimationTiming.ANCIENT_WAR_OAK_UNIT_ATTACK_FRAME_COUNT,
             attack.frameCount,
         )
+        assertEquals(attack.frameCount, leftAttack.frameCount)
         assertEquals(
             BossAttackAnimationTiming.ANCIENT_WAR_OAK_UNIT_ATTACK_DURATION_MILLISECONDS,
             attack.durationMilliseconds,
         )
+        assertEquals(attack.durationMilliseconds, leftAttack.durationMilliseconds)
         assertEquals(512, attack.frameWidth)
         assertEquals(384, attack.frameHeight)
+        assertEquals(512, leftAttack.frameWidth)
+        assertEquals(384, leftAttack.frameHeight)
+        assertEquals(
+            BossArtBounds(
+                left = 168f / 512f,
+                top = 93f / 384f,
+                right = 347f / 512f,
+                bottom = 285f / 384f,
+            ),
+            leftAttack.frameArtBounds,
+        )
         assertEquals(
             BossAttackAnimationTiming.ANCIENT_WAR_OAK_UNIT_ATTACK_IMPACT_FRAME_INDEX,
             attack.frameIndex(BossAttackAnimationTiming.ANCIENT_WAR_OAK_UNIT_ATTACK_WINDUP_MILLISECONDS),
@@ -92,13 +106,52 @@ class BossPresentationCatalogTest {
                 59,
             ),
         )
-        assertThrows(IllegalStateException::class.java) {
+        assertEquals(
+            "anim_boss_ancient_war_oak_attack_left_000",
             BossPresentationCatalog.attackFrameSpriteName(
                 "ancient_war_oak",
                 BossAttackDirection.LEFT,
                 0,
-            )
-        }
+            ),
+        )
+        assertEquals(
+            "anim_boss_ancient_war_oak_attack_left_059",
+            BossPresentationCatalog.attackFrameSpriteName(
+                "ancient_war_oak",
+                BossAttackDirection.LEFT,
+                59,
+            ),
+        )
+    }
+
+    @Test
+    fun ancientWarOakDeathAnimationIsNonLoopingAndKeepsTheCompactCanvas() {
+        val death = requireNotNull(
+            BossPresentationCatalog.definition("ancient_war_oak").deathAnimation(),
+        )
+
+        assertEquals(60, death.frameCount)
+        assertEquals(4_000L, death.durationMilliseconds)
+        assertEquals(false, death.loops)
+        assertEquals(512, death.frameWidth)
+        assertEquals(384, death.frameHeight)
+        assertEquals(
+            BossArtBounds(
+                left = 168f / 512f,
+                top = 93f / 384f,
+                right = 347f / 512f,
+                bottom = 285f / 384f,
+            ),
+            death.frameArtBounds,
+        )
+        assertEquals(
+            "anim_boss_ancient_war_oak_death_000",
+            BossPresentationCatalog.deathFrameSpriteName("ancient_war_oak", 0),
+        )
+        assertEquals(
+            "anim_boss_ancient_war_oak_death_059",
+            BossPresentationCatalog.deathFrameSpriteName("ancient_war_oak", 59),
+        )
     }
 
     @Test

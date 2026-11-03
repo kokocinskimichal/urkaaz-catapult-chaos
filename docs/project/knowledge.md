@@ -1161,8 +1161,10 @@ add new targets there and list sequences without a runtime loader in
 `withoutLoader` (currently `anim_ammunition_fire_rain_impact`). Single-frame
 boss idles have a static loader; multi-frame boss idles are runtime-loaded only
 when their target is listed in `runtimeBossIdleTargets`. Other boss states are
-runtime-loaded only when their exact sequence id is listed in
-`runtimeBossSequences` (currently `anim_boss_ancient_war_oak_attack_right`).
+runtime-loaded only when their exact sequence IDs appear in
+`runtimeBossSequences`, which lists the Oak's `attack_left`, `attack_right`,
+and `death` sequences. The left attack uses the anatomical right branch-arm,
+visible on screen-left; both attacks share the 60-frame 512×384 contract.
 
 The Balance tab edits the single schema 6 source
 `game-domain/src/main/resources/balance/game-balance.json`, which owns boss,
@@ -1243,15 +1245,22 @@ transparent expansion canvas. The Oak's collision is 432x576 world units,
 narrower than the visible tree; its presentation scale is 5/3 to preserve the
 previous rendered size while letting melee units approach inside its 780-unit
 attack range. Animation timing is presentation-only and pauses with the match.
-The Oak's unit attack has a 60-frame, 4.042-second
-`attack_right` sequence (512x384, impact at frame 34); `BossAttackBalance.windupSeconds`
+The Oak's unit attack has 60-frame `attack_right` and `attack_left` sequences
+(4.042 seconds, 512x384, impact at frame 34), and its non-looping death sequence
+has 60 frames over 4 seconds on a 512x384 canvas. `BossAttackBalance.windupSeconds`
 (2.291 s for the Oak, from `BossAttackAnimationTiming`) delays damage so it
 lands on the impact frame, while the cooldown keeps elapsing during the
 wind-up so attack cadence is unchanged. `MatchEvent.BossUnitAttackStarted`
 (with `targetTeam`) triggers the presentation; `RenderStateMapper` maps RED to
-`BossAttackDirection.RIGHT` and BLUE to `LEFT`. Only the right sequence
-exists; left attacks fall back to idle frames. Originals live in
-`assets_src/animgen/bosses/ancient_war_oak/attack-right/`. Unit attack reach
+`BossAttackDirection.RIGHT` and BLUE to `LEFT`. Both directions are runtime
+loaded; the left sequence uses the anatomical right branch-arm visible on
+screen-left. After any boss defeat, Android focuses the camera with a 1.18x
+zoom and delays the result popup until the death presentation completes. Bosses
+without a death sequence hold their available art for the shared 4-second
+window. Original outputs live in
+`assets_src/animgen/bosses/ancient_war_oak/attack-right/` and
+`assets_src/animgen/bosses/ancient_war_oak/attack-left/`; the death sequence is
+in `assets_src/animgen/bosses/ancient_war_oak/death/`. Unit attack reach
 against a boss grows by formation rank times the shared formation spacing;
 their world positions remain unchanged, and units engaged with another target
 do not count toward that rank.

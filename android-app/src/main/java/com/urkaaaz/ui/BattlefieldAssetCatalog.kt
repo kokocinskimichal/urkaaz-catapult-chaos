@@ -577,6 +577,18 @@ internal class BattlefieldAssetCatalog(
         )
     }
 
+    fun bossDeathFrame(presentationKey: String, frameIndex: Int): Bitmap? {
+        val animation = BossPresentationCatalog.definition(presentationKey).deathAnimation()
+            ?: return null
+        return bossAnimationFrame(
+            animation = animation,
+            frameIndex = frameIndex,
+            frameName = { index ->
+                BossPresentationCatalog.deathFrameSpriteName(presentationKey, index)
+            },
+        )
+    }
+
     private fun bossAnimationFrame(
         animation: BossSpriteAnimationDefinition,
         frameIndex: Int,

@@ -1,12 +1,12 @@
 {
   "schemaVersion": 6,
-  "balanceRevision": "game-balance-8",
+  "balanceRevision": "game-balance-9",
   "bosses": [
     {
       "id": "boss.central-ancient-war-oak.level-05",
       "presentationKey": "ancient_war_oak",
       "archetype": "CENTRAL_OBJECTIVE",
-      "maxHealth": 12000,
+      "maxHealth": 8000,
       "collision": {
         "width": 432,
         "height": 576

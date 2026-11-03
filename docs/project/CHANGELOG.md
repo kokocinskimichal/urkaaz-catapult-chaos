@@ -14,6 +14,11 @@
 - Added the global gameplay-speed multiplier to balance schema 5. It speeds up
   unit and mobile-boss movement plus projectile flight without changing
   projectile trajectories or match clocks.
+- Added the Ancient War Oak's 60-frame `attack_left` animation in a compact
+  512×384 transparent canvas; it uses the Oak's right branch-arm on screen-left.
+- Added the Oak's non-looping 60-frame death animation and a shared boss-death
+  camera/result sequence: mild focus zoom, full death presentation, then result
+  summary; bosses without death art hold their existing graphic for 4 seconds.
 - Added the AI improvement plan and implementation prompt, then implemented
   central-objective trajectory targeting and situation-aware spell policies
   for HASTE/FORTRESS_SHIELD/RUNIC_BASTION, with at most one cast per decision.
@@ -23,6 +28,8 @@
 
 ### Changed
 
+- Reduced Chapter 1 Level 5 Ancient War Oak health from 12,000 to 8,000 and
+  advanced the balance document revision to `game-balance-9`.
 - Optimized Android battlefield asset loading with a bounded asynchronous
   bitmap cache and on-demand animation frames. On the Level 5 emulator profile,
   warmed PSS fell 61.3% and PNG decoding left the main-thread render path;

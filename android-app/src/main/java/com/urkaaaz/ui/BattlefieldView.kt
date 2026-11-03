@@ -288,6 +288,11 @@ class BattlefieldView(context: Context) : View(context) {
         invalidate()
     }
 
+    fun isBossDeathPresentationPending(state: RenderState): Boolean {
+        val defeatedBoss = state.boss?.takeIf { it.health <= 0 } ?: return false
+        return !bossPresentationClock.isDeathPresentationComplete(defeatedBoss.entityId)
+    }
+
     fun setLifecyclePaused(paused: Boolean) {
         if (lifecyclePaused == paused) return
         lifecyclePaused = paused

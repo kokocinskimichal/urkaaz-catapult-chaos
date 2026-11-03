@@ -112,4 +112,36 @@ class BossPresentationLayoutTest {
             0.001f,
         )
     }
+
+    @Test
+    fun leftAttackCanvasKeepsTheVisibleOakSizeAndRootBaseline() {
+        val presentation = BossPresentationCatalog.definition("ancient_war_oak")
+        val animation = requireNotNull(presentation.attackAnimation(BossAttackDirection.LEFT))
+        val visualWidth = 400f
+        val visualHeight = 500f
+        val baselineY = 500f
+        val bounds = BossPresentationLayout.frameDrawBounds(
+            centerX = 200f,
+            baselineY = baselineY,
+            visualWidth = visualWidth,
+            visualHeight = visualHeight,
+            animation = animation,
+        )
+        val visibleWidth = bounds.width * animation.frameArtBounds.width
+        val visibleHeight = bounds.height * animation.frameArtBounds.height
+        val visibleBottom = bounds.baselineY -
+            (1f - animation.frameArtBounds.bottom) * bounds.height
+
+        assertEquals(
+            visualWidth * animation.referenceArtBounds.width,
+            visibleWidth,
+            0.001f,
+        )
+        assertEquals(
+            visualHeight * animation.referenceArtBounds.height,
+            visibleHeight,
+            0.001f,
+        )
+        assertEquals(baselineY, visibleBottom, 0.001f)
+    }
 }

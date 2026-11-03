@@ -71,9 +71,11 @@ kampanię, AI oraz działający match screen. Gałąź robocza: `develop`.
   odporność na `PLAGUE_CAULDRON`, pochodzą z
   `game-domain/src/main/resources/balance/game-balance.json`; Studio ma zakładkę
   Balance i kategorię Bosses w Animations. Ancient War Oak ma 75-klatkową
-  pętlę idle i 60-klatkowy atak w prawo; renderer wyprzedzająco ładuje klatki
-  i zachowuje ostatnią gotową klatkę podczas przejść. Pozostałe animacje bossów
-  są odrębnymi przyszłymi krokami.
+  pętlę idle, 60-klatkowe ataki w lewo i prawo oraz 60-klatkową animację
+  śmierci. Po pokonaniu dowolnego bossa kamera centruje się na nim z łagodnym
+  zoomem; podsumowanie poziomu czeka na koniec animacji lub 4-sekundowego holda
+  statycznej grafiki dla bossów bez własnej sekwencji śmierci. Pozostałe
+  animacje bossów są odrębnymi przyszłymi krokami.
 - Kampania po zwycięstwie na poziomie 50 udostępnia zwykłe poziomy 51–54, ale
   blokuje poziomy 55–100 bez kompletnych profili bossów i assetów.
 - Studio Progress edytuje developer preset z poziomem kampanii, liczbą żyć i

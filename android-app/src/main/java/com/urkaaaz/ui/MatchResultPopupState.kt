@@ -57,6 +57,7 @@ internal data class MatchResultPopupState(
 internal object MatchResultPopupStateMapper {
     fun map(
         isFinished: Boolean,
+        bossDeathPresentationPending: Boolean = false,
         outcome: MatchOutcome?,
         campaignLevel: Int,
         biomeName: String,
@@ -66,7 +67,7 @@ internal object MatchResultPopupStateMapper {
         stockSettlementStatus: MatchStockSettlementUiStatus =
             MatchStockSettlementUiStatus.NOT_REQUIRED,
     ): MatchResultPopupState? {
-        if (!isFinished || outcome == null) return null
+        if (!isFinished || bossDeathPresentationPending || outcome == null) return null
 
         val result = when (outcome) {
             MatchOutcome.BLUE_WIN -> MatchResultKind.VICTORY

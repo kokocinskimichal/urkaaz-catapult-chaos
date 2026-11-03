@@ -91,23 +91,89 @@ class BossPresentationClockTest {
     }
 
     @Test
-    fun leftwardAttackWithoutASequenceKeepsIdlePlayback() {
+    fun leftwardAttackPlaysItsSequenceFromTheStartEventAndReturnsToIdle() {
         val clock = BossPresentationClock()
         val state = state()
+        val attack = requireNotNull(
+            BossPresentationCatalog.definition("ancient_war_oak")
+                .attackAnimation(BossAttackDirection.LEFT),
+        )
         clock.update(state, 0L)
 
-        val frame = clock.update(
-            state.copy(
-                bossAttack = BossAttackRenderState(
-                    eventId = "attack-left",
-                    bossId = "boss-1",
-                    direction = BossAttackDirection.LEFT,
-                ),
+        val trigger = state.copy(
+            bossAttack = BossAttackRenderState(
+                eventId = "attack-left",
+                bossId = "boss-1",
+                direction = BossAttackDirection.LEFT,
             ),
-            500L,
         )
-        assertEquals(null, frame.attackDirection)
-        assertEquals(null, frame.attackFrameIndex)
+        val started = clock.update(trigger, 500L)
+        assertEquals(BossAttackDirection.LEFT, started.attackDirection)
+        assertEquals(0, started.attackFrameIndex)
+
+        val halfway = clock.update(trigger, 500L + attack.durationMilliseconds / 2)
+        assertEquals(attack.frameCount / 2, halfway.attackFrameIndex)
+
+        val finished = clock.update(trigger, 500L + attack.durationMilliseconds)
+        assertEquals(null, finished.attackDirection)
+        assertEquals(null, finished.attackFrameIndex)
+    }
+
+    @Test
+    fun oakDeathAnimationPlaysToItsLastFrameBeforeReportingCompletion() {
+        val clock = BossPresentationClock()
+        val alive = state()
+        val boss = requireNotNull(alive.boss)
+        val defeated = alive.copy(
+            boss = boss.copy(health = 0, phase = BossPhase.DEFEATED),
+        )
+        val death = requireNotNull(
+            BossPresentationCatalog.definition("ancient_war_oak").deathAnimation(),
+        )
+
+        val started = clock.update(defeated, 100L)
+        assertEquals(0, started.deathAnimationFrameIndex)
+        assertEquals(true, started.deathPresentationActive)
+        assertEquals(false, started.deathPresentationComplete)
+        assertEquals(false, clock.isDeathPresentationComplete(boss.entityId))
+
+        val halfway = clock.update(
+            defeated,
+            100L + death.durationMilliseconds / 2L,
+        )
+        assertEquals(death.frameCount / 2, halfway.deathAnimationFrameIndex)
+        assertEquals(false, halfway.deathPresentationComplete)
+
+        val finished = clock.update(defeated, 100L + death.durationMilliseconds)
+        assertEquals(death.frameCount - 1, finished.deathAnimationFrameIndex)
+        assertEquals(true, finished.deathPresentationActive)
+        assertEquals(true, finished.deathPresentationComplete)
+        assertEquals(true, clock.isDeathPresentationComplete(boss.entityId))
+    }
+
+    @Test
+    fun bossesWithoutDeathAssetsHoldTheirStaticPresentationForTheSharedDeathWindow() {
+        val clock = BossPresentationClock()
+        val alive = state()
+        val boss = requireNotNull(alive.boss).copy(
+            presentationKey = "thorncrown",
+            health = 0,
+            phase = BossPhase.DEFEATED,
+        )
+        val defeated = alive.copy(boss = boss)
+
+        val started = clock.update(defeated, 0L)
+        assertEquals(null, started.deathAnimationFrameIndex)
+        assertEquals(true, started.deathPresentationActive)
+        assertEquals(false, started.deathPresentationComplete)
+
+        val finished = clock.update(
+            defeated,
+            BossPresentationClock.DEFAULT_DEATH_PRESENTATION_DURATION_MILLISECONDS,
+        )
+        assertEquals(true, finished.deathPresentationActive)
+        assertEquals(true, finished.deathPresentationComplete)
+        assertEquals(true, clock.isDeathPresentationComplete(boss.entityId))
     }
 
     private fun state(): RenderState =

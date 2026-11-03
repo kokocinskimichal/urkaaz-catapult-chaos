@@ -67,12 +67,16 @@ data class BossPresentationDefinition(
     val spritesByPhase: Map<BossPhase, String> = emptyMap(),
     val idleAnimation: BossSpriteAnimationDefinition? = null,
     val attackAnimations: Map<BossAttackDirection, BossSpriteAnimationDefinition> = emptyMap(),
+    val deathAnimation: BossSpriteAnimationDefinition? = null,
     val visualScale: Float = 1f,
 ) {
     init {
         require(visualScale > 0f)
         require(attackAnimations.values.none { it.loops }) {
             "Boss attack animations must not loop"
+        }
+        require(deathAnimation?.loops != true) {
+            "Boss death animations must not loop"
         }
     }
 
@@ -81,6 +85,8 @@ data class BossPresentationDefinition(
 
     fun attackAnimation(direction: BossAttackDirection): BossSpriteAnimationDefinition? =
         attackAnimations[direction]
+
+    fun deathAnimation(): BossSpriteAnimationDefinition? = deathAnimation
 }
 
 object BossPresentationCatalog {
@@ -110,6 +116,23 @@ object BossPresentationCatalog {
                 ),
             ),
             attackAnimations = mapOf(
+                // Compact horizontal sweep to world-left with the Oak's
+                // anatomical right branch-arm, visible on screen-left.
+                BossAttackDirection.LEFT to BossSpriteAnimationDefinition(
+                    frameCount = BossAttackAnimationTiming.ANCIENT_WAR_OAK_UNIT_ATTACK_FRAME_COUNT,
+                    durationMilliseconds =
+                        BossAttackAnimationTiming.ANCIENT_WAR_OAK_UNIT_ATTACK_DURATION_MILLISECONDS,
+                    frameWidth = 512,
+                    frameHeight = 384,
+                    referenceArtBounds = ANCIENT_WAR_OAK_REFERENCE_ART_BOUNDS,
+                    frameArtBounds = BossArtBounds(
+                        left = 168f / 512f,
+                        top = 93f / 384f,
+                        right = 347f / 512f,
+                        bottom = 285f / 384f,
+                    ),
+                    loops = false,
+                ),
                 // Overhead branch-hand slam towards world-right (RED side). The
                 // 4:3 canvas leaves room for the raised hand; frame 0 body bounds
                 // were measured with the same alpha threshold as the idle frames.
@@ -128,6 +151,20 @@ object BossPresentationCatalog {
                     ),
                     loops = false,
                 ),
+            ),
+            deathAnimation = BossSpriteAnimationDefinition(
+                frameCount = 60,
+                durationMilliseconds = 4_000L,
+                frameWidth = 512,
+                frameHeight = 384,
+                referenceArtBounds = ANCIENT_WAR_OAK_REFERENCE_ART_BOUNDS,
+                frameArtBounds = BossArtBounds(
+                    left = 168f / 512f,
+                    top = 93f / 384f,
+                    right = 347f / 512f,
+                    bottom = 285f / 384f,
+                ),
+                loops = false,
             ),
         ),
         "burntwood_warden" to BossPresentationDefinition(
@@ -185,5 +222,14 @@ object BossPresentationCatalog {
         }
         val suffix = direction.name.lowercase()
         return "anim_boss_${presentationKey}_attack_${suffix}_${frameIndex.toString().padStart(3, '0')}"
+    }
+
+    fun deathFrameSpriteName(presentationKey: String, frameIndex: Int): String {
+        val animation = definition(presentationKey).deathAnimation()
+            ?: error("No boss death animation is registered for '$presentationKey'")
+        require(frameIndex in 0 until animation.frameCount) {
+            "Boss death frame index $frameIndex is outside 0 until ${animation.frameCount}"
+        }
+        return "anim_boss_${presentationKey}_death_${frameIndex.toString().padStart(3, '0')}"
     }
 }

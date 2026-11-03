@@ -4,6 +4,9 @@ data class BossPresentationFrame(
     val idleFrameIndex: Int? = null,
     val attackDirection: BossAttackDirection? = null,
     val attackFrameIndex: Int? = null,
+    val deathAnimationFrameIndex: Int? = null,
+    val deathPresentationActive: Boolean = false,
+    val deathPresentationComplete: Boolean = false,
 )
 
 class BossPresentationClock {
@@ -17,7 +20,17 @@ class BossPresentationClock {
     private var attackEventId: String? = null
     private var attackDirection: BossAttackDirection? = null
     private var attackElapsedMilliseconds = 0L
+    private var deathBossId: String? = null
+    private var deathElapsedMilliseconds = 0L
+    private var deathDurationMilliseconds = 0L
+    private var deathFallbackIdleFrameIndex: Int? = null
+    private var deathStarted = false
     private var wasPaused = false
+
+    fun isDeathPresentationComplete(bossId: String): Boolean =
+        deathStarted &&
+            deathBossId == bossId &&
+            deathElapsedMilliseconds >= deathDurationMilliseconds
 
     fun update(state: RenderState, nowMilliseconds: Long): BossPresentationFrame {
         val matchChanged = initialized && state.matchId != matchId
@@ -34,14 +47,19 @@ class BossPresentationClock {
             activeBoss = null
             idleElapsedMilliseconds = 0L
             clearAttack()
+            clearDeath()
         }
 
-        val boss = state.boss?.takeIf { it.health > 0 }
+        val boss = state.boss
         val bossKey = boss?.let { it.entityId to it.presentationKey }
         val bossChanged = bossKey != activeBoss
         if (bossChanged) {
             idleElapsedMilliseconds = 0L
             clearAttack()
+            clearDeath()
+        }
+        if (boss != null && boss.health > 0 && deathStarted) {
+            clearDeath()
         }
 
         val elapsed = if (
@@ -56,12 +74,21 @@ class BossPresentationClock {
         } else {
             0L
         }
+        val deathWasActiveForBoss =
+            boss != null && deathStarted && deathBossId == boss.entityId
         if (bossKey != null) {
-            idleElapsedMilliseconds += elapsed
-            attackElapsedMilliseconds += elapsed
+            if (deathWasActiveForBoss) {
+                deathElapsedMilliseconds = (
+                    deathElapsedMilliseconds + elapsed
+                    ).coerceAtMost(deathDurationMilliseconds)
+            } else if (boss.health > 0) {
+                idleElapsedMilliseconds += elapsed
+                attackElapsedMilliseconds += elapsed
+            }
         } else {
             idleElapsedMilliseconds = 0L
             clearAttack()
+            clearDeath()
         }
 
         activeBoss = bossKey
@@ -69,6 +96,32 @@ class BossPresentationClock {
         wasPaused = state.isPaused
         val definition = boss?.let { BossPresentationCatalog.definition(it.presentationKey) }
             ?: return BossPresentationFrame()
+
+        if (boss.health <= 0) {
+            if (!deathWasActiveForBoss) {
+                val deathAnimation = definition.deathAnimation()
+                deathStarted = true
+                deathBossId = boss.entityId
+                deathElapsedMilliseconds = 0L
+                deathDurationMilliseconds =
+                    deathAnimation?.durationMilliseconds
+                        ?: DEFAULT_DEATH_PRESENTATION_DURATION_MILLISECONDS
+                deathFallbackIdleFrameIndex =
+                    definition.idleAnimation?.frameIndex(idleElapsedMilliseconds)
+                clearAttack()
+            }
+            val deathAnimation = definition.deathAnimation()
+            return BossPresentationFrame(
+                idleFrameIndex = if (deathAnimation == null) {
+                    deathFallbackIdleFrameIndex
+                } else {
+                    null
+                },
+                deathAnimationFrameIndex = deathAnimation?.frameIndex(deathElapsedMilliseconds),
+                deathPresentationActive = true,
+                deathPresentationComplete = isDeathPresentationComplete(boss.entityId),
+            )
+        }
 
         val attack = state.bossAttack
         if (attack != null && attack.eventId != attackEventId) {
@@ -100,5 +153,17 @@ class BossPresentationClock {
         attackEventId = null
         attackDirection = null
         attackElapsedMilliseconds = 0L
+    }
+
+    private fun clearDeath() {
+        deathBossId = null
+        deathElapsedMilliseconds = 0L
+        deathDurationMilliseconds = 0L
+        deathFallbackIdleFrameIndex = null
+        deathStarted = false
+    }
+
+    companion object {
+        const val DEFAULT_DEATH_PRESENTATION_DURATION_MILLISECONDS = 4_000L
     }
 }

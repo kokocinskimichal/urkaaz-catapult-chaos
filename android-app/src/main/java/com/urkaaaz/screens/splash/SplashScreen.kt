@@ -37,6 +37,20 @@ class SplashScreen(
         scaleType = ImageView.ScaleType.FIT_CENTER
         setImageResource(R.drawable.splash_company_logo)
     }
+    private val companyLogoGlow = View(context).apply {
+        importantForAccessibility = View.IMPORTANT_FOR_ACCESSIBILITY_NO
+        background = context.getDrawable(R.drawable.splash_company_logo_glow)
+    }
+    private val companyLogoComposition = FrameLayout(context).apply {
+        addView(
+            companyLogoGlow,
+            FrameLayout.LayoutParams(dp(190), dp(88), Gravity.CENTER),
+        )
+        addView(
+            companyLogo,
+            FrameLayout.LayoutParams(dp(132), dp(47), Gravity.CENTER),
+        )
+    }
 
     private val runePulse = ValueAnimator.ofFloat(0f, 1f).apply {
         duration = RUNE_PULSE_DURATION_MILLISECONDS
@@ -94,17 +108,10 @@ class SplashScreen(
             })
         }, FrameLayout.LayoutParams(-2, -2, Gravity.CENTER))
 
-        addView(View(context).apply {
-            importantForAccessibility = View.IMPORTANT_FOR_ACCESSIBILITY_NO
-            background = context.getDrawable(R.drawable.splash_company_logo_glow)
-        }, FrameLayout.LayoutParams(dp(204), dp(92)).apply {
+        addView(companyLogoComposition, FrameLayout.LayoutParams(dp(216), dp(122)).apply {
             gravity = Gravity.BOTTOM or Gravity.END
-        })
-
-        addView(companyLogo, FrameLayout.LayoutParams(dp(160), dp(58)).apply {
-            gravity = Gravity.BOTTOM or Gravity.END
-            marginEnd = dp(20)
-            bottomMargin = dp(18)
+            marginEnd = dp(16)
+            bottomMargin = dp(16)
         })
     }
 

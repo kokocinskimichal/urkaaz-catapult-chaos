@@ -44,6 +44,8 @@ class BattlefieldCameraController(
     private var matchIdentityInitialized = false
     private var lastMatchId: String? = null
     private var lastMatchGeneration = 0L
+    private var deathFocusBossId: String? = null
+    private var deathFocusTargetScale: Float? = null
 
     fun update(state: RenderState, viewportWidth: Float, viewportHeight: Float) {
         if (snapshotMode) {
@@ -62,6 +64,8 @@ class BattlefieldCameraController(
             postImpactHoldSeconds = 0f
             cameraReturnActive = false
             preFollowScale = null
+            deathFocusBossId = null
+            deathFocusTargetScale = null
         }
         matchIdentityInitialized = true
         lastMatchId = state.matchId
@@ -85,6 +89,16 @@ class BattlefieldCameraController(
             lastFramedTeamLabel = "BLUE"
             clampOffset(viewportWidth, viewportHeight)
             return
+        }
+
+        val defeatedBoss = state.boss?.takeIf { it.health <= 0 }
+        if (defeatedBoss != null) {
+            focusOnDefeatedBoss(defeatedBoss, viewportWidth, viewportHeight)
+            lastPhaseLabel = state.phaseLabel
+            return
+        } else if (deathFocusBossId != null) {
+            deathFocusBossId = null
+            deathFocusTargetScale = null
         }
 
         val trackedProjectile = if (manualPanActive || panningMap) {
@@ -143,8 +157,12 @@ class BattlefieldCameraController(
         snapshotMode = enabled
         if (enabled) {
             preFollowScale = null
+            deathFocusBossId = null
+            deathFocusTargetScale = null
         } else {
             initialLevelFramingApplied = false
+            deathFocusBossId = null
+            deathFocusTargetScale = null
         }
     }
 
@@ -155,6 +173,7 @@ class BattlefieldCameraController(
         viewportWidth: Float,
         viewportHeight: Float,
     ) {
+        if (deathFocusBossId != null) return
         if (!scaleFactor.isFinite() || scaleFactor <= 0f) return
         val oldScale = transform.scale
         val newScale = (oldScale * scaleFactor).coerceIn(MIN_MAP_SCALE, MAX_MAP_SCALE)
@@ -176,7 +195,7 @@ class BattlefieldCameraController(
     }
 
     fun beginPan(x: Float, y: Float): Boolean {
-        if (wasFollowingProjectile) return false
+        if (wasFollowingProjectile || deathFocusBossId != null) return false
         panningMap = true
         panDragging = false
         panStartX = x
@@ -208,7 +227,7 @@ class BattlefieldCameraController(
     }
 
     fun translateMap(deltaX: Float, deltaY: Float, viewportWidth: Float, viewportHeight: Float) {
-        if (wasFollowingProjectile) return
+        if (wasFollowingProjectile || deathFocusBossId != null) return
         if (deltaX != 0f || deltaY != 0f) {
             manualPanActive = true
         }
@@ -250,6 +269,46 @@ class BattlefieldCameraController(
             state.blueCatapultX to state.blueCatapultY
         }
         centerOnWorld(x, y, viewportWidth, viewportHeight)
+    }
+
+    private fun focusOnDefeatedBoss(
+        boss: BossRenderState,
+        viewportWidth: Float,
+        viewportHeight: Float,
+    ) {
+        if (viewportWidth <= 0f || viewportHeight <= 0f) return
+        if (deathFocusBossId != boss.entityId) {
+            deathFocusBossId = boss.entityId
+            deathFocusTargetScale =
+                (transform.scale * BOSS_DEATH_FOCUS_ZOOM_FACTOR).coerceIn(
+                    MIN_MAP_SCALE,
+                    MAX_MAP_SCALE,
+                )
+            manualPanActive = false
+            panningMap = false
+            panDragging = false
+            wasFollowingProjectile = false
+            trackedTeamLabel = null
+            postImpactHoldSeconds = 0f
+            cameraReturnActive = false
+            preFollowScale = null
+        }
+        val targetScale = requireNotNull(deathFocusTargetScale)
+        val focusY = boss.groundY -
+            boss.collisionHeight * BOSS_DEATH_FOCUS_VERTICAL_CENTER_RATIO
+        val targetX = viewportWidth / 2f -
+            (boss.x / worldWidth * viewportWidth) * targetScale
+        val targetY = viewportHeight / 2f -
+            (focusY / worldHeight * viewportHeight) * targetScale
+        transform = CameraTransform(
+            scale = transform.scale +
+                (targetScale - transform.scale) * BOSS_DEATH_FOCUS_LERP,
+            offsetX = transform.offsetX +
+                (targetX - transform.offsetX) * BOSS_DEATH_FOCUS_LERP,
+            offsetY = transform.offsetY +
+                (targetY - transform.offsetY) * BOSS_DEATH_FOCUS_LERP,
+        )
+        clampOffset(viewportWidth, viewportHeight)
     }
 
     /** Frames the authored map anchor without changing simulation coordinates. */
@@ -356,6 +415,9 @@ class BattlefieldCameraController(
         private const val CAMERA_RETURN_LERP = 0.18f
         private const val CAMERA_RETURN_EPSILON = 1f
         private const val CAMERA_RETURN_SCALE_EPSILON = 0.001f
+        private const val BOSS_DEATH_FOCUS_ZOOM_FACTOR = 1.18f
+        private const val BOSS_DEATH_FOCUS_VERTICAL_CENTER_RATIO = 0.62f
+        private const val BOSS_DEATH_FOCUS_LERP = 0.18f
         private const val PAN_START_DISTANCE = 12f
     }
 }

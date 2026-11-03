@@ -44,7 +44,8 @@ class GameBalanceRepositoryTest {
         assertEquals(5, result.balance.config.ammunition.all.size)
         assertEquals(11, result.balance.config.spells.all.size)
         assertEquals(6, result.balance.config.schemaVersion)
-        assertEquals("game-balance-8", result.balance.config.balanceRevision)
+        assertEquals("game-balance-9", result.balance.config.balanceRevision)
+        assertEquals(8_000, result.balance.config.bosses.first().maxHealth)
         assertEquals(1.2f, result.balance.config.runtime.combat.gameplaySpeedMultiplier)
         assertEquals(0.9f, result.balance.config.runtime.combat.unitMovementSpeedScale)
         assertEquals(0.44f, result.balance.config.runtime.combat.garrisonMovementSpeedScale)
@@ -191,7 +192,7 @@ class GameBalanceRepositoryTest {
         val content = javaClass.getResourceAsStream("/balance/game-balance.json")!!
             .bufferedReader()
             .use { it.readText() }
-        val changed = content.replace("game-balance-8", "game-balance-9")
+        val changed = content.replace("game-balance-9", "game-balance-10")
         val first = assertIs<GameBalanceRead.Available>(repository(content).load()).balance
         val second = assertIs<GameBalanceRead.Available>(repository(changed).load()).balance
 

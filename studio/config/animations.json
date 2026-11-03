@@ -7,6 +7,10 @@
   },
   "teamTextureTargets": ["defender", "demolisher", "raging_boar", "sapper"],
   "runtimeBossIdleTargets": ["ancient_war_oak"],
-  "runtimeBossSequences": ["anim_boss_ancient_war_oak_attack_right"],
+  "runtimeBossSequences": [
+    "anim_boss_ancient_war_oak_attack_left",
+    "anim_boss_ancient_war_oak_attack_right",
+    "anim_boss_ancient_war_oak_death"
+  ],
   "withoutLoader": ["anim_ammunition_fire_rain_impact"]
 }

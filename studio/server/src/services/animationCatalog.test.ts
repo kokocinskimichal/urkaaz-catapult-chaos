@@ -19,7 +19,11 @@ const config: AnimationConfig = parseAnimationConfig({
   },
   teamTextureTargets: ["defender", "demolisher", "sapper"],
   runtimeBossIdleTargets: ["ancient_war_oak"],
-  runtimeBossSequences: ["anim_boss_ancient_war_oak_attack_right"],
+  runtimeBossSequences: [
+    "anim_boss_ancient_war_oak_attack_left",
+    "anim_boss_ancient_war_oak_attack_right",
+    "anim_boss_ancient_war_oak_death",
+  ],
   withoutLoader: ["anim_ammunition_fire_rain_impact"],
 });
 
@@ -139,7 +143,17 @@ describe("buildAnimationCatalog", () => {
       hasRuntimeLoader: true,
     });
     expect(sequenceOf("anim_boss_ancient_war_oak_attack_left", 60)).toMatchObject({
+      target: "ancient_war_oak",
+      type: "attack_left",
+      hasRuntimeLoader: true,
+    });
+    expect(sequenceOf("anim_boss_ancient_war_oak_attack_up", 60)).toMatchObject({
       hasRuntimeLoader: false,
+    });
+    expect(sequenceOf("anim_boss_ancient_war_oak_death", 60)).toMatchObject({
+      target: "ancient_war_oak",
+      type: "death",
+      hasRuntimeLoader: true,
     });
   });
 
@@ -305,7 +319,25 @@ describe("repository animation catalog", () => {
         targetConfigured: true,
         hasRuntimeLoader: true,
       });
-    expect(catalog.sequences.filter(sequence => sequence.category === "boss")).toHaveLength(9);
+    expect(catalog.sequences.find(sequence => sequence.id === "anim_boss_ancient_war_oak_attack_left"))
+      .toMatchObject({
+        category: "boss",
+        target: "ancient_war_oak",
+        type: "attack_left",
+        frameIndices: Array.from({ length: 60 }, (_, index) => index),
+        targetConfigured: true,
+        hasRuntimeLoader: true,
+      });
+    expect(catalog.sequences.find(sequence => sequence.id === "anim_boss_ancient_war_oak_death"))
+      .toMatchObject({
+        category: "boss",
+        target: "ancient_war_oak",
+        type: "death",
+        frameIndices: Array.from({ length: 60 }, (_, index) => index),
+        targetConfigured: true,
+        hasRuntimeLoader: true,
+      });
+    expect(catalog.sequences.filter(sequence => sequence.category === "boss")).toHaveLength(11);
     expect(catalog.sequences.filter(sequence => sequence.category === "boss"))
       .toEqual(expect.arrayContaining([
         expect.objectContaining({

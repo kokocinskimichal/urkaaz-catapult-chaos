@@ -5,6 +5,7 @@ import com.urkaaaz.contracts.MatchPhase
 import com.urkaaaz.contracts.MatchSnapshot
 import com.urkaaaz.contracts.MatchStatus
 import com.urkaaaz.contracts.Team
+import com.urkaaaz.contracts.WorldDimensions
 import com.urkaaaz.contracts.WorldScale
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
@@ -399,5 +400,53 @@ class BattlefieldCameraControllerTest {
         }
 
         assertEquals(4f, camera.transform.scale)
+    }
+
+    @Test
+    fun defeatedBossTakesCameraFocusWithAMildZoom() {
+        val camera = BattlefieldCameraController()
+        val viewportWidth = 1_000f
+        val viewportHeight = 600f
+        val boss = BossRenderState(
+            entityId = "boss-oak",
+            profileId = "boss.central-ancient-war-oak.level-05",
+            presentationKey = "ancient_war_oak",
+            archetype = com.urkaaaz.contracts.BossArchetype.CENTRAL_OBJECTIVE,
+            phase = com.urkaaaz.contracts.BossPhase.DEFEATED,
+            x = 3_600f,
+            groundY = 2_400f,
+            collisionWidth = 432f,
+            collisionHeight = 576f,
+            health = 0,
+            maxHealth = 12_000,
+            blueDamage = 12_000,
+            redDamage = 0,
+        )
+        val state = RenderStateMapper.map(
+            MatchSnapshot(
+                status = MatchStatus.FINISHED,
+                phase = MatchPhase.FINISHED,
+                outcome = com.urkaaaz.contracts.MatchOutcome.BLUE_WIN,
+            ),
+        ).copy(boss = boss)
+
+        repeat(40) {
+            camera.update(state, viewportWidth, viewportHeight)
+        }
+
+        assertEquals(1.18f, camera.transform.scale, 0.001f)
+        assertEquals(
+            viewportWidth / 2f,
+            boss.x / WorldDimensions.WIDTH * viewportWidth * camera.transform.scale +
+                camera.transform.offsetX,
+            0.1f,
+        )
+        val focusY = boss.groundY - boss.collisionHeight * 0.62f
+        assertEquals(
+            viewportHeight / 2f,
+            focusY / WorldDimensions.HEIGHT * viewportHeight * camera.transform.scale +
+                camera.transform.offsetY,
+            0.1f,
+        )
     }
 }
