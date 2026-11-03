@@ -1,5 +1,17 @@
 # Changelog
 
+## 2026-11-03
+
+### Added
+
+- Added the Chapter 1, Level 2 map definition to both campaign resources and
+  Android assets.
+
+### Changed
+
+- Updated the saved Chapter 1 maps for Levels 1, 3, 4 and 5 in both resource
+  locations with the latest Studio-authored terrain and decoration data.
+
 ## 2026-11-02
 
 ### Added

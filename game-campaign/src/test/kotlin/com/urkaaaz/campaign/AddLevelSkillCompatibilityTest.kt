@@ -12,17 +12,20 @@ class AddLevelSkillCompatibilityTest {
     fun registryUsesOnlyValidatedBundledJsonForCampaignLevels() {
         val registry = CampaignLevelRegistry.default(campaignBalance)
         val first = registry.mapDefinition(1)
+        val second = registry.mapDefinition(2)
         val levelThree = registry.mapDefinition(3)
         val levelFour = registry.mapDefinition(4)
         val last = registry.mapDefinition(CampaignLevelDefinition.MAX_LEVELS)
 
         assertEquals("chapter1-level1", first.mapId)
         assertEquals("green_frontier", first.biome)
+        assertEquals("chapter1-level2", second.mapId)
         assertEquals("chapter1-level3", levelThree.mapId)
         assertEquals("chapter1-level4", levelFour.mapId)
         assertEquals("demo-map", last.mapId)
         assertEquals("ashen_march", last.biome)
         assertTrue(MapDefinitionValidator.validate(first).isValid)
+        assertTrue(MapDefinitionValidator.validate(second).isValid)
         assertTrue(MapDefinitionValidator.validate(levelFour).isValid)
     }
 

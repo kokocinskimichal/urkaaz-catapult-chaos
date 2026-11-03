@@ -31,27 +31,31 @@ class MapDefinitionValidatorTest {
     }
 
     @Test
-    fun importedChapterOneLevelThreeMapIsValidAndUsesItsAuthoredData() {
+    fun generatedChapterOneLevelThreeMapIsValidAndUsesItsSavedRandomMapData() {
         val definition = CampaignLevelDefinition.forLevel(3).mapDefinition
 
         assertTrue(MapDefinitionValidator.validate(definition).isValid)
         assertEquals("chapter1-level3", definition.mapId)
         assertEquals("green_frontier", definition.biome)
         assertEquals(181, definition.terrain.samples.size)
-        assertTrue(definition.terrain.samples.all { it.height == 3_180f })
+        assertTrue(
+            abs(definition.fortresses.single { it.owner.name == "BLUE" }.foundationHeight - 3_307.1512f) < 0.01f,
+        )
+        assertTrue(
+            abs(definition.fortresses.single { it.owner.name == "RED" }.foundationHeight - 3_169.4959f) < 0.01f,
+        )
         assertEquals(240f, definition.fortresses.first { it.owner.name == "BLUE" }.halfWidth)
         assertEquals(240f, definition.fortresses.first { it.owner.name == "RED" }.halfWidth)
-        assertEquals("terrain_green_frontier_tree_00", definition.decorations.single().assetKey)
-        assertEquals(4_748.3364f, definition.decorations.single().x, 0.001f)
-        assertEquals(1L, definition.generationMetadata?.seed)
-        assertEquals("web", definition.generationMetadata?.generatorVersion)
-        assertEquals("map-editor-web/0.1.0", definition.generationMetadata?.authoringVersion)
+        assertEquals(4, definition.decorations.size)
+        assertEquals(1_327_317_795L, definition.generationMetadata?.seed)
+        assertEquals("studio-random-map/1", definition.generationMetadata?.generatorVersion)
+        assertEquals("urkaaz-studio/0.1.0", definition.generationMetadata?.authoringVersion)
         assertEquals("PLAYER_FORTRESS", definition.initialCameraAnchor.name)
-        assertEquals(1.3f, definition.initialCameraZoom)
+        assertEquals(1f, definition.initialCameraZoom)
     }
 
     @Test
-    fun importedChapterOneLevelFourMapIsValidAndPreservesAuthoredTerrainAndRelics() {
+    fun generatedChapterOneLevelFourMapIsValidAndUsesItsSavedRandomMapData() {
         val definition = CampaignLevelDefinition.forLevel(4).mapDefinition
         val relics = definition.decorations.filter { it.relicSize != null }
 
@@ -59,23 +63,17 @@ class MapDefinitionValidatorTest {
         assertEquals("chapter1-level4", definition.mapId)
         assertEquals("green_frontier", definition.biome)
         assertEquals(181, definition.terrain.samples.size)
-        assertEquals(2_870f, definition.terrain.samples.first().height)
-        assertEquals(3_390f, definition.terrain.samples.last().height)
         assertTrue(
-            abs(definition.terrain.samples.single { it.x == 5_040f }.height - 3_179.936f) < 0.01f,
+            abs(definition.fortresses.single { it.owner.name == "BLUE" }.foundationHeight - 2_784.9663f) < 0.01f,
         )
         assertTrue(
-            abs(definition.terrain.samples.single { it.x == 6_080f }.height - 3_386.802f) < 0.01f,
+            abs(definition.fortresses.single { it.owner.name == "RED" }.foundationHeight - 3_016.5233f) < 0.01f,
         )
-        assertEquals(2_870f, definition.fortresses.single { it.owner.name == "BLUE" }.foundationHeight)
-        assertEquals(3_390f, definition.fortresses.single { it.owner.name == "RED" }.foundationHeight)
-        assertEquals(10, definition.decorations.size)
-        assertEquals(2, relics.size)
-        assertTrue(relics.any { abs(it.x - 811.189f) < 0.01f })
-        assertTrue(relics.any { abs(it.x - 4_197.316f) < 0.01f })
-        assertEquals(1L, definition.generationMetadata?.seed)
-        assertEquals("web", definition.generationMetadata?.generatorVersion)
-        assertEquals("map-editor-web/0.1.0", definition.generationMetadata?.authoringVersion)
+        assertEquals(5, definition.decorations.size)
+        assertTrue(relics.isEmpty())
+        assertEquals(3_781_372_522L, definition.generationMetadata?.seed)
+        assertEquals("studio-random-map/1", definition.generationMetadata?.generatorVersion)
+        assertEquals("urkaaz-studio/0.1.0", definition.generationMetadata?.authoringVersion)
         assertEquals("PLAYER_FORTRESS", definition.initialCameraAnchor.name)
         assertEquals(1f, definition.initialCameraZoom)
     }
@@ -188,9 +186,11 @@ class MapDefinitionValidatorTest {
         val levels = (1..CampaignLevelDefinition.MAX_LEVELS).map(registry::level)
 
         assertEquals("chapter1-level1", levels[0].mapDefinition.mapId)
+        assertEquals("chapter1-level2", levels[1].mapDefinition.mapId)
         assertEquals("chapter1-level3", levels[2].mapDefinition.mapId)
         assertEquals("chapter1-level4", levels[3].mapDefinition.mapId)
-        assertEquals("demo-map", levels[1].mapDefinition.mapId)
+        assertEquals("chapter1-level5", levels[4].mapDefinition.mapId)
+        assertEquals("demo-map", levels[5].mapDefinition.mapId)
         assertNotEquals(levels[0].availableUnits, levels[99].availableUnits)
         assertNotEquals(levels[0].mapDefinition.terrain.samples, levels[1].mapDefinition.terrain.samples)
         assertNotEquals(levels[0].mapDefinition.terrain.samples, levels[2].mapDefinition.terrain.samples)

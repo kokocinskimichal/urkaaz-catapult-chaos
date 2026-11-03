@@ -309,14 +309,15 @@ Android also bundles the same file at
 `android-app/src/main/assets/maps/demo-map.json` for offline loading.
 `CampaignLevelDefinition` looks for `chapter<ordinal>-level<globalLevel>` and
 uses the bundled map when it exists; missing level maps still use the
-intentional `demo-map` transition fallback. Chapter 1 Levels 1, 3 and 4 now
-have map JSON files in both resource locations; other levels without a
+intentional `demo-map` transition fallback. Chapter 1 Levels 1–5 now have map
+JSON files in both resource locations; other levels without a
 dedicated JSON currently use `demo-map`. The Studio Maps save dialog selects
 the campaign chapter and global level, derives this stable map ID, and saves
 through the paired-map hash guard into both resource locations. Level 4
-preserves the authored 2870/3390 foundation heights and has three relics moved
-to validated, non-overlapping soil placements. This is a transition mapping,
-not yet a complete one-map-per-level campaign. The former Kotlin campaign map
+is a seeded Studio-authored map; its current terrain, foundations and
+decorations are recorded in the paired JSON files and `generationMetadata`.
+This is a transition mapping, not yet a complete one-map-per-level campaign.
+The former Kotlin campaign map
 definitions and map authoring builder have been removed.
 Chapter II levels 11–20 currently keep the `demo-map` geometry but override
 its biome to Frostbound for visual theme only; no additional gameplay
