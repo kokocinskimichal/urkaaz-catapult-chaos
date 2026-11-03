@@ -8,8 +8,12 @@ kampanię, AI oraz działający match screen. Gałąź robocza: `develop`.
 
 ## Obecnie działające
 
-- Start → dashboard → campaign → match screen przez lekką nawigację
+- Splash → dashboard → campaign → match screen przez lekką nawigację
   single-activity.
+- Splash trwa około 2,5 sekundy, używa runicznego drawable assetu i pokazuje
+  dokładne logo AFACODE jako osobny overlay. Pełnoekranowe tło jest zapisane
+  w `assets_src/splash/splash_background.png` i załadowane jako runtime asset;
+  prompt źródłowy znajduje się w `docs/systems/splash-screen-background.agp`.
 - Typowany wybór campaign level przez `game-campaign`; zwycięstwo kampanii
   zapisuje ukończenie poziomu i atomowo rozlicza nagrody.
 - `CampaignChapterRegistry` definiuje dziesięć rozdziałów, ich biomy oraz
@@ -30,7 +34,8 @@ kampanię, AI oraz działający match screen. Gałąź robocza: `develop`.
 - Dashboard używa zaakceptowanego układu, osobnego tła i istniejących assetów
   przycisków/ramki. Globus otwiera krótką listę flag PL/UK/ES; flagi nie
   zmieniają jeszcze języka. `AD REWARD` pozostaje nieaktywny, a dwa boczne
-  sloty eventów są ukryte i nie mają jeszcze źródła danych.
+  sloty eventów są ukryte i nie mają jeszcze źródła danych. `TEST MODE`
+  otwiera demo Loadout, z którego po zatwierdzeniu startuje mecz `DEMO_LEVEL`.
 - Lokalny przepływ:
   `MatchUiAction → MatchViewModel → LocalMatchGateway → MatchSession →
   simulation → MatchSnapshot`.
@@ -58,8 +63,10 @@ kampanię, AI oraz działający match screen. Gałąź robocza: `develop`.
   poziomach 5–50. Profile legacy, w tym HP, obrażenia, prędkość, enrage i
   odporność na `PLAGUE_CAULDRON`, pochodzą z
   `game-domain/src/main/resources/balance/game-balance.json`; Studio ma zakładkę
-  Balance i kategorię Bosses w Animations. Bossy renderują się statycznie;
-  animacje są odrębnymi przyszłymi krokami.
+  Balance i kategorię Bosses w Animations. Ancient War Oak ma 75-klatkową
+  pętlę idle i 60-klatkowy atak w prawo; renderer wyprzedzająco ładuje klatki
+  i zachowuje ostatnią gotową klatkę podczas przejść. Pozostałe animacje bossów
+  są odrębnymi przyszłymi krokami.
 - Kampania po zwycięstwie na poziomie 50 udostępnia zwykłe poziomy 51–54, ale
   blokuje poziomy 55–100 bez kompletnych profili bossów i assetów.
 - Studio Progress edytuje developer preset z poziomem kampanii, liczbą żyć i
@@ -98,7 +105,7 @@ kampanię, AI oraz działający match screen. Gałąź robocza: `develop`.
   `MapDefinitionValidator`. `CampaignLevelDefinition` nadal składa typowaną
   konfigurację gameplayową poziomu, natomiast geometria map kampanii jest
   ładowana z JSON schema 1, nie z per-level Kotlin `LevelAuthoringRequest`.
-- Chapter 1 Levels 1–5 mają dedykowane JSON-y w `game-campaign` resources i
+- Chapter 1 Levels 1–10 mają dedykowane JSON-y w `game-campaign` resources i
   `android-app` assets. Runtime wybiera plik `chapterN-levelX`, jeśli istnieje;
   poziomy bez dedykowanej mapy używają przejściowego `demo-map`. Geometria nie
   jest losowana podczas meczu, a definicje demo i kampanii korzystają ze
@@ -162,9 +169,8 @@ snapshotów i eventów zamiast mutować bezpośrednio stan innych podsystemów.
 2. Docelowa technologia nawigacji: obecny `AppNavigator` versus Android
    Navigation/Compose.
 3. Zakres i właściciel przyszłego backendu/network play.
-4. Pełna migracja tutoriala, pozostałych zaklęć i wyników; animacje bossów
-   oraz zawartość bossów
-   poziomów 55–100 są odłożone.
+4. Pełna migracja tutoriala, pozostałych zaklęć i wyników; dodatkowe animacje
+   bossów oraz zawartość bossów poziomów 55–100 są odłożone.
 5. Zakres zgodności wizualnej i regresyjnej ze starą aplikacją poza obecnym
    deterministycznym wycinkiem M11.
 6. Finalna polityka assetów/audio dla elementów, których status lub źródło

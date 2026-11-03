@@ -190,7 +190,20 @@ class MapDefinitionValidatorTest {
         assertEquals("chapter1-level3", levels[2].mapDefinition.mapId)
         assertEquals("chapter1-level4", levels[3].mapDefinition.mapId)
         assertEquals("chapter1-level5", levels[4].mapDefinition.mapId)
-        assertEquals("demo-map", levels[5].mapDefinition.mapId)
+        val classLoader = MapDefinitionRepository::class.java.classLoader
+        val demoOnlyRepository = MapDefinitionRepository { path ->
+            if (path == "maps/demo-map.json") {
+                classLoader.getResourceAsStream(path)
+            } else {
+                null
+            }
+        }
+        val missingMapLevel = CampaignLevelDefinition.forLevel(
+            level = 6,
+            campaignBalance = campaignBalance,
+            mapRepository = demoOnlyRepository,
+        )
+        assertEquals("demo-map", missingMapLevel.mapDefinition.mapId)
         assertNotEquals(levels[0].availableUnits, levels[99].availableUnits)
         assertNotEquals(levels[0].mapDefinition.terrain.samples, levels[1].mapDefinition.terrain.samples)
         assertNotEquals(levels[0].mapDefinition.terrain.samples, levels[2].mapDefinition.terrain.samples)

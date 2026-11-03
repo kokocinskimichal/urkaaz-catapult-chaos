@@ -16,7 +16,7 @@ import com.urkaaaz.contracts.UnitHitboxProfile
 import com.urkaaaz.contracts.WorldDimensions
 import com.urkaaaz.contracts.WorldScale
 
-class BattlefieldRenderer(
+internal class BattlefieldRenderer(
     private val assets: BattlefieldAssetCatalog,
     private val textTypeface: Typeface,
     private val drawTiledTexture: (Canvas, Bitmap?, Float, Float, Float, Int) -> Unit,
@@ -31,6 +31,12 @@ class BattlefieldRenderer(
     private val backgroundPaint = Paint(Paint.ANTI_ALIAS_FLAG)
     private val spritePaint = Paint(Paint.ANTI_ALIAS_FLAG or Paint.FILTER_BITMAP_FLAG)
     private val fortressShieldPaint = Paint(Paint.ANTI_ALIAS_FLAG or Paint.FILTER_BITMAP_FLAG)
+    private val bossAnimationFrameHold = BossAnimationFrameHold<BossDrawableFrame>()
+
+    private data class BossDrawableFrame(
+        val bitmap: Bitmap,
+        val animation: BossSpriteAnimationDefinition?,
+    )
 
     fun render(
         canvas: Canvas,
@@ -267,7 +273,11 @@ class BattlefieldRenderer(
             } else {
                 animationFrame
             }
-            val frame = frames.getOrNull(frameIndex % frames.size.coerceAtLeast(1))
+            val frame = if (frames.frameCount == 0) {
+                null
+            } else {
+                frames.bitmapIfReady(frameIndex % frames.frameCount)
+            }
             val projectileHeight = if (frame == null) {
                 projectileRenderSize
             } else {
@@ -314,8 +324,9 @@ class BattlefieldRenderer(
         activeImpact?.let { impact ->
             val animation = assets.animationFor(impact.ammunitionType)
             val frames = animation.impactFrames
-            if (frames.isNotEmpty()) {
-                val frame = frames[impactFrame % frames.size]
+            if (frames.frameCount > 0) {
+                val frame = frames.bitmapIfReady(impactFrame % frames.frameCount)
+                    ?: return@let
                 val impactX = worldToViewX(impact.x, viewportWidth).coerceIn(0f, viewportWidth)
                 val impactY = worldToViewY(impact.y, viewportHeight)
                 if (
@@ -400,11 +411,13 @@ class BattlefieldRenderer(
             FortressShieldGeometry.horizontalRadius(width)
         val verticalRadius =
             FortressShieldGeometry.verticalRadius(height)
-        val frame = activeHit?.let {
-            assets.fortressShieldHitFrames[it.frameIndex]
-        } ?: assets.fortressShieldDomeFrames[
-            FortressShieldPresentation.frameIndex(animationFrame),
-        ]
+        val frame = if (activeHit != null) {
+            assets.fortressShieldHitFrames.bitmapIfReady(activeHit.frameIndex)
+        } else {
+            assets.fortressShieldDomeFrames.bitmapIfReady(
+                FortressShieldPresentation.frameIndex(animationFrame),
+            )
+        } ?: return null
         val sprite = FortressShieldPresentation.spriteBounds(
             ellipseLeft = centerX - horizontalRadius,
             ellipseTop = centerY - verticalRadius,
@@ -464,8 +477,8 @@ class BattlefieldRenderer(
         viewportHeight: Float,
     ) {
         fields.forEach { field ->
-            val frame = assets.fireRainAnimations.fireFieldFrames.getOrNull(field.frameIndex)
-                ?: error("FIRE_RAIN fire field frame ${field.frameIndex} is unavailable")
+            val frame = assets.fireRainAnimations.fireFieldFrames
+                .bitmapIfReady(field.frameIndex) ?: return@forEach
             val centerX = worldToViewX(field.x, viewportWidth)
             val centerY = worldToViewY(field.y, viewportHeight)
             val canvasDiameter = field.radius * 2f * FIRE_RAIN_FIELD_CANVAS_DIAMETER_MULTIPLIER
@@ -491,15 +504,13 @@ class BattlefieldRenderer(
     ) {
         bastions.forEach { bastion ->
             val idleFrameIndex = presentation.idleFrameIndices[bastion.entityId]
-            val frame = idleFrameIndex?.let {
-                assets.runicBastionIdleFrames.getOrNull(it)
-                    ?: error("Runic Bastion idle frame $it is unavailable")
-            } ?: run {
+            val frame = if (idleFrameIndex != null) {
+                assets.runicBastionIdleFrames.bitmapIfReady(idleFrameIndex)
+            } else {
                 val creationFrameIndex = presentation.creationFrameIndices[bastion.entityId]
                     ?: RunicBastionPresentation.FRAME_COUNT - 1
-                assets.runicBastionCreationFrames.getOrNull(creationFrameIndex)
-                    ?: error("Runic Bastion creation frame $creationFrameIndex is unavailable")
-            }
+                assets.runicBastionCreationFrames.bitmapIfReady(creationFrameIndex)
+            } ?: return@forEach
 
             drawRunicBastionFrame(
                 canvas = canvas,
@@ -510,10 +521,8 @@ class BattlefieldRenderer(
             )
         }
         presentation.destructionAnimations.forEach { animation ->
-            val frame = assets.runicBastionDestructionFrames.getOrNull(animation.frameIndex)
-                ?: error(
-                    "Runic Bastion destruction frame ${animation.frameIndex} is unavailable",
-                )
+            val frame = assets.runicBastionDestructionFrames
+                .bitmapIfReady(animation.frameIndex) ?: return@forEach
             drawRunicBastionFrame(
                 canvas = canvas,
                 bastion = animation.bastion,
@@ -532,7 +541,10 @@ class BattlefieldRenderer(
         viewportWidth: Float,
         viewportHeight: Float,
     ) {
-        if (boss == null || boss.health <= 0) return
+        if (boss == null || boss.health <= 0) {
+            bossAnimationFrameHold.clear()
+            return
+        }
         val definition = BossPresentationCatalog.definition(boss.presentationKey)
         val attackDirection = presentation.attackDirection
         val attackFrameIndex = presentation.attackFrameIndex
@@ -541,8 +553,8 @@ class BattlefieldRenderer(
         } else {
             null
         }
-        val animation = attackAnimation ?: definition.idleAnimation
-        val bitmap = when {
+        val requestedAnimation = attackAnimation ?: definition.idleAnimation
+        val requestedFrame = when {
             attackAnimation != null -> assets.bossAttackFrame(
                 presentationKey = boss.presentationKey,
                 direction = requireNotNull(attackDirection),
@@ -553,7 +565,23 @@ class BattlefieldRenderer(
                 frameIndex = presentation.idleFrameIndex ?: 0,
             )
             else -> null
-        } ?: assets.bossSprite(boss.presentationKey, boss.phase)
+        }
+        val drawableFrame = if (requestedAnimation != null) {
+            bossAnimationFrameHold.resolve(
+                bossEntityId = boss.entityId,
+                presentationKey = boss.presentationKey,
+                currentFrame = requestedFrame?.let {
+                    BossDrawableFrame(it, requestedAnimation)
+                },
+            ) ?: assets.bossSprite(boss.presentationKey, boss.phase)
+                ?.let { BossDrawableFrame(it, requestedAnimation) } ?: return
+        } else {
+            bossAnimationFrameHold.clear()
+            val bitmap = assets.bossSprite(boss.presentationKey, boss.phase) ?: return
+            BossDrawableFrame(bitmap, null)
+        }
+        val bitmap = drawableFrame.bitmap
+        val animation = drawableFrame.animation
         val centerX = worldToViewX(boss.x, viewportWidth)
         val baselineY = worldToViewY(boss.groundY, viewportHeight)
         val hitboxWidth = worldToViewWidth(boss.collisionWidth, viewportWidth)
@@ -646,8 +674,7 @@ class BattlefieldRenderer(
                 return@forEach
             }
             val frame = assets.animationFor(PLAGUE_CAULDRON_AMMUNITION)
-                .impactFrames.getOrNull(cloud.frameIndex)
-                ?: error("PLAGUE_CAULDRON cloud frame ${cloud.frameIndex} is unavailable")
+                .impactFrames.bitmapIfReady(cloud.frameIndex) ?: return@forEach
             val width = lerp(
                 cloud.radius * PlagueCauldronVisualContract.GROWTH_START_WIDTH_TO_RADIUS,
                 cloud.radius * PlagueCauldronVisualContract.CANVAS_WIDTH_TO_RADIUS,
@@ -718,8 +745,8 @@ class BattlefieldRenderer(
         viewportHeight: Float,
     ) {
         splitFlashes.forEach { flash ->
-            val frame = assets.fireRainAnimations.splitFlashFrames.getOrNull(flash.frameIndex)
-                ?: error("FIRE_RAIN split flash frame ${flash.frameIndex} is unavailable")
+            val frame = assets.fireRainAnimations.splitFlashFrames
+                .bitmapIfReady(flash.frameIndex) ?: return@forEach
             val centerX = worldToViewX(flash.x, viewportWidth)
             val centerY = worldToViewY(flash.y, viewportHeight)
             val width = worldToViewWidth(FIRE_RAIN_SPLIT_FLASH_RENDER_SIZE, viewportWidth)
@@ -953,6 +980,17 @@ class BattlefieldRenderer(
         }
     }
 
+    private fun terrainHeightAt(
+        samples: List<Float>,
+        sampleSpacing: Float,
+        worldX: Float,
+        fallbackWorldY: Float,
+    ): Float = if (samples.isEmpty()) {
+        fallbackWorldY
+    } else {
+        sampleHeightAt(samples, sampleSpacing, worldX)
+    }
+
     private fun sampleHeightAt(
         samples: List<Float>,
         sampleSpacing: Float,
@@ -963,17 +1001,6 @@ class BattlefieldRenderer(
         val right = (left + 1).coerceAtMost(samples.lastIndex)
         val fraction = (position - left).coerceIn(0f, 1f)
         return samples[left] + (samples[right] - samples[left]) * fraction
-    }
-
-    private fun terrainHeightAt(
-        samples: List<Float>,
-        sampleSpacing: Float,
-        worldX: Float,
-        fallbackWorldY: Float,
-    ): Float = if (samples.isEmpty()) {
-        fallbackWorldY
-    } else {
-        sampleHeightAt(samples, sampleSpacing, worldX)
     }
 
     private fun drawHealthBar(
@@ -1073,8 +1100,8 @@ class BattlefieldRenderer(
                 val returnFrames = assets.sapperReturnAnimationFrames(unit.teamLabel)
                 sapperReturnAnimationClock.frame(
                     unit.entityId,
-                    turnFrames.size,
-                    returnFrames.size,
+                    turnFrames.frameCount,
+                    returnFrames.frameCount,
                 )
             } else {
                 null
@@ -1087,12 +1114,12 @@ class BattlefieldRenderer(
                     assets.sapperTurnAnimationFrames(unit.teamLabel)
                 SapperReturnAnimationFrame.Phase.RETURN ->
                     assets.sapperReturnAnimationFrames(unit.teamLabel)
-                null -> emptyList()
+                null -> null
             }
             val frames = if (deathAnimationPlaying) {
                 assets.unitDeathAnimationFrames(unit.unitType, unit.teamLabel)
             } else if (sapperReturnPosition != null) {
-                sapperReturnFrames
+                requireNotNull(sapperReturnFrames)
             } else {
                 assets.unitAnimationFrames(
                     unit.unitType,
@@ -1101,22 +1128,22 @@ class BattlefieldRenderer(
                     useAttackAnimation,
                 )
             }
-            val frame = if (frames.isEmpty()) {
+            val frame = if (frames.frameCount == 0) {
                 null
             } else if (deathAnimationPlaying) {
-                deathAnimationClock.frameIndex(unit.entityId, frames.size)
-                    ?.let(frames::get)
+                deathAnimationClock.frameIndex(unit.entityId, frames.frameCount)
+                    ?.let(frames::bitmapIfReady)
             } else if (sapperReturnPosition != null) {
-                frames[sapperReturnPosition.index]
+                frames.bitmapIfReady(sapperReturnPosition.index)
             } else if (usesDemolisherAttackAnimation) {
-                frames[
+                frames.bitmapIfReady(
                     requireNotNull(unit.demolisherThrowFrameIndex)
-                        .coerceIn(0, frames.lastIndex)
-                ]
+                        .coerceIn(0, frames.frameCount - 1),
+                )
             } else if (attacking && unit.unitType != "DEMOLISHER") {
-                frames[(unit.attackProgress * frames.size)
+                frames.bitmapIfReady((unit.attackProgress * frames.frameCount)
                     .toInt()
-                    .coerceIn(0, frames.lastIndex)]
+                    .coerceIn(0, frames.frameCount - 1))
             } else {
                 val renderFramesPerAnimationFrame = if (
                     unit.unitType == "RAGING_BOAR" && unit.moving
@@ -1125,11 +1152,11 @@ class BattlefieldRenderer(
                 } else {
                     DEFAULT_UNIT_ANIMATION_RENDER_FRAMES_PER_FRAME
                 }
-                frames[
+                frames.bitmapIfReady(
                     (animationFrame / renderFramesPerAnimationFrame +
-                        Math.floorMod(unit.entityId.hashCode(), frames.size)) %
-                        frames.size
-                ]
+                        Math.floorMod(unit.entityId.hashCode(), frames.frameCount)) %
+                        frames.frameCount,
+                )
             }
             val bitmap = frame ?: assets.unitBitmap(unit.unitType, unit.teamLabel)
             if (bitmap != null) {
@@ -1204,7 +1231,7 @@ class BattlefieldRenderer(
                     usesGeneratedSapperTurnAnimation ->
                         sapperTurnCanvasScale(
                             frameIndex = requireNotNull(sapperReturnPosition).index,
-                            frameCount = sapperReturnFrames.size,
+                            frameCount = requireNotNull(sapperReturnFrames).frameCount,
                         )
                     usesGeneratedSapperReturnAnimation ->
                         GENERATED_SAPPER_RETURN_CANVAS_SCALE
@@ -1340,9 +1367,9 @@ class BattlefieldRenderer(
         baselineY: Float,
         unitSpriteWidth: Float,
     ) {
-        val frame = assets.hasteOrbitingChevronFrames[
-            HasteOrbitingChevronPresentation.frameIndex(animationFrame)
-        ]
+        val frame = assets.hasteOrbitingChevronFrames.bitmapIfReady(
+            HasteOrbitingChevronPresentation.frameIndex(animationFrame),
+        ) ?: return
         val bounds =
             HasteOrbitingChevronPresentation.spriteBounds(centerX, baselineY, unitSpriteWidth)
         val saveCount = canvas.save()
@@ -1395,7 +1422,7 @@ class BattlefieldRenderer(
                 CombatFeedbackRenderState.Kind.EXPLOSION -> {
                     val explosionFrame = if (item.sourceUnitType == "DEMOLISHER") {
                         item.animationFrameIndex
-                            ?.let(assets.demolisherExplosionFrames::getOrNull)
+                            ?.let(assets.demolisherExplosionFrames::bitmapIfReady)
                     } else {
                         null
                     }
@@ -1486,8 +1513,9 @@ class BattlefieldRenderer(
         if (flights.isEmpty()) return
         val animation = assets.animationFor(SIEGE_BOMB_AMMUNITION)
         flights.forEach { flight ->
-            val bitmap = animation.flightFrames.getOrNull(
-                flight.frameIndex % animation.flightFrames.size.coerceAtLeast(1),
+            if (animation.flightFrames.frameCount == 0) return@forEach
+            val bitmap = animation.flightFrames.bitmapIfReady(
+                flight.frameIndex % animation.flightFrames.frameCount,
             ) ?: return@forEach
             val centerX = worldToViewX(flight.x, viewportWidth)
             val centerY = worldToViewY(flight.y, viewportHeight)

@@ -7,8 +7,8 @@ class ProjectileAnimationTest {
     @Test
     fun impactKeepsFlightSizeUntilRockBreaksApart() {
         val animation = ProjectileAnimation(
-            flightFrames = emptyList(),
-            impactFrames = emptyList(),
+            flightFrames = BitmapFrameSequence.empty(),
+            impactFrames = BitmapFrameSequence.empty(),
             flightRenderSize = 18f,
             impactRenderSize = 36f,
             impactFullRenderSizeStartFrame = 9,

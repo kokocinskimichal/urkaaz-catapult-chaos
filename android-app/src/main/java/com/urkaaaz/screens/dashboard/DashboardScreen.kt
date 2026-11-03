@@ -35,6 +35,7 @@ class DashboardScreen(
     private val onBack: () -> Unit,
     private val onCampaign: () -> Unit,
     private val onShop: () -> Unit,
+    private val onDemoMode: () -> Unit,
     private val onResetProgress: suspend () -> PlayerProgressResetResult,
     private val loadProgress: suspend () -> DeveloperProgressSummary,
 ) : ScreenContent {
@@ -384,7 +385,18 @@ class DashboardScreen(
                 descriptionResource = R.string.dashboard_shop_accessibility,
                 action = onShop,
             ),
-            LinearLayout.LayoutParams(dp(210), dp(52)),
+            LinearLayout.LayoutParams(dp(140), dp(52)),
+        )
+        addView(
+            darkActionButton(
+                labelResource = R.string.test_mode,
+                iconResource = null,
+                descriptionResource = R.string.test_mode,
+                action = onDemoMode,
+            ),
+            LinearLayout.LayoutParams(dp(140), dp(52)).apply {
+                marginStart = dp(12)
+            },
         )
         addView(
             darkActionButton(
@@ -393,7 +405,7 @@ class DashboardScreen(
                 descriptionResource = R.string.dashboard_ad_reward_accessibility,
                 action = null,
             ),
-            LinearLayout.LayoutParams(dp(220), dp(55)).apply {
+            LinearLayout.LayoutParams(dp(140), dp(55)).apply {
                 marginStart = dp(12)
             },
         )
@@ -414,7 +426,7 @@ class DashboardScreen(
 
     private fun darkActionButton(
         labelResource: Int,
-        iconResource: Int,
+        iconResource: Int?,
         descriptionResource: Int,
         action: (() -> Unit)?,
     ): View = LinearLayout(context).apply {
@@ -429,9 +441,9 @@ class DashboardScreen(
         if (action != null) {
             setOnClickListener { action() }
         }
-        addView(image(iconResource, 28, 26))
+        iconResource?.let { addView(image(it, 28, 26)) }
         addView(label(context.getString(labelResource), 14f), LinearLayout.LayoutParams(-2, -2).apply {
-            marginStart = dp(7)
+            if (iconResource != null) marginStart = dp(7)
         })
     }
 

@@ -1,0 +1,11 @@
+<layer-list xmlns:android="http://schemas.android.com/apk/res/android">
+    <item android:drawable="@drawable/splash_rune_glow" />
+    <item>
+        <inset
+            android:drawable="@drawable/ic_splash_rune"
+            android:insetLeft="34dp"
+            android:insetTop="34dp"
+            android:insetRight="34dp"
+            android:insetBottom="34dp" />
+    </item>
+</layer-list>

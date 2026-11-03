@@ -397,7 +397,11 @@ korzeni. Pozostałe fazy bez własnej sekwencji nadal używają statycznego spri
 Oryginalne wyjście AnimGen (video i ZIP 75 klatek 1024×1024) znajduje się w
 `assets_src/animgen/bosses/ancient_war_oak/idle/`; runtime używa
 przezroczystych klatek 384×384. `BattlefieldAssetCatalog` ładuje je leniwie z
-ograniczonego cache i zgłasza jawny błąd dla brakującej klatki.
+ograniczonego cache, żąda dwie kolejne klatki z wyprzedzeniem i zgłasza jawny
+błąd dla brakującej klatki. Gdy bieżąca klatka jest jeszcze wczytywana,
+renderer zachowuje ostatnią gotową klatkę tego samego bossa również podczas
+przejścia idle/atak, wraz z jej układem, zamiast znikać lub skakać do statycznego
+fallbacku. Zegar prezentacji i timing ataku pozostają bez zmian.
 
 ### Atak na jednostki z wind-upem
 

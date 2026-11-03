@@ -3,15 +3,21 @@
 ## Current state
 
 The project is a modular Android game with a deterministic local match
-simulation. The application opens into `StartScreen`, which reproduces the
-legacy start menu. Its Play button opens the redesigned `DashboardScreen`,
-which uses the approved screen reference and its own background asset. Its
-Campaign button opens `CampaignScreen`, and selecting a level opens the loadout
-screen. A globe button opens a compact list of PL/UK/ES flags, but the flags do
+simulation. The application opens into a roughly 2.5-second `SplashScreen`
+using the generated full-screen background, a layered runic drawable, and the
+exact AFACODE company logo as a separate overlay, then automatically opens the
+redesigned `DashboardScreen`, which uses the approved screen reference and its
+own background asset. The splash background source is
+`assets_src/splash/splash_background.png`; its copy-ready prompt is
+[`docs/systems/splash-screen-background.agp`](../systems/splash-screen-background.agp).
+The Dashboard's Campaign button opens `CampaignScreen`, and selecting a level
+opens the loadout screen. A globe button opens a compact list of PL/UK/ES flags,
+but the flags do
 not change the language until LocalizationSystem is implemented. The dashboard
 keeps `AD REWARD` visible but inert. Two hidden side anchors are reserved for
-future game-event icons; there is no Dashboard event feed yet. The test mode button still opens
-`MatchScreen` with `DEMO_LEVEL`. The loadout core, local player profile and
+future game-event icons; there is no Dashboard event feed yet. The Dashboard's
+`TEST MODE` action opens demo Loadout and then starts a match with `DEMO_LEVEL`.
+The loadout core, local player profile and
 per-level loadout persistence are implemented with AndroidX DataStore.
 Campaign matches start
 only after the profile and saved loadout are read, validated and committed.
@@ -309,7 +315,7 @@ Android also bundles the same file at
 `android-app/src/main/assets/maps/demo-map.json` for offline loading.
 `CampaignLevelDefinition` looks for `chapter<ordinal>-level<globalLevel>` and
 uses the bundled map when it exists; missing level maps still use the
-intentional `demo-map` transition fallback. Chapter 1 Levels 1–5 now have map
+intentional `demo-map` transition fallback. Chapter 1 Levels 1–10 now have map
 JSON files in both resource locations; other levels without a
 dedicated JSON currently use `demo-map`. The Studio Maps save dialog selects
 the campaign chapter and global level, derives this stable map ID, and saves
@@ -775,6 +781,35 @@ reference height, then apply their respective `+35` and `+35 - 200` world-Y
 presentation offsets. The aim origin remains fortress-relative.
 Initial battlefield framing remains at 1x and waits for a non-zero viewport.
 
+## Battlefield rendering performance
+
+An active Level 5 emulator profile on 2026-11-03 identified repeated PNG
+decoding from `BattlefieldRenderer.drawMapDecorations` through
+`BattlefieldAssetCatalog.mapDecoration` and `loadBitmap` on the `onDraw` path.
+That path is now backed by an asynchronous, `allocationByteCount`-weighted
+cache owned by `BattlefieldAssetCatalog` and capped at 8–64 MiB (one eighth of
+the runtime heap, clamped). Animation frame sequences also load on demand,
+share in-flight requests and prefetch two following frames. The decoder uses a
+bounded 1–2 thread executor with a 128-task queue, and `BattlefieldView` cancels
+pending loads on detach.
+
+On the same emulator, warmed Level 5 PSS fell from 723,980 KiB to 280,364 KiB
+(61.3%); native heap fell from 660,845 KiB to 229,232 KiB (65.3%). The
+main-thread steady-state profile no longer showed decoration PNG decoding or
+team-texture recoloring. Three 10-second frame samples measured 28.5–28.7 FPS;
+frame-time percentiles varied, with p95 at 25–53 ms and p99 at 53–73 ms. The
+29 FPS/p95 targets therefore were not met consistently. The remaining sampled
+cost was primarily emulator QEMU/Skia GL work on `RenderThread`; no physical
+device was profiled. Some static biome assets still decode during catalog
+construction.
+Ancient War Oak idle and attack requests prefetch two frames ahead; while the
+requested frame is pending, the renderer holds the last ready frame for the
+same boss across idle/attack transitions, including its layout metadata,
+instead of switching to static art or disappearing. This affects only
+presentation and does not change `BossPresentationClock` timing.
+The baseline, measurements and remaining limitations are recorded in
+[`docs/performance/battlefield-rendering-optimization-plan.md`](../performance/battlefield-rendering-optimization-plan.md).
+
 ## Data flow
 
 ```text
@@ -802,7 +837,7 @@ must go through commands and domain/application boundaries.
 | `android-app/.../navigation/AppScreen.kt` | Screen identity contract |
 | `android-app/.../navigation/AppNavigator.kt` | Navigation and back stack |
 | `android-app/.../navigation/ScreenHost.kt` | Active screen container |
-| `android-app/.../screens/start/StartScreen.kt` | Legacy-style start menu |
+| `android-app/.../screens/splash/SplashScreen.kt` | Brief runic startup intro |
 | `android-app/.../screens/dashboard/DashboardScreen.kt` | Dashboard layout, profile summary, navigation, reset and static language icons |
 | `docs/systems/dashboard-screen.md` and `docs/systems/dashboard-screen-implementation-prompt.md` | Dashboard presentation boundaries, approved assets and implementation requirements |
 | `android-app/.../screens/campaign/CampaignScreen.kt` | Chapter campaign map, chapter selector, and Start Level flow |
@@ -831,6 +866,8 @@ must go through commands and domain/application boundaries.
 | `android-app/.../ui/MatchFeedbackToastView.kt` | Transient text-only spell feedback with fade-out |
 | `android-app/.../ui/BattlefieldView.kt` | Battlefield interaction and draw entry point |
 | `android-app/.../ui/BattlefieldRenderer.kt` | Battlefield draw orchestration |
+| `docs/performance/battlefield-rendering-optimization-plan.md` | Measured Android rendering baseline, implementation results and remaining performance limits |
+| `docs/performance/battlefield-rendering-implementation-prompt.md` | Copy-ready implementation task for the rendering optimization |
 | `android-app/.../ui/BattlefieldCameraController.kt` | Camera, zoom and pan |
 | `android-app/.../ui/MatchScreenController.kt` | Match composition, lifecycle and debug panel |
 | `android-app/.../ui/AimGestureController.kt` | Aiming gesture lifecycle |
@@ -857,7 +894,7 @@ must go through commands and domain/application boundaries.
   uses 1dp image padding for the Slingmaster (4dp for the others) so its
   smaller artwork has a matching visible size without cropping the icon.
 - **Map JSON campaign migration:** campaign geometry is loaded from the
-  bundled schema-1 map repository. Chapter 1 Levels 1–5 have dedicated JSON
+  bundled schema-1 map repository. Chapter 1 Levels 1–10 have dedicated JSON
   maps; levels without a dedicated map use the intentional `demo-map`
   transition fallback. There is no fallback to old Kotlin geometry.
 - **Map editor export:** the web and Kotlin codecs export only the shared map
@@ -1173,7 +1210,9 @@ complete. Boss sprites and optional idle sequences are mapped by
 `presentationKey`. Ancient War Oak uses a 75-frame, 5.042-second neutral
 AnimGen idle loop; the original video and 1024px frame archive are retained in
 `assets_src/animgen/bosses/ancient_war_oak/idle/`, while Android decodes
-384px runtime frames through a 4 MiB LRU cache. Normalized source/output art
+384px runtime frames on demand through the bounded shared asynchronous bitmap
+cache. It prefetches two frames ahead and retains the last ready frame, with
+its own layout, across idle/attack transitions. Normalized source/output art
 bounds preserve the visible sprite size and root baseline despite the
 transparent expansion canvas. The Oak's collision is 432x576 world units,
 narrower than the visible tree; its presentation scale is 5/3 to preserve the

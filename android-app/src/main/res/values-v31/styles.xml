@@ -1,0 +1,8 @@
+<resources>
+    <style name="Theme.Urkaaaz" parent="android:style/Theme.Material.Light.NoActionBar">
+        <item name="android:fontFamily">@font/cinzel_semibold</item>
+        <item name="android:windowSplashScreenBackground">#0A0B0F</item>
+        <item name="android:windowSplashScreenAnimatedIcon">@drawable/splash_rune_art</item>
+        <item name="android:windowSplashScreenAnimationDuration">350</item>
+    </style>
+</resources>

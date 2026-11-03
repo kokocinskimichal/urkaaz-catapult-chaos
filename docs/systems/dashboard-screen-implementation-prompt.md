@@ -69,7 +69,8 @@ modułu Gradle ani systemu gameplayowego.
 - Odtwórz zaakceptowaną kompozycję: pełne tło, Back i logo w górnym nagłówku,
   profil i zasoby, globus w nagłówku z listą flag pokazywaną po dotknięciu,
   wyraźny przycisk Campaign w centrum,
-  przyciski Shop i Ad Reward niżej oraz mały RESET w prawym dolnym rejonie.
+  przyciski Shop, Test Mode i Ad Reward niżej oraz mały RESET w prawym dolnym
+  rejonie.
 - Użyj `loadout_header_frame.png` dla panelu tytułowego i
   `match_hud_universal_frame.9.png` dla panelu statystyk profilu.
   Nałóż ramkę profilu na nieprzezroczyste, ciemne, zaokrąglone wypełnienie,
@@ -86,6 +87,8 @@ modułu Gradle ani systemu gameplayowego.
   Shop używa istniejącego `icon_orcoins.png`; Ad Reward używa małej wektorowej
   ikony clapperboardu. Nie używaj ilustracyjnych
   `dashboard_shop_button.png` ani `dashboard_ad_reward_button.png`.
+- Pokaż `TEST MODE` jako dodatkowy przycisk na wspólnym ciemnym tle, z żywą
+  etykietą i bez nowego assetu.
 - Użyj istniejących ikon życia i złota; status regeneracji pokaż z ikoną
   wektorowego serca z plusem zamiast klepsydry.
 - Drawable assety PNG znajdują się w
@@ -108,10 +111,13 @@ modułu Gradle ani systemu gameplayowego.
   `DeveloperProgressSummary`; wartości przykładowe ze screenshotu nie są
   wartościami stałymi.
 - Zachowaj przepływy:
-  - Back → poprzedni ekran przez `AppNavigator`;
+  - Back → poprzedni ekran przez `AppNavigator`; gdy Dashboard jest ekranem
+    głównym, akcja kończy aplikację;
   - Campaign → `CampaignScreen`, która prowadzi przez wybrany poziom do
     Loadout;
-  - Shop → `ShopScreen`; powrót prowadzi do Dashboardu.
+  - Shop → `ShopScreen`; powrót prowadzi do Dashboardu;
+  - Test Mode → istniejący `LoadoutScreen` w trybie demo, a następnie mecz
+    `DEMO_LEVEL`.
 - Pokaż tylko jeden RESET, w miejscu zgodnym ze screenshotem. Usuń
   nieobsługiwany, duplikujący RESET z górnego HUD-u. Zostaw istniejący dialog
   potwierdzenia i wywołuj `PlayerProgressResetRepository` dopiero po

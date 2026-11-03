@@ -6,15 +6,35 @@
 
 - Added the Chapter 1, Level 2 map definition to both campaign resources and
   Android assets.
+- Added Chapter 1, Levels 6–10 as paired campaign-resource and Android-asset
+  map definitions.
+- Added a short runic splash intro with the AFACODE logo as a separate overlay.
+- Added a measured battlefield-rendering optimization plan and a copy-ready
+  implementation prompt, prioritizing repeated map-decoration PNG decoding.
+- Added a proposed global gameplay-speed plan and implementation prompt; the
+  balance and runtime behavior are not changed by those documents.
 
 ### Changed
 
+- Optimized Android battlefield asset loading with a bounded asynchronous
+  bitmap cache and on-demand animation frames. On the Level 5 emulator profile,
+  warmed PSS fell 61.3% and PNG decoding left the main-thread render path;
+  measured throughput remained 28.5–28.7 FPS, so the 29 FPS target was not met
+  consistently.
+- Replaced the legacy start screen with the timed Splash → Dashboard flow and
+  added Dashboard `TEST MODE` navigation to the existing demo loadout.
 - Shifted both fortress centers inward by 110 world units across campaign maps,
   map-editor defaults and mapless simulation; kept catapults, protected
   foundations, projectile anchors and garrison slots aligned.
 - Updated the saved Chapter 1 maps for Levels 1, 3, 4 and 5 in both resource
   locations with the latest Studio-authored terrain and decoration data.
 - Reduced the SIEGE_BOMB reload from 5.5 seconds to 2 seconds.
+
+### Fixed
+
+- Prevented Ancient War Oak from snapping to static artwork while the next
+  idle or attack frame is loading, including brief disappearance between
+  animation types.
 
 ### Removed
 

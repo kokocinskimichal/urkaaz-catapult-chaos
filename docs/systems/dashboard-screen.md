@@ -23,6 +23,8 @@ balans.
 - Zachowanie live summary profilu: poziom, życia, złoto i status regeneracji
   `N/A`; wartości zawsze pochodzą z danych aplikacji, nie ze screenshotu.
 - Zachowanie Back, Campaign, Shop i potwierdzanego RESET.
+- Umieszczenie przycisku `TEST MODE` na Dashboardzie bez zmiany
+  istniejącego przepływu demo meczu.
 - Zachowanie widocznego przycisku `AD REWARD` wyłącznie jako elementu
   prezentacji; nie dodawać integracji reklam ani nagród.
 - Dodanie przycisku globusa w nagłówku. Dotknięcie otwiera krótki panel flag
@@ -56,7 +58,7 @@ Hierarchia ekranu:
 1. Nagłówek: Back, branding Urkaaaz, portret gracza, poziom/życia/złoto/status
    regeneracji i globus; po jego dotknięciu pojawia się krótka lista trzech flag.
 2. Główny, centralny przycisk Campaign.
-3. Niżej drugorzędne przyciski Shop i Ad Reward.
+3. Niżej drugorzędne przyciski Shop, Test Mode i Ad Reward.
 4. Mały przycisk RESET w prawym dolnym rejonie, oddzielony od głównej
    nawigacji.
 5. Dwa puste, niewidoczne sloty eventów po bokach przycisku Campaign.
@@ -121,10 +123,13 @@ prezentacyjne i nie konsumują danych z innych systemów.
 
 ### Wyjścia
 
-- Back → istniejący stos `AppNavigator`.
+- Back → istniejący stos `AppNavigator`; gdy Dashboard jest ekranem głównym,
+  akcja kończy aplikację zamiast wracać do splash screenu.
 - Campaign → istniejący `CampaignScreen`; wybranie poziomu prowadzi dalej do
   Loadout.
 - Shop → `ShopScreen`; powrót po zakupie prowadzi do Dashboardu.
+- TEST MODE → `LoadoutScreen` dla poziomu demo; po zatwierdzeniu loadoutu
+  uruchamia istniejący mecz `DEMO_LEVEL`.
 - RESET → dialog potwierdzenia, a dopiero po akceptacji wywołanie istniejącego
   resetu postępu.
 - Globus → otwarcie lub zamknięcie popupu flag; dotknięcie flag nie wywołuje

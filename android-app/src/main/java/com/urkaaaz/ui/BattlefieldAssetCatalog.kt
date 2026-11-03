@@ -9,6 +9,11 @@ import android.util.LruCache
 import com.urkaaaz.android.R
 import com.urkaaaz.contracts.BossPhase
 import org.json.JSONObject
+import java.util.concurrent.ArrayBlockingQueue
+import java.util.concurrent.RejectedExecutionException
+import java.util.concurrent.ThreadFactory
+import java.util.concurrent.ThreadPoolExecutor
+import java.util.concurrent.TimeUnit
 
 data class BattlefieldTheme(
     val background: Bitmap?,
@@ -35,9 +40,9 @@ enum class BattlefieldAssetKind {
     RELIC,
 }
 
-data class ProjectileAnimation(
-    val flightFrames: List<Bitmap>,
-    val impactFrames: List<Bitmap>,
+internal data class ProjectileAnimation(
+    val flightFrames: BitmapFrameSequence,
+    val impactFrames: BitmapFrameSequence,
     val flightRenderSize: Float = 36f,
     val impactRenderSize: Float = 108f,
     val impactFullRenderSizeStartFrame: Int = 0,
@@ -50,28 +55,43 @@ data class ProjectileAnimation(
         }
 }
 
-data class FireRainAnimationSet(
-    val containerFlightFrames: List<Bitmap>,
-    val splitFlashFrames: List<Bitmap>,
-    val fragmentFlightFrames: List<Bitmap>,
-    val fireFieldFrames: List<Bitmap>,
+internal data class FireRainAnimationSet(
+    val containerFlightFrames: BitmapFrameSequence,
+    val splitFlashFrames: BitmapFrameSequence,
+    val fragmentFlightFrames: BitmapFrameSequence,
+    val fireFieldFrames: BitmapFrameSequence,
 )
 
-class BattlefieldAssetCatalog(private val context: Context) {
-    private val resources = context.resources
-    private val unitBitmapCache = mutableMapOf<String, Bitmap?>()
-    private val bossBitmapCache = mutableMapOf<String, Bitmap>()
-    private val bossAnimationFrameCache = object : LruCache<String, Bitmap>(
-        BOSS_ANIMATION_FRAME_CACHE_KILOBYTES,
-    ) {
-        override fun sizeOf(key: String, value: Bitmap): Int =
-            (value.allocationByteCount / 1024).coerceAtLeast(1)
+internal class BattlefieldAssetCatalog(
+    context: Context,
+    onBitmapReady: () -> Unit = {},
+) {
+    private val context = context.applicationContext
+    private val resources = this.context.resources
+    private val resourceIdCache = mutableMapOf<String, Int>()
+    private val decodedStaticBitmaps = mutableMapOf<String, Bitmap?>()
+    private val decodeExecutor = ThreadPoolExecutor(
+        1,
+        2,
+        ASSET_DECODER_KEEP_ALIVE_SECONDS,
+        TimeUnit.SECONDS,
+        ArrayBlockingQueue(ASSET_DECODER_QUEUE_CAPACITY),
+        ThreadFactory { runnable ->
+            Thread(runnable, "UrkaaazAssetDecoder").apply { isDaemon = true }
+        },
+    ).apply {
+        allowCoreThreadTimeOut(true)
     }
-    private val unitAnimationCache = mutableMapOf<String, List<Bitmap>>()
+    private val bitmapCache = AsyncAssetCache<Bitmap>(
+        maxKilobytes = bitmapCacheKilobytes(),
+        executor = decodeExecutor,
+        sizeOf = { (it.allocationByteCount / 1024).coerceAtLeast(1) },
+        onAssetReady = onBitmapReady,
+    )
+    private val unitAnimationCache = mutableMapOf<String, BitmapFrameSequence>()
     private val teamTextureBitmapCache = TeamTextureBitmapCache()
     private val teamTextureConfigurationCache = mutableMapOf<String, Map<String, String>>()
     private val teamTextureCache = mutableMapOf<String, Bitmap>()
-    private val teamNeutralFrameCache = mutableMapOf<String, List<Bitmap>>()
     private val teamMaskCache = object : LruCache<String, Bitmap>(4 * 1024) {
         override fun sizeOf(key: String, value: Bitmap): Int =
             (value.allocationByteCount / 1024).coerceAtLeast(1)
@@ -112,25 +132,25 @@ class BattlefieldAssetCatalog(private val context: Context) {
         ),
     )
 
-    val fortressShieldDomeFrames: List<Bitmap> = loadRequiredFortressShieldDomeFrames()
-    val fortressShieldHitFrames: List<Bitmap> = loadRequiredFortressShieldFrames(
+    val fortressShieldDomeFrames: BitmapFrameSequence = loadRequiredFortressShieldDomeFrames()
+    val fortressShieldHitFrames: BitmapFrameSequence = loadRequiredFortressShieldFrames(
         prefix = FORTRESS_SHIELD_HIT_PREFIX,
         phase = "hit flash",
     )
-    val hasteOrbitingChevronFrames: List<Bitmap> = loadRequiredHasteOrbitingChevronFrames()
-    val runicBastionCreationFrames: List<Bitmap> =
+    val hasteOrbitingChevronFrames: BitmapFrameSequence = loadRequiredHasteOrbitingChevronFrames()
+    val runicBastionCreationFrames: BitmapFrameSequence =
         loadRequiredRunicBastionFrames(
             prefix = RUNIC_BASTION_CREATION_PREFIX,
             phase = "creation",
             frameCount = RunicBastionPresentation.FRAME_COUNT,
         )
-    val runicBastionIdleFrames: List<Bitmap> =
+    val runicBastionIdleFrames: BitmapFrameSequence =
         loadRequiredRunicBastionFrames(
             prefix = RUNIC_BASTION_IDLE_PREFIX,
             phase = "idle",
             frameCount = RunicBastionPresentation.IDLE_FRAME_COUNT,
         )
-    val runicBastionDestructionFrames: List<Bitmap> =
+    val runicBastionDestructionFrames: BitmapFrameSequence =
         loadRequiredRunicBastionFrames(
             prefix = RUNIC_BASTION_DESTRUCTION_PREFIX,
             phase = "destruction",
@@ -153,7 +173,7 @@ class BattlefieldAssetCatalog(private val context: Context) {
         "POWDER_BARREL" to animation("anim_ammunition_powder_barrel"),
         "FIRE_RAIN" to ProjectileAnimation(
             flightFrames = fireRainAnimations.containerFlightFrames,
-            impactFrames = emptyList(),
+            impactFrames = emptyFrameSequence("fire-rain-impact"),
         ),
         "PLAGUE_CAULDRON" to animation("anim_ammunition_plague_cauldron"),
     )
@@ -237,7 +257,6 @@ class BattlefieldAssetCatalog(private val context: Context) {
 
     fun unitBitmap(unitType: String, teamLabel: String): Bitmap? {
         val side = if (teamLabel == "BLUE") "left" else "right"
-        val team = if (teamLabel == "BLUE") "blue" else "red"
         val resourceName = when (unitType) {
             "SAPPER" -> "sapper_$side"
             "DEFENDER" -> "defender_$side"
@@ -246,18 +265,10 @@ class BattlefieldAssetCatalog(private val context: Context) {
             "SLINGMASTER" -> "anim_character_slingmaster_move_000"
             else -> return null
         }
-
-        return unitBitmapCache.getOrPut(resourceName) {
-            if (unitType == "RAGING_BOAR") {
-                unitAnimationFrames(unitType, teamLabel, moving = false).firstOrNull()
-            } else {
-                val resourceId = resources.getIdentifier(
-                    resourceName,
-                    "drawable",
-                    context.packageName,
-                )
-                resourceId.takeIf { it != 0 }?.let { BitmapFactory.decodeResource(resources, it) }
-            }
+        return if (unitType == "RAGING_BOAR") {
+            unitAnimationFrames(unitType, teamLabel, moving = false).bitmapIfReady(0)
+        } else {
+            requestBitmap(resourceName, required = false)
         }
     }
 
@@ -266,7 +277,7 @@ class BattlefieldAssetCatalog(private val context: Context) {
         teamLabel: String,
         moving: Boolean,
         attacking: Boolean = false,
-    ): List<Bitmap> {
+    ): BitmapFrameSequence {
         val side = if (teamLabel == "BLUE") "left" else "right"
         val team = if (teamLabel == "BLUE") "blue" else "red"
         val cacheKey = "$unitType:$side:$moving:$attacking"
@@ -297,7 +308,7 @@ class BattlefieldAssetCatalog(private val context: Context) {
                         team,
                         side,
                     )
-                    else -> emptyList()
+                    else -> emptyFrameSequence(cacheKey)
                 }
             } else if (!moving) {
                 when (unitType) {
@@ -325,7 +336,7 @@ class BattlefieldAssetCatalog(private val context: Context) {
                         team,
                         side,
                     )
-                    else -> emptyList()
+                    else -> emptyFrameSequence(cacheKey)
                 }
             } else {
                 val prefix = when (unitType) {
@@ -334,7 +345,7 @@ class BattlefieldAssetCatalog(private val context: Context) {
                     "DEMOLISHER" -> "anim_character_demolisher_move_${team}"
                     "RAGING_BOAR" -> "anim_character_raging_boar_move"
                     "SLINGMASTER" -> "anim_character_slingmaster_move"
-                    else -> return@getOrPut emptyList()
+                    else -> return@getOrPut emptyFrameSequence(cacheKey)
                 }
                 if (unitType == "DEFENDER") {
                     loadTeamTextureAnimationFrames("defender", "move", team, side)
@@ -345,14 +356,13 @@ class BattlefieldAssetCatalog(private val context: Context) {
                 } else if (unitType == "RAGING_BOAR") {
                     loadTeamTextureAnimationFrames("raging_boar", "move", team, side)
                 } else {
-                    loadThreeDigitAnimationFrames(prefix)
+                    loadThreeDigitAnimationSequence(prefix)
                 }
             }
         }
-
     }
 
-    fun unitDeathAnimationFrames(unitType: String, teamLabel: String): List<Bitmap> {
+    fun unitDeathAnimationFrames(unitType: String, teamLabel: String): BitmapFrameSequence {
         val side = if (teamLabel == "BLUE") "left" else "right"
         val team = if (teamLabel == "BLUE") "blue" else "red"
         val cacheKey = "death:$unitType:$side"
@@ -370,24 +380,27 @@ class BattlefieldAssetCatalog(private val context: Context) {
                     team,
                     side,
                 )
-                else -> emptyList()
+                else -> emptyFrameSequence(cacheKey)
             }
         }
     }
 
-    fun sapperTurnAnimationFrames(teamLabel: String): List<Bitmap> =
+    fun sapperTurnAnimationFrames(teamLabel: String): BitmapFrameSequence =
         sapperAnimationFrames("turn", teamLabel)
 
-    fun sapperReturnAnimationFrames(teamLabel: String): List<Bitmap> =
+    fun sapperReturnAnimationFrames(teamLabel: String): BitmapFrameSequence =
         sapperAnimationFrames("return", teamLabel)
 
-    private fun sapperAnimationFrames(animation: String, teamLabel: String): List<Bitmap> {
+    private fun sapperAnimationFrames(
+        animation: String,
+        teamLabel: String,
+    ): BitmapFrameSequence {
         val side = if (teamLabel == "BLUE") "left" else "right"
         val team = if (teamLabel == "BLUE") "blue" else "red"
         return unitAnimationCache.getOrPut("SAPPER:$animation:$side") {
             loadTeamTextureAnimationFrames("sapper", animation, team, side).also { frames ->
-                check(frames.size == SAPPER_RETURN_FRAME_COUNT) {
-                    "Sapper $animation animation has ${frames.size} frames; " +
+                check(frames.frameCount == SAPPER_RETURN_FRAME_COUNT) {
+                    "Sapper $animation animation has ${frames.frameCount} frames; " +
                         "expected $SAPPER_RETURN_FRAME_COUNT"
                 }
             }
@@ -399,61 +412,83 @@ class BattlefieldAssetCatalog(private val context: Context) {
         animation: String,
         team: String,
         side: String,
-    ): List<Bitmap> {
-        val neutralFrames = teamNeutralFrameCache.getOrPut("$target:$animation") {
-            loadThreeDigitAnimationFrames("anim_character_${target}_$animation")
-        }
-        val masks = object : AbstractList<Bitmap>() {
-            override val size: Int = neutralFrames.size
-
-            override fun get(index: Int): Bitmap {
-                require(index in indices) {
-                    "$target $animation mask $index is out of range"
-                }
+    ): BitmapFrameSequence {
+        val sourceFrames = loadThreeDigitAnimationResources(
+            "anim_character_${target}_$animation",
+        )
+        return BitmapFrameSequence(
+            frameCount = sourceFrames.size,
+            cache = bitmapCache,
+            frameKey = { index -> "team:$target:$animation:$team:$index" },
+            decodeFrame = { index ->
                 val frameName = index.toString().padStart(3, '0')
-                val key = "$target:$animation:$side:$frameName"
-                return teamMaskCache.get(key) ?: context.assets.open(
-                    "animations/$target/masks/$animation/$frameName.png",
-                ).use { input ->
-                    BitmapFactory.decodeStream(input)
-                        ?: error("Could not decode $target $animation mask frame $index")
-                }.let { sourceMask ->
-                    require(
-                        sourceMask.width == neutralFrames[index].width &&
-                            sourceMask.height == neutralFrames[index].height,
-                    ) {
-                        "$target $animation mask frame $index has mismatched dimensions"
-                    }
-                    if (side == "right") mirrorBitmap(sourceMask) else sourceMask
-                }.also { teamMaskCache.put(key, it) }
-            }
-        }
+                val neutralFrame = decodeResourceBitmap(sourceFrames[index])
+                val mask = loadTeamMask(
+                    target = target,
+                    animation = animation,
+                    side = side,
+                    frameName = frameName,
+                    expectedWidth = neutralFrame.width,
+                    expectedHeight = neutralFrame.height,
+                )
+                val texture = loadTeamTexture(target, team)
+                val source = if (side == "right") {
+                    mirrorBitmap(neutralFrame)
+                } else {
+                    neutralFrame
+                }
+                teamTextureBitmapCache.getOrCreate(
+                    "$target:$animation:$team:$index",
+                    source,
+                    mask,
+                    texture,
+                )
+            },
+        )
+    }
 
-        val textures = teamTextureConfigurationCache.getOrPut(target) {
-            loadTeamTextureConfiguration(target)
+    private fun loadTeamMask(
+        target: String,
+        animation: String,
+        side: String,
+        frameName: String,
+        expectedWidth: Int,
+        expectedHeight: Int,
+    ): Bitmap {
+        val key = "$target:$animation:$side:$frameName"
+        synchronized(teamMaskCache) {
+            teamMaskCache.get(key)?.let { return it }
+            val sourceMask = context.assets.open(
+                "animations/$target/masks/$animation/$frameName.png",
+            ).use { input ->
+                BitmapFactory.decodeStream(input)
+                    ?: error("Could not decode $target $animation mask frame $frameName")
+            }
+            require(
+                sourceMask.width == expectedWidth && sourceMask.height == expectedHeight,
+            ) {
+                "$target $animation mask frame $frameName has mismatched dimensions"
+            }
+            val mask = if (side == "right") mirrorBitmap(sourceMask) else sourceMask
+            teamMaskCache.put(key, mask)
+            return mask
+        }
+    }
+
+    private fun loadTeamTexture(target: String, team: String): Bitmap {
+        val textures = synchronized(teamTextureConfigurationCache) {
+            teamTextureConfigurationCache.getOrPut(target) {
+                loadTeamTextureConfiguration(target)
+            }
         }
         val texturePath = textures[team.uppercase()]
             ?: error("No $target texture is configured for team '$team'")
-        val texture = teamTextureCache.getOrPut(texturePath) {
-            context.assets.open(texturePath).use { input ->
-                BitmapFactory.decodeStream(input)
-                    ?: error("Could not decode $target texture '$texturePath'")
-            }
-        }
-        val sources = if (side == "right") neutralFrames.map(::mirrorBitmap) else neutralFrames
-        return object : AbstractList<Bitmap>() {
-            override val size: Int = sources.size
-
-            override fun get(index: Int): Bitmap {
-                require(index in indices) {
-                    "$target $animation frame $index is out of range"
+        synchronized(teamTextureCache) {
+            return teamTextureCache.getOrPut(texturePath) {
+                context.assets.open(texturePath).use { input ->
+                    BitmapFactory.decodeStream(input)
+                        ?: error("Could not decode $target texture '$texturePath'")
                 }
-                return teamTextureBitmapCache.getOrCreate(
-                    "$target:$animation:$team:$index",
-                    sources[index],
-                    masks[index],
-                    texture,
-                )
             }
         }
     }
@@ -489,7 +524,7 @@ class BattlefieldAssetCatalog(private val context: Context) {
                 ?.get(1)
                 ?.let { "relic_medium_$it" }
             ?: return null
-        return loadBitmap(resourceName)
+        return requestBitmap(resourceName, required = false)
     }
 
     fun mapDecoration(
@@ -501,7 +536,7 @@ class BattlefieldAssetCatalog(private val context: Context) {
             "_prop_" in assetKey -> BattlefieldAssetKind.PROP
             else -> return null
         }
-        val bitmap = loadBitmap(assetKey) ?: error("Missing map decoration drawable '$assetKey'")
+        val bitmap = requestBitmap(assetKey, required = true) ?: return null
         return ResolvedMapDecoration(bitmap, kind)
     }
 
@@ -509,19 +544,20 @@ class BattlefieldAssetCatalog(private val context: Context) {
         animations[ammunitionType]
             ?: error("No projectile animation is registered for ammunition '$ammunitionType'")
 
-    fun bossSprite(presentationKey: String, phase: BossPhase): Bitmap {
+    fun bossSprite(presentationKey: String, phase: BossPhase): Bitmap? {
         val name = BossPresentationCatalog.definition(presentationKey).spriteFor(phase)
-        return bossBitmapCache.getOrPut(name) {
-            loadBitmap(name) ?: error("Missing boss drawable '$name'")
-        }
+        return requestBitmap(name, required = true)
     }
 
     fun bossIdleFrame(presentationKey: String, frameIndex: Int): Bitmap? {
         val animation = BossPresentationCatalog.definition(presentationKey).idleAnimation
             ?: return null
         return bossAnimationFrame(
-            animation,
-            BossPresentationCatalog.idleFrameSpriteName(presentationKey, frameIndex),
+            animation = animation,
+            frameIndex = frameIndex,
+            frameName = { index ->
+                BossPresentationCatalog.idleFrameSpriteName(presentationKey, index)
+            },
         )
     }
 
@@ -533,22 +569,38 @@ class BattlefieldAssetCatalog(private val context: Context) {
         val animation = BossPresentationCatalog.definition(presentationKey)
             .attackAnimation(direction) ?: return null
         return bossAnimationFrame(
-            animation,
-            BossPresentationCatalog.attackFrameSpriteName(presentationKey, direction, frameIndex),
+            animation = animation,
+            frameIndex = frameIndex,
+            frameName = { index ->
+                BossPresentationCatalog.attackFrameSpriteName(presentationKey, direction, index)
+            },
         )
     }
 
     private fun bossAnimationFrame(
         animation: BossSpriteAnimationDefinition,
-        name: String,
-    ): Bitmap {
-        bossAnimationFrameCache.get(name)?.let { return it }
-        val bitmap = loadBitmap(name) ?: error("Missing boss animation frame '$name'")
-        check(bitmap.width == animation.frameWidth && bitmap.height == animation.frameHeight) {
-            "Boss animation frame '$name' must be ${animation.frameWidth}x${animation.frameHeight}"
+        frameIndex: Int,
+        frameName: (Int) -> String,
+    ): Bitmap? {
+        var currentFrame: Bitmap? = null
+        repeat(BOSS_FRAME_PREFETCH_AHEAD + 1) { offset ->
+            val requestedIndex = if (animation.loops) {
+                (frameIndex + offset) % animation.frameCount
+            } else {
+                (frameIndex + offset).coerceAtMost(animation.frameCount - 1)
+            }
+            val name = frameName(requestedIndex)
+            val frame = requestBitmap(name, required = true) { bitmap ->
+                check(bitmap.width == animation.frameWidth &&
+                    bitmap.height == animation.frameHeight
+                ) {
+                    "Boss animation frame '$name' must be " +
+                        "${animation.frameWidth}x${animation.frameHeight}"
+                }
+            }
+            if (offset == 0) currentFrame = frame
         }
-        bossAnimationFrameCache.put(name, bitmap)
-        return bitmap
+        return currentFrame
     }
 
     private fun animation(
@@ -564,194 +616,197 @@ class BattlefieldAssetCatalog(private val context: Context) {
         )
 
     private fun loadBitmap(name: String): Bitmap? {
-        val resourceId = resources.getIdentifier(name, "drawable", context.packageName)
-        return resourceId.takeIf { it != 0 }?.let { BitmapFactory.decodeResource(resources, it) }
+        if (decodedStaticBitmaps.containsKey(name)) return decodedStaticBitmaps[name]
+        val resourceId = drawableResourceId(name)
+        val bitmap = resourceId.takeIf { it != 0 }
+            ?.let { BitmapFactory.decodeResource(resources, it) }
+        decodedStaticBitmaps[name] = bitmap
+        bitmap?.let { bitmapCache.putReady(bitmapCacheKey(name), it) }
+        return bitmap
     }
 
-    private fun loadAnimationFrames(prefix: String): List<Bitmap> =
-        (0..31).mapNotNull { index ->
-            val resourceId = resources.getIdentifier(
-                "${prefix}_%03d".format(index),
-                "drawable",
-                context.packageName,
-            )
-            resourceId.takeIf { it != 0 }?.let { BitmapFactory.decodeResource(resources, it) }
+    private fun requestBitmap(
+        name: String,
+        required: Boolean,
+        validate: (Bitmap) -> Unit = {},
+    ): Bitmap? {
+        val resourceId = drawableResourceId(name)
+        if (resourceId == 0) {
+            if (required) error("Missing drawable '$name'")
+            return null
         }
+        return when (
+            val result = bitmapCache.request(bitmapCacheKey(name)) {
+                val bitmap = BitmapFactory.decodeResource(resources, resourceId)
+                    ?: error("Could not decode drawable '$name'")
+                validate(bitmap)
+                bitmap
+            }
+        ) {
+            is AsyncAssetResult.Ready -> result.value
+            AsyncAssetResult.Pending -> null
+            is AsyncAssetResult.Failed ->
+                throw IllegalStateException("Could not load drawable '$name'", result.cause)
+        }
+    }
+
+    private fun drawableResourceId(name: String): Int =
+        synchronized(resourceIdCache) {
+            resourceIdCache.getOrPut(name) {
+                resources.getIdentifier(name, "drawable", context.packageName)
+            }
+        }
+
+    private fun bitmapCacheKey(resourceName: String): String = "drawable:$resourceName"
+
+    private fun emptyFrameSequence(key: String) = BitmapFrameSequence(
+        frameCount = 0,
+        cache = bitmapCache,
+        frameKey = { "$key:unused:$it" },
+        decodeFrame = { error("Empty animation sequence '$key' has no frames") },
+    )
+
+    private data class DrawableResource(val name: String, val id: Int)
+
+    private fun loadAnimationFrames(prefix: String): BitmapFrameSequence {
+        val frames = (0..31).mapNotNull { index ->
+            val name = "${prefix}_%03d".format(index)
+            drawableResourceId(name).takeIf { it != 0 }?.let { DrawableResource(name, it) }
+        }
+        return BitmapFrameSequence(
+            frameCount = frames.size,
+            cache = bitmapCache,
+            frameKey = { index -> bitmapCacheKey(frames[index].name) },
+            decodeFrame = { index -> decodeResourceBitmap(frames[index]) },
+        )
+    }
 
     private fun loadRequiredFireRainFrames(
         phase: String,
         prefix: String,
         frameCount: Int,
-    ): List<Bitmap> {
-        val frames = (0 until frameCount).map { index ->
-            val resourceName = "${prefix}_%03d".format(index)
-            val resourceId = resources.getIdentifier(
-                resourceName,
-                "drawable",
-                context.packageName,
-            )
-            check(resourceId != 0) {
-                "FIRE_RAIN $phase is missing frame $index ('$resourceName')"
-            }
-            val bitmap = BitmapFactory.decodeResource(resources, resourceId)
-                ?: error("FIRE_RAIN $phase frame $index ('$resourceName') could not be decoded")
-            check(bitmap.width == FIRE_RAIN_FRAME_WIDTH &&
-                bitmap.height == FIRE_RAIN_FRAME_HEIGHT
-            ) {
-                "FIRE_RAIN $phase frame $index ('$resourceName') has invalid size " +
-                    "${bitmap.width}x${bitmap.height}; expected " +
-                    "${FIRE_RAIN_FRAME_WIDTH}x$FIRE_RAIN_FRAME_HEIGHT"
-            }
-            check(bitmap.hasAlpha()) {
-                "FIRE_RAIN $phase frame $index ('$resourceName') has no alpha channel"
-            }
-            bitmap
-        }
-        val unexpectedResourceName = "${prefix}_%03d".format(frameCount)
-        check(
-            resources.getIdentifier(
-                unexpectedResourceName,
-                "drawable",
-                context.packageName,
-            ) == 0,
-        ) {
-            "FIRE_RAIN $phase has an unexpected frame at index $frameCount " +
-                "('$unexpectedResourceName')"
-        }
-        return frames
-    }
+    ): BitmapFrameSequence =
+        requiredFrameSequence(
+            label = "FIRE_RAIN $phase",
+            frameCount = frameCount,
+            resourceName = { index -> "${prefix}_%03d".format(index) },
+            width = FIRE_RAIN_FRAME_WIDTH,
+            height = FIRE_RAIN_FRAME_HEIGHT,
+            requireAlpha = true,
+        )
 
-    private fun loadRequiredFortressShieldDomeFrames(): List<Bitmap> =
+    private fun loadRequiredFortressShieldDomeFrames(): BitmapFrameSequence =
         loadRequiredFortressShieldFrames(
             prefix = FORTRESS_SHIELD_DOME_PREFIX,
             phase = "dome",
         )
 
-    private fun loadRequiredFortressShieldFrames(prefix: String, phase: String): List<Bitmap> {
-        val frames = (0 until FortressShieldPresentation.FRAME_COUNT).map { index ->
-            val resourceName = "$prefix%03d".format(index)
-            val resourceId = resources.getIdentifier(
-                resourceName,
-                "drawable",
-                context.packageName,
-            )
-            check(resourceId != 0) {
-                "Fortress Shield $phase is missing frame $index ('$resourceName')"
-            }
-            val bitmap = BitmapFactory.decodeResource(resources, resourceId)
-                ?: error("Fortress Shield $phase frame $index ('$resourceName') could not be decoded")
-            check(
-                bitmap.width == FortressShieldPresentation.FRAME_WIDTH &&
-                    bitmap.height == FortressShieldPresentation.FRAME_HEIGHT,
-            ) {
-                "Fortress Shield $phase frame $index ('$resourceName') has invalid size " +
-                    "${bitmap.width}x${bitmap.height}"
-            }
-            check(bitmap.hasAlpha()) {
-                "Fortress Shield $phase frame $index ('$resourceName') has no alpha channel"
-            }
-            bitmap
-        }
-        return frames
-    }
+    private fun loadRequiredFortressShieldFrames(
+        prefix: String,
+        phase: String,
+    ): BitmapFrameSequence =
+        requiredFrameSequence(
+            label = "Fortress Shield $phase",
+            frameCount = FortressShieldPresentation.FRAME_COUNT,
+            resourceName = { index -> "$prefix%03d".format(index) },
+            width = FortressShieldPresentation.FRAME_WIDTH,
+            height = FortressShieldPresentation.FRAME_HEIGHT,
+            requireAlpha = true,
+        )
 
-    private fun loadRequiredHasteOrbitingChevronFrames(): List<Bitmap> {
-        val frames = (0 until HasteOrbitingChevronPresentation.FRAME_COUNT).map { index ->
-            val resourceName = "$HASTE_ORBITING_CHEVRON_PREFIX%03d".format(index)
-            val resourceId = resources.getIdentifier(
-                resourceName,
-                "drawable",
-                context.packageName,
-            )
-            check(resourceId != 0) {
-                "HASTE orbiting chevron effect is missing frame $index ('$resourceName')"
-            }
-            val bitmap = BitmapFactory.decodeResource(resources, resourceId)
-                ?: error("HASTE orbiting chevron frame $index ('$resourceName') could not be decoded")
-            check(
-                bitmap.width == HasteOrbitingChevronPresentation.FRAME_WIDTH &&
-                    bitmap.height == HasteOrbitingChevronPresentation.FRAME_HEIGHT,
-            ) {
-                "HASTE orbiting chevron frame $index ('$resourceName') has invalid size " +
-                    "${bitmap.width}x${bitmap.height}"
-            }
-            check(bitmap.hasAlpha()) {
-                "HASTE orbiting chevron frame $index ('$resourceName') has no alpha channel"
-            }
-            bitmap
-        }
-        val unexpectedResourceName =
-            "$HASTE_ORBITING_CHEVRON_PREFIX%03d".format(
-                HasteOrbitingChevronPresentation.FRAME_COUNT,
-            )
-        check(
-            resources.getIdentifier(
-                unexpectedResourceName,
-                "drawable",
-                context.packageName,
-            ) == 0,
-        ) {
-            "HASTE orbiting chevrons have an unexpected frame at index " +
-                "${HasteOrbitingChevronPresentation.FRAME_COUNT} ('$unexpectedResourceName')"
-        }
-        return frames
-    }
+    private fun loadRequiredHasteOrbitingChevronFrames(): BitmapFrameSequence =
+        requiredFrameSequence(
+            label = "HASTE orbiting chevrons",
+            frameCount = HasteOrbitingChevronPresentation.FRAME_COUNT,
+            resourceName = { index -> "$HASTE_ORBITING_CHEVRON_PREFIX%03d".format(index) },
+            width = HasteOrbitingChevronPresentation.FRAME_WIDTH,
+            height = HasteOrbitingChevronPresentation.FRAME_HEIGHT,
+            requireAlpha = true,
+        )
 
     private fun loadRequiredRunicBastionFrames(
         prefix: String,
         phase: String,
         frameCount: Int,
-    ): List<Bitmap> {
+    ): BitmapFrameSequence =
+        requiredFrameSequence(
+            label = "Runic Bastion $phase",
+            frameCount = frameCount,
+            resourceName = { index -> "$prefix%03d".format(index) },
+            width = RunicBastionPresentation.FRAME_WIDTH,
+            height = RunicBastionPresentation.FRAME_HEIGHT,
+            requireAlpha = true,
+        )
+
+    private fun requiredFrameSequence(
+        label: String,
+        frameCount: Int,
+        resourceName: (Int) -> String,
+        width: Int,
+        height: Int,
+        requireAlpha: Boolean,
+    ): BitmapFrameSequence {
         val frames = (0 until frameCount).map { index ->
-            val resourceName = "$prefix%03d".format(index)
-            val resourceId = resources.getIdentifier(
-                resourceName,
-                "drawable",
-                context.packageName,
-            )
-            check(resourceId != 0) {
-                "Runic Bastion $phase animation is missing frame $index ('$resourceName')"
-            }
-            val bitmap = BitmapFactory.decodeResource(resources, resourceId)
-                ?: error("Runic Bastion $phase frame $index ('$resourceName') could not be decoded")
-            check(
-                bitmap.width == RunicBastionPresentation.FRAME_WIDTH &&
-                    bitmap.height == RunicBastionPresentation.FRAME_HEIGHT,
-            ) {
-                "Runic Bastion $phase frame $index ('$resourceName') has invalid size " +
-                    "${bitmap.width}x${bitmap.height}"
-            }
-            check(bitmap.hasAlpha()) {
-                "Runic Bastion $phase frame $index ('$resourceName') has no alpha channel"
-            }
-            bitmap
+            val name = resourceName(index)
+            val id = drawableResourceId(name)
+            check(id != 0) { "$label is missing frame $index ('$name')" }
+            DrawableResource(name, id)
         }
-        val unexpectedResourceName = "$prefix%03d".format(frameCount)
-        check(
-            resources.getIdentifier(
-                unexpectedResourceName,
-                "drawable",
-                context.packageName,
-            ) == 0,
-        ) {
-            "Runic Bastion $phase animation has an unexpected frame at index " +
-                "$frameCount ('$unexpectedResourceName')"
+        val unexpectedFrame = resourceName(frameCount)
+        check(drawableResourceId(unexpectedFrame) == 0) {
+            "$label has an unexpected frame at index $frameCount ('$unexpectedFrame')"
         }
-        return frames
+        return BitmapFrameSequence(
+            frameCount = frames.size,
+            cache = bitmapCache,
+            frameKey = { index -> bitmapCacheKey(frames[index].name) },
+            decodeFrame = { index ->
+                decodeResourceBitmap(frames[index]).also { bitmap ->
+                    check(bitmap.width == width && bitmap.height == height) {
+                        "$label frame $index ('${frames[index].name}') has invalid size " +
+                            "${bitmap.width}x${bitmap.height}; expected ${width}x$height"
+                    }
+                    if (requireAlpha) {
+                        check(bitmap.hasAlpha()) {
+                            "$label frame $index ('${frames[index].name}') has no alpha channel"
+                        }
+                    }
+                }
+            },
+        )
     }
 
-    private fun loadThreeDigitAnimationFrames(prefix: String): List<Bitmap> =
+    private fun loadThreeDigitAnimationSequence(prefix: String): BitmapFrameSequence {
+        val frames = loadThreeDigitAnimationResources(prefix)
+        return BitmapFrameSequence(
+            frameCount = frames.size,
+            cache = bitmapCache,
+            frameKey = { index -> bitmapCacheKey(frames[index].name) },
+            decodeFrame = { index -> decodeResourceBitmap(frames[index]) },
+        )
+    }
+
+    private fun loadThreeDigitAnimationResources(prefix: String): List<DrawableResource> =
         (0..99).mapNotNull { index ->
-            val resourceId = resources.getIdentifier(
-                "${prefix}_%03d".format(index),
-                "drawable",
-                context.packageName,
-            )
-            resourceId.takeIf { it != 0 }?.let { BitmapFactory.decodeResource(resources, it) }
+            val name = "${prefix}_%03d".format(index)
+            drawableResourceId(name).takeIf { it != 0 }?.let { DrawableResource(name, it) }
         }
 
+    private fun decodeResourceBitmap(resource: DrawableResource): Bitmap =
+        BitmapFactory.decodeResource(resources, resource.id)
+            ?: error("Could not decode drawable '${resource.name}'")
+
+    fun cancelPendingLoads() {
+        bitmapCache.cancelPendingLoads()
+    }
+
     private companion object {
-        const val BOSS_ANIMATION_FRAME_CACHE_KILOBYTES = 4 * 1024
+        const val MIN_BITMAP_CACHE_KILOBYTES = 8 * 1024
+        const val MAX_BITMAP_CACHE_KILOBYTES = 64 * 1024
+        const val BITMAP_CACHE_MEMORY_FRACTION = 8
+        const val ASSET_DECODER_KEEP_ALIVE_SECONDS = 30L
+        const val ASSET_DECODER_QUEUE_CAPACITY = 128
+        const val BOSS_FRAME_PREFETCH_AHEAD = 2
         const val SAPPER_RETURN_FRAME_COUNT = 15
         const val ROCK_IMPACT_BREAKUP_FRAME = 9
         const val FIRE_RAIN_FRAME_WIDTH = 512
@@ -766,6 +821,19 @@ class BattlefieldAssetCatalog(private val context: Context) {
         const val RUNIC_BASTION_CREATION_PREFIX = "anim_spell_runic_bastion_creation_"
         const val RUNIC_BASTION_IDLE_PREFIX = "anim_spell_runic_bastion_idle_"
         const val RUNIC_BASTION_DESTRUCTION_PREFIX = "anim_spell_runic_bastion_destruction_"
+
+        fun bitmapCacheKilobytes(): Int =
+            (
+                Runtime.getRuntime().maxMemory() /
+                    1024 /
+                    BITMAP_CACHE_MEMORY_FRACTION
+                )
+                .coerceIn(
+                    MIN_BITMAP_CACHE_KILOBYTES.toLong(),
+                    MAX_BITMAP_CACHE_KILOBYTES.toLong(),
+                )
+                .toInt()
+
         val RELIC_ASSET_RESOURCES = buildMap {
             val biomeResources = mapOf(
                 "green_frontier" to listOf(

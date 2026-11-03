@@ -66,6 +66,11 @@ do bieżącego zadania według [indeksu dokumentów kontekstu](docs/agent-contex
 - [Prompt implementacji edytora webowego](docs/map-editor/web-implementation-prompt.md)
 - [README modułu webowego](docs/map-editor/web/README.md)
 
+### Wydajność renderowania
+
+- [Plan optymalizacji renderowania pola bitwy](docs/performance/battlefield-rendering-optimization-plan.md)
+- [Prompt implementacyjny](docs/performance/battlefield-rendering-implementation-prompt.md)
+
 ### Systemy gry
 
 - [Projekt systemu amunicji](docs/systems/ammunition-design.md)
@@ -88,6 +93,8 @@ do bieżącego zadania według [indeksu dokumentów kontekstu](docs/agent-contex
 - [System lokalizacji](docs/systems/localization-system.md)
 - [Prompt systemu lokalizacji](docs/systems/localization-system-implementation-prompt.md)
 - [System czarów](docs/systems/spell-system.md)
+- [Plan globalnego mnożnika tempa rozgrywki](docs/systems/gameplay-tempo-multiplier-plan.md) ·
+  [prompt implementacyjny](docs/systems/gameplay-tempo-multiplier-implementation-prompt.md)
 - [Plan dynamicznej podmiany koloru animacji (propozycja)](docs/systems/team-color-animation-plan.md)
 - [Prompt systemu czarów](docs/systems/spell-system-implementation-prompt.md)
 - [Prezentacja Fire Rain](docs/systems/fire-rain-presentation.md)
@@ -104,6 +111,7 @@ do bieżącego zadania według [indeksu dokumentów kontekstu](docs/agent-contex
 - [Analiza brakujących mechanik UI](docs/ui/mechanics-gap-analysis.md)
 - [Architektura Dashboardu](docs/systems/dashboard-screen.md) ·
   [prompt implementacyjny](docs/systems/dashboard-screen-implementation-prompt.md)
+- [Tło splash screenu](docs/systems/splash-screen-background.agp)
 - [Brief koncepcji wizualnej Shop](docs/systems/shop-screen-mockup.agp) ·
   [referencja układu UI](assets_src/shop/screen-concepts/shop_ui_reference.png)
 - [Prompt systemu definicji poziomów](docs/prompts/IMPLEMENT_LEVEL_DEFINITION_SYSTEM.md)
@@ -152,7 +160,8 @@ MainActivity
 
 Available screens:
 
-- `StartScreen` — legacy-style start menu;
+- `SplashScreen` — brief runic startup intro that automatically opens the
+  Dashboard;
 - `DashboardScreen` — legacy-style dashboard, wired to navigation;
 - `CampaignScreen` — legacy-style selector backed by persisted
   `CampaignProgress`;

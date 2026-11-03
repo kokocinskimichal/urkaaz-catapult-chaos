@@ -97,7 +97,7 @@ MainActivity
 
 Dostępne ekrany:
 
-- `StartScreen` — styl startowego menu;
+- `SplashScreen` — krótkie runiczne intro, które automatycznie otwiera Dashboard;
 - `DashboardScreen` — dashboard;
 - `CampaignScreen` — wybór poziomu kampanii;
 - `LoadoutScreen` — edytuje jednostki, sloty amunicji i czary; wewnętrzne

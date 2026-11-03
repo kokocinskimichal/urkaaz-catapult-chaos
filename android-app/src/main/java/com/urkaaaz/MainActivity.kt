@@ -45,7 +45,7 @@ import com.urkaaaz.screens.loadout.LoadoutItemReference
 import com.urkaaaz.screens.match.MatchScreen
 import com.urkaaaz.screens.result.ResultScreen
 import com.urkaaaz.screens.shop.ShopScreen
-import com.urkaaaz.screens.start.StartScreen
+import com.urkaaaz.screens.splash.SplashScreen
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -177,10 +177,10 @@ class MainActivity : ComponentActivity() {
                     DeveloperProgressPresetApply.NotRequested,
                     -> Unit
                 }
-                navigator.start(AppScreen.Start)
+                navigator.start(AppScreen.Splash)
             }
         } else {
-            navigator.start(AppScreen.Start)
+            navigator.start(AppScreen.Splash)
         }
     }
 
@@ -207,18 +207,18 @@ class MainActivity : ComponentActivity() {
 
     private fun showScreen(screen: AppScreen) {
         val content = when (screen) {
-            AppScreen.Start -> StartScreen(
+            AppScreen.Splash -> SplashScreen(
                 context = this,
-                onPlay = { navigator.navigate(AppScreen.Dashboard) },
-                onTestMode = {
-                    navigator.navigate(AppScreen.Loadout(campaignLevel = 1, demoMode = true))
-                },
+                onFinished = { navigator.replace(AppScreen.Dashboard) },
             )
             AppScreen.Dashboard -> DashboardScreen(
                 context = this,
-                onBack = { navigator.back() },
+                onBack = { if (!navigator.back()) finish() },
                 onCampaign = { navigator.navigate(AppScreen.Campaign) },
                 onShop = { navigator.navigate(AppScreen.Shop()) },
+                onDemoMode = {
+                    navigator.navigate(AppScreen.Loadout(campaignLevel = 1, demoMode = true))
+                },
                 onResetProgress = { playerProgressResetRepository.reset() },
                 loadProgress = { developerProgressPreset.current() },
             )

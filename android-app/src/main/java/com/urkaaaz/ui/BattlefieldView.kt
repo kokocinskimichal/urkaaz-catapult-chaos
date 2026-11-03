@@ -226,7 +226,7 @@ class BattlefieldView(context: Context) : View(context) {
             teamLabel = "BLUE",
             moving = false,
             attacking = true,
-        ).size
+        ).frameCount
         demolisherAttackAnimationClock.update(
             units = newState.units,
             frameCount = demolisherAttackFrameCount,
@@ -237,7 +237,7 @@ class BattlefieldView(context: Context) : View(context) {
         )
         val animatedCombatFeedback = demolisherExplosionAnimationClock.update(
             feedback = newState.combatFeedback,
-            frameCount = assets.demolisherExplosionFrames.size,
+            frameCount = assets.demolisherExplosionFrames.frameCount,
             paused = presentationPaused,
             activeDemolisherAttackUnitIds =
                 demolisherAttackAnimationClock.activeEntityIds(),
@@ -275,7 +275,7 @@ class BattlefieldView(context: Context) : View(context) {
                 impactFrame += 1
                 if (
                     impactFrame >=
-                    assets.animationFor(currentImpact.ammunitionType).impactFrames.size
+                    assets.animationFor(currentImpact.ammunitionType).impactFrames.frameCount
                 ) {
                     activeImpact = null
                 }
@@ -345,6 +345,7 @@ class BattlefieldView(context: Context) : View(context) {
     }
 
     override fun onDetachedFromWindow() {
+        assets.cancelPendingLoads()
         floatingRewardFeedbackClock.update(
             feedback = emptyList(),
             nowMilliseconds = SystemClock.uptimeMillis(),

@@ -6,7 +6,7 @@ import com.urkaaaz.contracts.MatchId
 import com.urkaaaz.application.shop.ShopItemReference
 
 sealed interface AppScreen {
-    data object Start : AppScreen
+    data object Splash : AppScreen
     data object Dashboard : AppScreen
     data object Campaign : AppScreen
     data class Loadout(

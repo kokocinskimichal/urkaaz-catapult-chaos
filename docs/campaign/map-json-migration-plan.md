@@ -7,7 +7,7 @@ Migracja została zaimplementowana. Znormalizowany
 `~/Downloads/web-map.json`; oryginalny plik pozostaje nietknięty. Android
 dołącza tę samą mapę offline w
 `android-app/src/main/assets/maps/demo-map.json`. Dedykowane JSON-y mają
-obecnie Chapter 1, Levels 1–5; dla pozostałych poziomów brakujący plik
+obecnie Chapter 1, Levels 1–10; dla pozostałych poziomów brakujący plik
 oznacza przejściowy fallback do `demo-map`. Studio Maps zapisuje kampanijną
 mapę przez wybór Chapter i globalnego Level; ID `chapterN-levelX` jest
 zapisywane atomowo w obu lokalizacjach. Runtime wybiera mapę poziomu o takim
