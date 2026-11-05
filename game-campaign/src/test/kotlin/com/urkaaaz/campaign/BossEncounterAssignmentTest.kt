@@ -9,7 +9,7 @@ class BossEncounterAssignmentTest {
     fun bossLevelsFiveThroughFiftyHaveStableEncounterAssignments() {
         val expected = mapOf(
             5 to "boss.central-ancient-war-oak.level-05",
-            10 to "boss.mobile-thorncrown.level-10",
+            10 to "boss.mobile-boulderbloom.level-10",
             15 to "boss.central-frozen-troll.level-15",
             20 to "boss.mobile-old-yeti-sovereign.level-20",
             25 to "boss.central-copperwood-siege-lord.level-25",

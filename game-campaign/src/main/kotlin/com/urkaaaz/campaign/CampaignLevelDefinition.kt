@@ -83,7 +83,7 @@ data class CampaignLevelDefinition(
         private fun bossEncounterForLevel(level: Int): BossEncounterConfig? {
             val profileId = when (level) {
                 5 -> "boss.central-ancient-war-oak.level-05"
-                10 -> "boss.mobile-thorncrown.level-10"
+                10 -> "boss.mobile-boulderbloom.level-10"
                 15 -> "boss.central-frozen-troll.level-15"
                 20 -> "boss.mobile-old-yeti-sovereign.level-20"
                 25 -> "boss.central-copperwood-siege-lord.level-25"

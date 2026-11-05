@@ -561,6 +561,18 @@ internal class BattlefieldAssetCatalog(
         )
     }
 
+    fun bossWalkFrame(presentationKey: String, frameIndex: Int): Bitmap? {
+        val animation = BossPresentationCatalog.definition(presentationKey).walkAnimation
+            ?: return null
+        return bossAnimationFrame(
+            animation = animation,
+            frameIndex = frameIndex,
+            frameName = { index ->
+                BossPresentationCatalog.walkFrameSpriteName(presentationKey, index)
+            },
+        )
+    }
+
     fun bossAttackFrame(
         presentationKey: String,
         direction: BossAttackDirection,

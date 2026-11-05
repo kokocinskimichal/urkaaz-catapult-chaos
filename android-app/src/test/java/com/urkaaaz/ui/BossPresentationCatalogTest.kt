@@ -33,6 +33,28 @@ class BossPresentationCatalogTest {
     }
 
     @Test
+    fun boulderbloomUsesItsStaticSpriteAndLoopingWalkFrames() {
+        val presentation = BossPresentationCatalog.definition("boulderbloom")
+        val walk = requireNotNull(presentation.walkAnimation)
+
+        assertEquals("anim_boss_boulderbloom_idle_000", presentation.staticSprite)
+        assertEquals(1.29f, presentation.visualScale, 0f)
+        assertEquals(32, walk.frameCount)
+        assertEquals(4_000L, walk.durationMilliseconds)
+        assertEquals(480, walk.frameWidth)
+        assertEquals(576, walk.frameHeight)
+        assertEquals(true, walk.loops)
+        assertEquals(
+            "anim_boss_boulderbloom_walk_000",
+            BossPresentationCatalog.walkFrameSpriteName("boulderbloom", 0),
+        )
+        assertEquals(
+            "anim_boss_boulderbloom_walk_031",
+            BossPresentationCatalog.walkFrameSpriteName("boulderbloom", 31),
+        )
+    }
+
+    @Test
     fun ancientWarOakUsesTheApprovedIdleAndKeepsAStaticFallback() {
         val presentation = BossPresentationCatalog.definition("ancient_war_oak")
         val animation = requireNotNull(presentation.idleAnimation)

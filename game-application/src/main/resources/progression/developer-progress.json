@@ -1,7 +1,7 @@
 {
   "schemaVersion": 2,
-  "revision": "developer-progress-4",
-  "currentLevel": 5,
+  "revision": "developer-progress-5",
+  "currentLevel": 10,
   "lives": 5,
   "gold": 5000,
   "fieldsToApply": [

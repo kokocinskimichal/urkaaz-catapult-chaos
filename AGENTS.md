@@ -76,7 +76,7 @@ do bieżącego zadania według [indeksu dokumentów kontekstu](docs/agent-contex
 - [Projekt systemu amunicji](docs/systems/ammunition-design.md)
 - [Projekt systemu walki](docs/systems/combat-design.md)
 - [BossSystem](docs/systems/boss-system.md)
-- [Koncepcja grafiki Ślimaka Oblężniczego](docs/systems/green-frontier-siege-snail-art.agp)
+- [Grafika nowego bossa finałowego Chapter 1](docs/systems/green-frontier-chapter1-final-boss-art.agp)
 - [Plan poprawy AI: bossy i czary](docs/systems/ai-boss-spell-improvement-plan.md) ·
   [prompt implementacyjny](docs/systems/ai-boss-spell-improvement-implementation-prompt.md)
 - [System kampanii](docs/systems/campaign-system.md)
@@ -191,6 +191,9 @@ Do not add new screen controls directly to `MainActivity`. Add a screen-owned
 view/controller and connect it through `AppScreen` and `AppNavigator`.
 Shared Campaign/Loadout screen-edge and Back-button dimensions use
 `ScreenChromeMetrics`; reuse those tokens rather than duplicating their values.
+Catapult power uses the same adaptive screen-space pull radius shown by the
+aim gesture guide. Saturate pull length without clamping its vector direction,
+so extra drag preserves the selected angle while power stays at 100%.
 
 ## Layering rules
 
@@ -255,7 +258,8 @@ trajectory preview, aiming circle and simulation must use the same anchor.
   the cast succeeds.
 - Central-objective boss aiming predicts trajectories with the shared
   `Projectile.advance` step and stays within the normal ammunition and command
-  validation paths. RED must not target a mobile boss allied with RED.
+  validation paths. Mobile siege bosses are RED allies: RED must not target or
+  damage them, and they target only BLUE units.
 
 ## Animation asset naming
 

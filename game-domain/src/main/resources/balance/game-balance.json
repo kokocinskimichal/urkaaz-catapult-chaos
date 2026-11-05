@@ -1,6 +1,6 @@
 {
   "schemaVersion": 6,
-  "balanceRevision": "game-balance-9",
+  "balanceRevision": "game-balance-10",
   "bosses": [
     {
       "id": "boss.central-ancient-war-oak.level-05",
@@ -32,8 +32,8 @@
       ]
     },
     {
-      "id": "boss.mobile-thorncrown.level-10",
-      "presentationKey": "thorncrown",
+      "id": "boss.mobile-boulderbloom.level-10",
+      "presentationKey": "boulderbloom",
       "archetype": "MOBILE_SIEGE_BOSS",
       "maxHealth": 9000,
       "collision": {

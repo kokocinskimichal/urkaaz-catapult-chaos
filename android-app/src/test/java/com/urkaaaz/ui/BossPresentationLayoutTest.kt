@@ -144,4 +144,32 @@ class BossPresentationLayoutTest {
         )
         assertEquals(baselineY, visibleBottom, 0.001f)
     }
+
+    @Test
+    fun boulderbloomWalkFramesKeepReferenceArtSizeAndGroundBaseline() {
+        val presentation = BossPresentationCatalog.definition("boulderbloom")
+        val animation = requireNotNull(presentation.walkAnimation)
+        val visualWidth = 431f * presentation.visualScale
+        val visualHeight = 517.2f * presentation.visualScale
+        val baselineY = 500f
+        val bounds = BossPresentationLayout.frameDrawBounds(
+            centerX = 200f,
+            baselineY = baselineY,
+            visualWidth = visualWidth,
+            visualHeight = visualHeight,
+            animation = animation,
+        )
+        val visibleHeight = bounds.height * animation.frameArtBounds.height
+        val visibleBottom = bounds.baselineY -
+            (1f - animation.frameArtBounds.bottom) * bounds.height
+        val referenceVisibleBottom =
+            baselineY - (1f - animation.referenceArtBounds.bottom) * visualHeight
+
+        assertEquals(
+            visualHeight * animation.referenceArtBounds.height,
+            visibleHeight,
+            0.001f,
+        )
+        assertEquals(referenceVisibleBottom, visibleBottom, 0.001f)
+    }
 }

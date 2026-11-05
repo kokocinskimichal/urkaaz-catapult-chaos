@@ -952,9 +952,11 @@ must go through commands and domain/application boundaries.
   Automatic projectile tracking raises zoom to at least 1.25x, then restores
   the pre-follow scale while the camera returns to the tracked team's catapult.
   A manual zoom during tracking cancels that pending automatic restoration.
-  Aiming power uses screen-space pull distance, so the same finger drag keeps
-  its strength across zoom levels; the aiming circle and gesture threshold are
-  also measured in screen space.
+  Aiming power uses a screen-space radius based on 25% of viewport width,
+  capped at 260 pixels and clipped to reachable space around the launch
+  anchor. The visible aiming circle and power saturation use the same radius.
+  Pull length saturates at 100% without clamping its direction. A live power
+  percentage accompanies the trajectory preview.
 - Soil textures repeat at a base tile width of 256 view units in both the
   Android battlefield and web map preview. Android tiles preserve the source
   aspect ratio and repeat vertically rather than stretching to the soil depth.
@@ -1248,7 +1250,7 @@ have profiles and assets; levels 51–54 remain playable without bosses, and the
 campaign frontier stops at 54 until encounters for level 55 onward are
 complete. Boss sprites and optional idle sequences are mapped by
 `presentationKey`. Ancient War Oak uses a 75-frame, 5.042-second neutral
-AnimGen idle loop; the original video and 1024px frame archive are retained in
+idle loop; its original video and 1024px frame archive are retained in
 `assets_src/animgen/bosses/ancient_war_oak/idle/`, while Android decodes
 384px runtime frames on demand through the bounded shared asynchronous bitmap
 cache. It prefetches two frames ahead and retains the last ready frame, with
@@ -1272,11 +1274,28 @@ zoom and delays the result popup until the death presentation completes. Bosses
 without a death sequence hold their available art for the shared 4-second
 window. Original outputs live in
 `assets_src/animgen/bosses/ancient_war_oak/attack-right/` and
-`assets_src/animgen/bosses/ancient_war_oak/attack-left/`; the death sequence is
-in `assets_src/animgen/bosses/ancient_war_oak/death/`. Unit attack reach
+`assets_src/animgen/bosses/ancient_war_oak/attack-left/`; the death sequence
+is in `assets_src/animgen/bosses/ancient_war_oak/death/`. Unit attack reach
 against a boss grows by formation rank times the shared formation spacing;
 their world positions remain unchanged, and units engaged with another target
 do not count toward that rank.
+
+Chapter 1's Level 10 final boss is Boulderbloom, a stone-and-root colossus,
+documented in
+[`docs/systems/green-frontier-chapter1-final-boss-art.agp`](../systems/green-frontier-chapter1-final-boss-art.agp).
+The supplied reference at `assets_src/bosses/green_frontier_chapter1_boss_reference.png`
+has a baked checkerboard and is design reference only. A supplied RGBA image
+has been proportionally fitted with transparent padding to
+`assets_src/bosses/green_frontier_chapter1_final_boss.png` at 1145x1374, with
+its feet aligned to a 12px bottom margin. Level 10 maps to `presentationKey`
+`boulderbloom`; Android displays the static sprite while stationary and the
+32-frame, 4-second transparent walk loop while marching or enraged. Original
+AnimGen outputs are in
+`assets_src/animgen/bosses/green_frontier_chapter1_final_boss/walk-left/`.
+Level 50 still maps to Thorncrown. Mobile siege bosses are RED allies: RED
+units and damage cannot target or damage them, and they attack only active
+BLUE units before reaching the BLUE gate. Central objectives remain
+contestable by both teams.
 
 ## Push workflow
 

@@ -29,6 +29,7 @@ class AimGestureController {
         y: Float,
         currentAim: SlingshotAim,
         screenSpaceScale: Float = 1f,
+        maximumScreenPullDistance: Float = SlingshotAimCalculator.MAX_PULL_DISTANCE,
     ): AimGestureResult {
         val previousAim = currentAim.copy(
             pullDistance = 0f,
@@ -36,7 +37,14 @@ class AimGestureController {
             shouldFire = false,
         )
         state = AimGestureState(
-            aim = calculateAim(originX, originY, x, y, screenSpaceScale),
+            aim = calculateAim(
+                originX,
+                originY,
+                x,
+                y,
+                screenSpaceScale,
+                maximumScreenPullDistance,
+            ),
             previousAim = previousAim,
             x = x,
             y = y,
@@ -50,10 +58,18 @@ class AimGestureController {
         x: Float,
         y: Float,
         screenSpaceScale: Float = 1f,
+        maximumScreenPullDistance: Float = SlingshotAimCalculator.MAX_PULL_DISTANCE,
     ): AimGestureResult? {
         if (!isDragging) return null
         state = state.copy(
-            aim = calculateAim(originX, originY, x, y, screenSpaceScale),
+            aim = calculateAim(
+                originX,
+                originY,
+                x,
+                y,
+                screenSpaceScale,
+                maximumScreenPullDistance,
+            ),
             x = x,
             y = y,
         )
@@ -87,6 +103,7 @@ class AimGestureController {
         x: Float,
         y: Float,
         screenSpaceScale: Float,
+        maximumScreenPullDistance: Float,
     ): SlingshotAim {
         require(screenSpaceScale.isFinite() && screenSpaceScale > 0f) {
             "screen space scale must be finite and positive"
@@ -96,6 +113,7 @@ class AimGestureController {
             originY,
             originX + (x - originX) * screenSpaceScale,
             originY + (y - originY) * screenSpaceScale,
+            maximumScreenPullDistance,
         )
     }
 

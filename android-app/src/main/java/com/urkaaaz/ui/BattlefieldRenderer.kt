@@ -562,7 +562,13 @@ internal class BattlefieldRenderer(
         } else {
             null
         }
-        val requestedAnimation = deathAnimation ?: attackAnimation ?: definition.idleAnimation
+        val walkAnimation = if (presentation.walkFrameIndex != null) {
+            definition.walkAnimation
+        } else {
+            null
+        }
+        val requestedAnimation =
+            deathAnimation ?: attackAnimation ?: walkAnimation ?: definition.idleAnimation
         val requestedFrame = when {
             deathAnimation != null -> assets.bossDeathFrame(
                 presentationKey = boss.presentationKey,
@@ -573,11 +579,20 @@ internal class BattlefieldRenderer(
                 direction = requireNotNull(attackDirection),
                 frameIndex = requireNotNull(attackFrameIndex),
             )
+            walkAnimation != null -> assets.bossWalkFrame(
+                presentationKey = boss.presentationKey,
+                frameIndex = requireNotNull(presentation.walkFrameIndex),
+            )
             definition.idleAnimation != null -> assets.bossIdleFrame(
                 presentationKey = boss.presentationKey,
                 frameIndex = presentation.idleFrameIndex ?: 0,
             )
             else -> null
+        }
+        val fallbackAnimation = if (walkAnimation != null) {
+            definition.idleAnimation
+        } else {
+            requestedAnimation
         }
         val drawableFrame = if (requestedAnimation != null) {
             bossAnimationFrameHold.resolve(
@@ -587,7 +602,7 @@ internal class BattlefieldRenderer(
                     BossDrawableFrame(it, requestedAnimation)
                 },
             ) ?: assets.bossSprite(boss.presentationKey, boss.phase)
-                ?.let { BossDrawableFrame(it, requestedAnimation) } ?: return
+                ?.let { BossDrawableFrame(it, fallbackAnimation) } ?: return
         } else {
             bossAnimationFrameHold.clear()
             val bitmap = assets.bossSprite(boss.presentationKey, boss.phase) ?: return

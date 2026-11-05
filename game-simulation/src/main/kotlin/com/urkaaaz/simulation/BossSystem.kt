@@ -133,7 +133,12 @@ class BossSystem(
         sourceTeam: Team,
         ammunitionType: String? = null,
     ): BossDamageResult? {
-        if (!isAlive || amount <= 0 || ammunitionType in profile.immuneAmmunitionTypes) {
+        if (
+            !isAlive ||
+            amount <= 0 ||
+            !isHostileToBoss(sourceTeam) ||
+            ammunitionType in profile.immuneAmmunitionTypes
+        ) {
             return null
         }
         val previousPhase = phase
@@ -188,6 +193,7 @@ class BossSystem(
             !isAlive ||
             amount <= 0 ||
             radius < 0f ||
+            !isHostileToBoss(sourceTeam) ||
             ammunitionType in profile.immuneAmmunitionTypes
         ) return null
         val effectiveRadiusX = profile.collision.width / 2f + radius
@@ -325,8 +331,12 @@ class BossSystem(
 
     private fun canUnitTargetBoss(unit: Unit, movingTeams: Set<Team>): Boolean =
         isActiveUnit(unit, movingTeams) &&
+            isHostileToBoss(unit.team) &&
             unit.type !is SapperUnit &&
             unit.type !is SlingmasterUnit
+
+    private fun isHostileToBoss(team: Team): Boolean =
+        profile.archetype != BossArchetype.MOBILE_SIEGE_BOSS || team == Team.BLUE
 
     private fun isActiveUnit(unit: Unit, movingTeams: Set<Team>): Boolean =
         unit.isAlive &&
@@ -354,6 +364,7 @@ class BossSystem(
         val attack = profile.attacks.firstOrNull { it.target == target } ?: return emptyList()
         return units.asSequence()
             .filter { isActiveUnit(it, movingTeams) }
+            .filter { isHostileToBoss(it.team) }
             .filter {
                 profile.archetype != BossArchetype.CENTRAL_OBJECTIVE ||
                     it.isEngagedInCombat()

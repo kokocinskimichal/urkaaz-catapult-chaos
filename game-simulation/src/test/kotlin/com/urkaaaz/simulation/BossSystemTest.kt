@@ -334,13 +334,47 @@ class BossSystemTest {
     }
 
     @Test
-    fun mobileBossDefeatIsAttributedToTheLastDamageSource() {
-        val boss = system(mobileProfile(health = 10))
-        boss.applyDamage(9, Team.BLUE)
-        val result = boss.applyDamage(1, Team.RED)
+    fun mobileBossOnlyEngagesBlueUnitsAndCannotBeTargetedByRedUnits() {
+        val boss = system(mobileProfile(), spawnRatio = 0.5f)
+        val blue = unit("blue-unit", Team.BLUE, x = 500f)
+        val red = unit("red-unit", Team.RED, x = 500f)
+        val movingTeams = setOf(Team.BLUE, Team.RED)
 
+        assertNull(boss.approachX(red, movingTeams))
+        assertFalse(boss.canUnitAttack(red, movingTeams))
+        assertEquals(0, boss.formationRank(red, listOf(red), movingTeams))
+
+        val attack = boss.advance(
+            deltaSeconds = 2.5f,
+            units = listOf(blue, red),
+            movingTeams = movingTeams,
+            blueGateX = 0f,
+            random = Random(5),
+        )
+
+        assertEquals(Team.BLUE, attack.unitAttackStarted)
+        assertEquals(setOf(blue.id), attack.unitDamage.keys)
+    }
+
+    @Test
+    fun mobileBossIgnoresRedDamageAndBlueWinsWhenDefeatingIt() {
+        val boss = system(mobileProfile(health = 10))
+        assertNull(boss.applyDamage(9, Team.RED))
+        assertNull(
+            boss.applyDamageAt(
+                positionX = 500f,
+                positionY = 50f,
+                radius = 0f,
+                amount = 9,
+                sourceTeam = Team.RED,
+                ammunitionType = "ROCK",
+            ),
+        )
+        assertEquals(10, boss.snapshot().health)
+
+        val result = boss.applyDamage(10, Team.BLUE)
         assertNotNull(result)
-        assertEquals(MatchOutcome.RED_WIN, result.winner)
+        assertEquals(MatchOutcome.BLUE_WIN, result.winner)
         assertFalse(boss.isAlive)
     }
 

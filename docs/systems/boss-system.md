@@ -12,8 +12,8 @@ Zatwierdzony zakres:
 
 - jeden `BossSystem` obejmuje mobilnych bossów poziomów co 10 oraz nieruchome
   cele centralne poziomów co 5;
-- pierwsza migracja obejmuje istniejące profile i grafiki legacy dla poziomów
-  5–50;
+- pierwsza migracja obejmuje profile i grafiki poziomów 5–50, z wyjątkiem
+  Chapter 1 Level 10, gdzie Boulderbloom zastąpił prezentację Thorncrown;
 - pierwsze zachowania odwzorowują legacy, w tym atak obronny celu centralnego
   i enrage mobilnego bossa; nowe ataki dystansowe, np. strzelanie, są odłożone;
 - balansem będzie można iterować w testach; rozbieżności HP pomiędzy profilami
@@ -240,10 +240,10 @@ meczu należy do scenariusza poziomu.
 
 Mapowanie pierwszej migracji:
 
-| Pozycja w rozdziale | Profil/asset legacy |
+| Pozycja w rozdziale | Boss prezentowany |
 |---:|---|
 | 5 | Ancient War Oak |
-| 10 | THORNCROWN |
+| 10 | Boulderbloom |
 | 15 | Frozen Troll |
 | 20 | Old Yeti Sovereign |
 | 25 | Copperwood Siege Lord |
@@ -252,6 +252,20 @@ Mapowanie pierwszej migracji:
 | 40 | The Scorchbound King |
 | 45 | Ancient War Oak |
 | 50 | THORNCROWN |
+
+### Chapter 1 finale art direction
+
+The user selected a stone-and-root colossus, named Boulderbloom, as Chapter 1's
+Level 10 final boss. The original reference at
+`assets_src/bosses/green_frontier_chapter1_boss_reference.png` has an opaque
+checkerboard and is design reference only. The transparent static sprite is
+`assets_src/bosses/green_frontier_chapter1_final_boss.png` (1145 × 1374 RGBA).
+Android uses it as Level 10's idle/static art and plays its 32-frame, 4-second
+left-facing walk loop while the boss is marching or enraged. The source MP4 and
+frame ZIP are retained in
+`assets_src/animgen/bosses/green_frontier_chapter1_final_boss/walk-left/`.
+Level 50 continues to use Thorncrown; this art replacement does not change
+encounter balance.
 
 Kampania zachowuje poziomy 1–100 w strukturze. Po wygranej na poziomie 50
 odblokowuje zwykłe poziomy 51–54, ale nie poziom 55; limit grywalnej zawartości
@@ -283,8 +297,12 @@ zaprojektowane dla wszystkich poziomów razem.
 
 Zwycięzca pokonania mobilnego bossa wynika z `sourceTeam` rozstrzygającego
 obrażenia, niezależnie od tego, czy ostatni cios zadała jednostka, czy
-pocisk. Nie przenosić legacy’owego błędu, w którym pocisk ustawiał zwycięzcę
-na BLUE bez względu na drużynę strzelającą.
+pocisk. Mobilny boss oblężniczy jest sojusznikiem RED: jednostki i obrażenia
+pochodzące od RED nie mogą go atakować, a jego ataki wybierają wyłącznie
+aktywne jednostki BLUE. Ta reguła nie dotyczy central objective, które pozostaje
+celem obu drużyn i może atakować zaangażowane jednostki obu stron. Nie przenosić
+legacy’owego błędu, w którym pocisk ustawiał zwycięzcę na BLUE bez względu na
+drużynę strzelającą.
 
 ## Runtime state i cykl życia
 
@@ -616,8 +634,9 @@ profilu nie wybiera domyślnego bossa.
 - central objective przyjmuje obrażenia obu drużyn i nalicza je dokładnie raz;
 - zniszczenie central objective rozstrzyga wynik poprawnie, także dla remisu;
 - mobilny boss aktualizuje pozycję zgodnie z prędkością i terenem, wchodzi w
-  fazę enrage przy skonfigurowanym progu, atakuje jednostki/bramę i może zostać
-  pokonany;
+  fazę enrage przy skonfigurowanym progu, atakuje wyłącznie jednostki BLUE lub
+  bramę i może zostać pokonany;
+- jednostki i obrażenia RED nie mogą celować w ani uszkodzić mobilnego bossa;
 - pocisk i jednostka przypisują obrażenia oraz ostatni cios rzeczywistej
   drużynie źródłowej;
 - atak bossa może zakończyć mecz przez zniszczenie fortecy BLUE;

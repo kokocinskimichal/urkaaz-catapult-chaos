@@ -66,12 +66,16 @@ data class BossPresentationDefinition(
     val nameResource: Int,
     val spritesByPhase: Map<BossPhase, String> = emptyMap(),
     val idleAnimation: BossSpriteAnimationDefinition? = null,
+    val walkAnimation: BossSpriteAnimationDefinition? = null,
     val attackAnimations: Map<BossAttackDirection, BossSpriteAnimationDefinition> = emptyMap(),
     val deathAnimation: BossSpriteAnimationDefinition? = null,
     val visualScale: Float = 1f,
 ) {
     init {
         require(visualScale > 0f)
+        require(walkAnimation?.loops != false) {
+            "Boss walk animations must loop"
+        }
         require(attackAnimations.values.none { it.loops }) {
             "Boss attack animations must not loop"
         }
@@ -167,6 +171,30 @@ object BossPresentationCatalog {
                 loops = false,
             ),
         ),
+        "boulderbloom" to BossPresentationDefinition(
+            staticSprite = "anim_boss_boulderbloom_idle_000",
+            nameResource = R.string.boss_name_boulderbloom,
+            walkAnimation = BossSpriteAnimationDefinition(
+                frameCount = 32,
+                durationMilliseconds = 4_000L,
+                frameWidth = 480,
+                frameHeight = 576,
+                referenceArtBounds = BossArtBounds(
+                    left = 12f / 1145f,
+                    top = 310f / 1374f,
+                    right = 1133f / 1145f,
+                    bottom = 1362f / 1374f,
+                ),
+                frameArtBounds = BossArtBounds(
+                    left = 49f / 480f,
+                    top = 186f / 576f,
+                    right = 430f / 480f,
+                    bottom = 543f / 576f,
+                ),
+                referenceCanvasAspect = 1145f / 1374f,
+            ),
+            visualScale = 1.29f,
+        ),
         "burntwood_warden" to BossPresentationDefinition(
             staticSprite = "anim_boss_burntwood_warden_idle_000",
             nameResource = R.string.boss_name_burntwood_warden,
@@ -208,6 +236,15 @@ object BossPresentationCatalog {
             "Boss idle frame index $frameIndex is outside 0 until ${animation.frameCount}"
         }
         return "anim_boss_${presentationKey}_idle_${frameIndex.toString().padStart(3, '0')}"
+    }
+
+    fun walkFrameSpriteName(presentationKey: String, frameIndex: Int): String {
+        val animation = definition(presentationKey).walkAnimation
+            ?: error("No boss walk animation is registered for '$presentationKey'")
+        require(frameIndex in 0 until animation.frameCount) {
+            "Boss walk frame index $frameIndex is outside 0 until ${animation.frameCount}"
+        }
+        return "anim_boss_${presentationKey}_walk_${frameIndex.toString().padStart(3, '0')}"
     }
 
     fun attackFrameSpriteName(

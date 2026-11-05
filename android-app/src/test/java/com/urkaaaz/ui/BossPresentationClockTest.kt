@@ -47,6 +47,53 @@ class BossPresentationClockTest {
     }
 
     @Test
+    fun boulderbloomWalkLoopAdvancesOnlyWhileMarchingAndPausesWithTheMatch() {
+        val clock = BossPresentationClock()
+        val original = state()
+        val originalBoss = requireNotNull(original.boss)
+        val moving = original.copy(
+            boss = originalBoss.copy(
+                presentationKey = "boulderbloom",
+                phase = BossPhase.MARCHING,
+            ),
+        )
+        val walk = requireNotNull(
+            BossPresentationCatalog.definition("boulderbloom").walkAnimation,
+        )
+
+        assertEquals(0, clock.update(moving, 0L).walkFrameIndex)
+        assertEquals(
+            walk.frameCount / 2,
+            clock.update(moving, walk.durationMilliseconds / 2L).walkFrameIndex,
+        )
+        assertEquals(
+            walk.frameCount / 2,
+            clock.update(moving.copy(isPaused = true), walk.durationMilliseconds).walkFrameIndex,
+        )
+        assertEquals(
+            walk.frameCount / 2,
+            clock.update(moving, walk.durationMilliseconds + 100L).walkFrameIndex,
+        )
+
+        val engaged = moving.copy(boss = requireNotNull(moving.boss).copy(phase = BossPhase.ENGAGED))
+        assertEquals(null, clock.update(engaged, walk.durationMilliseconds + 200L).walkFrameIndex)
+        assertEquals(0, clock.update(moving, walk.durationMilliseconds + 300L).walkFrameIndex)
+
+        val enraged = moving.copy(
+            boss = requireNotNull(moving.boss).copy(phase = BossPhase.ENRAGED),
+        )
+        val enragedClock = BossPresentationClock()
+        assertEquals(null, enragedClock.update(enraged, 0L).walkFrameIndex)
+        assertEquals(
+            0,
+            enragedClock.update(
+                enraged.copy(boss = requireNotNull(enraged.boss).copy(x = 999f)),
+                100L,
+            ).walkFrameIndex,
+        )
+    }
+
+    @Test
     fun rightwardAttackPlaysOnceFromItsStartEventAndReturnsToIdle() {
         val clock = BossPresentationClock()
         val state = state()

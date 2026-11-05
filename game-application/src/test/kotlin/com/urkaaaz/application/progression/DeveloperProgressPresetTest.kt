@@ -14,7 +14,7 @@ class DeveloperProgressPresetTest {
         ).loaded
 
         assertEquals(2, loaded.preset.schemaVersion)
-        assertEquals(5, loaded.preset.currentLevel)
+        assertEquals(10, loaded.preset.currentLevel)
         assertEquals(5, loaded.preset.lives)
         assertEquals(5_000, loaded.preset.gold)
         assertEquals(

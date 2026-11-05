@@ -137,6 +137,7 @@ kontrakty są wyraźnie oddzielone.
 | **Fortress Health Bars** | Paski HUD-u w lewym i prawym górnym rogu pokazujące zdrowie obu fortec. |
 | **Central Objective** | Specjalny, zniszczalny cel w centrum poziomów kampanii kończących się cyfrą 5. Symulacja kończy mecz po jego zniszczeniu i wyznacza zwycięzcę według obrażeń zadanych przez obie drużyny. |
 | **Ancient War Oak** | Central Objective poziomu 5 w Green Frontier, używany przez BossSystem jako statyczny sprite z osobnym profilem zdrowia, obrażeń i kolizji. |
+| **Boulderbloom** | Mobilny boss poziomu 10 w Chapter 1, prezentowany statycznym sprite'em i 32-klatkową animacją marszu; zastępuje Thorncrown na tym poziomie. |
 | **Frozen Troll** | Central Objective poziomu 15 i kolejnych specjalnych poziomów Frostbound; uwięziony w lodzie troll, którego sylwetka i głowa pozostają widoczne dla obu graczy. |
 | **Special Objective Level** | Co piąty poziom każdego Chapteru. Ma względnie płaskie podejścia, jedno szerokie płaskie wzgórze na środku i aktywny Central Objective. |
 | **Boss Level Terrain Profile** | Zasada generowania ostatniego poziomu Chapteru (`10, 20, 30...`): teren pozostaje deformowalny i lekko pofałdowany, ale używa łagodnego profilu wysokości oraz obniżonych mas górskich, aby nie tworzyć dużych gór zasłaniających walkę z bossem. |
@@ -351,7 +352,7 @@ hazard, collision rule, movement modifier, damage rule, or projectile rule.
 | --- | --- |
 | **Chapter** | Dziesięciopoziomowy fragment kampanii z własnym motywem, głównym celem, progresją i nagrodą. Chapter I obejmuje poziomy 1–10. |
 | **Siege Sovereign** | Końcowy boss kampanii i najwyższa ranga centralnego przeciwnika. Jest nadrzędny wobec Siege Lord i stanowi główne zagrożenie finałowego poziomu. |
-| **Boss** | Silny przeciwnik kampanijny obsługiwany przez BossSystem jako centralny cel albo mobilny siege boss. Mobilny wariant zbliża się do fortecy BLUE; spotkanie może zakończyć się także po zniszczeniu celu centralnego. |
+| **Boss** | Silny przeciwnik kampanijny obsługiwany przez BossSystem jako centralny cel albo mobilny siege boss. Mobilny wariant jest sojusznikiem RED, zbliża się do fortecy BLUE i atakuje tylko BLUE; spotkanie może zakończyć się także po zniszczeniu celu centralnego. |
 | **Siege Lord** | Specjalny centralny przeciwnik występujący na poziomach 5, 15, 25 i kolejnych poziomach kampanii kończących się cyfrą 5. Jest silniejszy i ważniejszy niż zwykła jednostka, ale mniej rozbudowany niż pełny Boss. Ancient War Oak jest implementacją Siege Lord dla poziomu 5. |
 | **Boss Level** | Poziom kończący się cyfrą 0, np. 10, 20, 30, w którym kampania przypisuje mobilnego bossa. Gracz musi go pokonać, zanim zniszczy fortecę BLUE. |
 | **Campaign Map** | Ekran wyboru poziomów trwałej kampanii. |

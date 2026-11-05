@@ -1,0 +1,110 @@
+STATUS
+
+The user selected the attached stone-and-root colossus as the new visual
+concept for the Chapter 1 finale (campaign level 10). This prompt requests a
+production-quality transparent sprite only; it does not change the encounter,
+balance, or gameplay behavior.
+
+A user-supplied RGBA image has since been fitted to the target
+`1145 × 1374` canvas at
+`assets_src/bosses/green_frontier_chapter1_final_boss.png`. The image was
+scaled proportionally, preserving all visible art with transparent padding
+and a bottom-aligned baseline. The user named the boss Boulderbloom, and
+approved 32-frame, 4-second left-facing walk animation is now wired to the
+Chapter 1 Level 10 presentation. Level 50 continues to use Thorncrown.
+
+REFERENCE INPUTS
+
+- Attach `assets_src/bosses/green_frontier_chapter1_boss_reference.png` as the
+  primary character-design reference. Preserve its broad stone body, leafy
+  canopy, crooked branch-like crown, large boulder fists, single glowing amber
+  eye, and imposing forward-leaning pose.
+- The reference currently has an opaque checkerboard background and a
+  1536 × 1024 landscape canvas. The checkerboard is not part of the design:
+  remove it completely and create genuine transparency around the character.
+  Do not simply crop, recolor, or reuse the checkerboard pixels.
+- Attach
+  `android-app/src/main/res/drawable-nodpi/anim_boss_ancient_war_oak_idle_000.png`
+  as the primary style reference. Match its painterly rendering, material
+  definition, lighting, and level of detail only. Do not copy the Oak's tree
+  anatomy, face, or silhouette.
+- Attach `assets_src/bosses/thorncrown.png` only as a technical reference for
+  the current boss sprite's 1145 × 1374 portrait canvas, camera, scale, and
+  ground baseline. Do not retain Thorncrown's character design.
+
+PROMPT
+
+Create one full-body, production-ready 2D boss sprite for the Urkaaaz Android
+siege game: a massive stone-and-root guardian that serves as the mobile siege
+boss for the Chapter 1 finale.
+
+Use the attached selected concept as the character's source of truth. Keep the
+colossus's broad, forward-leaning rocky body, massive rounded boulder fists,
+root-and-vine joints, thick leafy shoulders and canopy, crooked branching
+crown, and single bright amber eye. Retain the threatening, slightly
+grotesque expression and imposing silhouette. It should read as a living
+mobile siege creature, not a human wearing armor and not a conventional treant.
+
+The attached preview's checkerboard is an editing artifact, not artwork.
+Recreate the character cleanly and leave every pixel outside its silhouette
+transparent. Preserve the existing face and body design; do not invent a
+different boss, weapon, shell, tower, shield, or companion.
+
+Use the Ancient War Oak frame as the rendering-style reference: painterly
+fantasy-game surfaces, textured stone and foliage, clear material separation,
+controlled highlights, and readable forms. Give this boss its own identity:
+rock and root anatomy, broad fists, leafy crown, and amber eye must remain
+distinct from the Oak's tree trunk and branch silhouette.
+
+Compose the sprite in a stable three-quarter frontal view facing left toward
+the BLUE fortress. Keep the complete crown, shoulders, fists, legs, and feet
+visible. The feet rest on a clean, level gameplay baseline; the body and
+crown fill roughly the same vertical world-space footprint as the existing
+Thorncrown sprite. Keep the amber eye and fist silhouettes recognizable at
+small match-screen scale.
+
+Render only the boss sprite. Do not draw a battlefield, forest, ground plane,
+cast shadow, background glow, impact effect, health bar, HUD, name, text, logo,
+or additional character. Do not add a floor or scenery to explain the pose.
+
+TECHNICAL REQUIREMENTS
+
+- Output exactly one PNG named `green_frontier_chapter1_final_boss.png`.
+- Canvas: exactly 1145 × 1374 pixels, portrait, RGBA.
+- Use genuine alpha transparency outside the complete character. No
+  checkerboard, matte, flat background color, or opaque border.
+- Preserve the selected concept's identity and facing direction while fitting
+  the technical sprite canvas; do not stretch the image to convert its
+  landscape preview into portrait.
+- Keep all crown branches, fists, and feet inside the canvas with a small
+  transparent safety margin. Preserve a clear, stable bottom baseline.
+- Save the review output to
+  `assets_src/bosses/green_frontier_chapter1_final_boss.png`.
+  Do not overwrite or delete the current Thorncrown runtime asset.
+- This is one static sprite, not an animation, sprite sheet, contact sheet, or
+  gameplay screenshot.
+
+NEGATIVE PROMPT
+
+checkerboard, checkerboard pixels, opaque background, flat-color background,
+matte, floor, ground plane, forest scene, battlefield, cast shadow, shadow
+plate, humanoid knight, elf, handsome face, Thorncrown, bow, antler armor,
+snail, snail shell, watchtower shell, castle on back, Ancient War Oak copied
+silhouette, tree trunk body, Oak face, extra character, pet, mount, weapon,
+shield, projectile, explosion, HUD, health bar, UI, text, letters, numbers,
+logo, watermark, signature, cropped branch, cropped fist, cropped feet,
+alternate poses, color variants, animation frames, contact sheet,
+photorealism, unrelated franchise, copied commercial art
+
+ACCEPTANCE CHECK
+
+1. The output preserves the user's selected stone-and-root colossus design:
+   broad rock body, foliage, crooked branches, large fists, and amber eye.
+2. The checkerboard is entirely absent; all exterior pixels have genuine
+   transparency.
+3. The Ancient War Oak reference influences painterly rendering only, not the
+   new boss's anatomy or silhouette.
+4. The full sprite fits the 1145 × 1374 portrait canvas, faces left, and keeps
+   its feet on a clean baseline without stretching or clipping.
+5. The face, glowing eye, crown, fists, and body remain legible at
+   match-screen scale.

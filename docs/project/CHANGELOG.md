@@ -8,17 +8,26 @@
   enabled by default in demo matches.
 - Added a copy-ready art brief for a grotesque ruin-shell siege snail as a
   replacement concept for Thorncrown.
+- Added Boulderbloom as the Chapter 1 Level 10 final boss, with static art and
+  a looping walk animation; Thorncrown remains the Level 50 boss.
 
 ### Changed
 
+- Catapult aiming now reaches full power within the adaptive screen-space
+  pull radius shown by its gesture guide, keeps the angle stable after power
+  saturates, and displays a live power percentage.
 - AI recruitment now favors the least represented affordable unit type allowed
   by the campaign level, and normal waves gather three garrisoned units before
   dispatch.
 - Added explicit garrison membership to unit snapshots so wave decisions do
   not confuse garrison repositioning with an already dispatched unit.
+- Queued the debug progress preset for Chapter 1 Level 10 to support final-boss
+  verification on the next debug launch.
 
 ### Fixed
 
+- Fixed mobile siege-boss allegiance: RED units and damage cannot target or
+  hurt their allied boss, which now attacks only BLUE units.
 - Fixed demo startup when an optional campaign-map asset is absent, allowing
   the intended `demo-map` fallback.
 

@@ -131,6 +131,15 @@ class BattlefieldView(context: Context) : View(context) {
         textSize = 12f * resources.displayMetrics.scaledDensity
         typeface = UiTypography.typeface(context)
     }
+    private val aimPowerLabelBackgroundPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        color = Color.argb(225, 23, 37, 54)
+        style = Paint.Style.FILL
+    }
+    private val aimPowerLabelTextPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        color = Color.WHITE
+        textAlign = Paint.Align.CENTER
+        typeface = UiTypography.typeface(context)
+    }
     private var pinchActive = false
     private val scaleDetector = ScaleGestureDetector(
         context,
@@ -558,6 +567,8 @@ class BattlefieldView(context: Context) : View(context) {
     private fun handleAimTouch(event: MotionEvent): Boolean {
         val (originX, originY) = playerAimOriginView()
         val screenSpaceScale = camera.transform.scale
+        val maximumScreenPullDistance =
+            visualPullRadius(originX, originY) * screenSpaceScale
         val mapX = camera.screenToWorldX(event.x)
         val mapY = camera.screenToWorldY(event.y)
         when (event.actionMasked) {
@@ -582,6 +593,7 @@ class BattlefieldView(context: Context) : View(context) {
                             shouldFire = false,
                         ),
                         screenSpaceScale = screenSpaceScale,
+                        maximumScreenPullDistance = maximumScreenPullDistance,
                     ),
                 )
                 invalidate()
@@ -595,6 +607,7 @@ class BattlefieldView(context: Context) : View(context) {
                     mapX,
                     mapY,
                     screenSpaceScale = screenSpaceScale,
+                    maximumScreenPullDistance = maximumScreenPullDistance,
                 )?.let(::handleAimResult)
                 invalidate()
                 return true
@@ -633,6 +646,7 @@ class BattlefieldView(context: Context) : View(context) {
     private fun drawAimGesture(canvas: Canvas, groundTop: Float) {
         val (originX, originY) = playerAimOriginView()
         val screenSpaceScale = camera.transform.scale
+        val aim = aimController.state.aim ?: return
         val visualRadius = visualPullRadius(originX, originY)
         val limitPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
             color = Color.argb(110, 255, 255, 255)
@@ -656,7 +670,7 @@ class BattlefieldView(context: Context) : View(context) {
         val pullX = originX + dx * scale
         val pullY = originY + dy * scale
         val paint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-            color = if (aimController.state.aim?.directionValid == true) {
+            color = if (aim.directionValid) {
                 Color.rgb(255, 224, 110)
             } else {
                 Color.RED
@@ -667,23 +681,73 @@ class BattlefieldView(context: Context) : View(context) {
         }
         canvas.drawLine(originX, originY, pullX, pullY, paint)
         canvas.drawCircle(pullX, pullY, 28f / screenSpaceScale, paint)
+        drawAimPowerLabel(canvas, aim, pullX, pullY)
+    }
+
+    private fun drawAimPowerLabel(
+        canvas: Canvas,
+        aim: SlingshotAim,
+        pullX: Float,
+        pullY: Float,
+    ) {
+        if (width <= 0 || height <= 0) return
+        val cameraTransform = camera.transform
+        val density = resources.displayMetrics.density
+        val scale = cameraTransform.scale
+        val text = "${aim.power.toInt()}%"
+        val textSize = 12f * density
+        aimPowerLabelTextPaint.textSize = textSize
+        val fontMetrics = aimPowerLabelTextPaint.fontMetrics
+        val padding = 6f * density
+        val halfWidth = (aimPowerLabelTextPaint.measureText(text) + 2f * padding) / 2f
+        val halfHeight = (fontMetrics.bottom - fontMetrics.top + 2f * padding) / 2f
+        val screenX = pullX * scale + cameraTransform.offsetX
+        val screenY = pullY * scale + cameraTransform.offsetY
+        val margin = 4f * density
+        fun clampCenter(position: Float, halfSize: Float, extent: Float): Float =
+            if (extent <= 2f * (halfSize + margin)) {
+                extent / 2f
+            } else {
+                position.coerceIn(halfSize + margin, extent - halfSize - margin)
+            }
+
+        var labelCenterY = screenY - 30f * density
+        if (labelCenterY - halfHeight < margin) {
+            labelCenterY = screenY + 30f * density
+        }
+        val labelCenterX = clampCenter(screenX, halfWidth, width.toFloat())
+        labelCenterY = clampCenter(labelCenterY, halfHeight, height.toFloat())
+        val left = (labelCenterX - halfWidth - cameraTransform.offsetX) / scale
+        val top = (labelCenterY - halfHeight - cameraTransform.offsetY) / scale
+        val right = (labelCenterX + halfWidth - cameraTransform.offsetX) / scale
+        val bottom = (labelCenterY + halfHeight - cameraTransform.offsetY) / scale
+        val labelBounds = RectF(left, top, right, bottom)
+        canvas.drawRoundRect(
+            labelBounds,
+            7f * density / scale,
+            7f * density / scale,
+            aimPowerLabelBackgroundPaint,
+        )
+        val baselineY = labelCenterY - (fontMetrics.ascent + fontMetrics.descent) / 2f
+        aimPowerLabelTextPaint.textSize = textSize / scale
+        canvas.drawText(
+            text,
+            (labelCenterX - cameraTransform.offsetX) / scale,
+            (baselineY - cameraTransform.offsetY) / scale,
+            aimPowerLabelTextPaint,
+        )
     }
 
     private fun visualPullRadius(originX: Float, originY: Float): Float {
         val cameraTransform = camera.transform
         val screenOriginX = originX * cameraTransform.scale + cameraTransform.offsetX
         val screenOriginY = originY * cameraTransform.scale + cameraTransform.offsetY
-        val availableScreenRadius = minOf(
-            screenOriginX,
-            width - screenOriginX,
-            screenOriginY,
-            height - screenOriginY,
-        ) - AIM_CIRCLE_EDGE_MARGIN
-        val screenRadius = minOf(
-            VISUAL_MAX_PULL_DISTANCE,
-            availableScreenRadius.coerceAtLeast(MIN_VISUAL_PULL_RADIUS),
-        )
-        return screenRadius / cameraTransform.scale
+        return AimPullLimitCalculator.maximumScreenPullDistance(
+            viewportWidth = width.toFloat(),
+            viewportHeight = height.toFloat(),
+            originScreenX = screenOriginX,
+            originScreenY = screenOriginY,
+        ) / cameraTransform.scale
     }
 
     private fun drawHealthBar(
@@ -975,12 +1039,9 @@ class BattlefieldView(context: Context) : View(context) {
     }
 
     companion object {
-        private const val VISUAL_MAX_PULL_DISTANCE = 96f
         private const val RELOAD_INDICATOR_RADIUS = 12f
         private const val RELOAD_INDICATOR_DURATION = 5.5f
         private const val FORTRESS_RENDER_WIDTH = 280f
-        private const val AIM_CIRCLE_EDGE_MARGIN = 8f
-        private const val MIN_VISUAL_PULL_RADIUS = 24f
         private const val TRAJECTORY_PREVIEW_POINTS = 42
         private const val TRAJECTORY_PREVIEW_STEP_SECONDS = 1f / 30f
         private const val PROJECTILE_TRAIL_POINTS = 60

@@ -1,7 +1,11 @@
 package com.urkaaaz.ui
 
+import com.urkaaaz.contracts.BossPhase
+import kotlin.math.abs
+
 data class BossPresentationFrame(
     val idleFrameIndex: Int? = null,
+    val walkFrameIndex: Int? = null,
     val attackDirection: BossAttackDirection? = null,
     val attackFrameIndex: Int? = null,
     val deathAnimationFrameIndex: Int? = null,
@@ -16,7 +20,10 @@ class BossPresentationClock {
     private var matchStartEventId: String? = null
     private var lastUpdateMilliseconds: Long? = null
     private var activeBoss: Pair<String, String>? = null
+    private var lastBossX: Float? = null
+    private var recentMovementGraceMilliseconds = 0L
     private var idleElapsedMilliseconds = 0L
+    private var walkElapsedMilliseconds = 0L
     private var attackEventId: String? = null
     private var attackDirection: BossAttackDirection? = null
     private var attackElapsedMilliseconds = 0L
@@ -45,7 +52,10 @@ class BossPresentationClock {
             matchStartEventId = state.matchStartEventId
             lastUpdateMilliseconds = null
             activeBoss = null
+            lastBossX = null
+            recentMovementGraceMilliseconds = 0L
             idleElapsedMilliseconds = 0L
+            walkElapsedMilliseconds = 0L
             clearAttack()
             clearDeath()
         }
@@ -54,7 +64,10 @@ class BossPresentationClock {
         val bossKey = boss?.let { it.entityId to it.presentationKey }
         val bossChanged = bossKey != activeBoss
         if (bossChanged) {
+            lastBossX = boss?.x
+            recentMovementGraceMilliseconds = 0L
             idleElapsedMilliseconds = 0L
+            walkElapsedMilliseconds = 0L
             clearAttack()
             clearDeath()
         }
@@ -74,6 +87,23 @@ class BossPresentationClock {
         } else {
             0L
         }
+        if (boss == null) {
+            lastBossX = null
+            recentMovementGraceMilliseconds = 0L
+        } else {
+            val movedSinceLastUpdate = !bossChanged &&
+                lastBossX?.let { abs(boss.x - it) > MIN_MOVEMENT_WORLD_UNITS } == true
+            recentMovementGraceMilliseconds = if (movedSinceLastUpdate) {
+                MOVEMENT_GRACE_MILLISECONDS
+            } else {
+                (recentMovementGraceMilliseconds - elapsed).coerceAtLeast(0L)
+            }
+            lastBossX = boss.x
+        }
+        val bossIsWalking = boss?.let {
+            it.phase == BossPhase.MARCHING ||
+                (it.phase == BossPhase.ENRAGED && recentMovementGraceMilliseconds > 0L)
+        } == true
         val deathWasActiveForBoss =
             boss != null && deathStarted && deathBossId == boss.entityId
         if (bossKey != null) {
@@ -84,9 +114,15 @@ class BossPresentationClock {
             } else if (boss.health > 0) {
                 idleElapsedMilliseconds += elapsed
                 attackElapsedMilliseconds += elapsed
+                walkElapsedMilliseconds = if (bossIsWalking) {
+                    walkElapsedMilliseconds + elapsed
+                } else {
+                    0L
+                }
             }
         } else {
             idleElapsedMilliseconds = 0L
+            walkElapsedMilliseconds = 0L
             clearAttack()
             clearDeath()
         }
@@ -108,6 +144,7 @@ class BossPresentationClock {
                         ?: DEFAULT_DEATH_PRESENTATION_DURATION_MILLISECONDS
                 deathFallbackIdleFrameIndex =
                     definition.idleAnimation?.frameIndex(idleElapsedMilliseconds)
+                walkElapsedMilliseconds = 0L
                 clearAttack()
             }
             val deathAnimation = definition.deathAnimation()
@@ -144,6 +181,9 @@ class BossPresentationClock {
 
         return BossPresentationFrame(
             idleFrameIndex = definition.idleAnimation?.frameIndex(idleElapsedMilliseconds),
+            walkFrameIndex = definition.walkAnimation
+                ?.takeIf { bossIsWalking }
+                ?.frameIndex(walkElapsedMilliseconds),
             attackDirection = activeAttack?.first,
             attackFrameIndex = activeAttack?.second,
         )
@@ -165,5 +205,7 @@ class BossPresentationClock {
 
     companion object {
         const val DEFAULT_DEATH_PRESENTATION_DURATION_MILLISECONDS = 4_000L
+        private const val MIN_MOVEMENT_WORLD_UNITS = 0.01f
+        private const val MOVEMENT_GRACE_MILLISECONDS = 150L
     }
 }
