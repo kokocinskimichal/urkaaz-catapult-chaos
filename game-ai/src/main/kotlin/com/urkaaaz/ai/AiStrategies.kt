@@ -333,8 +333,17 @@ private data class TargetPoint(val x: Float, val y: Float)
 private object SimpleRecruitmentStrategy : UnitRecruitmentStrategy {
     override val id = AiStrategyId("simple")
 
-    override fun chooseUnit(context: AiStrategyContext): UnitDefinition? =
-        affordableUnits(context).minWithOrNull(compareBy({ it.supplyCost }, { it.id }))
+    override fun chooseUnit(context: AiStrategyContext): UnitDefinition? {
+        val deployedUnitCounts = context.snapshot.units
+            .filter { it.team == context.team && it.health > 0 }
+            .groupingBy(UnitSnapshot::unitType)
+            .eachCount()
+        return affordableUnits(context).minWithOrNull(
+            compareBy<UnitDefinition> { deployedUnitCounts[it.id] ?: 0 }
+                .thenBy(UnitDefinition::supplyCost)
+                .thenBy(UnitDefinition::id),
+        )
+    }
 }
 
 private object SituationalRecruitmentStrategy : UnitRecruitmentStrategy {
@@ -421,14 +430,15 @@ private object SimpleWaveDispatchStrategy : WaveDispatchStrategy {
     override val id = AiStrategyId("simple")
 
     override fun shouldSend(context: AiStrategyContext): Boolean =
-        readyUnits(context).isNotEmpty()
+        garrisonedUnits(context).size >=
+            context.balance.runtime.aiStrategy.waveDispatch.situationalMinimumReadyUnits
 }
 
 private object SituationalWaveDispatchStrategy : WaveDispatchStrategy {
     override val id = AiStrategyId("situational")
 
     override fun shouldSend(context: AiStrategyContext): Boolean =
-        readyUnits(context).size >=
+        garrisonedUnits(context).size >=
             context.balance.runtime.aiStrategy.waveDispatch.situationalMinimumReadyUnits
 }
 
@@ -436,7 +446,7 @@ private object CounterplayWaveDispatchStrategy : WaveDispatchStrategy {
     override val id = AiStrategyId("counterplay")
 
     override fun shouldSend(context: AiStrategyContext): Boolean {
-        val ready = readyUnits(context)
+        val ready = garrisonedUnits(context)
         if (ready.isEmpty()) return false
         val fortress = context.snapshot.fortresses.firstOrNull { it.team == context.team }
         val waveBalance = context.balance.runtime.aiStrategy.waveDispatch
@@ -456,9 +466,9 @@ private object CounterplayWaveDispatchStrategy : WaveDispatchStrategy {
     }
 }
 
-private fun readyUnits(context: AiStrategyContext): List<UnitSnapshot> =
+private fun garrisonedUnits(context: AiStrategyContext): List<UnitSnapshot> =
     context.snapshot.units.filter {
-        it.team == context.team && it.health > 0 && !it.moving
+        it.team == context.team && it.health > 0 && it.inGarrison
     }
 
 private fun randomOffset(random: Random, maximum: Float): Float =

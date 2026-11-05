@@ -76,6 +76,7 @@ do bieżącego zadania według [indeksu dokumentów kontekstu](docs/agent-contex
 - [Projekt systemu amunicji](docs/systems/ammunition-design.md)
 - [Projekt systemu walki](docs/systems/combat-design.md)
 - [BossSystem](docs/systems/boss-system.md)
+- [Koncepcja grafiki Ślimaka Oblężniczego](docs/systems/green-frontier-siege-snail-art.agp)
 - [Plan poprawy AI: bossy i czary](docs/systems/ai-boss-spell-improvement-plan.md) ·
   [prompt implementacyjny](docs/systems/ai-boss-spell-improvement-implementation-prompt.md)
 - [System kampanii](docs/systems/campaign-system.md)

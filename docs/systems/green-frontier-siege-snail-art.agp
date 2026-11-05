@@ -1,0 +1,106 @@
+STATUS
+
+Create a new visual concept for the Green Frontier chapter finale's mobile
+siege boss. This replaces Thorncrown's character concept; it does not change
+the boss encounter, balance, or gameplay behavior.
+
+REFERENCE INPUTS
+
+- Attach the first frame of the Ancient War Oak idle sequence,
+  `android-app/src/main/res/drawable-nodpi/anim_boss_ancient_war_oak_idle_000.png`,
+  as the primary style reference. Match its painterly rendering, shape
+  definition, material texture, lighting, and level of detail. Borrow only the
+  art style; do not copy its tree-like character design, face, branches, or
+  silhouette.
+- Attach `assets_src/bosses/thorncrown.png` only as a technical reference for
+  the existing boss sprite's 1145 × 1374 canvas, transparent margins, game
+  camera, scale, and ground baseline. Do not retain Thorncrown's humanoid body,
+  wooden antler crown, leafy cape, armor, or bow.
+- The new creature is a Green Frontier mobile siege boss. Keep its silhouette
+  readable at match scale and facing toward the BLUE fortress.
+
+PROMPT
+
+Create one full-body, grotesque fantasy siege-snail boss sprite for Urkaaaz.
+The boss is a huge land snail carrying an ancient, partially collapsed stone
+watchtower as its shell. It should feel like a living siege engine that has
+slowly absorbed a ruin, not a normal snail with a miniature building simply
+placed on its back.
+
+Give it a low, heavy, muscular gastropod body with thick folds, a wide mouth,
+and two long, uneven eye stalks. Make the face grotesque and expressive:
+bulging mismatched eyes, one drooping and one staring, a crooked sneer, and a
+few large irregular blunt teeth. Keep the expression strange and memorable,
+with dark-comic personality rather than a noble or solemn expression. Avoid
+gore, exposed flesh, or horror-body imagery.
+
+Build the shell from massive, weathered gray-brown masonry shaped like a broken
+watchtower or gatehouse fragment. Give it a strong, readable arched silhouette,
+one or two broken battlement peaks, and a few missing or offset stones.
+Integrate roots, moss, vines, and grass naturally into the cracks so the ruin
+belongs to the Green Frontier. Add only restrained warm bronze details, if
+needed. The shell must remain the dominant, unmistakable feature and should
+suggest that the creature can ram a fortress gate.
+
+Show the snail in a stable three-quarter view facing left toward the BLUE
+fortress, with its head and eyestalks clearly visible in front of the shell.
+Keep the pose imposing and mobile, but not humanoid. The body rests low on the
+ground baseline; the ruin shell rises high enough to occupy roughly the same
+vertical space as the existing boss sprite. Keep the face, shell silhouette,
+mouth, and eyes readable after the sprite is scaled down in the match.
+
+Use the Ancient War Oak frame as the rendering-style guide while giving the
+snail its own restrained Green Frontier palette: stone gray, damp earth brown,
+moss and leaf greens, with small warm bronze accents. Match the reference's
+painterly shape definition and material finish, not its character design or
+exact color placement. The snail should feel grotesque, weathered, and
+slightly absurd, yet still credible as the chapter's final mobile siege
+threat.
+
+Render only the complete boss sprite. Do not draw the battlefield, scenery,
+ground plane, cast shadow, impact effect, slime trail, health bar, HUD, name,
+text, or any other character. Keep all visual elements attached to the snail
+or its integrated ruin shell so the game can composite the sprite directly
+into the battlefield.
+
+TECHNICAL REQUIREMENTS
+
+- Output exactly one PNG named `green_frontier_siege_snail_concept.png`.
+- Canvas: exactly 1145 × 1374 pixels, portrait, RGBA.
+- Use genuine alpha transparency outside the full creature. Do not use a
+  checkerboard, matte, flat-color background, or opaque glow.
+- Keep the complete shell, eye stalks, body, and foot inside the canvas with a
+  small transparent safety margin. Preserve a clear, stable bottom baseline.
+- Match the original boss sprite's camera, approximate scale, and overall
+  visual footprint so a later runtime replacement can be reviewed without
+  changing the presentation contract.
+- Save the review image to `assets_src/bosses/green_frontier_siege_snail_concept.png`.
+  Do not overwrite or delete `assets_src/bosses/thorncrown.png`.
+- This is one static concept still. Do not create animation frames, variants,
+  a sprite sheet, a contact sheet, or a battle scene.
+
+NEGATIVE PROMPT
+
+humanoid tree warrior, elf, human, knight, king, antler crown, leafy cape,
+bow, Thorncrown face, noble expression, heroic pose, solemn portrait, perfect
+symmetry, cute mascot, tiny ordinary garden snail, shell-less slug, building
+floating above the body, clean intact castle, detached tower, separate
+fortress, miniature person, character riding the snail, extra limbs, extra
+heads, gore, blood, exposed flesh, body horror, slime pool, slime trail,
+projectile, weapon in hand, catapult, battlefield, forest background, ground
+plane, cast shadow, opaque background, checkerboard, card frame, UI, text,
+letters, numbers, logo, watermark, signature, photorealism, unrelated
+franchise, copied commercial art
+
+ACCEPTANCE CHECK
+
+1. The image reads immediately as a giant mobile siege snail carrying an
+   integrated, ruined watchtower shell.
+2. Its face is grotesque, asymmetrical, and darkly comic rather than noble or
+   serious; it remains free of gore and body horror.
+3. The concept is clearly distinct from Thorncrown: no humanoid body, antler
+   crown, leafy cape, or bow.
+4. The full sprite uses genuine transparency, fits the 1145 × 1374 canvas, and
+   preserves the existing boss camera, approximate scale, and ground baseline.
+5. The face, shell, eye stalks, and overall silhouette remain recognizable at
+   mobile-match presentation size.

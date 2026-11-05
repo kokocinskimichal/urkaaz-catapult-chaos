@@ -106,6 +106,7 @@ class MatchScreenController(
     private lateinit var stockSettlementRetryButton: TextView
     private var snapshotMode = false
     private var debugPausedMatch = false
+    private var aiUnitAutomationEnabled = true
     private var campaignCompletionRecorded: Boolean? = null
     private var campaignRewardResult: LevelRewardResult? = null
     private var lastMatchFinishedEvent: MatchEvent.MatchFinished? = null
@@ -355,7 +356,6 @@ class MatchScreenController(
             addView(stockSettlementOverlay, FrameLayout.LayoutParams(-1, -1))
             render(viewModel.dispatch(MatchUiAction.StartMatch))
             if (openDebugOnStart) {
-                viewModel.setAiUnitAutomationEnabled(false)
                 post { showDebugToolsDialog() }
             }
         }
@@ -681,6 +681,16 @@ class MatchScreenController(
             LinearLayout.LayoutParams.WRAP_CONTENT,
         ).apply {
             topMargin = dp(8)
+        })
+        root.addView(CheckBox(activity).apply {
+            text = activity.getString(R.string.match_debug_ai_unit_automation)
+            setTextColor(Color.WHITE)
+            buttonTintList = ColorStateList.valueOf(Color.rgb(243, 210, 138))
+            isChecked = aiUnitAutomationEnabled
+            setOnCheckedChangeListener { _, enabled ->
+                aiUnitAutomationEnabled = enabled
+                viewModel.setAiUnitAutomationEnabled(enabled)
+            }
         })
         root.addView(TextView(activity).apply {
             text = "ENEMY UNITS"

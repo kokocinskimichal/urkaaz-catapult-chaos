@@ -1188,6 +1188,23 @@ class DeterministicMatchSimulationTest {
     }
 
     @Test
+    fun snapshotDistinguishesGarrisonMovementFromBeingSentOnAWave() {
+        val simulation = DeterministicMatchSimulation(MatchId("garrison-state-match"), config)
+        simulation.start()
+        simulation.deployUnit(GameBalanceFixtures.unit(UnitIds.DEFENDER), Team.BLUE)
+
+        val repositioning = simulation.snapshot().units.single()
+        assertTrue(repositioning.moving)
+        assertTrue(repositioning.inGarrison)
+
+        simulation.sendWave(Team.BLUE)
+
+        val sent = simulation.snapshot().units.single()
+        assertTrue(sent.moving)
+        assertFalse(sent.inGarrison)
+    }
+
+    @Test
     fun gameplaySpeedMultiplierScalesWaveAndGarrisonMovement() {
         fun waveDistance(multiplier: Float): Float {
             val simulation = DeterministicMatchSimulation(

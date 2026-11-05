@@ -36,6 +36,8 @@ kampanię, AI oraz działający match screen. Gałąź robocza: `develop`.
   zmieniają jeszcze języka. `AD REWARD` pozostaje nieaktywny, a dwa boczne
   sloty eventów są ukryte i nie mają jeszcze źródła danych. `TEST MODE`
   otwiera demo Loadout, z którego po zatwierdzeniu startuje mecz `DEMO_LEVEL`.
+  Demo Debug Tools udostępnia checkbox automatycznej rekrutacji i fal RED,
+  domyślnie włączony.
 - Lokalny przepływ:
   `MatchUiAction → MatchViewModel → LocalMatchGateway → MatchSession →
   simulation → MatchSnapshot`.
@@ -98,6 +100,11 @@ kampanię, AI oraz działający match screen. Gałąź robocza: `develop`.
   `AiStrategyRegistry`; ELITE leaduje ruchome cele i kontruje zagrożenia.
   `AiMatchCoordinator` w aplikacji zarządza seedem i reakcją; postęp ELITE
   jest ograniczony do poziomu 100 i nie przyznaje bonusów zasobów ani statystyk.
+  Prosta rekrutacja wybiera najmniej reprezentowany, dostępny i osiągalny
+  supply'owo typ jednostki. Wszystkie profile grupują minimum trzy jednostki
+  garnizonowe przed wysłaniem zwykłej fali; counterplay może wysłać mniejszą
+  grupę pod presją. Gotowość wynika z jawnego stanu garnizonu, niezależnego od
+  chwilowego ruchu podczas przegrupowania.
   CADET ma błąd celowania ±18°/±30 mocy, aby jego strzały były wyraźnie mniej
   celne.
 - Legacy-style sprite'y, animacje idle/walk, HP bary jednostek, cache assetów

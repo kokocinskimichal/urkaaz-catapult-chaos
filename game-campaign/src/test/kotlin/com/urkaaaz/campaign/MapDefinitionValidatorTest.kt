@@ -5,6 +5,7 @@ import com.urkaaaz.contracts.InitialCameraAnchor
 import com.urkaaaz.contracts.MapDecoration
 import com.urkaaaz.contracts.MapWorldDimensions
 import com.urkaaaz.contracts.RelicSize
+import java.io.FileNotFoundException
 import kotlin.math.abs
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -178,6 +179,15 @@ class MapDefinitionValidatorTest {
             "invalid map id",
             (MapDefinitionRepository { null }.load("../demo-map") as MapLoadResult.Failure).message,
         )
+    }
+
+    @Test
+    fun containsTreatsMissingAssetExceptionAsAnAbsentMap() {
+        val repository = MapDefinitionRepository {
+            throw FileNotFoundException("maps/chapter10-level100.json")
+        }
+
+        assertFalse(repository.contains("chapter10-level100"))
     }
 
     @Test

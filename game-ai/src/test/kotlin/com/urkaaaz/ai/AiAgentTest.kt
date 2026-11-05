@@ -425,6 +425,138 @@ class AiAgentTest {
     }
 
     @Test
+    fun simpleRecruitmentPrefersAnAffordableUnderrepresentedUnit() {
+        val deployment = AiAgent(
+            AiConfiguration(
+                balance = GameBalanceFixtures.balance,
+                playerId = PlayerId("ai-player"),
+                team = Team.RED,
+                profile = AiProfileSelection(AiProfileId.CADET),
+                allowedUnits = setOf(
+                    GameBalanceFixtures.unit(UnitIds.DEFENDER),
+                    GameBalanceFixtures.unit(UnitIds.SAPPER),
+                ),
+            ),
+        ).decide(
+            snapshot.copy(
+                resources = snapshot.resources.copy(supply = 100),
+                units = listOf(
+                    UnitSnapshot(
+                        entityId = EntityId("red-defender"),
+                        team = Team.RED,
+                        unitType = UnitIds.DEFENDER,
+                        x = 700f,
+                        y = 400f,
+                        health = GameBalanceFixtures.unit(UnitIds.DEFENDER).maxHealth,
+                    ),
+                ),
+            ),
+        ).filterIsInstance<MatchCommand.DeployUnit>().single()
+
+        assertEquals(UnitIds.SAPPER, deployment.unitType)
+    }
+
+    @Test
+    fun waveDispatchIncludesGarrisonUnitsWhileTheyAreStillRepositioning() {
+        val commands = AiAgent(
+            AiConfiguration(
+                balance = GameBalanceFixtures.balance,
+                playerId = PlayerId("ai-player"),
+                team = Team.RED,
+                profile = AiProfileSelection(AiProfileId.VETERAN),
+                allowedUnits = setOf(GameBalanceFixtures.unit(UnitIds.DEFENDER)),
+            ),
+        ).decide(
+            snapshot.copy(
+                resources = snapshot.resources.copy(supply = 0),
+                units = (1..3).map { index ->
+                    UnitSnapshot(
+                        entityId = EntityId("red-defender-$index"),
+                        team = Team.RED,
+                        unitType = UnitIds.DEFENDER,
+                        x = 700f + index,
+                        y = 400f,
+                        health = GameBalanceFixtures.unit(UnitIds.DEFENDER).maxHealth,
+                        moving = true,
+                        actionState = "MOVING",
+                        inGarrison = true,
+                    )
+                },
+            ),
+        )
+
+        assertEquals(1, commands.filterIsInstance<MatchCommand.SendWave>().size)
+    }
+
+    @Test
+    fun simpleWaveDispatchWaitsForTheConfiguredGarrisonGroup() {
+        fun commandsForGarrisonSize(size: Int) = AiAgent(
+            AiConfiguration(
+                balance = GameBalanceFixtures.balance,
+                playerId = PlayerId("ai-player"),
+                team = Team.RED,
+                profile = AiProfileSelection(AiProfileId.CADET),
+                allowedUnits = setOf(GameBalanceFixtures.unit(UnitIds.DEFENDER)),
+            ),
+        ).decide(
+            snapshot.copy(
+                resources = snapshot.resources.copy(supply = 0),
+                units = (1..size).map { index ->
+                    UnitSnapshot(
+                        entityId = EntityId("red-defender-$index"),
+                        team = Team.RED,
+                        unitType = UnitIds.DEFENDER,
+                        x = 700f + index,
+                        y = 400f,
+                        health = GameBalanceFixtures.unit(UnitIds.DEFENDER).maxHealth,
+                        moving = true,
+                        actionState = "MOVING",
+                        inGarrison = true,
+                    )
+                },
+            ),
+        )
+
+        assertTrue(commandsForGarrisonSize(2).none { it is MatchCommand.SendWave })
+        assertEquals(
+            1,
+            commandsForGarrisonSize(3).count { it is MatchCommand.SendWave },
+        )
+    }
+
+    @Test
+    fun waveDispatchDoesNotCountUnitsAlreadyOutsideTheGarrison() {
+        val commands = AiAgent(
+            AiConfiguration(
+                balance = GameBalanceFixtures.balance,
+                playerId = PlayerId("ai-player"),
+                team = Team.RED,
+                profile = AiProfileSelection(AiProfileId.VETERAN),
+                allowedUnits = setOf(GameBalanceFixtures.unit(UnitIds.DEFENDER)),
+            ),
+        ).decide(
+            snapshot.copy(
+                resources = snapshot.resources.copy(supply = 0),
+                units = (1..3).map { index ->
+                    UnitSnapshot(
+                        entityId = EntityId("red-defender-$index"),
+                        team = Team.RED,
+                        unitType = UnitIds.DEFENDER,
+                        x = 700f + index,
+                        y = 400f,
+                        health = GameBalanceFixtures.unit(UnitIds.DEFENDER).maxHealth,
+                        moving = true,
+                        actionState = "MOVING",
+                        inGarrison = false,
+                    )
+                },
+            ),
+        )
+
+        assertTrue(commands.none { it is MatchCommand.SendWave })
+    }
+
+    @Test
     fun veteranRecruitmentSelectsDefenderToCounterEnemySapper() {
         val deployment = AiAgent(
             AiConfiguration(

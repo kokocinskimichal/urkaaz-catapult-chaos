@@ -4,6 +4,7 @@ import com.urkaaaz.contracts.MapDefinition
 import kotlinx.serialization.SerializationException
 import kotlinx.serialization.decodeFromString
 import kotlinx.serialization.json.Json
+import java.io.FileNotFoundException
 import java.io.IOException
 
 sealed interface MapLoadResult {
@@ -29,7 +30,11 @@ class MapDefinitionRepository(
 
     fun contains(mapId: String): Boolean {
         if (!MAP_ID.matches(mapId)) return false
-        return openResource("maps/$mapId.json")?.use { true } ?: false
+        return try {
+            openResource("maps/$mapId.json")?.use { true } ?: false
+        } catch (_: FileNotFoundException) {
+            false
+        }
     }
 
     private fun loadUncached(mapId: String): MapLoadResult {

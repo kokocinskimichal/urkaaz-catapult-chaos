@@ -1029,6 +1029,7 @@ class DeterministicMatchSimulation(
                 sapperHasBomb = it.sapperHasBomb,
                 statuses = statuses,
                 statusDetails = statusDetails,
+                inGarrison = it.inGarrison,
             )
         },
         projectiles = projectiles.map {

@@ -84,6 +84,7 @@ data class UnitSnapshot(
     val sapperHasBomb: Boolean = true,
     val statuses: Map<String, Float> = emptyMap(),
     val statusDetails: Map<String, StatusSnapshot> = emptyMap(),
+    val inGarrison: Boolean = false,
 )
 
 data class StatusSnapshot(

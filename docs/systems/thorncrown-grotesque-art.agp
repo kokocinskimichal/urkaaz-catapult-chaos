@@ -1,0 +1,99 @@
+STATUS
+
+SUPERSEDED
+
+The user rejected the Thorncrown character concept. Do not use this prompt for
+new art; the replacement concept is
+`docs/systems/green-frontier-siege-snail-art.agp`.
+
+Create a grotesque revision of the existing Thorncrown boss illustration.
+Keep the established character concept and gameplay presentation; change only
+the visual personality so the boss feels more strange, asymmetrical, and
+expressive instead of noble and serious.
+
+REFERENCE INPUTS
+
+- Attach `assets_src/bosses/thorncrown.png` as the exact character and
+  composition reference. Preserve its identity, pose, scale, camera angle,
+  main silhouette, thorn-crown idea, leaf mantle, green-and-gold palette, and
+  large branch-and-thorn weapon.
+- The source is a full-body transparent boss sprite used by the mobile siege
+  encounter. Keep its three-quarter frontal game-sprite composition and ground
+  baseline. This is an art revision, not a new character concept.
+- Preserve the existing painterly Urkaaaz fantasy-game finish. Do not copy
+  artwork from another franchise or introduce unrelated visual themes.
+
+PROMPT
+
+Redraw the attached Thorncrown boss as the same forest siege warlord, but give
+him a much more grotesque, eccentric personality. The current version reads
+like a solemn, polished hero. Make the face and body language unmistakably
+odd, lopsided, and unsettling in a playful dark-fantasy way, while keeping the
+same recognizable character and equipment.
+
+Give Thorncrown an exaggerated crooked grin, an uneven jutting jaw, a broad
+hooked nose, and mismatched expressive eyes: one narrowed and suspicious, the
+other larger with its familiar emerald glow. Use irregular blunt teeth, a
+slightly protruding lower lip, and a few small bark-like tusks if they fit the
+existing face. Keep the expression readable at gameplay scale. The result
+should feel grotesque and memorable, not dignified or conventionally heroic,
+but also not like a clown or a horror-gore creature.
+
+Make the posture and costume a little more asymmetrical: a slight hunched
+shoulder, uneven leaf-and-bark mantle, twisted thorn-crown branches, and
+quirky mismatched armor details. Keep these changes subordinate to the
+existing silhouette and pose. Retain the dark green foliage, layered bark,
+weathered bronze/gold ornaments, emerald accents, and the same large
+branch-and-thorn weapon. Do not add a different weapon, shield, companion,
+extra limbs, or new story props.
+
+The character remains an imposing mobile siege boss: tall, sturdy, and
+readable against a battlefield, with an intentionally grotesque face rather
+than a heroic portrait. Keep the eyes, grin, crown, weapon, feet, and full
+silhouette clear when the sprite is scaled down. Avoid excessive tiny surface
+detail that disappears in-game.
+
+TECHNICAL REQUIREMENTS
+
+- Output exactly one PNG named `thorncrown_grotesque_revision.png`.
+- Canvas: exactly 1145 × 1374 pixels, portrait, RGBA.
+- Use genuine transparency outside the character. Do not add a checkerboard,
+  background color, floor, landscape, glow cloud, shadow plate, or card frame.
+- Keep the complete crown branches, weapon, cape, and both feet inside the
+  canvas with a small transparent safety margin. Preserve a stable bottom
+  baseline suitable for replacing the current static boss sprite.
+- Keep the same overall width, height, pose, camera, and visual footprint as
+  the reference. Do not crop or substantially rescale the character.
+- Save the review output to `assets_src/bosses/thorncrown_grotesque_revision.png`.
+  Do not overwrite `assets_src/bosses/thorncrown.png`; the revision will be
+  reviewed before it is promoted to the runtime asset.
+- Do not create animation frames, variants, a sprite sheet, a contact sheet,
+  or a second concept.
+
+NEGATIVE PROMPT
+
+solemn heroic king, noble elf, handsome human face, realistic human portrait,
+perfect symmetry, stoic expression, polished heroic armor, cute mascot,
+clown makeup, slapstick costume, gore, blood, exposed flesh, body horror,
+extra arms, extra legs, extra heads, changed species, changed character
+identity, different weapon, sword, axe, shield, staff, pet, mount, added
+characters, new props, changed pose, changed camera angle, changed
+composition, cropped antlers, cropped weapon, cropped feet, missing cape,
+missing thorn crown, missing emerald details, blue/red team variant, scene,
+forest background, battlefield, ground plane, opaque backdrop, checkerboard,
+card frame, UI, text, letters, numbers, logo, watermark, signature,
+photorealism, unrelated franchise, copied commercial art
+
+ACCEPTANCE CHECK
+
+1. The revision is immediately recognizable as the same Thorncrown from the
+   attached reference: same forest-warlord concept, thorn crown, leafy mantle,
+   palette, weapon, pose, and overall silhouette.
+2. The face is clearly more grotesque and expressive: asymmetry, crooked grin,
+   uneven features, and a readable mischievous or unsettling expression.
+3. The character is not more heroic or solemn, and the grotesque treatment is
+   not gore, body horror, or clown styling.
+4. The complete transparent sprite preserves the 1145 × 1374 canvas, game
+   camera, scale, and bottom baseline without clipping.
+5. At reduced gameplay size, the face, crown, weapon, and body silhouette
+   remain distinct and legible.

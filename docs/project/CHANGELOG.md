@@ -1,5 +1,27 @@
 # Changelog
 
+## 2026-11-05
+
+### Added
+
+- Added a debug-tools toggle for RED enemy recruitment and wave automation,
+  enabled by default in demo matches.
+- Added a copy-ready art brief for a grotesque ruin-shell siege snail as a
+  replacement concept for Thorncrown.
+
+### Changed
+
+- AI recruitment now favors the least represented affordable unit type allowed
+  by the campaign level, and normal waves gather three garrisoned units before
+  dispatch.
+- Added explicit garrison membership to unit snapshots so wave decisions do
+  not confuse garrison repositioning with an already dispatched unit.
+
+### Fixed
+
+- Fixed demo startup when an optional campaign-map asset is absent, allowing
+  the intended `demo-map` fallback.
+
 ## 2026-11-03
 
 ### Added

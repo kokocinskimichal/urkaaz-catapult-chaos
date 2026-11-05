@@ -58,9 +58,8 @@ into registry-selected strategies. `AiProfileCatalog` maps `CADET` to simple
 heuristics, `VETERAN` to situational evaluation and `ELITE` to counterplay.
 `AiMatchCoordinator` in `game-application` owns the agent lifecycle and
 simulation-time reaction cadence; `MatchViewModel` dispatches the resulting
-commands through `LocalMatchGateway`. Campaign profile assignment preserves
-the previous level mapping: levels 3, 4, 6, 7 and 11–30 use VETERAN; 8–9 and
-31–100 use ELITE; remaining levels use CADET. ELITE progression is 0% at
+commands through `LocalMatchGateway`. Campaign profile assignment uses CADET
+for levels 1–10, VETERAN for 11–30, and ELITE for 31–100. ELITE progression is 0% at
 level 31 and 100% at level 100, with bounded interpolation between. AI uses
 the match seed and leads moving counterplay targets by movement speed times its
 reaction interval. Against a live central objective, it evaluates candidate
@@ -72,6 +71,14 @@ most one cast per decision. The unused campaign enemy health/fortress
 multipliers and separate aim-error/reaction overrides were removed; profile
 tuning is the single source for those AI parameters. Base aim errors are
 ±18°/±30 power for CADET, ±3°/±6 for VETERAN, and ±1.25°/±2.5 for ELITE.
+Simple recruitment prefers the least represented affordable unit type;
+campaign `availableUnits` still limits the choice. Wave policies use the
+explicit `UnitSnapshot.inGarrison` state rather than `moving`, so temporary
+garrison repositioning does not prevent dispatch. Simple and situational
+profiles wait for the configured normal wave group (currently three units);
+counterplay can dispatch a smaller group when the fortress is threatened or
+enemies approach. Levels 1–4 only allow DEFENDER, and CADET's configured
+recruitment interval remains eight seconds.
 The match unit panel hides unit icons not available to the campaign level or
 committed player loadout; insufficient supply still disables available units.
 
@@ -492,7 +499,9 @@ The current match HUD also displays:
   mouse cursor. `BattlefieldView` handles hover, generic-motion and pointer-move
   events, and `BattlefieldCameraController.screenToGameWorld` converts them
   through the current camera transform and viewport dimensions; campaign debug
-  tools omit this demo-only option.
+  tools omit this demo-only option. Demo debug startup keeps automated RED unit
+  recruitment and waves enabled by default; a Debug Tools checkbox can disable
+  that automation for manual enemy-unit testing.
 - The demo starts with light eastward wind (`direction = 1`, `strength = 0.25`),
   enabling the deterministic wind system: it begins transitioning after eight
   seconds and selects another wind target every 18–24 seconds.
@@ -686,6 +695,10 @@ does not decode the full animation set again for every frame or every unit.
   strategies for artillery, recruitment and wave dispatch. Its reaction
   interval and aim error are bounded by the campaign profile; it uses only
   RED's available supply and has no resource/stat bonuses.
+- Recruitment balances the simple profile across affordable types allowed by
+  the campaign level. Normal waves gather at least three units, and wave
+  readiness uses garrison membership independently of movement, so units
+  repositioning inside the garrison can still be dispatched.
 - Campaign AI progresses from CADET on levels 1–10 to VETERAN on 11–30 and
   ELITE from level 31. CADET adds aim error of up to ±28° and ±45 power and has
   an 8-second interval between unit recruitments; combat decisions continue
