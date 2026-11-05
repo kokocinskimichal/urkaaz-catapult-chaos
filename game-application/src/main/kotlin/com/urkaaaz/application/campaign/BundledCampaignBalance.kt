@@ -9,6 +9,13 @@ import com.urkaaaz.campaign.DemoLevelDefinitions
 import com.urkaaaz.campaign.MapDefinitionRepository
 
 object BundledCampaignBalance {
+    fun bossPresentationKeyForLevel(level: Int): String? {
+        val profileId = CampaignLevelDefinition.bossProfileIdForLevel(level) ?: return null
+        return GameBalanceRepository.bundled.requireConfig()
+            .bossProfile(profileId)
+            .presentationKey
+    }
+
     fun levelDefinition(
         level: Int,
         repository: MapDefinitionRepository = MapDefinitionRepository.bundled,

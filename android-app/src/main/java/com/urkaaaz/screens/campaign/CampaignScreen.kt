@@ -323,35 +323,67 @@ class CampaignScreen(
                 CampaignChapterPageStatus.PREVIEW ->
                     R.string.campaign_chapter_tab_preview
             }
-            val tab = TextView(context).apply {
-                text = context.getString(label, chapterNumber)
-                UiTypography.applyButtonTypeface(this)
-                textSize = 14f
-                gravity = Gravity.CENTER
-                minWidth = dp(54)
-                setPadding(dp(10), dp(7), dp(10), dp(7))
-                setTextColor(
-                    when {
-                        isSelected -> Color.rgb(255, 211, 106)
-                        page.status == CampaignChapterPageStatus.COMPLETED ->
-                            Color.rgb(184, 220, 163)
-                        page.status == CampaignChapterPageStatus.PREVIEW ->
-                            Color.rgb(192, 185, 172)
-                        else -> Color.WHITE
-                    },
-                )
-                background = chapterTabBackground(isSelected)
-                contentDescription = context.getString(
-                    R.string.campaign_chapter_tab_accessibility,
-                    chapterNumber,
-                    page.chapter.title,
-                    statusString,
-                )
-                isFocusable = true
-                setOnClickListener {
-                    if (viewModel.selectChapter(page.chapter.id)) {
-                        render(viewModel.state)
-                    }
+            val tabLabel = context.getString(label, chapterNumber)
+            val tabTextColor = when {
+                isSelected -> Color.rgb(255, 211, 106)
+                page.status == CampaignChapterPageStatus.COMPLETED ->
+                    Color.rgb(184, 220, 163)
+                page.status == CampaignChapterPageStatus.PREVIEW ->
+                    Color.rgb(192, 185, 172)
+                else -> Color.WHITE
+            }
+            val tabDescription = context.getString(
+                R.string.campaign_chapter_tab_accessibility,
+                chapterNumber,
+                page.chapter.title,
+                statusString,
+            )
+            val onTabClick = View.OnClickListener {
+                if (viewModel.selectChapter(page.chapter.id)) {
+                    render(viewModel.state)
+                }
+            }
+            val chapterIcon = CampaignMapPresentationCatalog.chapterTabIconDrawable(
+                page.chapter.id,
+            )
+            val tab = if (chapterIcon == null) {
+                TextView(context).apply {
+                    text = tabLabel
+                    UiTypography.applyButtonTypeface(this)
+                    textSize = 14f
+                    gravity = Gravity.CENTER
+                    minWidth = dp(54)
+                    setPadding(dp(10), dp(7), dp(10), dp(7))
+                    setTextColor(tabTextColor)
+                    background = chapterTabBackground(isSelected)
+                    contentDescription = tabDescription
+                    isFocusable = true
+                    setOnClickListener(onTabClick)
+                }
+            } else {
+                LinearLayout(context).apply {
+                    orientation = LinearLayout.VERTICAL
+                    gravity = Gravity.CENTER
+                    minimumWidth = dp(54)
+                    setPadding(dp(6), dp(1), dp(6), dp(1))
+                    background = chapterTabBackground(isSelected)
+                    contentDescription = tabDescription
+                    isFocusable = true
+                    addView(ImageView(context).apply {
+                        contentDescription = null
+                        importantForAccessibility = View.IMPORTANT_FOR_ACCESSIBILITY_NO
+                        scaleType = ImageView.ScaleType.FIT_CENTER
+                        setImageResource(chapterIcon)
+                    }, LinearLayout.LayoutParams(dp(28), dp(28)))
+                    addView(TextView(context).apply {
+                        text = tabLabel
+                        UiTypography.applyButtonTypeface(this)
+                        textSize = 13f
+                        gravity = Gravity.CENTER
+                        maxLines = 1
+                        setTextColor(tabTextColor)
+                    }, LinearLayout.LayoutParams(-1, -2))
+                    setOnClickListener(onTabClick)
                 }
             }
             chapterTabs.addView(tab, LinearLayout.LayoutParams(-2, -1).apply {

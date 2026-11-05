@@ -80,6 +80,9 @@ data class CampaignLevelDefinition(
         const val MAX_LEVELS = 100
         const val LAST_COMPLETE_CAMPAIGN_LEVEL = 54
 
+        fun bossProfileIdForLevel(level: Int): String? =
+            bossEncounterForLevel(level)?.profileId
+
         private fun bossEncounterForLevel(level: Int): BossEncounterConfig? {
             val profileId = when (level) {
                 5 -> "boss.central-ancient-war-oak.level-05"

@@ -61,11 +61,38 @@ data class BossSpriteAnimationDefinition(
 
 typealias BossIdleAnimationDefinition = BossSpriteAnimationDefinition
 
+data class CampaignMarkerIdleAnimationDefinition(
+    val sequenceType: String,
+    val frameCount: Int,
+    val durationMilliseconds: Long,
+    val frameWidth: Int,
+    val frameHeight: Int,
+) {
+    init {
+        require(sequenceType.matches(Regex("[a-z][a-z0-9_]*"))) {
+            "campaign marker animation sequence type is invalid"
+        }
+        require(frameCount > 0) { "campaign marker animation must contain frames" }
+        require(durationMilliseconds > 0L) {
+            "campaign marker animation duration must be positive"
+        }
+        require(frameWidth > 0 && frameHeight > 0) {
+            "campaign marker animation dimensions must be positive"
+        }
+    }
+
+    fun frameIndex(elapsedMilliseconds: Long): Int {
+        val position = elapsedMilliseconds.coerceAtLeast(0L) % durationMilliseconds
+        return (position * frameCount / durationMilliseconds).toInt()
+    }
+}
+
 data class BossPresentationDefinition(
     val staticSprite: String,
     val nameResource: Int,
     val spritesByPhase: Map<BossPhase, String> = emptyMap(),
     val idleAnimation: BossSpriteAnimationDefinition? = null,
+    val campaignMarkerIdleAnimation: CampaignMarkerIdleAnimationDefinition? = null,
     val walkAnimation: BossSpriteAnimationDefinition? = null,
     val attackAnimations: Map<BossAttackDirection, BossSpriteAnimationDefinition> = emptyMap(),
     val deathAnimation: BossSpriteAnimationDefinition? = null,
@@ -100,24 +127,32 @@ object BossPresentationCatalog {
         right = 1240f / 1254f,
         bottom = 1f,
     )
+    private val ANCIENT_WAR_OAK_IDLE_ANIMATION = BossSpriteAnimationDefinition(
+        frameCount = 75,
+        durationMilliseconds = 5_042L,
+        frameWidth = 384,
+        frameHeight = 384,
+        referenceArtBounds = ANCIENT_WAR_OAK_REFERENCE_ART_BOUNDS,
+        frameArtBounds = BossArtBounds(
+            left = 80f / 384f,
+            top = 67f / 384f,
+            right = 308f / 384f,
+            bottom = 311f / 384f,
+        ),
+    )
 
     private val definitions = mapOf(
         "ancient_war_oak" to BossPresentationDefinition(
             staticSprite = "boss_ancient_war_oak_idle_fallback",
             nameResource = R.string.boss_name_ancient_war_oak,
             visualScale = 5f / 3f,
-            idleAnimation = BossSpriteAnimationDefinition(
-                frameCount = 75,
-                durationMilliseconds = 5_042L,
-                frameWidth = 384,
-                frameHeight = 384,
-                referenceArtBounds = ANCIENT_WAR_OAK_REFERENCE_ART_BOUNDS,
-                frameArtBounds = BossArtBounds(
-                    left = 80f / 384f,
-                    top = 67f / 384f,
-                    right = 308f / 384f,
-                    bottom = 311f / 384f,
-                ),
+            idleAnimation = ANCIENT_WAR_OAK_IDLE_ANIMATION,
+            campaignMarkerIdleAnimation = CampaignMarkerIdleAnimationDefinition(
+                sequenceType = "idle",
+                frameCount = ANCIENT_WAR_OAK_IDLE_ANIMATION.frameCount,
+                durationMilliseconds = ANCIENT_WAR_OAK_IDLE_ANIMATION.durationMilliseconds,
+                frameWidth = ANCIENT_WAR_OAK_IDLE_ANIMATION.frameWidth,
+                frameHeight = ANCIENT_WAR_OAK_IDLE_ANIMATION.frameHeight,
             ),
             attackAnimations = mapOf(
                 // Compact horizontal sweep to world-left with the Oak's
@@ -174,6 +209,13 @@ object BossPresentationCatalog {
         "boulderbloom" to BossPresentationDefinition(
             staticSprite = "anim_boss_boulderbloom_idle_000",
             nameResource = R.string.boss_name_boulderbloom,
+            campaignMarkerIdleAnimation = CampaignMarkerIdleAnimationDefinition(
+                sequenceType = "campaign_idle",
+                frameCount = 32,
+                durationMilliseconds = 4_000L,
+                frameWidth = 480,
+                frameHeight = 480,
+            ),
             walkAnimation = BossSpriteAnimationDefinition(
                 frameCount = 32,
                 durationMilliseconds = 4_000L,
@@ -236,6 +278,16 @@ object BossPresentationCatalog {
             "Boss idle frame index $frameIndex is outside 0 until ${animation.frameCount}"
         }
         return "anim_boss_${presentationKey}_idle_${frameIndex.toString().padStart(3, '0')}"
+    }
+
+    fun campaignMarkerIdleFrameSpriteName(presentationKey: String, frameIndex: Int): String {
+        val animation = definition(presentationKey).campaignMarkerIdleAnimation
+            ?: error("No campaign marker idle animation is registered for '$presentationKey'")
+        require(frameIndex in 0 until animation.frameCount) {
+            "Campaign marker idle frame index $frameIndex is outside 0 until ${animation.frameCount}"
+        }
+        return "anim_boss_${presentationKey}_${animation.sequenceType}_" +
+            frameIndex.toString().padStart(3, '0')
     }
 
     fun walkFrameSpriteName(presentationKey: String, frameIndex: Int): String {

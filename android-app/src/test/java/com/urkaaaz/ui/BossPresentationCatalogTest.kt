@@ -3,6 +3,7 @@ package com.urkaaaz.ui
 import com.urkaaaz.contracts.BossAttackAnimationTiming
 import com.urkaaaz.contracts.BossPhase
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertThrows
 import org.junit.Test
 
@@ -21,6 +22,7 @@ class BossPresentationCatalogTest {
         keys.forEach { key ->
             val presentation = BossPresentationCatalog.definition(key)
             assertEquals(null, presentation.idleAnimation)
+            assertNull(presentation.campaignMarkerIdleAnimation)
             assertEquals(
                 "anim_boss_${key}_idle_000",
                 presentation.spriteFor(BossPhase.MARCHING),
@@ -51,6 +53,39 @@ class BossPresentationCatalogTest {
         assertEquals(
             "anim_boss_boulderbloom_walk_031",
             BossPresentationCatalog.walkFrameSpriteName("boulderbloom", 31),
+        )
+    }
+
+    @Test
+    fun campaignMarkerIdlesDoNotChangeBattlefieldAnimationStates() {
+        val boulderbloom = BossPresentationCatalog.definition("boulderbloom")
+        val boulderbloomIdle = requireNotNull(boulderbloom.campaignMarkerIdleAnimation)
+        val oak = BossPresentationCatalog.definition("ancient_war_oak")
+        val oakCampaignIdle = requireNotNull(oak.campaignMarkerIdleAnimation)
+
+        assertNull(boulderbloom.idleAnimation)
+        assertEquals("campaign_idle", boulderbloomIdle.sequenceType)
+        assertEquals(32, boulderbloomIdle.frameCount)
+        assertEquals(4_000L, boulderbloomIdle.durationMilliseconds)
+        assertEquals(480, boulderbloomIdle.frameWidth)
+        assertEquals(480, boulderbloomIdle.frameHeight)
+        assertEquals(0, boulderbloomIdle.frameIndex(0L))
+        assertEquals(31, boulderbloomIdle.frameIndex(3_999L))
+        assertEquals(0, boulderbloomIdle.frameIndex(4_000L))
+        assertEquals(
+            "anim_boss_boulderbloom_campaign_idle_000",
+            BossPresentationCatalog.campaignMarkerIdleFrameSpriteName("boulderbloom", 0),
+        )
+        assertEquals(
+            "anim_boss_boulderbloom_campaign_idle_031",
+            BossPresentationCatalog.campaignMarkerIdleFrameSpriteName("boulderbloom", 31),
+        )
+
+        assertEquals("idle", oakCampaignIdle.sequenceType)
+        assertEquals(oak.idleAnimation?.frameCount, oakCampaignIdle.frameCount)
+        assertEquals(
+            "anim_boss_ancient_war_oak_idle_000",
+            BossPresentationCatalog.campaignMarkerIdleFrameSpriteName("ancient_war_oak", 0),
         )
     }
 
@@ -180,6 +215,13 @@ class BossPresentationCatalogTest {
     fun idleFrameNameRejectsIndicesOutsideTheRegisteredSequence() {
         assertThrows(IllegalArgumentException::class.java) {
             BossPresentationCatalog.idleFrameSpriteName("ancient_war_oak", 75)
+        }
+    }
+
+    @Test
+    fun campaignMarkerIdleFrameNameRejectsIndicesOutsideTheRegisteredSequence() {
+        assertThrows(IllegalArgumentException::class.java) {
+            BossPresentationCatalog.campaignMarkerIdleFrameSpriteName("boulderbloom", 32)
         }
     }
 

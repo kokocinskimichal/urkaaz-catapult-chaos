@@ -350,13 +350,12 @@ konfiguracji i lokalizacji.
    nad przyciskiem startu. Screenshot jest referencją stylu i kompozycji, nie
    źródłem nazw, balansu, cen ani stanów profilu.
 2. **[Wdrożone częściowo] Złożyć ekran z istniejących zasobów Urkaaaz.**
-   Ekran używa istniejącego tła menu, paneli HUD oraz ikon jednostek i
-   amunicji. Pozostaje dopasowanie tła/paneli do konkretnego biomu i kontrola
-   wizualna na urządzeniu. Docelowe elementy to tło biomu poziomu,
-   `dashboard_hud_top_panel.png`, `dashboard_hud_portrait_frame.png`,
-   `dashboard_back_button.png` i `bg_hud_panel.xml`, o ile kontrola wizualna
-   potwierdzi dopasowanie. Nie generować ponownie tła, przycisku powrotu,
-   ramek portretów ani ilustracji jednostek/amunicji, które już istnieją.
+   Ekran używa istniejącego tła, paneli HUD oraz ikon jednostek i amunicji.
+   Pozostaje dopasowanie tła/paneli do konkretnego biomu i kontrola wizualna
+   na urządzeniu. Dawne Dashboard assets `dashboard_background.png`,
+   `dashboard_hud_top_panel.png` i `dashboard_back_button.png` zostały usunięte;
+   nie używać ich jako zależności Loadoutu. Nie generować ponownie aktywnych
+   teł, przycisku powrotu, ramek portretów ani ilustracji jednostek/amunicji.
 3. **[Wdrożone] Dodać interaktywne selektory do istniejącego ekranu.**
    Wiersze kart
    jednostek, slotów amunicji i zaklęć wywołują istniejące
@@ -418,8 +417,8 @@ jest ukrytym warunkiem poprawności lokalnych selektorów.
 
 | Element ze screenshotu | Stan w Urkaaaz / decyzja | Użycie w Loadout |
 |---|---|---|
-| Pejzaż w tle | Są `background_*.png` dla biomów oraz `dashboard_background.png`; nie generować drugiego pejzażu. | Dobierać istniejące tło do biomu poziomu; położyć ciemny scrim, żeby karty miały czytelny kontrast. |
-| Drewniano-metalowy nagłówek i przycisk powrotu | Są `dashboard_hud_top_panel.png` i `dashboard_back_button.png`. | Użyć na pasku tytułu/nawigacji, zachowując responsywną geometrię i natywny tekst. |
+| Pejzaż w tle | Są `background_*.png` dla biomów; stare `dashboard_background.png` usunięto. | Dobierać istniejące tło do biomu poziomu; położyć ciemny scrim, żeby karty miały czytelny kontrast. |
+| Drewniano-metalowy nagłówek i przycisk powrotu | Legacy Dashboard assety `dashboard_hud_top_panel.png` i `dashboard_back_button.png` usunięto. | Użyć aktualnych assetów Loadoutu: `loadout_header_frame.png` i `loadout_start_match_button_xs_short`; zachować responsywną geometrię i natywny tekst. |
 | Ramy portretów i panele sekcji | Są `dashboard_hud_portrait_frame.png`, `bg_hud_panel.xml` i `bg_menu_soft_focus.xml`. | Wykorzystać jako wspólny język ramek, powierzchni i przyciemnienia; stany wyboru zrobić przez Android drawable, tint i obramowanie. |
 | Karty jednostek | Są ikony `defender_icon.png`, `sapper_icon.png`, `demolisher_icon.png`, `goblin_raging_boar_icon.png`, `goblin_slingmaster_icon.png` oraz istniejące sprite'y jednostek. | Wygenerować pięć osobnych ilustracji pełnego kafelka zgodnie z `loadout-unit-card-art.agp`, zachowując ikony jako referencje tożsamości. Nie zmieniać sprite'ów bitewnych ani animacji. |
 | Karty amunicji | Są `ammo_icon_siege_bomb.png`, `ammo_icon_powder_barrel.png`, `fire_rain_icon.png`, `plague_cauldron_icon.png` oraz `anim_ammunition_rock_flight_000.png`. | Mapować do `SIEGE_BOMB`, `POWDER_BARREL`, `FIRE_RAIN`, `PLAGUE_CAULDRON` i `ROCK`; `ROCK` zawsze w slocie 1. Nie generować osobnej grafiki ROCK. |

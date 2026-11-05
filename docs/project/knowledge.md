@@ -294,6 +294,24 @@ layers a transparent campaign frame, live chapter/progress UI, fortress/boss
 artwork, state-specific level plaques, completed/locked badges, and a shared
 available-level glow. Chapters 2–10 do not yet have map artwork and use the
 explicit chapter level-list fallback.
+Chapter 1's approved `campaign_chapter_01_green_frontier_map` image is
+1670x942, with ten empty fortress sites on one continuous route and highlighted
+boss sites at levels 5 and 10. Its source/runtime copies match. Existing
+normalized marker anchors were updated in the shared layout for this artwork;
+the user can continue repositioning fortresses and boss markers in Studio.
+Boss markers resolve a level's encounter profile through
+`CampaignLevelDefinition.bossProfileIdForLevel` and the balance profile's
+`presentationKey`. `CampaignMapView` uses the matching boss sprite and optional
+campaign-marker idle while preserving the existing plaque, status, selection,
+and accessibility behavior; landmarks without a boss profile retain the
+generic boss marker. Boss landmark art now renders at 72 dp, 150% of its former
+48 dp size; fortress art and live level/status overlays are unchanged.
+The Chapter 1 and Chapter 2 selector tabs use separate transparent icon assets
+from `assets_src/campaign/chapter-icons/`, displayed above their live chapter
+number and status text. `CampaignMapPresentationCatalog` maps only those two
+chapter IDs; later chapters keep their existing text-only tabs until their
+icons are prepared. The original 2:1 icon sheet is preserved beside the
+normalized 512x512 source icons.
 
 The Studio Campaign tab edits the same chapter and layout JSON through
 `/api/campaign/*`; it never modifies `MapDefinition` or Android resource IDs.
@@ -312,9 +330,10 @@ The Dashboard's confirmed **RESET** action uses
 in one update. This resets campaign progress, profile gold/unlocks/stocks,
 saved loadouts, and reward receipts; storage failures remain explicit and do
 not produce a success message. The screen uses the approved background at
-`android-app/src/main/res/drawable-nodpi/dashboard_background_approved.png`,
-preserving the previous `dashboard_background.png`. Its source and accepted
-screen reference are under `assets_src/dashboard/`. The title uses
+`android-app/src/main/res/drawable-nodpi/dashboard_background_approved.png`;
+the unused legacy Dashboard background and button/logo drawables were removed.
+Its source and accepted screen reference are under `assets_src/dashboard/`.
+The title uses
 `loadout_header_frame.png`; the profile uses
 `match_hud_universal_frame.9.png` over an opaque rounded dark fill because the
 NinePatch center is transparent. The avatar uses
@@ -1178,8 +1197,12 @@ boss idles have a static loader; multi-frame boss idles are runtime-loaded only
 when their target is listed in `runtimeBossIdleTargets`. Other boss states are
 runtime-loaded only when their exact sequence IDs appear in
 `runtimeBossSequences`, which lists the Oak's `attack_left`, `attack_right`,
-and `death` sequences. The left attack uses the anatomical right branch-arm,
-visible on screen-left; both attacks share the 60-frame 512×384 contract.
+and `death` sequences plus Boulderbloom's campaign-only `campaign_idle`.
+Campaign marker idles are stored separately from match idles: Oak reuses its
+existing idle, while Boulderbloom's 32 480×480 frames are decoded on demand
+through a bounded cache and never enter the battlefield renderer. The left
+attack uses the anatomical right branch-arm, visible on screen-left; both
+attacks share the 60-frame 512×384 contract.
 
 The Balance tab edits the single schema 6 source
 `game-domain/src/main/resources/balance/game-balance.json`, which owns boss,

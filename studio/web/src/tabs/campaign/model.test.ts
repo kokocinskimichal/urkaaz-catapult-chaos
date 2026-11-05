@@ -106,7 +106,7 @@ describe("campaign map editor model", () => {
       [0.565, 0.750],
       [0.485, 0.475],
     ];
-    const viewport = coverMapBounds(914, 411, 1608, 905);
+    const viewport = coverMapBounds(914, 411, 1670, 942);
     const bounds = anchors.map(([x, y], index) =>
       markerVisualBounds(
         index + 1,

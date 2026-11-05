@@ -1,7 +1,8 @@
-STATUS: The latest user-provided image is already an atlas-style map and is
-the current Chapter 1 map candidate. Do not use this prompt to replace it.
-Keep this generation prompt only as a fallback if a new or revised map is
-explicitly requested.
+STATUS: SUPERSEDED. The approved Chapter 1 map has been imported to
+`assets_src/campaign/chapter-maps/campaign_chapter_01_green_frontier_map.png`
+and Android resources. Keep this file only as a historical prompt; do not use
+it to generate the current map. Use the general `/campaignMapAgp` skill for
+future chapter maps.
 
 Create one campaign-map background for Chapter 1 of Urkaaaz, "The Green
 Frontier". Use the attached Green Frontier biome background as the

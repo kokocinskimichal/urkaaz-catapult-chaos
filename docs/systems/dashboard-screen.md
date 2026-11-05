@@ -207,18 +207,16 @@ Najpierw użyć istniejących zasobów Androida bez przerysowywania:
 
 Wszystkie powyższe istniejące assety drawable znajdują się w
 `android-app/src/main/res/drawable-nodpi/`, z wyjątkiem selektorów XML
-przycisków w `res/drawable/`. Poprzedni `dashboard_background.png` pozostaje
-bez zmian; zaakceptowany obraz tła jest używany przez nowy
-`dashboard_background_approved.png`. Screenshot jest wyłącznie referencją
-koncepcyjną, nie runtime assetem.
+przycisków w `res/drawable/`. Zaakceptowany obraz tła
+`dashboard_background_approved.png` jest jedynym runtime tłem Dashboardu;
+źródło i screenshot referencyjny pozostają w `assets_src/dashboard/`.
 
-Assety `dashboard_hud_top_panel.png`, `dashboard_back_button.png`,
-`dashboard_campaign_button.png`,
+Nieużywane, stare kopie runtime usunięto z Android resources:
+`dashboard_background.png`, `dashboard_hud_top_panel.png`,
+`dashboard_back_button.png`, `dashboard_campaign_button.png`,
 `dashboard_shop_button.png`, `dashboard_ad_reward_button.png` i
-`logo_main_menu.png` nie są używane w nowym układzie, ponieważ ich tekst,
-ilustracje lub kompozycja nie odpowiadają zaakceptowanemu screenowi. Zamiast
-nich ekrany składają etykiety na wspólnych tłach przycisków; `CAMPAIGN` używa
-złotego tła, a `SHOP` i `AD REWARD` ciemnych teł.
+`logo_main_menu.png`. Zamiast starych przycisków ekran składa etykiety na
+wspólnych tłach; `CAMPAIGN` używa złotego tła, a `SHOP` i `AD REWARD` ciemnych.
 
 Wspólne helpery:
 

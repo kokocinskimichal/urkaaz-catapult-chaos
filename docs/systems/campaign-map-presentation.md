@@ -104,6 +104,16 @@ The selector must make it easy to understand:
   markers have no status badge.
 - A two-icon sprite-sheet prompt for the completed check and locked padlock is
   available at `docs/systems/campaign-map-level-status-icons.agp`.
+- The current Chapter 1 and Chapter 2 selector icon prompt is
+  `docs/systems/campaign-chapter-icons.agp`. It uses one attached map
+  background per icon as a theme reference only; chapter numbers and locked
+  state remain live UI.
+- The approved icons are separate transparent 512 x 512 assets at
+  `assets_src/campaign/chapter-icons/campaign_chapter_01_icon.png` and
+  `assets_src/campaign/chapter-icons/campaign_chapter_02_icon.png`, with the
+  original 2:1 sheet preserved beside them. Only the Chapter 1 and Chapter 2
+  selector tabs use these icons; remaining chapters retain their existing
+  text-only tabs until their artwork is prepared.
 - `CampaignProgress` already persists `highestUnlockedLevel` and
   `completedLevels`.
 - `CampaignChapterRegistry` reads canonical chapter metadata from
@@ -168,7 +178,9 @@ Studio CampaignTab (studio-web)
 
 `game-campaign` must not contain Android resource IDs or `Context` references.
 The Android presentation catalog resolves a stable background asset key to
-its drawable and resolves landmark kind to a separate marker asset.
+its drawable. Fortress landmarks use their shared marker asset; boss landmarks
+with a campaign level profile use that profile's presentation key to resolve a
+boss sprite and, when available, a campaign-marker idle animation.
 Normalized marker positions remain in the shared campaign layout resource,
 not in the Android catalog. This is campaign presentation data, not a second
 terrain or gameplay `MapDefinition` catalog.
@@ -187,10 +199,13 @@ The Android map renders each landmark as an independent transparent marker
 asset positioned at its level anchor. Marker kind and progress status are
 separate inputs: the asset catalog chooses fortress versus boss artwork, while
 the UI overlays the same completed/current/locked treatment for either kind.
-The catalog should support an optional per-level asset override so a specific
-fortress or future boss illustration can be replaced without editing the
-background, coordinates, progress logic, or other level markers. A missing
-boss marker must never silently show a fortress.
+For boss landmarks, `CampaignLevelDefinition` supplies the encounter profile
+ID and the balance profile supplies its presentation key. Android resolves the
+static sprite and optional `campaignMarkerIdleAnimation` through
+`BossPresentationCatalog`; generated campaign-only idles do not alter the
+battlefield renderer. Boss landmarks without a profile or campaign sprite keep
+the generic boss marker. A missing boss marker must never silently show a
+fortress.
 
 ## Chapter definition and first-pass biome assignment
 
@@ -311,10 +326,10 @@ level's anchor, overlays its live level number, and applies the same status
 treatment independently. A completed level uses a distinct completion mark;
 the available level uses full image contrast; locked levels use a subdued
 treatment at 72% opacity and a lock indicator. Do not surround landmark art
-with circular frames or status rings. Fortress artwork renders at 72 dp (150%
-of its former 48 dp size); boss artwork remains at 48 dp. The available
-landmark receives a soft amber radial glow behind its transparent art. The
-next chapter preview clearly signals that its landmarks are not yet
+with circular frames or status rings. Fortress artwork renders at 72 dp;
+boss artwork renders at 72 dp, scaled to 150% of its former 48 dp size. The
+available landmark receives a soft amber radial glow behind its transparent
+art. The next chapter preview clearly signals that its landmarks are not yet
 selectable. Marker labels and status must remain live UI content rather than
 being baked into either asset.
 
@@ -340,33 +355,36 @@ Map images are campaign presentation assets and do not enter `MapDefinition`,
 `MapDefinitionRepository`, or the Studio Maps editor. They do not define
 world coordinates, collision, placement, or match terrain.
 
-### Chapter 1 map candidate and draft anchors
+### Chapter 1 approved map and anchors
 
-The latest user-provided image is already a top-down atlas map, not merely a
-biome reference. It is the current Chapter 1 map candidate and is stored at
-`assets_src/campaign/chapter-maps/campaign_chapter_01_green_frontier_map.png`.
-Its source size is 1608 × 905 pixels, close to 16:9. Preserve the image and its
-aspect ratio; do not generate a replacement map unless requested.
+The approved Chapter 1 background is stored at
+`assets_src/campaign/chapter-maps/campaign_chapter_01_green_frontier_map.png`
+and imported unchanged into
+`android-app/src/main/res/drawable-nodpi/campaign_chapter_01_green_frontier_map.png`.
+Its source dimensions are 1670 × 942 pixels. It has ten empty fortress-site
+placeholders along one continuous, non-branching route; the larger sites at
+levels 5 and 10 identify the boss encounters. No marker, number, status, or hit
+target is baked into the image.
 
-The following normalized coordinates are the current marker centers in
-`game-campaign/src/main/resources/campaign-map-layouts/green_frontier.json`.
-The points follow a broad route around the landscape and return to the central
-basin for the final boss. They are separate from the map artwork; visual
-review at supported landscape sizes is still required before treating them as
-final.
+The current marker anchors in
+`game-campaign/src/main/resources/campaign-map-layouts/green_frontier.json`
+were updated in Studio for the approved background. The user can continue
+repositioning fortresses and boss markers there; artwork imports must not
+overwrite the saved coordinates. The table lists the current JSON values,
+rounded to six decimal places.
 
-| Level | Landmark | x | y | Visual area |
-|---:|---|---:|---:|---|
-| 1 | Fortress | 0.145 | 0.750 | Southwest meadow |
-| 2 | Fortress | 0.255 | 0.545 | Western river-side clearing |
-| 3 | Fortress | 0.365 | 0.365 | West-central upland |
-| 4 | Fortress | 0.485 | 0.260 | North-central plateau |
-| 5 | Boss | 0.645 | 0.330 | Upper-east plateau |
-| 6 | Fortress | 0.845 | 0.245 | Northeast clearing |
-| 7 | Fortress | 0.855 | 0.455 | East-central grassland |
-| 8 | Fortress | 0.755 | 0.675 | Southeast plateau |
-| 9 | Fortress | 0.565 | 0.750 | South-central clearing |
-| 10 | Boss | 0.485 | 0.475 | Central basin |
+| Level | Landmark | x | y |
+|---:|---|---:|---:|
+| 1 | Fortress | 0.905967 | 0.286715 |
+| 2 | Fortress | 0.715496 | 0.351271 |
+| 3 | Fortress | 0.471544 | 0.369729 |
+| 4 | Fortress | 0.227157 | 0.399566 |
+| 5 | Boss | 0.484655 | 0.500928 |
+| 6 | Fortress | 0.865628 | 0.545625 |
+| 7 | Fortress | 0.846475 | 0.698885 |
+| 8 | Fortress | 0.641559 | 0.753433 |
+| 9 | Fortress | 0.389665 | 0.764836 |
+| 10 | Boss | 0.135624 | 0.723839 |
 
 These are presentation coordinates only. Levels 5 and 10 use boss markers;
 the other eight use fortress markers. No marker, number, status, or hit target
@@ -538,7 +556,8 @@ Remaining artwork and authoring deliverables:
   The PNG was previewed at its 72 dp display size and replaces the temporary
   vector. The approved boss marker is at
   `assets_src/campaign/map-markers/campaign_map_marker_boss.png` and
-  `android-app/src/main/res/drawable-nodpi/campaign_map_marker_boss.png`.
+  `android-app/src/main/res/drawable-nodpi/campaign_map_marker_boss.png`; it
+  remains the fallback for boss landmarks without a mapped boss profile.
 - Chapter map AGPs 02–10 remain outstanding. The fortress and boss marker
   prompts are `docs/systems/campaign-map-fortress-marker.agp` and
   `docs/systems/campaign-map-boss-marker.agp`. The level-plaque sprite sheet
@@ -612,16 +631,16 @@ simulation are expected to remain unchanged.
   Chapters 6–10 are temporary assignments; their future new biomes require
   their own biome implementation and art approval before the map art or level
   theme is changed.
-- Chapter 1 uses the supplied map candidate and the implemented anchor
-  coordinates above; verify marker placement and spacing in a visual preview
-  at supported landscape sizes.
-- `docs/systems/campaign-chapter-map-01.agp` is retained only as a fallback
-  prompt if a new or revised Chapter 1 map is explicitly requested. The other
-  nine chapter prompts and map images remain future asset work.
+- Chapter 1 uses the approved imported map and the current Studio-authored
+  anchors listed above. Assistants must not change fortress or boss anchors
+  without an explicit request.
+- `docs/systems/campaign-chapter-map-01.agp` is a superseded historical prompt.
+  Use the general `/campaignMapAgp` skill for future chapter-map prompts. The
+  other nine chapter map images remain future asset work.
 - The fortress marker uses the approved 512 × 512 transparent blue-banner
   asset and has been previewed at device size. The boss marker uses the
   approved 512 × 512 transparent horned-skull shrine and has been previewed
-  at 48 dp. Their generation prompts are
+  at 72 dp, the current boss-landmark display size. Their generation prompts are
   `docs/systems/campaign-map-fortress-marker.agp` and
   `docs/systems/campaign-map-boss-marker.agp`. Changing either image must not
   require map regeneration.

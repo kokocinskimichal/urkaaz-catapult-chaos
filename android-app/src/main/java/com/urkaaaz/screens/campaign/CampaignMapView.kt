@@ -9,6 +9,7 @@ import android.widget.FrameLayout
 import android.widget.ImageView
 import android.widget.TextView
 import com.urkaaaz.android.R
+import com.urkaaaz.ui.BossPresentationCatalog
 import kotlin.math.roundToInt
 
 class CampaignMapView(
@@ -132,22 +133,10 @@ class CampaignMapView(
                 ),
             )
 
-            addView(ImageView(context).apply {
-                importantForAccessibility = View.IMPORTANT_FOR_ACCESSIBILITY_NO
-                scaleType = ImageView.ScaleType.FIT_CENTER
-                alpha = when (marker.status) {
-                    CampaignLevelMarkerStatus.COMPLETED -> 0.78f
-                    CampaignLevelMarkerStatus.AVAILABLE -> 1f
-                    CampaignLevelMarkerStatus.LOCKED -> 0.72f
-                }
-                setImageResource(
-                    if (marker.landmarkKind == com.urkaaaz.campaign.CampaignMapLandmarkKind.BOSS) {
-                        R.drawable.campaign_map_marker_boss
-                    } else {
-                        R.drawable.campaign_map_marker_fortress
-                    },
-                )
-            }, LayoutParams(iconSize, iconSize, Gravity.TOP or Gravity.CENTER_HORIZONTAL))
+            addView(
+                markerIcon(marker),
+                LayoutParams(iconSize, iconSize, Gravity.TOP or Gravity.CENTER_HORIZONTAL),
+            )
 
             val plaqueWidth = dp(56)
             val plaqueHeight = dp(22)
@@ -210,6 +199,44 @@ class CampaignMapView(
             }
         }
 
+    private fun markerIcon(marker: CampaignLevelMarkerState): ImageView {
+        val bossPresentation = marker.bossPresentationKey?.let {
+            BossPresentationCatalog.definition(it)
+        }
+        val animation = bossPresentation?.campaignMarkerIdleAnimation
+        val icon = if (bossPresentation != null && animation != null) {
+            CampaignBossMarkerImageView(
+                context = context,
+                presentationKey = requireNotNull(marker.bossPresentationKey),
+                animation = animation,
+                fallbackSprite = bossPresentation.staticSprite,
+            )
+        } else {
+            ImageView(context).apply {
+                scaleType = ImageView.ScaleType.FIT_CENTER
+                val spriteResource = bossPresentation?.let {
+                    CampaignBossMarkerFrameStore.requireDrawableResource(
+                        context,
+                        it.staticSprite,
+                    )
+                } ?: when (marker.landmarkKind) {
+                    com.urkaaaz.campaign.CampaignMapLandmarkKind.BOSS ->
+                        R.drawable.campaign_map_marker_boss
+                    com.urkaaaz.campaign.CampaignMapLandmarkKind.FORTRESS ->
+                        R.drawable.campaign_map_marker_fortress
+                }
+                setImageResource(spriteResource)
+            }
+        }
+        icon.importantForAccessibility = View.IMPORTANT_FOR_ACCESSIBILITY_NO
+        icon.alpha = when (marker.status) {
+            CampaignLevelMarkerStatus.COMPLETED -> 0.78f
+            CampaignLevelMarkerStatus.AVAILABLE -> 1f
+            CampaignLevelMarkerStatus.LOCKED -> 0.72f
+        }
+        return icon
+    }
+
     private fun plaqueDrawable(status: CampaignLevelMarkerStatus): Int =
         when (status) {
             CampaignLevelMarkerStatus.COMPLETED -> R.drawable.campaign_level_plate_completed
@@ -218,17 +245,25 @@ class CampaignMapView(
         }
 
     private fun markerIconSize(marker: CampaignLevelMarkerState): Int =
-        dp(
-            if (marker.landmarkKind == com.urkaaaz.campaign.CampaignMapLandmarkKind.BOSS) {
-                48
-            } else {
-                72
-            },
-        )
+        dp(CampaignMapMarkerDimensions.iconSizeDp(marker.landmarkKind))
 
     private fun markerSize(marker: CampaignLevelMarkerState): Int =
         markerIconSize(marker) + dp(28)
 
     private fun dp(value: Int): Int =
         (value * context.resources.displayMetrics.density).roundToInt()
+}
+
+internal object CampaignMapMarkerDimensions {
+    const val BOSS_BASE_ICON_SIZE_DP = 48
+    const val BOSS_ICON_SCALE_PERCENT = 150
+    const val BOSS_ICON_SIZE_DP =
+        BOSS_BASE_ICON_SIZE_DP * BOSS_ICON_SCALE_PERCENT / 100
+    const val FORTRESS_ICON_SIZE_DP = 72
+
+    fun iconSizeDp(landmarkKind: com.urkaaaz.campaign.CampaignMapLandmarkKind): Int =
+        when (landmarkKind) {
+            com.urkaaaz.campaign.CampaignMapLandmarkKind.BOSS -> BOSS_ICON_SIZE_DP
+            com.urkaaaz.campaign.CampaignMapLandmarkKind.FORTRESS -> FORTRESS_ICON_SIZE_DP
+        }
 }

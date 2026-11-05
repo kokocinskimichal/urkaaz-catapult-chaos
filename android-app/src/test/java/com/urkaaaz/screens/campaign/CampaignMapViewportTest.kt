@@ -1,6 +1,7 @@
 package com.urkaaaz.screens.campaign
 
 import com.urkaaaz.campaign.CampaignMapAnchor
+import com.urkaaaz.campaign.CampaignMapLandmarkKind
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -33,22 +34,44 @@ class CampaignMapViewportTest {
         val bounds = CampaignMapViewport.coverBounds(
             viewportWidth = 2400,
             viewportHeight = 1080,
-            imageWidth = 1608,
-            imageHeight = 905,
+            imageWidth = 1670,
+            imageHeight = 942,
         )
 
-        val expectedHeight = 2400f * 905f / 1608f
+        val expectedHeight = 2400f * 942f / 1670f
         assertEquals(0f, bounds.left, 0.001f)
         assertEquals(0f - (expectedHeight - 1080f) / 2f, bounds.top, 0.001f)
         assertEquals(2400f, bounds.width, 0.001f)
         assertEquals(expectedHeight, bounds.height, 0.001f)
 
+        val levelOneAnchor = CampaignMapAnchor(
+            level = 1,
+            x = 0.145f,
+            y = 0.75f,
+        )
         val levelOne = CampaignMapViewport.anchorCenter(
             bounds,
-            CampaignMapAnchor(level = 1, x = 0.145f, y = 0.75f),
+            levelOneAnchor,
         )
-        assertEquals(348f, levelOne.x, 0.001f)
-        assertEquals(bounds.top + bounds.height * 0.75f, levelOne.y, 0.001f)
+        assertEquals(bounds.width * levelOneAnchor.x, levelOne.x, 0.001f)
+        assertEquals(bounds.top + bounds.height * levelOneAnchor.y, levelOne.y, 0.001f)
         assertTrue(levelOne.y in 0f..1080f)
+    }
+
+    @Test
+    fun bossMapArtIs150PercentOfItsFormerSizeWithoutChangingFortressArt() {
+        assertEquals(
+            CampaignMapMarkerDimensions.BOSS_BASE_ICON_SIZE_DP *
+                CampaignMapMarkerDimensions.BOSS_ICON_SCALE_PERCENT / 100,
+            CampaignMapMarkerDimensions.iconSizeDp(CampaignMapLandmarkKind.BOSS),
+        )
+        assertEquals(
+            72,
+            CampaignMapMarkerDimensions.iconSizeDp(CampaignMapLandmarkKind.BOSS),
+        )
+        assertEquals(
+            72,
+            CampaignMapMarkerDimensions.iconSizeDp(CampaignMapLandmarkKind.FORTRESS),
+        )
     }
 }

@@ -20,6 +20,7 @@ const config: AnimationConfig = parseAnimationConfig({
   teamTextureTargets: ["defender", "demolisher", "sapper"],
   runtimeBossIdleTargets: ["ancient_war_oak"],
   runtimeBossSequences: [
+    "anim_boss_boulderbloom_campaign_idle",
     "anim_boss_boulderbloom_walk",
     "anim_boss_ancient_war_oak_attack_left",
     "anim_boss_ancient_war_oak_attack_right",
@@ -151,6 +152,12 @@ describe("buildAnimationCatalog", () => {
     expect(sequenceOf("anim_boss_boulderbloom_walk", 32)).toMatchObject({
       target: "boulderbloom",
       type: "walk",
+      frameIndices: Array.from({ length: 32 }, (_, index) => index),
+      hasRuntimeLoader: true,
+    });
+    expect(sequenceOf("anim_boss_boulderbloom_campaign_idle", 32)).toMatchObject({
+      target: "boulderbloom",
+      type: "campaign_idle",
       frameIndices: Array.from({ length: 32 }, (_, index) => index),
       hasRuntimeLoader: true,
     });
@@ -344,7 +351,16 @@ describe("repository animation catalog", () => {
         targetConfigured: true,
         hasRuntimeLoader: true,
       });
-    expect(catalog.sequences.filter(sequence => sequence.category === "boss")).toHaveLength(13);
+    expect(catalog.sequences.find(sequence => sequence.id === "anim_boss_boulderbloom_campaign_idle"))
+      .toMatchObject({
+        category: "boss",
+        target: "boulderbloom",
+        type: "campaign_idle",
+        frameIndices: Array.from({ length: 32 }, (_, index) => index),
+        targetConfigured: true,
+        hasRuntimeLoader: true,
+      });
+    expect(catalog.sequences.filter(sequence => sequence.category === "boss")).toHaveLength(14);
     expect(catalog.sequences.filter(sequence => sequence.category === "boss"))
       .toEqual(expect.arrayContaining([
         expect.objectContaining({

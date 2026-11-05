@@ -41,9 +41,10 @@ modułu Gradle ani systemu gameplayowego.
    oraz `assets_src/dashboard/dashboard_background_approved.png`. Jeśli któregoś
    brakuje, poproś o odtworzenie źródła zamiast odtwarzać je z pamięci albo
    generować zastępczą grafikę.
-4. Pozostaw poprzedni
-   `android-app/src/main/res/drawable-nodpi/dashboard_background.png`
-   nienaruszony. Użyj dedykowanego
+4. Usuń nieużywany runtime asset poprzedniego tła
+   `android-app/src/main/res/drawable-nodpi/dashboard_background.png`.
+   Nie usuwaj źródła zaakceptowanego tła ani screenshotu referencyjnego.
+   Użyj dedykowanego
    `android-app/src/main/res/drawable-nodpi/dashboard_background_approved.png`.
 
 ### Właściciel i ograniczenia architektury
@@ -76,17 +77,16 @@ modułu Gradle ani systemu gameplayowego.
   Nałóż ramkę profilu na nieprzezroczyste, ciemne, zaokrąglone wypełnienie,
   aby środek NinePatch nie odsłaniał tła sceny.
   `dashboard_hud_portrait_frame.png` oprawia avatar. Zbuduj napis `URKAAAZ`
-  jako żywy tekst w tytułowej ramce; nie używaj kolorowego
-  `logo_main_menu.png`, którego kompozycja nie odpowiada zaakceptowanemu
-  screenowi.
+  jako żywy tekst w tytułowej ramce; stary `logo_main_menu.png` został usunięty
+  i nie należy go przywracać.
 - Użyj `loadout_start_match_button` jako tła głównego przycisku `CAMPAIGN`
   oraz `loadout_start_match_button_xs_short` dla `BACK`; etykiety renderuj jako
-  żywy tekst, bez assetu `dashboard_campaign_button.png` i
-  `dashboard_back_button.png`.
+  żywy tekst. Stare assety `dashboard_campaign_button.png` i
+  `dashboard_back_button.png` zostały usunięte.
 - Zbuduj `SHOP` i `AD REWARD` na wspólnym `ui_button_dark_m` z żywymi etykietami.
   Shop używa istniejącego `icon_orcoins.png`; Ad Reward używa małej wektorowej
-  ikony clapperboardu. Nie używaj ilustracyjnych
-  `dashboard_shop_button.png` ani `dashboard_ad_reward_button.png`.
+  ikony clapperboardu. Stare `dashboard_shop_button.png` i
+  `dashboard_ad_reward_button.png` zostały usunięte.
 - Pokaż `TEST MODE` jako dodatkowy przycisk na wspólnym ciemnym tle, z żywą
   etykietą i bez nowego assetu.
 - Użyj istniejących ikon życia i złota; status regeneracji pokaż z ikoną

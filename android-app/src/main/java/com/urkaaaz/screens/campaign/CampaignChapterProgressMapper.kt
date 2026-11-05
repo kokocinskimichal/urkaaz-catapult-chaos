@@ -1,5 +1,6 @@
 package com.urkaaaz.screens.campaign
 
+import com.urkaaaz.application.campaign.BundledCampaignBalance
 import com.urkaaaz.application.campaign.CampaignProgress
 import com.urkaaaz.campaign.CampaignLevelDefinition
 import com.urkaaaz.campaign.CampaignChapterDefinition
@@ -22,6 +23,7 @@ data class CampaignLevelMarkerState(
     val level: Int,
     val landmarkKind: CampaignMapLandmarkKind,
     val status: CampaignLevelMarkerStatus,
+    val bossPresentationKey: String? = null,
 )
 
 data class CampaignChapterPageState(
@@ -37,6 +39,8 @@ data class CampaignMapProgressionState(
 
 class CampaignChapterProgressMapper(
     private val registry: CampaignChapterRegistry = CampaignChapterRegistry.default(),
+    private val bossPresentationKeyForLevel: (Int) -> String? =
+        ::bundledBossPresentationKeyForLevel,
 ) {
     fun map(progress: CampaignProgress): CampaignMapProgressionState {
         val playableFrontier = progress.highestUnlockedLevel.coerceAtMost(
@@ -58,6 +62,7 @@ class CampaignChapterProgressMapper(
                 else -> return@mapIndexedNotNull null
             }
             val markers = (chapter.firstLevel..chapter.lastLevel).map { level ->
+                val landmarkKind = chapter.landmarkKindForLevel(level)
                 val markerStatus = when {
                     level > CampaignLevelDefinition.LAST_COMPLETE_CAMPAIGN_LEVEL ->
                         CampaignLevelMarkerStatus.LOCKED
@@ -69,8 +74,13 @@ class CampaignChapterProgressMapper(
                 }
                 CampaignLevelMarkerState(
                     level = level,
-                    landmarkKind = chapter.landmarkKindForLevel(level),
+                    landmarkKind = landmarkKind,
                     status = markerStatus,
+                    bossPresentationKey = if (landmarkKind == CampaignMapLandmarkKind.BOSS) {
+                        bossPresentationKeyForLevel(level)
+                    } else {
+                        null
+                    },
                 )
             }
             CampaignChapterPageState(chapter, status, markers)
@@ -80,5 +90,11 @@ class CampaignChapterProgressMapper(
             pages = visibleChapters,
             selectedChapterId = currentChapterId,
         )
+    }
+
+    private companion object {
+        fun bundledBossPresentationKeyForLevel(level: Int): String? {
+            return BundledCampaignBalance.bossPresentationKeyForLevel(level)
+        }
     }
 }

@@ -4,6 +4,7 @@ import com.urkaaaz.application.campaign.CampaignProgress
 import com.urkaaaz.campaign.CampaignChapterRegistry
 import com.urkaaaz.campaign.CampaignMapLandmarkKind
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
@@ -48,6 +49,32 @@ class CampaignChapterProgressMapperTest {
         assertEquals(CampaignMapLandmarkKind.BOSS, chapter.markers[4].landmarkKind)
         assertEquals(CampaignLevelMarkerStatus.AVAILABLE, chapter.markers[5].status)
         assertEquals(CampaignMapLandmarkKind.BOSS, chapter.markers[9].landmarkKind)
+    }
+
+    @Test
+    fun bossMarkersResolveTheirCampaignPresentationFromTheBossProfile() {
+        val state = mapper.map(CampaignProgress.INITIAL)
+        val markers = state.pages.flatMap { it.markers }.associateBy { it.level }
+
+        assertNull(markers.getValue(1).bossPresentationKey)
+        assertEquals("ancient_war_oak", markers.getValue(5).bossPresentationKey)
+        assertEquals("boulderbloom", markers.getValue(10).bossPresentationKey)
+        assertEquals("frozen_troll", markers.getValue(15).bossPresentationKey)
+        assertEquals("old_yeti_sovereign", markers.getValue(20).bossPresentationKey)
+    }
+
+    @Test
+    fun bossLandmarksWithoutProfilesKeepTheGenericMarkerPresentation() {
+        val state = mapper.map(
+            CampaignProgress(
+                highestUnlockedLevel = 51,
+                completedLevels = (1..50).toSet(),
+            ),
+        )
+        val markers = state.pages.flatMap { it.markers }.associateBy { it.level }
+
+        assertNull(markers.getValue(55).bossPresentationKey)
+        assertNull(markers.getValue(60).bossPresentationKey)
     }
 
     @Test

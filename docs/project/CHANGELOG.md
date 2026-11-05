@@ -10,6 +10,8 @@
   replacement concept for Thorncrown.
 - Added Boulderbloom as the Chapter 1 Level 10 final boss, with static art and
   a looping walk animation; Thorncrown remains the Level 50 boss.
+- Imported the final approved 1670 × 942 Chapter 1 Green Frontier campaign map
+  with ten placeholder sites on one route; boss sites 5 and 10 are highlighted.
 
 ### Changed
 
@@ -30,6 +32,30 @@
   hurt their allied boss, which now attacks only BLUE units.
 - Fixed demo startup when an optional campaign-map asset is absent, allowing
   the intended `demo-map` fallback.
+
+## 2026-11-06
+
+### Added
+
+- Added a campaign-only 32-frame Boulderbloom idle; Chapter 1 boss markers now
+  use boss-specific presentation, with Ancient War Oak reusing its existing
+  idle without changing match rendering.
+- Added transparent Chapter 1 and Chapter 2 selector icons and a copy-ready
+  campaign chapter icon AGP.
+- Added the `/campaignMapAgp` skill for creating consistent campaign-map
+  generation prompts one chapter at a time.
+
+### Changed
+
+- Enlarged campaign boss artwork from 48 dp to 72 dp (150%) while keeping
+  fortress art and live level/status overlays unchanged.
+- Updated Chapter 1 normalized marker anchors in the shared layout for the
+  approved 1670 × 942 map artwork.
+
+### Removed
+
+- Removed unused legacy Dashboard background, button, HUD-panel, and logo
+  drawables that are not used by the approved Dashboard layout.
 
 ## 2026-11-03
 

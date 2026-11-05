@@ -30,6 +30,13 @@ sealed interface CampaignMapPresentationRead {
 }
 
 object CampaignMapPresentationCatalog {
+    fun chapterTabIconDrawable(chapterId: String): Int? =
+        when (chapterId) {
+            "green_frontier" -> R.drawable.campaign_chapter_01_icon
+            "broken_valley" -> R.drawable.campaign_chapter_02_icon
+            else -> null
+        }
+
     fun forLayout(layout: CampaignMapLayoutDefinition): CampaignMapPresentationRead {
         val backgroundDrawable = when (layout.backgroundAssetKey) {
             GREEN_FRONTIER_MAP_ASSET_KEY -> R.drawable.campaign_chapter_01_green_frontier_map

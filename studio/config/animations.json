@@ -8,6 +8,7 @@
   "teamTextureTargets": ["defender", "demolisher", "raging_boar", "sapper"],
   "runtimeBossIdleTargets": ["ancient_war_oak"],
   "runtimeBossSequences": [
+    "anim_boss_boulderbloom_campaign_idle",
     "anim_boss_boulderbloom_walk",
     "anim_boss_ancient_war_oak_attack_left",
     "anim_boss_ancient_war_oak_attack_right",

@@ -400,8 +400,8 @@ Wybrane przez użytkownika legacy artwork zostaje przeniesione do
 istniejącymi zasadami assetów. Profile encounterów nadal korzystają z tych
 samych neutralnych grafik; Ancient War Oak ma dodatkowo zaakceptowany,
 75-klatkowy idle, dwa kierunkowe ataki po 60 klatek i 60-klatkową animację
-śmierci wygenerowane w AnimGen. Pozostałe bossy zachowują statyczne grafiki;
-ich własne sekwencje śmierci pozostają przyszłą zawartością.
+śmierci wygenerowane w AnimGen. Pozostałe bossy zachowują statyczne grafiki w
+meczu; ich własne sekwencje śmierci pozostają przyszłą zawartością.
 
 Animacje są prezentacją-only i nie zmieniają kontraktów gameplayu. Ancient War
 Oak odtwarza zapętlony `idle` we wszystkich fazach; `BossPresentationCatalog`
@@ -412,6 +412,12 @@ używa hitboxa 432×576 world units (60% widocznej szerokości i 80% wysokości)
 i skali prezentacji 5/3; zmniejszenie hitboxa z 1440×2016 zachowuje dotychczasowy
 rozmiar widocznego sprite'a, a jednocześnie pozwala jednostkom podejść do
 korzeni. Pozostałe fazy bez własnej sekwencji nadal używają statycznego sprite'a.
+
+Mapa kampanii używa osobnego `campaignMarkerIdleAnimation`, niezależnego od
+stanów renderera meczu. Ancient War Oak ponownie wykorzystuje istniejące klatki
+`idle`, a Boulderbloom ma oddzielną 32-klatkową sekwencję `campaign_idle`;
+pozostałe bossy pokazują własny statyczny sprite do czasu zatwierdzenia ich
+kampanijnych idle.
 
 Oryginalne wyjście AnimGen (video i ZIP 75 klatek 1024×1024) znajduje się w
 `assets_src/animgen/bosses/ancient_war_oak/idle/`; runtime używa
