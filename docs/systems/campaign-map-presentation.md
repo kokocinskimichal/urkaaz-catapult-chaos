@@ -5,12 +5,13 @@
 **Partially implemented.** The campaign has a canonical ten-chapter registry,
 typed fortress/boss landmarks, chapter-based biome assignments, and a
 progression projection for current/completed/preview chapters. Chapter 1 uses
-the supplied map with interactive markers. Per the accepted rollout decision,
-chapters without map artwork retain the chapter-specific level-list
-presentation until their backgrounds are supplied; Chapters 2–10 do not yet
-have map images. Chapter metadata and map marker coordinates are stored as
-shared JSON resources in `game-campaign`; the Studio Campaign tab edits the
-same Chapter 1 layout that Android reads at runtime.
+the supplied map and Chapter 2 uses its supplied Broken Valley map, both with
+interactive markers. Per the accepted rollout decision, chapters without map
+artwork retain the chapter-specific level-list presentation until their
+backgrounds are supplied; Chapters 4–10 do not yet have map images. Chapter
+metadata and map marker coordinates are stored as shared JSON resources in
+`game-campaign`; the Studio Campaign tab edits the same per-chapter layouts
+that Android reads at runtime.
 
 The first version contains ten chapters with ten levels each. The design must
 allow more chapters to be added later without changing the screen navigation
@@ -72,9 +73,10 @@ The selector must make it easy to understand:
 
 - `CampaignScreen` now uses the chapter registry and exposes tabs for all
   completed chapters, the current chapter, and at most one locked preview.
-  Chapter 1 renders its supplied map and ten markers; chapters without map art
-  retain the level-list presentation for the selected chapter. The map fills
-  its viewport with a center-crop transform shared by the landmark anchors.
+  Chapters 1–3 render their supplied maps and ten markers; chapters without
+  map art retain the level-list presentation for the selected chapter. Each
+  map fills its viewport with a center-crop transform shared by the landmark
+  anchors.
 - A transparent campaign frame overlays the map. The campaign label, chapter
   number, title, and completion progress appear left-aligned in its upper-left
   plaque. A progress bar reflects completed levels in the selected chapter;
@@ -107,16 +109,24 @@ The selector must make it easy to understand:
   markers have no status badge.
 - A two-icon sprite-sheet prompt for the completed check and locked padlock is
   available at `docs/systems/campaign-map-level-status-icons.agp`.
-- The current Chapter 1 and Chapter 2 selector icon prompt is
-  `docs/systems/campaign-chapter-icons.agp`. It uses one attached map
-  background per icon as a theme reference only; chapter numbers and locked
-  state remain live UI.
+- A replacement art brief for wide Chapter 1 and Chapter 2 map-preview
+  thumbnails is `docs/systems/campaign-chapter-icons.agp`. It uses the
+  user-provided selector screenshot for proportions and the matching campaign
+  map backgrounds as terrain references. Chapter names and status remain live
+  UI.
 - The approved icons are separate transparent 512 x 512 assets at
   `assets_src/campaign/chapter-icons/campaign_chapter_01_icon.png` and
   `assets_src/campaign/chapter-icons/campaign_chapter_02_icon.png`, with the
   original 2:1 sheet preserved beside them. Only the Chapter 1 and Chapter 2
   selector tabs use these icons; remaining chapters retain their existing
-  text-only tabs until their artwork is prepared.
+  text-only tabs until their artwork is prepared. The runtime still uses these
+  square icons until the new thumbnails are generated, reviewed, and approved.
+  All tabs sit over one shared,
+  transparent parchment panel at
+  `assets_src/campaign/ui/campaign_chapter_selector_parchment.png`, imported
+  unchanged to `android-app/src/main/res/drawable-nodpi/`. The panel is 312 x
+  104 dp and flush to the screen's upper-right corner; individual tabs retain
+  their existing size and have no card backgrounds.
 - `CampaignProgress` already persists `highestUnlockedLevel` and
   `completedLevels`.
 - `CampaignChapterRegistry` reads canonical chapter metadata from
@@ -396,6 +406,30 @@ These are presentation coordinates only. Levels 5 and 10 use boss markers;
 the other eight use fortress markers. No marker, number, status, or hit target
 is baked into the background image.
 
+### Chapter 2 approved map and anchors
+
+The supplied Broken Valley background is stored at
+`assets_src/campaign/chapter-maps/campaign_chapter_02_broken_valley_map.png`
+and imported unchanged into
+`android-app/src/main/res/drawable-nodpi/campaign_chapter_02_broken_valley_map.png`.
+Its source dimensions are 1670 × 942 pixels. Its ten site positions are stored
+as normalized anchors for global levels 11–20 in
+`game-campaign/src/main/resources/campaign-map-layouts/broken_valley.json`;
+the larger boss sites correspond to local levels 5 and 10. The source and
+runtime images must remain byte-identical.
+
+### Chapter 3 approved map and anchors
+
+The supplied Ashen March background is stored at
+`assets_src/campaign/chapter-maps/campaign_chapter_03_ashen_march_map.png`
+and imported unchanged into
+`android-app/src/main/res/drawable-nodpi/campaign_chapter_03_ashen_march_map.png`.
+Its source dimensions are 1672 × 941 pixels. Its ten site positions are stored
+as normalized anchors for global levels 21–30 in
+`game-campaign/src/main/resources/campaign-map-layouts/ashen_march.json`;
+the larger boss sites correspond to local levels 5 and 10. The source and
+runtime images must remain byte-identical.
+
 ## Navigation and lifecycle
 
 Keep the existing `AppScreen.Campaign` route. `CampaignScreen` hosts the
@@ -487,8 +521,8 @@ state is required. The screen does not mutate `CampaignProgress` or
    current chapter, chapter completion state, and ten level-marker states.
 4. **Implemented for Chapter 1.** The shared campaign layout repository
    provides ten global level anchors; Android maps the background asset key
-   to its drawable and renders the layout with fortress/boss markers.
-   Chapter 2–10 backgrounds remain outstanding.
+   to its drawable and renders the layout with fortress/boss markers for
+   Chapters 1–3. Chapter 4–10 backgrounds remain outstanding.
 5. **Implemented.** Replace the single vertical list in `CampaignScreen` with the chapter
    selector, chapter map page, and dynamic fortress/boss marker overlays.
    Keep loading, storage errors, retry, Back behavior, and the current Loadout
@@ -498,7 +532,7 @@ state is required. The screen does not mutate `CampaignProgress` or
 6. **Implemented for available artwork.** Chapter 1's map, transparent frame, reusable
    fortress/boss markers, completed/available/locked plaques, status badges,
    and available-level glow are supplied. Copy-ready AGPs cover Chapter 1 and
-   the reusable UI/marker assets; map AGPs and images for Chapters 2–10 remain
+   the reusable UI/marker assets; map AGPs and images for Chapters 4–10 remain
    outstanding.
 7. **Implemented.** Kotlin/Android tests cover chapter visibility, marker
    states, shared layout decoding, and center-crop geometry. Studio tests cover

@@ -19,10 +19,34 @@ class CampaignMapLayoutRepositoryTest {
     }
 
     @Test
+    fun bundledChapterTwoLayoutContainsEveryGlobalLevelAnchor() {
+        val result = CampaignMapLayoutRepository.bundled.load("broken_valley")
+
+        assertTrue(result is CampaignMapLayoutRead.Available)
+        val layout = (result as CampaignMapLayoutRead.Available).layout
+        assertEquals("campaign_chapter_02_broken_valley_map", layout.backgroundAssetKey)
+        assertEquals(1_670, layout.imageWidthPx)
+        assertEquals(942, layout.imageHeightPx)
+        assertEquals((11..20).toList(), layout.anchors.map { it.level })
+    }
+
+    @Test
+    fun bundledChapterThreeLayoutContainsEveryGlobalLevelAnchor() {
+        val result = CampaignMapLayoutRepository.bundled.load("ashen_march")
+
+        assertTrue(result is CampaignMapLayoutRead.Available)
+        val layout = (result as CampaignMapLayoutRead.Available).layout
+        assertEquals("campaign_chapter_03_ashen_march_map", layout.backgroundAssetKey)
+        assertEquals(1_672, layout.imageWidthPx)
+        assertEquals(941, layout.imageHeightPx)
+        assertEquals((21..30).toList(), layout.anchors.map { it.level })
+    }
+
+    @Test
     fun missingChapterArtworkIsReportedSeparatelyFromInvalidChapter() {
         assertEquals(
-            CampaignMapLayoutRead.MapArtworkMissing("broken_valley"),
-            CampaignMapLayoutRepository.bundled.load("broken_valley"),
+            CampaignMapLayoutRead.MapArtworkMissing("whispering_marsh"),
+            CampaignMapLayoutRepository.bundled.load("whispering_marsh"),
         )
         assertEquals(
             CampaignMapLayoutRead.Failure(

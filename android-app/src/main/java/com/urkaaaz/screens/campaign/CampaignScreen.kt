@@ -45,12 +45,30 @@ class CampaignScreen(
     private val pageContent = FrameLayout(context)
     private val chapterTabs = LinearLayout(context).apply {
         orientation = LinearLayout.HORIZONTAL
-        gravity = Gravity.CENTER_VERTICAL
+        gravity = Gravity.CENTER
     }
     private val chapterTabsScroll = HorizontalScrollView(context).apply {
         isHorizontalScrollBarEnabled = false
+        clipToPadding = false
+        isFillViewport = true
         setPadding(dp(6), dp(2), dp(6), dp(2))
         addView(chapterTabs, LinearLayout.LayoutParams(-2, -1))
+    }
+    private val chapterSelectorBackplate = ImageView(context).apply {
+        contentDescription = null
+        importantForAccessibility = View.IMPORTANT_FOR_ACCESSIBILITY_NO
+        scaleType = ImageView.ScaleType.FIT_XY
+        setImageResource(CampaignMapPresentationCatalog.chapterSelectorBackgroundDrawable())
+    }
+    private val chapterSelectorPanel = FrameLayout(context).apply {
+        minimumWidth = dp(CHAPTER_SELECTOR_BACKPLATE_MIN_WIDTH_DP)
+        clipChildren = false
+        clipToPadding = false
+        addView(chapterSelectorBackplate, FrameLayout.LayoutParams(-1, -1))
+        addView(
+            chapterTabsScroll,
+            FrameLayout.LayoutParams(-1, -1),
+        )
     }
     private val campaignLabelText = TextView(context).apply {
         textSize = 10f
@@ -159,10 +177,11 @@ class CampaignScreen(
         }, FrameLayout.LayoutParams(-1, -1))
         addView(
             createChapterStrip(),
-            FrameLayout.LayoutParams(-2, dp(52), Gravity.TOP or Gravity.END).apply {
-                topMargin = dp(8)
-                marginEnd = dp(12)
-            },
+            FrameLayout.LayoutParams(
+                dp(CHAPTER_SELECTOR_BACKPLATE_MIN_WIDTH_DP),
+                dp(CHAPTER_SELECTOR_BACKPLATE_HEIGHT_DP),
+                Gravity.TOP or Gravity.END,
+            ),
         )
         addView(
             startLevelButton,
@@ -236,15 +255,14 @@ class CampaignScreen(
         )
     }
 
-    private fun createChapterStrip(): View = chapterTabsScroll.apply {
+    private fun createChapterStrip(): View = chapterSelectorPanel.apply {
         visibility = View.GONE
-        background = null
     }
 
     private fun render(state: CampaignUiState) {
         pageContent.removeAllViews()
         startLevelButton.visibility = View.GONE
-        chapterTabsScroll.visibility = View.GONE
+        chapterSelectorPanel.visibility = View.GONE
         campaignLabelText.text = ""
         chapterNumberText.text = ""
         titleText.text = ""
@@ -274,7 +292,7 @@ class CampaignScreen(
             return
         }
 
-        chapterTabsScroll.visibility = View.VISIBLE
+        chapterSelectorPanel.visibility = View.VISIBLE
         renderChapterTabs(state.mapProgression.pages, page.chapter.id)
         renderChapterHeader(page)
 
@@ -358,9 +376,10 @@ class CampaignScreen(
                     minWidth = dp(54)
                     setPadding(dp(10), dp(7), dp(10), dp(7))
                     setTextColor(tabTextColor)
-                    background = chapterTabBackground(isSelected)
+                    background = null
                     contentDescription = tabDescription
                     isFocusable = true
+                    this.isSelected = isSelected
                     setOnClickListener(onTabClick)
                 }
             } else {
@@ -373,13 +392,14 @@ class CampaignScreen(
                 }
                 FrameLayout(context).apply {
                     minimumWidth = dp(48)
-                    background = chapterTabBackground(isSelected)
                     contentDescription = tabDescription
                     isFocusable = true
+                    this.isSelected = isSelected
                     addView(ImageView(context).apply {
                         contentDescription = null
                         importantForAccessibility = View.IMPORTANT_FOR_ACCESSIBILITY_NO
                         scaleType = ImageView.ScaleType.CENTER_CROP
+                        alpha = if (isSelected) 1f else UNSELECTED_CHAPTER_ICON_ALPHA
                         setImageResource(chapterIcon)
                     }, FrameLayout.LayoutParams(-1, -1))
                     statusIcon?.let { drawable ->
@@ -397,7 +417,8 @@ class CampaignScreen(
                 }
             }
             val tabWidth = if (chapterIcon == null) -2 else dp(48)
-            chapterTabs.addView(tab, LinearLayout.LayoutParams(tabWidth, -1).apply {
+            val tabHeight = if (chapterIcon == null) -1 else dp(48)
+            chapterTabs.addView(tab, LinearLayout.LayoutParams(tabWidth, tabHeight).apply {
                 setMargins(dp(3), 0, dp(3), 0)
             })
             if (isSelected) {
@@ -409,6 +430,39 @@ class CampaignScreen(
                 }
             }
         }
+        resizeChapterSelectorPanelToTabs()
+    }
+
+    private fun resizeChapterSelectorPanelToTabs() {
+        var tabsWidth = chapterTabsScroll.paddingLeft + chapterTabsScroll.paddingRight
+        for (index in 0 until chapterTabs.childCount) {
+            val tab = chapterTabs.getChildAt(index)
+            val params = tab.layoutParams as LinearLayout.LayoutParams
+            val tabWidth = if (params.width >= 0) {
+                params.width
+            } else {
+                tab.measure(
+                    View.MeasureSpec.makeMeasureSpec(0, View.MeasureSpec.UNSPECIFIED),
+                    View.MeasureSpec.makeMeasureSpec(0, View.MeasureSpec.UNSPECIFIED),
+                )
+                tab.measuredWidth
+            }
+            tabsWidth += tabWidth + params.leftMargin + params.rightMargin
+        }
+        val minimumWidth = dp(CHAPTER_SELECTOR_BACKPLATE_MIN_WIDTH_DP)
+        val maximumWidth = context.resources.displayMetrics.widthPixels
+            .coerceAtLeast(minimumWidth)
+        val panelWidth = (tabsWidth * CHAPTER_SELECTOR_BACKPLATE_SCALE)
+            .coerceIn(minimumWidth, maximumWidth)
+        chapterSelectorPanel.layoutParams =
+            (chapterSelectorPanel.layoutParams as FrameLayout.LayoutParams).apply {
+                width = panelWidth
+            }
+        chapterSelectorPanel.translationX =
+            (panelWidth * CHAPTER_SELECTOR_BACKPLATE_RIGHT_TRANSPARENT_FRACTION).roundToInt().toFloat()
+        chapterSelectorPanel.translationY =
+            -(dp(CHAPTER_SELECTOR_BACKPLATE_HEIGHT_DP) *
+                CHAPTER_SELECTOR_BACKPLATE_TOP_TRANSPARENT_FRACTION)
     }
 
     private fun renderChapterHeader(page: CampaignChapterPageState) {
@@ -606,12 +660,6 @@ class CampaignScreen(
             },
         )
 
-    private fun chapterTabBackground(selected: Boolean): GradientDrawable =
-        GradientDrawable().apply {
-            cornerRadius = dp(8).toFloat()
-            setColor(Color.argb(if (selected) 245 else 190, 48, 36, 25))
-        }
-
     private fun progressFailureMessage(reason: CampaignProgressFailure): String =
         context.getString(when (reason) {
             CampaignProgressFailure.STORAGE_UNAVAILABLE ->
@@ -643,4 +691,13 @@ class CampaignScreen(
 
     private fun dp(value: Int): Int =
         (value * context.resources.displayMetrics.density).roundToInt()
+
+    private companion object {
+        const val CHAPTER_SELECTOR_BACKPLATE_MIN_WIDTH_DP = 312
+        const val CHAPTER_SELECTOR_BACKPLATE_HEIGHT_DP = 104
+        const val CHAPTER_SELECTOR_BACKPLATE_SCALE = 2
+        const val CHAPTER_SELECTOR_BACKPLATE_RIGHT_TRANSPARENT_FRACTION = 47f / 2000f
+        const val CHAPTER_SELECTOR_BACKPLATE_TOP_TRANSPARENT_FRACTION = 101f / 667f
+        const val UNSELECTED_CHAPTER_ICON_ALPHA = 0.78f
+    }
 }

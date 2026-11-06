@@ -30,6 +30,9 @@ sealed interface CampaignMapPresentationRead {
 }
 
 object CampaignMapPresentationCatalog {
+    fun chapterSelectorBackgroundDrawable(): Int =
+        R.drawable.campaign_chapter_selector_parchment
+
     fun chapterTabIconDrawable(chapterId: String): Int? =
         when (chapterId) {
             "green_frontier" -> R.drawable.campaign_chapter_01_icon
@@ -40,6 +43,8 @@ object CampaignMapPresentationCatalog {
     fun forLayout(layout: CampaignMapLayoutDefinition): CampaignMapPresentationRead {
         val backgroundDrawable = when (layout.backgroundAssetKey) {
             GREEN_FRONTIER_MAP_ASSET_KEY -> R.drawable.campaign_chapter_01_green_frontier_map
+            BROKEN_VALLEY_MAP_ASSET_KEY -> R.drawable.campaign_chapter_02_broken_valley_map
+            ASHEN_MARCH_MAP_ASSET_KEY -> R.drawable.campaign_chapter_03_ashen_march_map
             else -> return CampaignMapPresentationRead.Failure(
                 "Unsupported campaign map asset: ${layout.backgroundAssetKey}",
             )
@@ -58,4 +63,8 @@ object CampaignMapPresentationCatalog {
 
     private const val GREEN_FRONTIER_MAP_ASSET_KEY =
         "campaign_chapter_01_green_frontier_map"
+    private const val BROKEN_VALLEY_MAP_ASSET_KEY =
+        "campaign_chapter_02_broken_valley_map"
+    private const val ASHEN_MARCH_MAP_ASSET_KEY =
+        "campaign_chapter_03_ashen_march_map"
 }

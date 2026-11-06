@@ -293,20 +293,28 @@ markers. The available level is selected by default; tapping it changes
 screen-local selection, and **Start Level** calls the existing
 `CampaignSystem.selectLevel` before opening Loadout.
 
-`CampaignScreen` renders Chapter 1 as a full-bleed, center-cropped map and
+`CampaignScreen` renders Chapters 1–3 as full-bleed, center-cropped maps and
 positions level markers using the same crop transform as the shared
 `game-campaign/src/main/resources/campaign-map-layouts/<chapterId>.json`
 layout. Android's `CampaignMapPresentationCatalog` resolves background asset
 keys to drawable resources; it does not own marker coordinates. The screen
 layers a transparent campaign frame, live chapter/progress UI, fortress/boss
 artwork, state-specific level plaques, completed/locked badges, and a shared
-available-level glow. Chapters 2–10 do not yet have map artwork and use the
+available-level glow. Chapters 4–10 do not yet have map artwork and use the
 explicit chapter level-list fallback.
 Chapter 1's approved `campaign_chapter_01_green_frontier_map` image is
 1670x942, with ten empty fortress sites on one continuous route and highlighted
 boss sites at levels 5 and 10. Its source/runtime copies match. Existing
 normalized marker anchors were updated in the shared layout for this artwork;
 the user can continue repositioning fortresses and boss markers in Studio.
+Chapter 2 now uses the supplied `campaign_chapter_02_broken_valley_map` image
+(1670x942), with ten site anchors for global levels 11–20 in
+`campaign-map-layouts/broken_valley.json`; the source and Android drawable
+copies are byte-identical.
+Chapter 3 uses the supplied `campaign_chapter_03_ashen_march_map` image
+(1672x941), with ten site anchors for global levels 21–30 in
+`campaign-map-layouts/ashen_march.json`; the source and Android drawable
+copies are byte-identical.
 Boss markers resolve a level's encounter profile through
 `CampaignLevelDefinition.bossProfileIdForLevel` and the balance profile's
 `presentationKey`. `CampaignMapView` uses the matching boss sprite and optional
@@ -322,16 +330,23 @@ beside the normalized 512x512 source icons. Icon tabs omit visible chapter
 numbers, fill the tab surface with the icon, and overlay completed/locked
 badges at its lower-right instead of below it. Selection uses background fill
 opacity rather than a border; accessibility descriptions retain the chapter
-number. The campaign selector art brief
-`docs/systems/campaign-chapter-selector-parchment.agp` specifies one shared
-parchment backplate behind the icon group; this backplate has not yet been
-generated or integrated.
+number. One shared transparent 2000x667 parchment backplate is stored in
+`assets_src/campaign/ui/campaign_chapter_selector_parchment.png` and rendered
+behind the complete chapter group; individual tabs stay transparent. The
+selector is rendered at 312 x 104 dp, flush with the upper-right screen
+corner, while chapter icons retain their existing size. Its Android copy is
+`R.drawable.campaign_chapter_selector_parchment`. The
+copy-ready art brief is
+`docs/systems/campaign-chapter-selector-parchment.agp`. A replacement brief
+for low, wide chapter-map-preview thumbnails is
+`docs/systems/campaign-chapter-icons.agp`; the installed square icons remain in
+use until replacement artwork is approved and integrated.
 
 The Studio Campaign tab edits the same chapter and layout JSON through
 `/api/campaign/*`; it never modifies `MapDefinition` or Android resource IDs.
 It supports all ten marker positions (fortresses and bosses), drag and numeric
 normalized X/Y input, and per-chapter Save/Discard/Cancel handling. Only
-Chapter 1 currently has map art; missing-art chapters show a message and
+Chapters 1–3 currently have map art; missing-art chapters show a message and
 disable editing. A saved layout is used by the game after the next build or
 application restart. X/Y validation is independent per axis, and the server
 holds a filesystem lock across the expected-hash check and atomic replacement
@@ -1269,7 +1284,7 @@ preserves the player's existing lives and gold. A newly revised, queued preset
 is applied once to the local DataStore; release builds ignore it. The Dashboard
 reads the persisted level/lives/gold summary. Lives are currently stored and
 displayed only; consumption and regeneration remain unimplemented.
-The bundled queued preset currently applies level 5 and 5,000 gold on the next
+The bundled queued preset currently applies level 21 and 5,000 gold on the next
 debug app launch, replacing the persisted gold balance once.
 
 The team-texture animation renderer is shared by units: it combines one neutral

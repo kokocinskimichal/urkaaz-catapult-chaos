@@ -51,6 +51,12 @@
   campaign chapter icon AGP.
 - Added a copy-ready AGP for one shared parchment backplate behind the
   campaign chapter icons.
+- Added the supplied Chapter 2 Broken Valley campaign map, its normalized
+  level anchors, and Android presentation mapping.
+- Added the supplied Chapter 3 Ashen March campaign map, its normalized level
+  anchors, and Android presentation mapping.
+- Imported the transparent 2000 × 667 shared parchment backplate and placed
+  the campaign chapter controls over it without individual tab cards.
 - Added a copy-ready desktop landing-page concept AGP for Urkaaaz.
 - Added the `/campaignMapAgp` skill for creating consistent campaign-map
   generation prompts one chapter at a time.
@@ -64,6 +70,12 @@
   ornaments.
 - Refined the shared chapter-selector parchment AGP toward a flat, shallow
   plaque without rolled ends or large ornaments.
+- Reframed the Chapter 1 and Chapter 2 selector art brief as compact, wide
+  campaign-map preview thumbnails instead of square symbolic icons.
+- Doubled the chapter-selector parchment size and aligned it flush to the
+  screen's upper-right corner while keeping the chapter icons unchanged.
+- Set the debug developer-progress preset to Chapter 3, Level 21 for map
+  verification.
 - Reworked Sapper siege missions to choose the nearest hostile boss, Bastion,
   or fortress. Ordinary units and Demolisher blasts ignore Sappers, while boss,
   projectile, spell, and other area damage remain valid.

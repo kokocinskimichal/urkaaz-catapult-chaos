@@ -17,12 +17,12 @@ kampanię, AI oraz działający match screen. Gałąź robocza: `develop`.
 - Typowany wybór campaign level przez `game-campaign`; zwycięstwo kampanii
   zapisuje ukończenie poziomu i atomowo rozlicza nagrody.
 - `CampaignChapterRegistry` definiuje dziesięć rozdziałów, ich biomy oraz
-  fortress/boss landmarks. Campaign screen pokazuje mapę Chapter 1,
+  fortress/boss landmarks. Campaign screen pokazuje mapy Chapter 1–3,
   postęp, rozdziały ukończone/bieżący/podgląd oraz znaczniki stanów poziomów;
   start wymaga zaznaczenia dostępnego poziomu i przycisku **START LEVEL**.
 - Studio ma zakładkę Campaign do edycji pozycji X/Y wszystkich 10 markerów
   danego rozdziału. Wspólny JSON rozdziałów i osobny layout JSON są czytane
-  przez Studio i grę; Chapter 2–10 są tylko do odczytu do czasu dodania map.
+  przez Studio i grę; Chapters 4–10 są tylko do odczytu do czasu dodania map.
 - Campaign i Loadout współdzielą `ScreenChromeMetrics` dla insetu ekranu
   (`4 dp`) oraz wymiarów i odstępu Back buttona; treść Loadout ma osobny
   wewnętrzny padding.
@@ -160,7 +160,7 @@ snapshotów i eventów zamiast mutować bezpośrednio stan innych podsystemów.
 
 - `LoadoutScreen` asynchronicznie odczytuje, waliduje i zapisuje loadout.
   `ResultScreen` pozostaje placeholderem.
-- Chapter 1 ma zatwierdzoną mapę i assety campaign UI; mapy Chapter 2–10 nie
+- Chapters 1–3 mają zatwierdzone mapy i assety campaign UI; mapy Chapter 4–10 nie
   są jeszcze dostępne, więc te rozdziały używają listy poziomów.
 - Mechanika zużywania i regeneracji żyć pozostaje poza obecnym zakresem.
   Campaign progress, nagrody i lokalne zakupy/stock Shop są zapisywane w

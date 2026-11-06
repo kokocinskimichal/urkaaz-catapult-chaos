@@ -53,8 +53,8 @@ scroll banner or add large end ornaments.
 
 ## Separation from chapter icons and live UI
 
-- Generate the shared parchment backplate only. Chapter emblems remain the
-  separate transparent assets described by
+- Generate the shared parchment backplate only. The wide chapter-map-preview
+  thumbnails remain separate assets described by
   `docs/systems/campaign-chapter-icons.agp`.
 - Do not draw individual icon tiles, per-icon parchment backgrounds,
   separators, fixed icon slots, thumbnails, maps, or landscape artwork.

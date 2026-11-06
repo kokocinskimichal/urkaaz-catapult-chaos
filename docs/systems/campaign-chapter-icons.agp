@@ -1,95 +1,103 @@
-STATUS: Regenerate a matched pair of transparent chapter-tab icons for the
-currently visible Chapter 1 and Chapter 2 campaign tabs, without any
-surrounding frames, ribbons, bands, or loops. Use the two attached campaign
-map backgrounds as visual references only.
+STATUS: Create a matched pair of low, wide chapter-map-preview thumbnails for
+the campaign selector. These are miniature scenic previews, not symbolic
+chapter icons. They must fit side by side on the existing shallow parchment
+backplate.
 
 ## Reference images
 
-- Reference 1 is Chapter 1, **The Green Frontier**. Use it for the first icon.
-- Reference 2 is Chapter 2, **The Broken Valley**. Use it for the second icon.
-- Derive each icon's palette, materials, and painterly finish from its matching
-  map. Do not copy, crop, or miniaturize either map.
-- Keep both icons in one consistent Urkaaaz fantasy-art style while making
-  their silhouettes and chapter themes immediately distinct.
+- Attach the user-provided campaign-screen reference screenshot. Use only its
+  upper-right chapter selector to match the thumbnails' compact, horizontal
+  proportions and small scenic-preview treatment. Do not recreate the screen.
+- Attach
+  `assets_src/campaign/chapter-maps/campaign_chapter_01_green_frontier_map.png`
+  as the primary terrain reference for Chapter 1.
+- Attach
+  `assets_src/campaign/chapter-maps/campaign_chapter_02_broken_valley_map.png`
+  as the primary terrain reference for Chapter 2. Do not substitute the
+  existing square crystal emblem; it is not a map preview.
+- Create a readable miniature preview of each chapter's environment rather
+  than inventing a detached emblem.
 
 ## Output
 
 - Generate exactly one PNG sprite sheet:
-  `campaign_chapter_icons_sheet.png`.
-- Canvas: 1024 x 512 pixels, 2:1 landscape, RGBA with genuine transparent
-  alpha.
-- Arrange exactly two equal 512 x 512 transparent cells side by side:
-  1. Chapter 1 icon, using Reference 1.
-  2. Chapter 2 icon, using Reference 2.
-- Center one self-contained emblem in each cell. Match their apparent size,
-  detail density, lighting, and visual weight so they work as a pair.
-- Let each emblem fill about 90% of its cell, leaving only a narrow, even
-  transparent safety margin so the artwork nearly fills a 48 dp chapter tab.
-  Keep the full silhouette inside the canvas and do not crop it.
-- Keep the cells transparent and independent; do not add a background, divider,
-  shared frame, or connecting ornament.
+  `campaign_chapter_thumbnails_sheet.png`.
+- Save it under `assets_src/campaign/chapter-thumbnails/`.
+- Canvas: exactly 1024 x 256 pixels, horizontal, opaque RGB or RGBA with a
+  fully opaque alpha channel.
+- Arrange exactly two equal 512 x 256 pixel cells side by side:
+  1. Chapter 1 thumbnail, using Reference 1.
+  2. Chapter 2 thumbnail, using Reference 2.
+- Each cell is a 2:1 landscape thumbnail. Fill the cell edge to edge with
+  artwork; do not leave transparent padding or add a gutter between cells.
+- Design the pair to sit side by side within the existing approximately
+  312 x 104 dp shared parchment panel. Leave room for live UI status badges
+  without making either landscape too small.
+- Keep both previews at the same scale, camera distance, detail density, and
+  painterly finish so they read as a coordinated set.
 
-## Icon direction
+## Thumbnail direction
 
-- **Chapter 1 — The Green Frontier:** Create a compact emblem inspired by the
-  lush vegetation, terrain, and palette visible in Reference 1. Use one clear
-  botanical or natural-stone motif; do not depict a miniature landscape.
-- **Chapter 2 — The Broken Valley:** Create a distinct emblem inspired by the
-  valley forms, terrain, and palette visible in Reference 2. Its chapter
-  identity is Frostbound, but the attached map remains the visual source of
-  truth for its exact colors and materials. Do not depict a miniature
-  landscape.
-- Keep both emblems in a consistent painterly finish and lighting style, while
-  letting each map's palette and subject define its identity. Do not force a
-  shared gold ornament or outline.
-- Use clean edges, strong value contrast, and a readable outer silhouette.
-  Avoid fine engraved detail that disappears at phone size.
-- The silhouette must end at the leaf/rock or valley/ice artwork itself. Do not
-  encircle or partially surround it with a gold arc, ribbon, metal band, vine,
-  horn, or decorative stroke. Any gold may appear only as a small detail
-  integrated into the subject, never as a separate enclosing element.
-- The icons are separate artwork placed inside existing chapter tabs. The tab
-  background, chapter number, title, selection state, and lock state remain
-  live UI.
+- Show a compact, painterly miniature vista or map-preview of each chapter's
+  environment. Use broad, legible terrain shapes and strong color grouping so
+  the scene remains recognizable at small screen size.
+- **Chapter 1 — The Green Frontier:** show the lush green frontier from
+  Reference 1, using its characteristic vegetation, hills, waterways, and
+  warm natural palette.
+- **Chapter 2 — The Broken Valley:** match the fractured valley in the
+  supplied Chapter 2 map, using its cold palette and broken terrain.
+- Keep the camera angle and degree of detail consistent with the reference
+  maps. A simplified overview or carefully composed map-inspired crop is
+  acceptable; do not turn the scene into a single subject emblem.
+- Let each image fill its wide rectangle. Keep focal terrain and important
+  color contrasts away from the outermost few pixels so small UI badges can
+  overlay a corner without obscuring the scene.
+- Use clear, readable silhouettes and restrained details. Avoid tiny
+  structures, particles, or textures that collapse into noise when reduced.
+- Keep both thumbnails equally bright and complete. Do not darken Chapter 2
+  to imply its locked state; selection, completion, and lock states are live UI.
 
-## Separation from the map and live UI
+## Separation from the parchment and live UI
 
-- Generate only the two isolated chapter emblems. Do not generate a campaign
-  screen, tab, button, card, badge, border, map, terrain, or scene.
-- Do not include chapter numbers, names, text, letters, runes that resemble
-  writing, locks, checkmarks, or progress indicators.
-- Do not include a fortress, boss, character, enemy, or gameplay object.
-- Do not add a circular medallion, shield, pin, plaque, outer frame,
-  surrounding arc, wrapping ribbon, or border around either icon. The
-  transparent emblem itself must be the complete asset.
-- Keep all decoration attached to the emblem; no detached glow, shadow, or
-  particles outside its silhouette.
+- Generate only the two landscape thumbnails. The shared parchment is a
+  separate asset and must not be baked into either cell.
+- Do not add an individual card, frame, border, tab shape, ribbon, or rounded
+  tile around either thumbnail. The images are placed directly on the shared
+  parchment.
+- Do not include chapter numbers, names, title text, letters, runes that
+  resemble writing, locks, checkmarks, progress indicators, or selection
+  treatments.
+- Do not reproduce the whole campaign screenshot, outer map frame, Back
+  control, Start Level button, HUD, or unrelated screen elements.
+- Do not add captions, decorative badges, detached glow, shadows, or
+  transparent margins.
+- Keep any terrain or landmark detail faithful to the matching map. Do not add
+  unrelated characters, enemies, weapons, or gameplay scenes.
 
 ## Review and extraction
 
-- Confirm the sheet contains exactly two icons, in Chapter 1 / Chapter 2 order.
-- Confirm each icon is centered in its own transparent square cell, with no
-  overlap across the cell boundary.
-- Confirm the pair has matching scale and finish, but visibly different
-  chapter-specific motifs and palettes.
-- Confirm neither icon contains an outline, enclosing ring, gold ribbon,
-  framing arc, or other ornament around its subject.
-- Confirm both silhouettes remain clear at about 48 dp and have clean alpha
-  edges.
-- After approval, split the actual sheet into its two equal-width cells without
-  trimming away their shared canvas or transparent padding. Preserve each
-  512 x 512 RGBA cell as a separate source asset for review.
-- Do not import the icons into Android resources until both have been reviewed
-  and approved.
+- Confirm the output is exactly 1024 x 256 pixels and contains exactly two
+  edge-to-edge 512 x 256 landscape previews in Chapter 1 / Chapter 2 order.
+- Confirm each cell reads as a miniature of its chapter's environment, not as
+  a symbol, crest, or square app icon.
+- Confirm both thumbnails share the same camera scale and visual treatment,
+  while their landscapes and palettes remain clearly distinct.
+- Confirm no individual card frame, text, chapter number, lock, checkmark, or
+  parchment is baked into the artwork.
+- Confirm the images remain legible when displayed side by side on a shallow
+  312 x 104 dp parchment panel, with room for separate live status badges.
+- After approval, split the actual sprite sheet into two 512 x 256 RGBA source
+  assets without changing the composition or trimming either thumbnail.
+- Do not replace the currently installed square chapter-tab assets until the
+  generated previews have been reviewed and approved.
 
 ## Negative prompt
 
-opaque background, checkerboard, campaign map, miniature map, landscape scene,
-map screenshot, UI, chapter tab, button, card, border, frame, divider,
-medallion, shield, pin, plaque, surrounding gold frame, gold ring, gold arc,
-gold ribbon, wrapping band, decorative loop, enclosing vine, chapter number,
-chapter name, text, letters, writing, lock, checkmark, progress bar, fortress,
-boss, character, enemy, gameplay object, shared connected emblem, extra cells,
-extra icons, overlapping cells, tiny unreadable detail, weak silhouette,
-inconsistent icon scale, inconsistent art style, detached glow, detached
-shadow, particles, watermark, signature
+symbolic icon, square icon, emblem, crest, medallion, isolated leaf, isolated
+crystal, isolated object, portrait composition, tall composition, full campaign
+screen, UI screenshot, button, card, individual tile, card frame, border,
+parchment background, ribbon, chapter number, chapter name, title, text,
+letters, writing, runes, lock, checkmark, progress bar, selection glow,
+darkened locked state, badge, HUD, Back control, Start Level control, unrelated
+map, mismatched camera scale, inconsistent art style, tiny unreadable detail,
+noise, detached shadow, detached glow, particles, watermark, signature
