@@ -37,6 +37,10 @@
 
 ### Added
 
+- Added a Test Mode level picker for campaign levels 1–54 grouped by chapter.
+  It runs the selected campaign scenario with level-limited Loadout options,
+  in-memory Loadout selection, and Debug Tools without saving campaign
+  progress, rewards, or consumed stock.
 - Added a campaign-only 32-frame Boulderbloom idle; Chapter 1 boss markers now
   use boss-specific presentation, with Ancient War Oak reusing its existing
   idle without changing match rendering.
@@ -45,6 +49,8 @@
   resources, and user-approved Polish and Spanish catalogs.
 - Added transparent Chapter 1 and Chapter 2 selector icons and a copy-ready
   campaign chapter icon AGP.
+- Added a copy-ready AGP for one shared parchment backplate behind the
+  campaign chapter icons.
 - Added the `/campaignMapAgp` skill for creating consistent campaign-map
   generation prompts one chapter at a time.
 

@@ -3,6 +3,11 @@
     <string name="app_title">URKAAAZ! Catapult Chaos</string>
     <string name="open_dashboard">Open dashboard</string>
     <string name="test_mode">TEST MODE</string>
+    <string name="test_level_picker_title">TEST MODE • SELECT LEVEL</string>
+    <string name="test_level_picker_chapter">CHAPTER %1$d • %2$s</string>
+    <string name="test_level_picker_level">LEVEL %1$d</string>
+    <string name="test_level_picker_boss_level">BOSS • LEVEL %1$d</string>
+    <string name="test_level_picker_level_accessibility">Test level %1$d, %2$s</string>
     <string name="campaign_level">LEVEL %1$d</string>
     <string name="campaign_level_locked">LEVEL %1$d 🔒</string>
     <string name="campaign_level_completed">LEVEL %1$d • COMPLETED</string>
@@ -129,6 +134,7 @@
     <string name="match_result_retry_stock">RETRY INVENTORY SAVE</string>
     <string name="match_result_exit_campaign">EXIT TO CAMPAIGN</string>
     <string name="match_result_back_dashboard">BACK TO DASHBOARD</string>
+    <string name="match_result_back_test_levels">BACK TO TEST LEVELS</string>
     <string name="match_result_saving_status">Campaign progress is being saved.</string>
     <string name="match_result_completion_failed">Progress save failed. Retry this level or return.</string>
     <string name="match_result_saving_stock">Saving used inventory…</string>
@@ -221,6 +227,7 @@
     <string name="loadout_title">LOADOUT</string>
     <string name="loadout_level">CAMPAIGN • LEVEL %1$d</string>
     <string name="loadout_demo_mode">DEMO MODE</string>
+    <string name="loadout_test_mode_level">TEST MODE • LEVEL %1$d</string>
     <string name="loadout_back">BACK</string>
     <string name="loadout_gold">GOLD • %1$d</string>
     <string name="loadout_units">UNITS</string>

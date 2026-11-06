@@ -22,6 +22,7 @@ import com.urkaaaz.contracts.PlayerLoadoutConfig
 data class LoadoutUiState(
     val level: Int,
     val demoMode: Boolean = false,
+    val testMode: Boolean = false,
     val availableUnits: List<String>,
     val availableAmmunition: List<String>,
     val availableSpells: List<String>,
@@ -91,6 +92,7 @@ class LoadoutViewModel(
     private val loadoutCatalog: LoadoutCatalog = LoadoutCatalog.bundled(),
     demoMode: Boolean = false,
     definition: CampaignLevelDefinition? = null,
+    testMode: Boolean = false,
 ) {
     private val campaignDefinition = if (demoMode) {
         null
@@ -118,6 +120,7 @@ class LoadoutViewModel(
     var state = LoadoutUiState(
         level = campaignDefinition?.level ?: campaignLevel,
         demoMode = demoMode,
+        testMode = testMode,
         availableUnits = loadoutCatalog.units
             .map { it.id }
             .filter { it in availability.unitTypes },

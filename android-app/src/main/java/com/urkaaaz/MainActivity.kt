@@ -30,6 +30,7 @@ import com.urkaaaz.navigation.ShopLoadoutReturn
 import com.urkaaaz.navigation.ScreenHost
 import com.urkaaaz.persistence.DataStoreCampaignProgressRepository
 import com.urkaaaz.persistence.DataStoreLoadoutRepository
+import com.urkaaaz.persistence.InMemoryLoadoutRepository
 import com.urkaaaz.persistence.DataStorePlayerProgressionRepository
 import com.urkaaaz.persistence.DataStorePlayerProgressResetRepository
 import com.urkaaaz.persistence.DataStoreDeveloperProgressPresetAdapter
@@ -53,12 +54,15 @@ import com.urkaaaz.screens.match.MatchScreen
 import com.urkaaaz.screens.result.ResultScreen
 import com.urkaaaz.screens.shop.ShopScreen
 import com.urkaaaz.screens.splash.SplashScreen
+import com.urkaaaz.screens.testmode.TestLevelPickerScreen
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.launch
 import java.util.UUID
+
+private const val TEST_MODE_STOCK_PER_ITEM = 99
 
 class MainActivity : ComponentActivity() {
     private lateinit var screenHost: ScreenHost
@@ -153,6 +157,15 @@ class MainActivity : ComponentActivity() {
             ),
         )
     }
+    private val testLoadoutUseCases by lazy {
+        LoadoutUseCases(
+            progression = DemoLoadoutProgressionPort(
+                loadoutCatalog = loadoutCatalog,
+                stockPerItem = TEST_MODE_STOCK_PER_ITEM,
+            ),
+            repository = InMemoryLoadoutRepository(),
+        )
+    }
 
     override fun attachBaseContext(newBase: android.content.Context) {
         startupLanguage = StartupLanguageReader(
@@ -245,7 +258,7 @@ class MainActivity : ComponentActivity() {
                 onCampaign = { navigator.navigate(AppScreen.Campaign) },
                 onShop = { navigator.navigate(AppScreen.Shop()) },
                 onDemoMode = {
-                    navigator.navigate(AppScreen.Loadout(campaignLevel = 1, demoMode = true))
+                    navigator.navigate(AppScreen.TestLevelPicker)
                 },
                 onResetProgress = { playerProgressResetRepository.reset() },
                 loadProgress = { developerProgressPreset.current() },
@@ -263,13 +276,30 @@ class MainActivity : ComponentActivity() {
                     )
                 },
             )
+            AppScreen.TestLevelPicker -> TestLevelPickerScreen(
+                context = this,
+                onBack = { navigator.back() },
+                onLevelSelected = { level ->
+                    navigator.navigate(
+                        AppScreen.Loadout(
+                            campaignLevel = level,
+                            testMode = true,
+                        ),
+                    )
+                },
+            )
             is AppScreen.Loadout -> LoadoutScreen(
                 context = this,
                 campaignLevel = screen.campaignLevel,
-                loadoutUseCases = if (screen.demoMode) demoLoadoutUseCases else loadoutUseCases,
+                loadoutUseCases = when {
+                    screen.testMode -> testLoadoutUseCases
+                    screen.demoMode -> demoLoadoutUseCases
+                    else -> loadoutUseCases
+                },
                 loadoutCatalog = loadoutCatalog,
                 onBack = { navigator.back() },
                 demoMode = screen.demoMode,
+                testMode = screen.testMode,
                 initialDetailItem = screen.focusItem?.toLoadoutItemReference(),
                 onShop = { item ->
                     navigator.replace(
@@ -277,6 +307,7 @@ class MainActivity : ComponentActivity() {
                             returnToLoadout = ShopLoadoutReturn(
                                 campaignLevel = screen.campaignLevel,
                                 demoMode = screen.demoMode,
+                                testMode = screen.testMode,
                                 item = item.toShopItemReference(),
                             ),
                         ),
@@ -291,6 +322,7 @@ class MainActivity : ComponentActivity() {
                                 "LEVEL_${screen.campaignLevel}"
                             },
                             campaignLevel = screen.campaignLevel,
+                            testMode = screen.testMode,
                             matchId = MatchId(UUID.randomUUID().toString()),
                             playerLoadout = playerLoadout,
                             playerInventory = playerInventory.takeUnless { screen.demoMode },
@@ -311,6 +343,7 @@ class MainActivity : ComponentActivity() {
                             AppScreen.Loadout(
                                 campaignLevel = returnToLoadout.campaignLevel,
                                 demoMode = returnToLoadout.demoMode,
+                                testMode = returnToLoadout.testMode,
                                 focusItem = returnToLoadout.item,
                             ),
                         )
@@ -325,16 +358,17 @@ class MainActivity : ComponentActivity() {
                 playerInventory = screen.playerInventory,
                 matchId = screen.matchId,
                 stockSettlementUseCase = matchStockSettlementUseCase.takeIf {
-                    screen.playerInventory != null
+                    screen.playerInventory != null && !screen.testMode
                 },
                 loadoutCatalog = loadoutCatalog,
                 demoMode = screen.levelId == "DEMO_LEVEL",
+                testMode = screen.testMode,
                 onBackClicked = {
                     if (!navigator.back()) {
                         finish()
                     }
                 },
-                openDebugOnStart = screen.levelId == "DEMO_LEVEL",
+                openDebugOnStart = screen.levelId == "DEMO_LEVEL" || screen.testMode,
                 onMatchFinished = { level, event, reward, onCompletion ->
                     campaignCompletionPresenter.onMatchFinished(
                         level,

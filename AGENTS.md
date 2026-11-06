@@ -55,6 +55,7 @@ do bieżącego zadania według [indeksu dokumentów kontekstu](docs/agent-contex
 - [Prompt implementacji map JSON](docs/campaign/map-json-implementation-prompt.md)
 - [Rozdział 1 — README map](docs/campaign/maps/chapter1/README.md)
 - [Rozdział 1 — porównanie map](docs/campaign/maps/chapter1/COMPARISON.md)
+- [AGP wspólnego pergaminowego panelu selektora rozdziałów](docs/systems/campaign-chapter-selector-parchment.agp)
 
 ### Edytor map
 

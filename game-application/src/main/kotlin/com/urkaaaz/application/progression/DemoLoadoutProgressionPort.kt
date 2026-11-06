@@ -9,7 +9,12 @@ import com.urkaaaz.application.loadout.LoadoutPurchaseResult
 
 class DemoLoadoutProgressionPort(
     loadoutCatalog: LoadoutCatalog = LoadoutCatalog.bundled(),
+    stockPerItem: Int = Int.MAX_VALUE,
 ) : LoadoutProgressionPort {
+    init {
+        require(stockPerItem > 0) { "demo loadout stock must be positive" }
+    }
+
     private val demoSnapshot = LoadoutProgressionSnapshot(
         unlockedSpellTypes = loadoutCatalog.spells
             .asSequence()
@@ -18,11 +23,11 @@ class DemoLoadoutProgressionPort(
         ammunitionStocks = loadoutCatalog.ammunition
             .asSequence()
             .filterNot { it.unlimited }
-            .associate { it.id to Int.MAX_VALUE },
+            .associate { it.id to stockPerItem },
         specialSpellStocks = loadoutCatalog.spells
             .asSequence()
             .filter { it.special }
-            .associate { it.id to Int.MAX_VALUE },
+            .associate { it.id to stockPerItem },
         goldBalance = 0,
     )
 

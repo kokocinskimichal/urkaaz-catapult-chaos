@@ -59,12 +59,14 @@ class LoadoutScreen(
     private val onShop: (LoadoutItemReference) -> Unit,
     private val initialDetailItem: LoadoutItemReference? = null,
     demoMode: Boolean = false,
+    testMode: Boolean = false,
 ) : ScreenContent {
     private val viewModel = LoadoutViewModel(
         campaignLevel,
         loadoutUseCases,
         loadoutCatalog,
         demoMode,
+        testMode = testMode,
     )
     private val unavailableArtworkFilter = ColorMatrixColorFilter(
         ColorMatrix().apply { setSaturation(0f) },
@@ -419,10 +421,14 @@ class LoadoutScreen(
                     topMargin = dp(context, 30)
                 })
                 addView(TextView(context).apply {
-                    text = if (viewModel.state.demoMode) {
-                        context.getString(R.string.loadout_demo_mode)
-                    } else {
-                        context.getString(R.string.loadout_level, viewModel.state.level)
+                    text = when {
+                        viewModel.state.testMode ->
+                            context.getString(
+                                R.string.loadout_test_mode_level,
+                                viewModel.state.level,
+                            )
+                        viewModel.state.demoMode -> context.getString(R.string.loadout_demo_mode)
+                        else -> context.getString(R.string.loadout_level, viewModel.state.level)
                     }
                     textSize = 10f
                     setTextColor(Color.rgb(239, 220, 179))
@@ -734,7 +740,9 @@ class LoadoutScreen(
                 LoadoutOptionStatus.AVAILABLE,
                 LoadoutOptionStatus.UNIMPLEMENTED,
             )
-        val canOpenShop = viewModel.state.draft != null && isShopOfferOutOfStock(item, status)
+        val canOpenShop = !viewModel.state.testMode &&
+            viewModel.state.draft != null &&
+            isShopOfferOutOfStock(item, status)
 
         val textColumn = LinearLayout(context).apply {
             orientation = LinearLayout.VERTICAL
@@ -1042,6 +1050,7 @@ class LoadoutScreen(
         item: LoadoutItemReference,
         status: LoadoutOptionStatus,
     ): Boolean {
+        if (viewModel.state.testMode) return false
         if (status != LoadoutOptionStatus.OUT_OF_STOCK) return false
         return when (item) {
             is LoadoutItemReference.Unit -> false

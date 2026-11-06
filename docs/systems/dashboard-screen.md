@@ -24,8 +24,8 @@ balans.
 - Zachowanie live summary profilu: poziom, życia, złoto i status regeneracji
   `N/A`; wartości zawsze pochodzą z danych aplikacji, nie ze screenshotu.
 - Zachowanie Back, Campaign, Shop i potwierdzanego RESET.
-- Umieszczenie przycisku `TEST MODE` na Dashboardzie bez zmiany
-  istniejącego przepływu demo meczu.
+- Umieszczenie przycisku `TEST MODE` na Dashboardzie, który otwiera niezależny
+  od postępu gracza wybór poziomów kampanii 1–54.
 - Zachowanie widocznego przycisku `AD REWARD` wyłącznie jako elementu
   prezentacji; nie dodawać integracji reklam ani nagród.
 - Użycie istniejącego selektora globusa LocalizationSystem w nagłówku. Ekran
@@ -128,8 +128,11 @@ Widoczność popupu i ukryte sloty nie konsumują danych eventowych.
 - Campaign → istniejący `CampaignScreen`; wybranie poziomu prowadzi dalej do
   Loadout.
 - Shop → `ShopScreen`; powrót po zakupie prowadzi do Dashboardu.
-- TEST MODE → `LoadoutScreen` dla poziomu demo; po zatwierdzeniu loadoutu
-  uruchamia istniejący mecz `DEMO_LEVEL`.
+- TEST MODE → osobny `TestLevelPickerScreen` z poziomami 1–54 pogrupowanymi
+  według rozdziałów. Wybór otwiera Loadout z dostępnością wybranego levelu,
+  ale bez zapisu loadoutu. Mecz korzysta z rzeczywistej definicji kampanii,
+  otwiera Debug Tools i nie zapisuje postępu, nagród ani zużycia stocku.
+  Akcja powrotu z wyniku meczu prowadzi do selektora Test Mode.
 - RESET → dialog potwierdzenia, a dopiero po akceptacji wywołanie istniejącego
   resetu postępu.
 - Globus → otwarcie lub zamknięcie selektora; wybór flagi wysyła

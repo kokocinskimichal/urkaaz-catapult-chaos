@@ -4,6 +4,11 @@
     <string name="app_title">URKAAAZ! Caos de catapultas</string>
     <string name="open_dashboard">Abrir el panel</string>
     <string name="test_mode">MODO DE PRUEBA</string>
+    <string name="test_level_picker_title">MODO DE PRUEBA • ELEGIR NIVEL</string>
+    <string name="test_level_picker_chapter">CAPÍTULO %1$d • %2$s</string>
+    <string name="test_level_picker_level">NIVEL %1$d</string>
+    <string name="test_level_picker_boss_level">JEFE • NIVEL %1$d</string>
+    <string name="test_level_picker_level_accessibility">Nivel de prueba %1$d, %2$s</string>
     <string name="campaign_level">NIVEL %1$d</string>
     <string name="campaign_level_locked">NIVEL %1$d 🔒</string>
     <string name="campaign_level_completed">NIVEL %1$d • COMPLETADO</string>
@@ -131,6 +136,7 @@
     <string name="match_result_retry_stock">REINTENTAR GUARDADO DE INVENTARIO</string>
     <string name="match_result_exit_campaign">SALIR A LA CAMPAÑA</string>
     <string name="match_result_back_dashboard">VOLVER AL PANEL</string>
+    <string name="match_result_back_test_levels">VOLVER A ELEGIR NIVEL</string>
     <string name="match_result_saving_status">Se está guardando el progreso de campaña.</string>
     <string name="match_result_completion_failed">No se pudo guardar el progreso. Reintenta este nivel o vuelve.</string>
     <string name="match_result_saving_stock">Guardando el inventario usado…</string>
@@ -223,6 +229,7 @@
     <string name="loadout_title">EQUIPAMIENTO</string>
     <string name="loadout_level">CAMPAÑA • NIVEL %1$d</string>
     <string name="loadout_demo_mode">MODO DEMO</string>
+    <string name="loadout_test_mode_level">MODO DE PRUEBA • NIVEL %1$d</string>
     <string name="loadout_back">VOLVER</string>
     <string name="loadout_gold">ORO • %1$d</string>
     <string name="loadout_units">UNIDADES</string>

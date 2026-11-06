@@ -18,8 +18,13 @@ presentation resources, while Studio displays stable chapter IDs. The PL/ES
 translation list has been approved by the user. Fixed-size UI panels were
 visually reviewed on the Pixel 8 emulator in EN/PL/ES.
 The dashboard keeps `AD REWARD` visible but inert. Two hidden side anchors are
-reserved for future game-event icons; there is no Dashboard event feed yet. The Dashboard's
-`TEST MODE` action opens demo Loadout and then starts a match with `DEMO_LEVEL`.
+reserved for future game-event icons; there is no Dashboard event feed yet.
+`TEST MODE` opens a chapter-grouped picker for campaign levels 1–54 without
+consulting unlock progress. It opens a level-limited Loadout backed by
+`DemoLoadoutProgressionPort` (99 per limited stock) and
+`InMemoryLoadoutRepository`, then runs the selected campaign scenario with
+Debug Tools. It does not write loadout or campaign progress, rewards, or used
+stock to DataStore; the result action returns to the level picker.
 The loadout core, local player profile and
 per-level loadout persistence are implemented with AndroidX DataStore.
 Campaign matches start
@@ -28,7 +33,7 @@ ShopScreen now supports local OrCoins purchases and post-match stock settlement;
 ResultScreen remains a placeholder.
 `MainActivity` hides Android status and navigation bars for immersive
 full-screen presentation; system bars can be revealed transiently with a swipe.
-`CampaignScreen` and `LoadoutScreen` share Android UI chrome values from
+`CampaignScreen`, `TestLevelPickerScreen`, and `LoadoutScreen` share Android UI chrome values from
 `android-app/src/main/java/com/urkaaaz/ui/ScreenChromeMetrics.kt`: a 4 dp edge
 inset, 96 × 48 dp Back button, and 6 dp gap before the screen title. Loadout
 adds its own 14 dp content inset and 6 dp content top padding inside the shared
@@ -317,7 +322,10 @@ beside the normalized 512x512 source icons. Icon tabs omit visible chapter
 numbers, fill the tab surface with the icon, and overlay completed/locked
 badges at its lower-right instead of below it. Selection uses background fill
 opacity rather than a border; accessibility descriptions retain the chapter
-number.
+number. The campaign selector art brief
+`docs/systems/campaign-chapter-selector-parchment.agp` specifies one shared
+parchment backplate behind the icon group; this backplate has not yet been
+generated or integrated.
 
 The Studio Campaign tab edits the same chapter and layout JSON through
 `/api/campaign/*`; it never modifies `MapDefinition` or Android resource IDs.

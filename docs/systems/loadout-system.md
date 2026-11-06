@@ -81,12 +81,24 @@ przekazywany do `SimulationConfig`, a warstwa sesji egzekwuje jednostki i
 amunicję dla gracza. Wspólny kontrakt `CastSpell` trafia do SpellSystemu;
 efekt gameplayowy mają tylko czary oznaczone w katalogu jako zaimplementowane.
 
-Tryb demo używa tego samego ekranu i walidatora loadoutu, ale udostępnia
-wszystkie jednostki, typy amunicji i czary z katalogów, niezależnie od
-dostępności kampanii, odblokowań i zapasów gracza. Zapis demo ma osobny klucz
-DataStore i wersję schematu, niezależne od wyborów kampanii. Zatwierdzony
-wybór trafia do scenariusza demo z mapą i wiatrem demo, a wybrane jednostki,
-amunicja i czary pozostają ograniczone przez loadout w runtime meczu.
+Legacy sandbox `DEMO_LEVEL` używa tego samego ekranu i walidatora loadoutu,
+ale udostępnia wszystkie jednostki, typy amunicji i czary z katalogów,
+niezależnie od dostępności kampanii, odblokowań i zapasów gracza. Zapis demo
+ma osobny klucz DataStore i wersję schematu, niezależne od wyborów kampanii.
+Zatwierdzony wybór trafia do scenariusza demo z mapą i wiatrem demo, a
+wybrane jednostki, amunicja i czary pozostają ograniczone przez loadout w
+runtime meczu. Dashboard nie uruchamia już tego sandboxa.
+
+Dashboardowy TEST MODE otwiera `TestLevelPickerScreen`, który wyświetla
+grywalne poziomy 1–54 pogrupowane według kanonicznych rozdziałów, bez
+odczytywania blokad postępu. Poziom otwiera ten sam Loadout z dostępnością
+jednostek, amunicji i czarów wynikającą z `CampaignLevelDefinition`; progresja
+testowa udostępnia zawartość bez zależności od profilu, z 99 sztukami każdego
+limitowanego stocku, a `InMemoryLoadoutRepository` nie zapisuje wyboru do
+DataStore. Match używa rzeczywistego scenariusza kampanii i selektora Loadoutu
+dla wskazanego poziomu, ale pomija settlement stocku, nagrody i zapis
+`CampaignProgress`; Debug Tools pozostają dostępne. Po meczu akcja powrotu
+prowadzi do selektora poziomów testowych.
 
 ## Właściciel i kierunek zależności
 

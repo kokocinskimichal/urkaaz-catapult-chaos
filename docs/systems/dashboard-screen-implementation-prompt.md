@@ -112,8 +112,10 @@ mechanizmu języka ani nie cofaj istniejącej integracji.
   - Campaign → `CampaignScreen`, która prowadzi przez wybrany poziom do
     Loadout;
   - Shop → `ShopScreen`; powrót prowadzi do Dashboardu;
-  - Test Mode → istniejący `LoadoutScreen` w trybie demo, a następnie mecz
-    `DEMO_LEVEL`.
+  - Test Mode → osobny selektor leveli 1–54, niezależny od postępu kampanii.
+    Wybór otwiera testowy Loadout z dostępnością wybranego poziomu, bez zapisu
+    do profilu; mecz używa wybranej definicji kampanii i Debug Tools bez
+    zapisu postępu, nagród ani użycia stocku.
 - Pokaż tylko jeden RESET, w miejscu zgodnym ze screenshotem. Usuń
   nieobsługiwany, duplikujący RESET z górnego HUD-u. Zostaw istniejący dialog
   potwierdzenia i wywołuj `PlayerProgressResetRepository` dopiero po

@@ -45,6 +45,7 @@ import com.urkaaaz.simulation.NoOpAmmunitionLogSink
 class MatchViewModel(
     private val campaignLevel: Int = 1,
     private val demoMode: Boolean = false,
+    private val testMode: Boolean = false,
     playerLoadout: PlayerLoadoutConfig? = null,
     playerInventory: PlayerInventoryConfig? = null,
     private val stockSettlementUseCase: MatchStockSettlementUseCase? = null,
@@ -62,9 +63,9 @@ class MatchViewModel(
     ) -> Unit = { level, event, _ -> onMatchFinished(level, event) },
     private val onStockSettlementRequested: () -> Unit = {},
     private val rewardTracker: RewardTracker? =
-        if (demoMode) null else RewardTracker(campaignLevel),
+        if (demoMode || testMode) null else RewardTracker(campaignLevel),
     private val stockUsageTracker: MatchStockUsageTracker? =
-        playerInventory?.let(::MatchStockUsageTracker),
+        if (demoMode || testMode) null else playerInventory?.let(::MatchStockUsageTracker),
     private val gateway: LocalMatchGateway = LocalMatchGateway(
         loadSelectedDefinition(campaignLevel, demoMode, mapRepository).biome.name,
         loadSelectedDefinition(campaignLevel, demoMode, mapRepository).initialWind,
@@ -434,7 +435,7 @@ class MatchViewModel(
     }
 
     internal fun forwardCampaignCompletionEvents(events: List<MatchEvent>) {
-        if (demoMode) return
+        if (demoMode || testMode) return
         events.filterIsInstance<MatchEvent.MatchFinished>().forEach { event ->
             val delivery = Triple(matchGeneration, event.matchId, event.eventId)
             if (forwardedCampaignCompletions.add(delivery)) {

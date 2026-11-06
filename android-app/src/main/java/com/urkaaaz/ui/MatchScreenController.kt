@@ -50,6 +50,7 @@ class MatchScreenController(
     stockSettlementUseCase: MatchStockSettlementUseCase? = null,
     private val loadoutCatalog: LoadoutCatalog = LoadoutCatalog.bundled(),
     private val demoMode: Boolean = false,
+    private val testMode: Boolean = false,
     private val onBackClicked: () -> Unit,
     private val openDebugOnStart: Boolean = false,
     private val onMatchFinished: (
@@ -68,6 +69,7 @@ class MatchScreenController(
         stockSettlementUseCase = stockSettlementUseCase,
         loadoutCatalog = loadoutCatalog,
         demoMode = demoMode,
+        testMode = testMode,
         mapRepository = MapDefinitionRepository { path -> activity.assets.open(path) },
         combatLogSink = AndroidCombatLogSink(),
         ammunitionLogSink = AndroidAmmunitionLogSink(),
@@ -81,7 +83,11 @@ class MatchScreenController(
             }
         },
         onStockSettlementRequested = ::settleStockAfterMatchFinished,
-        rewardTracker = if (demoMode) null else RewardTracker(campaignLevel, rewardRegistry),
+        rewardTracker = if (demoMode || testMode) {
+            null
+        } else {
+            RewardTracker(campaignLevel, rewardRegistry)
+        },
     )
     private val gameHandler = Handler(Looper.getMainLooper())
     private var screenScope: CoroutineScope? = null
@@ -252,6 +258,7 @@ class MatchScreenController(
                 },
                 onCampaignReturn = { leaveAfterStockSettlement(onBackClicked) },
                 onDashboardReturn = { leaveAfterStockSettlement(onBackClicked) },
+                onTestLevelPickerReturn = { leaveAfterStockSettlement(onBackClicked) },
             )
         }
         stockSettlementOverlay = createStockSettlementOverlay()
@@ -423,6 +430,7 @@ class MatchScreenController(
             campaignLevel = campaignLevel,
             biomeName = state.terrainBiome,
             demoMode = demoMode,
+            testMode = testMode,
             campaignCompletionRecorded = campaignCompletionRecorded,
             reward = campaignRewardResult,
             stockSettlementStatus = stockSettlementUiStatus,
@@ -501,6 +509,18 @@ class MatchScreenController(
         val scope = screenScope ?: CoroutineScope(
             SupervisorJob() + Dispatchers.Main.immediate,
         ).also { screenScope = it }
+        if (testMode) {
+            val job = scope.launch(start = CoroutineStart.LAZY) {
+                check(operation() == null) {
+                    "Test mode must not settle persistent match stock"
+                }
+                stockSettlementJob = null
+                onSuccess()
+            }
+            stockSettlementJob = job
+            job.start()
+            return
+        }
         pendingStockOperation = operation
         pendingStockSuccess = onSuccess
         stockSettlementUiStatus = MatchStockSettlementUiStatus.PENDING
@@ -656,7 +676,7 @@ class MatchScreenController(
             textSize = 19f
             setTypeface(typeface, Typeface.BOLD)
         })
-        if (demoMode) {
+        if (demoMode || testMode) {
             root.addView(CheckBox(activity).apply {
                 text = activity.getString(R.string.match_debug_coordinates)
                 setTextColor(Color.WHITE)

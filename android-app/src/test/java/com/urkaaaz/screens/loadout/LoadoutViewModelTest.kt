@@ -12,6 +12,7 @@ import com.urkaaaz.application.loadout.LoadoutStorageWriteResult
 import com.urkaaaz.application.loadout.LoadoutUseCases
 import com.urkaaaz.application.loadout.LoadoutCatalog
 import com.urkaaaz.application.loadout.MatchLoadout
+import com.urkaaaz.application.campaign.BundledCampaignBalance
 import com.urkaaaz.application.progression.DemoLoadoutProgressionPort
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.awaitCancellation
@@ -101,6 +102,29 @@ class LoadoutViewModelTest {
                     ),
             )
         }
+    }
+
+    @Test
+    fun testModeUsesTheSelectedCampaignLevelsAvailabilityInsteadOfTheFullCatalog() = runBlocking {
+        val level = 10
+        val viewModel = LoadoutViewModel(
+            campaignLevel = level,
+            useCases = LoadoutUseCases(DemoLoadoutProgressionPort(catalog), FakeRepository()),
+            testMode = true,
+        )
+        val scenario = BundledCampaignBalance.levelDefinition(level).toMatchScenario()
+
+        viewModel.load()
+
+        assertTrue(viewModel.state.testMode)
+        assertFalse(viewModel.state.demoMode)
+        assertEquals(scenario.availableUnits.toSet(), viewModel.state.availableUnits.toSet())
+        assertEquals(
+            scenario.availableAmmunition.toSet(),
+            viewModel.state.availableAmmunition.toSet(),
+        )
+        assertEquals(scenario.availableSpells.toSet(), viewModel.state.availableSpells.toSet())
+        assertTrue(viewModel.state.canStart)
     }
 
     @Test

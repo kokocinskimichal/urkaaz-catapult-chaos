@@ -44,6 +44,23 @@ class MatchViewModelCampaignCompletionTest {
     }
 
     @Test
+    fun testCampaignMatchDoesNotForwardCompletionOrRequestStockSettlement() {
+        var completionForwarded = false
+        var settlementRequested = false
+        val viewModel = MatchViewModel(
+            campaignLevel = 54,
+            testMode = true,
+            onMatchFinished = { _, _ -> completionForwarded = true },
+            onStockSettlementRequested = { settlementRequested = true },
+        )
+
+        viewModel.forwardCampaignCompletionEvents(listOf(finishedEvent()))
+
+        assertEquals(false, completionForwarded)
+        assertEquals(false, settlementRequested)
+    }
+
+    @Test
     fun stockSettlementIsRequestedOnceForEveryFinalMatchOutcome() {
         var requests = 0
         val viewModel = MatchViewModel(

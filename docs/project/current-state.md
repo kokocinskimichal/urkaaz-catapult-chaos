@@ -37,10 +37,11 @@ kampanię, AI oraz działający match screen. Gałąź robocza: `develop`.
   rozdziałów są mapowane z lokalizowanych zasobów, a Studio pokazuje stabilne
   ID. Tłumaczenia PL/ES zostały zaakceptowane, a stałe panele zweryfikowano
   wizualnie na emulatorze w trzech językach. `AD REWARD` pozostaje nieaktywny, a dwa boczne
-  sloty eventów są ukryte i nie mają jeszcze źródła danych. `TEST MODE`
-  otwiera demo Loadout, z którego po zatwierdzeniu startuje mecz `DEMO_LEVEL`.
-  Demo Debug Tools udostępnia checkbox automatycznej rekrutacji i fal RED,
-  domyślnie włączony.
+  sloty eventów są ukryte i nie mają jeszcze źródła danych. `TEST MODE` otwiera
+  picker grywalnych poziomów 1–54 pogrupowanych po rozdziałach, bez względu na
+  postęp gracza. Loadout używa dostępności wybranego poziomu i przechowuje
+  wybory tylko w pamięci; mecz używa rzeczywistego scenariusza, ma dostępne
+  Debug Tools i nie zapisuje postępu, nagród ani użycia stocku.
 - Lokalny przepływ:
   `MatchUiAction → MatchViewModel → LocalMatchGateway → MatchSession →
   simulation → MatchSnapshot`.

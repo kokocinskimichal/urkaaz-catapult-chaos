@@ -236,6 +236,8 @@ internal class MatchResultPopupView(
                         R.string.match_result_retry_stock
                     MatchResultActionType.BACK_TO_DASHBOARD ->
                         R.string.match_result_back_dashboard
+                    MatchResultActionType.BACK_TO_TEST_LEVELS ->
+                        R.string.match_result_back_test_levels
                 },
             )
             isEnabled = action.enabled

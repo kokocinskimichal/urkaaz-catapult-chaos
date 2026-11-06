@@ -24,6 +24,7 @@ class MatchScreen(
     stockSettlementUseCase: MatchStockSettlementUseCase? = null,
     loadoutCatalog: LoadoutCatalog = LoadoutCatalog.bundled(),
     demoMode: Boolean = false,
+    testMode: Boolean = false,
     onBackClicked: () -> Unit,
     openDebugOnStart: Boolean = false,
     onMatchFinished: (
@@ -44,6 +45,7 @@ class MatchScreen(
         stockSettlementUseCase = stockSettlementUseCase,
         loadoutCatalog = loadoutCatalog,
         demoMode = demoMode,
+        testMode = testMode,
         onBackClicked = onBackClicked,
         openDebugOnStart = openDebugOnStart,
         onMatchFinished = onMatchFinished,

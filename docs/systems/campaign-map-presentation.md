@@ -278,6 +278,9 @@ existing implementation, not an approved final layout. A redesign concept
 prompt is available at `docs/systems/campaign-map-screen-layout.agp`; review
 the generated screenshot before changing screen composition. The full
 chapter title and completion summary remain visible on the selected map page.
+The reference design's upper-right chapter group uses one shared parchment
+backplate behind separate chapter icons, not a parchment card per icon; its
+asset brief is `docs/systems/campaign-chapter-selector-parchment.agp`.
 
 The chapter state is presentation-only:
 

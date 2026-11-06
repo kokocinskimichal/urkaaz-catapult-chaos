@@ -42,6 +42,17 @@ class DemoLoadoutProgressionPortTest {
             DemoLoadoutProgressionPort().snapshot(0),
         )
     }
+
+    @Test
+    fun configuredTestStockReplacesTheDefaultEffectivelyUnlimitedStock() = runBlocking {
+        val port = DemoLoadoutProgressionPort(catalog, stockPerItem = 99)
+        val snapshot = (
+            port.snapshot(10) as LoadoutProgressionRead.Available
+            ).snapshot
+
+        assertTrue(snapshot.ammunitionStocks.values.all { it == 99 })
+        assertTrue(snapshot.specialSpellStocks.values.all { it == 99 })
+    }
 }
 
 private fun <T> runBlocking(block: suspend () -> T): T =

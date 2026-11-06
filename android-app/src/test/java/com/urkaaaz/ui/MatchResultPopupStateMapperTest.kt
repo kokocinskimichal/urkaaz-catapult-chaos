@@ -120,6 +120,31 @@ class MatchResultPopupStateMapperTest {
     }
 
     @Test
+    fun testModeOffersRetryAndReturnToTheLevelPicker() {
+        val state = popup(testMode = true)
+
+        assertEquals(
+            listOf(MatchResultActionType.RETRY, MatchResultActionType.BACK_TO_TEST_LEVELS),
+            state?.actions?.map { it.type },
+        )
+    }
+
+    @Test
+    fun testModeResultActionReturnsToTheLevelPicker() {
+        val called = mutableListOf<String>()
+        dispatchMatchResultAction(
+            action = MatchResultActionType.BACK_TO_TEST_LEVELS,
+            onRetry = {},
+            onNextLevel = {},
+            onCampaignReturn = {},
+            onDashboardReturn = { called += "dashboard" },
+            onTestLevelPickerReturn = { called += "level-picker" },
+        )
+
+        assertEquals(listOf("level-picker"), called)
+    }
+
+    @Test
     fun unfinishedMatchDoesNotShowResultPopup() {
         assertNull(popup(isFinished = false))
     }
@@ -147,6 +172,7 @@ class MatchResultPopupStateMapperTest {
                 onNextLevel = { called += "next" },
                 onCampaignReturn = { called += "campaign" },
                 onDashboardReturn = { called += "dashboard" },
+                onTestLevelPickerReturn = { called += "test-levels" },
             )
         }
 
@@ -154,8 +180,9 @@ class MatchResultPopupStateMapperTest {
         callbacks(MatchResultActionType.NEXT_LEVEL)
         callbacks(MatchResultActionType.EXIT_TO_CAMPAIGN)
         callbacks(MatchResultActionType.BACK_TO_DASHBOARD)
+        callbacks(MatchResultActionType.BACK_TO_TEST_LEVELS)
 
-        assertEquals(listOf("retry", "next", "campaign", "dashboard"), called)
+        assertEquals(listOf("retry", "next", "campaign", "dashboard", "test-levels"), called)
     }
 
     private fun popup(
@@ -163,6 +190,7 @@ class MatchResultPopupStateMapperTest {
         level: Int = 4,
         biome: String = "GREEN_FRONTIER",
         demoMode: Boolean = false,
+        testMode: Boolean = false,
         completionRecorded: Boolean? = true,
         isFinished: Boolean = true,
         bossDeathPresentationPending: Boolean = false,
@@ -175,6 +203,7 @@ class MatchResultPopupStateMapperTest {
         campaignLevel = level,
         biomeName = biome,
         demoMode = demoMode,
+        testMode = testMode,
         campaignCompletionRecorded = completionRecorded,
         stockSettlementStatus = stockSettlementStatus,
     )

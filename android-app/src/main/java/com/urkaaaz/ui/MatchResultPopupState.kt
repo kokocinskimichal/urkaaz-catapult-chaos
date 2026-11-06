@@ -31,6 +31,7 @@ internal enum class MatchResultActionType {
     RETRY_SAVE,
     RETRY_STOCK_SETTLEMENT,
     BACK_TO_DASHBOARD,
+    BACK_TO_TEST_LEVELS,
 }
 
 internal enum class MatchResultButtonStyle {
@@ -62,6 +63,7 @@ internal object MatchResultPopupStateMapper {
         campaignLevel: Int,
         biomeName: String,
         demoMode: Boolean,
+        testMode: Boolean = false,
         campaignCompletionRecorded: Boolean?,
         reward: LevelRewardResult? = null,
         stockSettlementStatus: MatchStockSettlementUiStatus =
@@ -104,6 +106,19 @@ internal object MatchResultPopupStateMapper {
         val status: MatchResultPopupStatus?
         val actions: List<MatchResultPopupAction>
         when {
+            testMode -> {
+                status = null
+                actions = listOf(
+                    MatchResultPopupAction(
+                        MatchResultActionType.RETRY,
+                        MatchResultButtonStyle.RED,
+                    ),
+                    MatchResultPopupAction(
+                        MatchResultActionType.BACK_TO_TEST_LEVELS,
+                        MatchResultButtonStyle.DARK,
+                    ),
+                )
+            }
             demoMode -> {
                 status = null
                 actions = listOf(
@@ -201,6 +216,7 @@ internal fun dispatchMatchResultAction(
     onNextLevel: () -> Unit,
     onCampaignReturn: () -> Unit,
     onDashboardReturn: () -> Unit,
+    onTestLevelPickerReturn: () -> Unit = onDashboardReturn,
 ) {
     when (action) {
         MatchResultActionType.NEXT_LEVEL -> onNextLevel()
@@ -209,5 +225,6 @@ internal fun dispatchMatchResultAction(
         MatchResultActionType.RETRY_SAVE -> onRetrySave()
         MatchResultActionType.RETRY_STOCK_SETTLEMENT -> onRetryStockSettlement()
         MatchResultActionType.BACK_TO_DASHBOARD -> onDashboardReturn()
+        MatchResultActionType.BACK_TO_TEST_LEVELS -> onTestLevelPickerReturn()
     }
 }

@@ -1,0 +1,89 @@
+STATUS: Generate one shared parchment backplate for the campaign chapter
+selector, using the user-provided campaign-screen screenshot as the visual
+reference. Focus only on the grouped chapter controls in the screenshot's
+upper-right corner. This is one reusable background asset for all chapter
+icons, not a separate parchment card per icon.
+
+## Reference input
+
+- Attach the user-provided campaign-screen reference screenshot. Use it to
+  match the chapter selector's parchment, aged edges, gold trim, and compact
+  horizontal proportions.
+- Inspect only the upper-right chapter selector as the design reference. Do
+  not recreate the screenshot, campaign map, outer map frame, or other UI.
+- If available, attach
+  `assets_src/campaign/ui/campaign_map_frame_overlay.png` only as a material
+  and color reference. The selector panel remains a separate foreground UI
+  asset.
+
+## Output
+
+- Generate exactly one PNG:
+  `campaign_chapter_selector_parchment.png`.
+- Save it under `assets_src/campaign/ui/`.
+- Canvas: exactly 1920 × 512 pixels, horizontal, RGBA.
+- Keep the canvas transparent outside the single shared panel. Use genuine
+  alpha, not a checkerboard or a painted transparent-looking area.
+- Create one continuous parchment panel with a restrained outer border. Do
+  not make a sprite sheet, separate per-chapter cards, or multiple variants.
+- Keep the center field visually quiet and horizontally stretch-friendly:
+  detailed corner/end ornaments stay near the ends, while the central
+  parchment texture and border remain simple enough to resize for a variable
+  number of chapter tabs.
+- Do not add NinePatch guide marks, crop marks, labels, or a background.
+
+## Panel design
+
+- Match the reference's aged parchment face, warm tan/ivory tones, softly
+  darkened paper edges, and restrained antique-gold edging.
+- Keep the panel's silhouette wide and compact, approximately 3.75:1, so it
+  reads as one shared selector plaque rather than a full-screen banner.
+- Use a subtle worn texture and small, attached craft details. Keep the visual
+  weight below the campaign map's main outer frame; the panel must not compete
+  with level markers or the map.
+- The same backplate serves every chapter icon, regardless of chapter theme or
+  selection state. Do not tint or decorate it differently for Chapter 1,
+  Chapter 2, locked chapters, or completed chapters.
+- Maintain clear contrast for separate dark live labels and chapter artwork
+  placed over the parchment.
+
+## Separation from chapter icons and live UI
+
+- Generate the shared parchment backplate only. Chapter emblems remain the
+  separate transparent assets described by
+  `docs/systems/campaign-chapter-icons.agp`.
+- Do not draw individual icon tiles, per-icon parchment backgrounds,
+  separators, fixed icon slots, thumbnails, maps, or landscape artwork.
+- Do not include chapter numbers, names, text, letters, runes that resemble
+  writing, locks, checkmarks, progress indicators, or selection states.
+- Do not include the campaign map, its perimeter frame, Back control, Start
+  Level button, level markers, fortresses, bosses, characters, or other UI.
+- Do not add detached shadows, glow, particles, or decorative elements outside
+  the panel silhouette. Do not alter or imply any map-anchor positions.
+
+## Review checklist
+
+- Confirm the output is one 1920 × 512 RGBA PNG with transparent space outside
+  the panel.
+- Confirm it reads as a single shared parchment background for a horizontal
+  group of chapter icons, not multiple individual cards.
+- Confirm the center can stretch to support different visible chapter counts
+  without distorting detailed ornaments or exposing seams.
+- Composite it behind the separate Chapter 1 and Chapter 2 icons from the
+  reference; verify both remain readable and the panel does not obscure map
+  content or surrounding UI.
+- Confirm there is no text, chapter art, status badge, icon, map, or second
+  screen element baked into the asset.
+- Do not import the generated image into Android until it has been reviewed
+  and approved.
+
+## Negative prompt
+
+full campaign screen, screenshot, map, landscape, terrain, route, water, sky,
+fortress, boss, level marker, chapter icon, emblem, thumbnail, chapter card,
+individual parchment tile, per-icon background, fixed icon slots, divider,
+multiple panels, multiple assets, text, letters, numbers, runes, labels,
+chapter title, chapter number, lock, checkmark, progress bar, selection glow,
+Back button, Start Level button, UI controls, opaque canvas, painted
+transparent-looking area, checkerboard, detached shadow, detached glow,
+particles, excessive filigree, modern plastic, watermark, signature
