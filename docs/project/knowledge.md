@@ -803,6 +803,11 @@ snapshot. The `DEBUG` panel retains `SNAPSHOT`, which hides the HUD and
 ammunition controls and shows the complete normalized battlefield. Legacy
 AI-unit toggles are intentionally not copied because the new match does not
 yet expose runtime unit deployment or AI-unit commands.
+Projectile-vs-unit collision sweeps each projectile substep against the
+bottom-anchored `UnitHitboxProfile` rectangle expanded by its collision radius;
+the earliest contact supplies `ProjectileHitEntity` coordinates. Direct-impact
+damage is applied to that unit ID even when the contact point lies outside the
+unit-anchor splash radius.
 The overlay also draws the rendered canvas bounds of terrain trees, rocks,
 props and relics. These are asset bounds, not gameplay collision shapes:
 transparent padding inside a bitmap can make the visible pixels appear offset

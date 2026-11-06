@@ -1,0 +1,126 @@
+STATUS: Generate one desktop landing-page concept screenshot for the Android
+game Urkaaaz, using the attached game screen and repository artwork as visual
+references. This is a website design concept only, not a playable web game or
+website implementation.
+
+## What to attach
+
+Attach these references when running the prompt:
+
+1. **Required — the campaign-screen screenshot supplied by the user.** Use it
+   as the primary reference for the game's actual world, chapter presentation,
+   and in-game visual language. Show it as a clearly framed gameplay preview;
+   do not flatten the full screenshot into the website background.
+2. **Recommended — `assets_src/dashboard/dashboard_background_approved.png`.**
+   Use it as a source of approved character art and color mood for the hero
+   section. Do not copy its Dashboard controls into the website.
+3. **Recommended — the historical standalone game logo
+   `urkaaz-logo-main-menu.png`
+   from the session Library.** It was recovered from Git history; its former
+   repository path was `android-app/src/main/res/drawable-nodpi/logo_main_menu.png`.
+   Use this artwork as the exact game logo; do not replace it with the AFACODE
+   publisher mark.
+4. **Recommended — `assets_src/campaign/chapter-maps/campaign_chapter_01_green_frontier_map.png`.**
+   Use it for a secondary campaign/world preview if that section is visible.
+5. **Optional — `assets_src/splash/splash_background.png`.** Use it only as an
+   additional environment and lighting reference, not as a full-page backdrop.
+6. **Optional — `assets_src/splash/afacode_company_logo.png`.** Place it as a
+   small publisher mark in the footer only. It is the publisher logo, not the
+   Urkaaaz game logo.
+7. **Optional — one real match-screen screenshot.** Attach a current gameplay
+   capture if the page should show combat in addition to the campaign view.
+   Do not invent gameplay content when no match screenshot is attached.
+
+The standalone game logo existed on the legacy Start screen and was removed
+from the current repository. Attach the recovered `urkaaz-logo-main-menu.png`
+from the Library and use that artwork in the website header. Pair it with the
+`CATAPULT CHAOS` subtitle only if it is not already part of the attached logo.
+
+## Output
+
+- Generate exactly one PNG concept screenshot:
+  `urkaaaz_website_landing_page_concept.png`.
+- Save it under `assets_src/website/screen-concepts/`.
+- Canvas: exactly 1920 × 1080 pixels, landscape 16:9.
+- Show one complete desktop website viewport edge-to-edge. Do not add a browser
+  window, device frame, alternate screen, presentation mockup, or annotations.
+- The result is a static visual concept. Do not generate HTML, CSS, JavaScript,
+  or production website assets.
+
+## Page concept
+
+- Design a polished promotional landing page for **Urkaaaz! Catapult Chaos**,
+  an Android fantasy siege strategy game.
+- Use concise English copy throughout this concept.
+- Create a clear top navigation with the live-text wordmark, a few short
+  section links (for example `GAMEPLAY`, `CAMPAIGN`, `FEATURES`), and one
+  restrained call to action.
+- Make the hero the visual focus: bold game title and one short, readable
+  tagline on one side, with the supplied campaign or match screenshot shown
+  as the actual in-game preview on the other. Keep the game screenshot
+  rectangular and legible; do not stretch, repaint, or convert it into a
+  decorative background.
+- Below the hero, show a compact preview of the core game pillars using no
+  more than three content cards: catapult aiming, deploying units and spells,
+  and progressing through campaign chapters. Use the attached map/art assets
+  when available.
+- Finish with a simple footer. If the AFACODE logo is attached, use it only as
+  a small publisher attribution.
+
+## Art direction
+
+- Extend Urkaaaz's existing painterly fantasy style into a clean, premium
+  landing page: deep forest greens, charcoal stone, dark timber, warm
+  parchment, and restrained antique-gold accents.
+- Use dramatic but readable contrast. Keep parchment panels and gold trim as
+  accents rather than turning the whole page into a campaign screen.
+- Give the title and game preview generous space. The page should feel like a
+  real desktop game website, not a collage of Android UI panels.
+- Use consistent alignment, spacing, and typography. Keep navigation, hero
+  content, cards, and footer clearly separated without excessive decoration.
+- Use only artwork present in the supplied references. Do not invent new
+  characters, bosses, biomes, logos, or gameplay scenes.
+
+## Copy and factual limits
+
+- Keep all text short, correctly spelled, and readable at the full screenshot
+  size. Avoid lorem ipsum and decorative pseudo-text.
+- Suitable button copy: `EXPLORE THE CAMPAIGN` or `SEE GAMEPLAY`.
+- Do not invent a release date, price, user count, review score, awards,
+  supported platforms beyond Android, online multiplayer, or a store URL.
+- Do not draw a Google Play badge or imply that a store listing already exists.
+- Do not add signup forms, purchases, login, social feeds, or features not
+  evidenced by the references.
+
+## Separation from the Android game
+
+- This is a public promotional website concept, not a new game screen.
+- Do not copy the full Dashboard, Loadout, Match HUD, campaign selector, or
+  status bars as the website layout. Use supplied in-game screenshots only as
+  embedded product previews.
+- Do not add fake app controls that appear to operate the game.
+- Keep any publisher attribution visually separate from the Urkaaaz title.
+
+## Review checklist
+
+- Confirm the image is one complete 1920 × 1080 desktop website viewport.
+- Confirm the hero uses the exact title `URKAAAZ! Catapult Chaos` and the
+  attached game art/screenshots retain their proportions and visible content.
+- Confirm the overall visual language matches Urkaaaz without copying an
+  entire game screen as the webpage.
+- Confirm no unsupported release, store, rating, audience, or multiplayer
+  claims appear.
+- Confirm the page has clear hierarchy and restrained, readable copy.
+- Do not treat this concept image as a production website or import it into
+  the Android app.
+
+## Negative prompt
+
+mobile app screen, game HUD, flattened campaign map, fake gameplay scene,
+invented characters, invented boss, invented biome, browser chrome, phone
+mockup, device frame, multiple screenshots, collage, code editor, HTML, CSS,
+JavaScript, fake Google Play badge, fake store URL, release date, price,
+ratings, awards, user counts, multiplayer claim, login form, checkout,
+newsletter form, lorem ipsum, gibberish text, misspelled game title,
+AFACODE used as the game logo, cluttered navigation, tiny unreadable copy,
+excessive parchment, ornate gold overload, watermark, signature

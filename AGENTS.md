@@ -116,6 +116,7 @@ do bieżącego zadania według [indeksu dokumentów kontekstu](docs/agent-contex
 - [Architektura Dashboardu](docs/systems/dashboard-screen.md) ·
   [prompt implementacyjny](docs/systems/dashboard-screen-implementation-prompt.md)
 - [Tło splash screenu](docs/systems/splash-screen-background.agp)
+- [AGP landing page Urkaaaz](docs/systems/urkaaaz-website-landing-page.agp)
 - [Brief koncepcji wizualnej Shop](docs/systems/shop-screen-mockup.agp) ·
   [referencja układu UI](assets_src/shop/screen-concepts/shop_ui_reference.png)
 - [Prompt systemu definicji poziomów](docs/prompts/IMPLEMENT_LEVEL_DEFINITION_SYSTEM.md)

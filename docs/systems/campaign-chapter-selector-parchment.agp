@@ -1,14 +1,15 @@
-STATUS: Generate one shared parchment backplate for the campaign chapter
+STATUS: Generate one flat, shared parchment backplate for the campaign chapter
 selector, using the user-provided campaign-screen screenshot as the visual
 reference. Focus only on the grouped chapter controls in the screenshot's
 upper-right corner. This is one reusable background asset for all chapter
-icons, not a separate parchment card per icon.
+icons, not a separate parchment card per icon. Do not turn it into a rolled
+scroll banner or add large end ornaments.
 
 ## Reference input
 
 - Attach the user-provided campaign-screen reference screenshot. Use it to
-  match the chapter selector's parchment, aged edges, gold trim, and compact
-  horizontal proportions.
+  match the chapter selector's flat parchment plaque, aged edges, gold trim,
+  and compact horizontal proportions.
 - Inspect only the upper-right chapter selector as the design reference. Do
   not recreate the screenshot, campaign map, outer map frame, or other UI.
 - If available, attach
@@ -24,8 +25,9 @@ icons, not a separate parchment card per icon.
 - Canvas: exactly 1920 × 512 pixels, horizontal, RGBA.
 - Keep the canvas transparent outside the single shared panel. Use genuine
   alpha, not a checkerboard or a painted transparent-looking area.
-- Create one continuous parchment panel with a restrained outer border. Do
-  not make a sprite sheet, separate per-chapter cards, or multiple variants.
+- Create one continuous, shallow rectangular parchment panel with a restrained
+  outer border. Do not make a sprite sheet, separate per-chapter cards, or
+  multiple variants.
 - Keep the center field visually quiet and horizontally stretch-friendly:
   detailed corner/end ornaments stay near the ends, while the central
   parchment texture and border remain simple enough to resize for a variable
@@ -35,12 +37,14 @@ icons, not a separate parchment card per icon.
 ## Panel design
 
 - Match the reference's aged parchment face, warm tan/ivory tones, softly
-  darkened paper edges, and restrained antique-gold edging.
+  darkened paper edges, and a narrow, restrained antique-gold edge.
 - Keep the panel's silhouette wide and compact, approximately 3.75:1, so it
   reads as one shared selector plaque rather than a full-screen banner.
-- Use a subtle worn texture and small, attached craft details. Keep the visual
-  weight below the campaign map's main outer frame; the panel must not compete
-  with level markers or the map.
+- Keep the panel flat and plaque-like, with gently worn, shallow edges. Use
+  only subtle paper texture and minimal border detail. Do not add rolled ends,
+  curled scrolls, side handles, diamond medallions, or prominent ornaments.
+  Keep the visual weight below the campaign map's main outer frame; the panel
+  must not compete with level markers or the map.
 - The same backplate serves every chapter icon, regardless of chapter theme or
   selection state. Do not tint or decorate it differently for Chapter 1,
   Chapter 2, locked chapters, or completed chapters.
@@ -82,8 +86,10 @@ icons, not a separate parchment card per icon.
 full campaign screen, screenshot, map, landscape, terrain, route, water, sky,
 fortress, boss, level marker, chapter icon, emblem, thumbnail, chapter card,
 individual parchment tile, per-icon background, fixed icon slots, divider,
-multiple panels, multiple assets, text, letters, numbers, runes, labels,
-chapter title, chapter number, lock, checkmark, progress bar, selection glow,
-Back button, Start Level button, UI controls, opaque canvas, painted
-transparent-looking area, checkerboard, detached shadow, detached glow,
-particles, excessive filigree, modern plastic, watermark, signature
+multiple panels, multiple assets, rolled scroll ends, curled scrolls, scroll
+handles, large diamond ornaments, side medallions, oversized corner
+decorations, text, letters, numbers, runes, labels, chapter title, chapter
+number, lock, checkmark, progress bar, selection glow, Back button, Start
+Level button, UI controls, opaque canvas, painted transparent-looking area,
+checkerboard, detached shadow, detached glow, particles, excessive filigree,
+modern plastic, watermark, signature

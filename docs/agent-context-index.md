@@ -43,6 +43,7 @@ zadanie obejmuje kilka obszarów, wczytaj dokumenty dla każdego z nich.
 | Dashboard UI | `docs/systems/dashboard-screen.md` i `docs/systems/dashboard-screen-implementation-prompt.md`. |
 | Splash screen, runiczne tło lub branding firmy | `docs/systems/splash-screen-background.agp`; dokładne logo firmy znajduje się w `assets_src/splash/afacode_company_logo.png` i jest osobnym overlayem, nie częścią wygenerowanego tła. |
 | Shop UI lub jego wizualny koncept | `docs/systems/shop-system.md`, `docs/systems/shop-system-implementation-prompt.md`, `docs/systems/shop-screen-mockup.agp` oraz `assets_src/shop/screen-concepts/shop_ui_reference.png`; referencja służy do kompozycji, a AGP jest briefem koncepcji, nie implementacją ekranu ani runtime assetem. |
+| Promocyjny landing page Urkaaaz | `docs/systems/urkaaaz-website-landing-page.agp`; dołącz zaakceptowany screenshot kampanii oraz wskazane w AGP assety gry i logo wydawcy. |
 | Migracja balansu do JSON | `docs/migration/game-balance-json-expansion-plan.md`. |
 | Migracja architektury lub etap migracji | `docs/migration/README.md`, `docs/migration/roadmap.md` i dokumenty tylko tego etapu (`mN-*.md`); raport etapu czytaj, gdy potrzebny jest jego wynik lub uzasadnienie. |
 | Historia zmian lub stan refaktoryzacji | `docs/project/CHANGELOG.md` albo `docs/project/refactor-progress.md`, odpowiednio do pytania. |

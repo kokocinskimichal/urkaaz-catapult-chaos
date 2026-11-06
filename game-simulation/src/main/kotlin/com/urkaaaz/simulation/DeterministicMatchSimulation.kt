@@ -758,9 +758,16 @@ class DeterministicMatchSimulation(
             emitProjectileResolved(projectile.id, ProjectileResolution.SHIELD_IMPACT)
             return null
         }
-        val target = targetHitBy(impactProjectile, nonStoppingTargetIds)
+        val target = targetHitBy(
+            projectile = impactProjectile,
+            trajectoryStart = projectile.position,
+            ignoredUnitIds = nonStoppingTargetIds,
+        )
         if (target != null) {
-            resolveEntityImpact(impactProjectile, target)
+            val entityImpactProjectile = target.impactPosition?.let { position ->
+                impactProjectile.copy(position = position)
+            } ?: impactProjectile
+            resolveEntityImpact(entityImpactProjectile, target)
             if (target.stopsProjectile) {
                 emitProjectileResolved(projectile.id, ProjectileResolution.ENTITY_IMPACT)
                 return null
@@ -2986,12 +2993,19 @@ class DeterministicMatchSimulation(
             )
         }
         logAmmunition("projectile-hit-${target.layer.name.lowercase()}", projectile, targetId = target.id)
-        resolveAmmunitionEffect(projectile, target.layer)
+        resolveAmmunitionEffect(
+            projectile = projectile,
+            hitLayer = target.layer,
+            directUnitTargetId = target.id.takeIf {
+                target.layer == com.urkaaaz.domain.AmmunitionHitLayer.UNIT
+            },
+        )
     }
 
     private fun resolveAmmunitionEffect(
         projectile: Projectile,
         hitLayer: com.urkaaaz.domain.AmmunitionHitLayer? = null,
+        directUnitTargetId: EntityId? = null,
     ) {
         val definition = config.balance.ammunition.definition(projectile.ammunition)
         val damageFactor = damageVarianceFactor(teamLuckBias = 0f)
@@ -3019,6 +3033,7 @@ class DeterministicMatchSimulation(
                     statusDurationSeconds = behavior.durationSeconds,
                     hitLayer = hitLayer,
                     sourceProjectileId = projectile.id,
+                    directUnitTargetId = directUnitTargetId,
                     minimumDamage = definition.damage.minimumDamage,
                     friendlyFire = definition.collision.friendlyFire,
                 )
@@ -3062,6 +3077,7 @@ class DeterministicMatchSimulation(
                     unitDamage = applyDamageVariance(definition.damage.unitDamage, damageFactor),
                     hitLayer = hitLayer,
                     sourceProjectileId = projectile.id,
+                    directUnitTargetId = directUnitTargetId,
                     minimumDamage = definition.damage.minimumDamage,
                     friendlyFire = definition.collision.friendlyFire,
                 )
@@ -3076,6 +3092,7 @@ class DeterministicMatchSimulation(
                     unitDamage = applyDamageVariance(definition.damage.unitDamage, damageFactor),
                     hitLayer = hitLayer,
                     sourceProjectileId = projectile.id,
+                    directUnitTargetId = directUnitTargetId,
                     minimumDamage = definition.damage.minimumDamage,
                     friendlyFire = definition.collision.friendlyFire,
                 )
@@ -3098,6 +3115,7 @@ class DeterministicMatchSimulation(
         minimumDamage: Int = 0,
         friendlyFire: FriendlyFirePolicy = FriendlyFirePolicy.ENEMY_ONLY,
         unitFriendlyFire: FriendlyFirePolicy? = null,
+        directUnitTargetId: EntityId? = null,
     ) {
         if (damage > 0 &&
             sourceTeam != null &&
@@ -3164,11 +3182,12 @@ class DeterministicMatchSimulation(
                     unit.position.x - position.x,
                     unit.position.y - position.y,
                 )
+                val isDirectTarget = unit.id == directUnitTargetId
                 if (unit.isAlive &&
-                    distance <= radius &&
+                    (isDirectTarget || distance <= radius) &&
                     canHitUnit(sourceTeam, unit.team, unitFriendlyFire ?: friendlyFire)
                 ) {
-                    val distanceFactor = if (radius <= 0f) 1f else {
+                    val distanceFactor = if (isDirectTarget || radius <= 0f) 1f else {
                         (1f - distance / radius).coerceIn(0f, 1f)
                     }
                     val scaledDamage = if (distanceFactor >= 1f) {
@@ -3312,40 +3331,53 @@ class DeterministicMatchSimulation(
 
     private fun targetHitBy(
         projectile: Projectile,
+        trajectoryStart: WorldPosition,
         ignoredUnitIds: Set<EntityId> = emptySet(),
     ): EntityTarget? {
         val definition = config.balance.ammunition.definition(projectile.ammunition)
-        val targetUnit = if (com.urkaaaz.domain.AmmunitionHitLayer.UNIT in definition.collision.hitLayers) {
+        val targetUnitHit = if (
+            com.urkaaaz.domain.AmmunitionHitLayer.UNIT in definition.collision.hitLayers
+        ) {
             if (definition.collision.mode ==
                 com.urkaaaz.domain.AmmunitionCollisionMode.IGNORE_UNITS
             ) {
                 null
             } else {
-            units.asSequence()
-                .filter { unit ->
-                    unit.isAlive &&
-                        unit.id !in ignoredUnitIds &&
-                        canHitUnit(
-                            sourceTeam = projectile.firedBy,
-                            targetTeam = unit.team,
-                            friendlyFire = definition.collision.friendlyFire,
-                        ) &&
-                        kotlin.math.hypot(
-                            unit.position.x - projectile.position.x,
-                            unit.position.y - projectile.position.y,
-                        ) <= definition.collision.hitRadius
-                }
-                .minByOrNull { unit ->
-                    kotlin.math.hypot(
-                        unit.position.x - projectile.position.x,
-                        unit.position.y - projectile.position.y,
+                units.asSequence()
+                    .filter { unit ->
+                        unit.isAlive &&
+                            unit.id !in ignoredUnitIds &&
+                            canHitUnit(
+                                sourceTeam = projectile.firedBy,
+                                targetTeam = unit.team,
+                                friendlyFire = definition.collision.friendlyFire,
+                            )
+                    }
+                    .mapNotNull { unit ->
+                        val hitbox = UnitHitboxProfile.forUnitType(unit.type.id)
+                        segmentEntryFraction(
+                            start = trajectoryStart,
+                            end = projectile.position,
+                            left = unit.position.x - hitbox.halfWidth -
+                                definition.collision.hitRadius,
+                            top = unit.position.y - hitbox.height -
+                                definition.collision.hitRadius,
+                            right = unit.position.x + hitbox.halfWidth +
+                                definition.collision.hitRadius,
+                            bottom = unit.position.y + definition.collision.hitRadius,
+                        )?.let { fraction -> fraction to unit }
+                    }
+                    .minWithOrNull(
+                        compareBy<Pair<Float, Unit>> { it.first }
+                            .thenBy { it.second.id.value },
                     )
-                }
             }
         } else {
             null
         }
+        val targetUnit = targetUnitHit?.second
         if (targetUnit != null) {
+            val impactFraction = requireNotNull(targetUnitHit).first
             return EntityTarget(
                 id = targetUnit.id,
                 layer = com.urkaaaz.domain.AmmunitionHitLayer.UNIT,
@@ -3353,6 +3385,12 @@ class DeterministicMatchSimulation(
                     com.urkaaaz.domain.AmmunitionCollisionMode.PIERCE_UNITS,
                 team = targetUnit.team,
                 kind = ProjectileTargetKind.UNIT,
+                impactPosition = WorldPosition(
+                    x = trajectoryStart.x +
+                        (projectile.position.x - trajectoryStart.x) * impactFraction,
+                    y = trajectoryStart.y +
+                        (projectile.position.y - trajectoryStart.y) * impactFraction,
+                ),
             )
         }
         if (com.urkaaaz.domain.AmmunitionHitLayer.FORTRESS !in definition.collision.hitLayers) {
@@ -3433,6 +3471,37 @@ class DeterministicMatchSimulation(
                 kind = ProjectileTargetKind.FORTRESS,
             )
         }
+    }
+
+    private fun segmentEntryFraction(
+        start: WorldPosition,
+        end: WorldPosition,
+        left: Float,
+        top: Float,
+        right: Float,
+        bottom: Float,
+    ): Float? {
+        var entry = 0f
+        var exit = 1f
+
+        fun clipAxis(origin: Float, delta: Float, minimum: Float, maximum: Float): Boolean {
+            if (delta == 0f) return origin in minimum..maximum
+            val first = (minimum - origin) / delta
+            val second = (maximum - origin) / delta
+            entry = maxOf(entry, minOf(first, second))
+            exit = minOf(exit, maxOf(first, second))
+            return entry <= exit
+        }
+
+        if (
+            !clipAxis(start.x, end.x - start.x, left, right) ||
+            !clipAxis(start.y, end.y - start.y, top, bottom) ||
+            exit < 0f ||
+            entry > 1f
+        ) {
+            return null
+        }
+        return entry.coerceIn(0f, 1f)
     }
 
     private fun runicBastionBlocksProjectile(
@@ -3640,6 +3709,7 @@ class DeterministicMatchSimulation(
         val stopsProjectile: Boolean,
         val team: Team?,
         val kind: ProjectileTargetKind,
+        val impactPosition: WorldPosition? = null,
     )
 
     private data class ShieldImpact(

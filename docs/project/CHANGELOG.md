@@ -51,6 +51,7 @@
   campaign chapter icon AGP.
 - Added a copy-ready AGP for one shared parchment backplate behind the
   campaign chapter icons.
+- Added a copy-ready desktop landing-page concept AGP for Urkaaaz.
 - Added the `/campaignMapAgp` skill for creating consistent campaign-map
   generation prompts one chapter at a time.
 
@@ -61,6 +62,8 @@
 - Updated campaign chapter tabs to use borderless, full-cell icons with
   completion/lock badges, and refined their art brief to exclude framing
   ornaments.
+- Refined the shared chapter-selector parchment AGP toward a flat, shallow
+  plaque without rolled ends or large ornaments.
 - Reworked Sapper siege missions to choose the nearest hostile boss, Bastion,
   or fortress. Ordinary units and Demolisher blasts ignore Sappers, while boss,
   projectile, spell, and other area damage remain valid.
@@ -70,6 +73,11 @@
   fortress art and live level/status overlays unchanged.
 - Updated Chapter 1 normalized marker anchors in the shared layout for the
   approved 1670 × 942 map artwork.
+
+### Fixed
+
+- Fixed direct catapult hits missing unit bodies: projectile paths now sweep
+  against unit hitboxes and apply impact damage to the contacted unit.
 
 ### Removed
 

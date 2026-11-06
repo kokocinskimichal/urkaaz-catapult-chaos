@@ -273,6 +273,13 @@ Possible behaviors include:
 impact/damage area radii. Current projectile hit radii, including the default
 fortress collision margin, are half their previous values.
 
+For unit targets, the simulation sweeps the projectile path between substeps
+against the bottom-anchored `UnitHitboxProfile` rectangle expanded by
+`collision.hitRadius`. The earliest intersected unit wins, and the entity-hit
+event records the contact point. Direct-impact damage is applied to that
+selected unit even when the contact point is farther from its ground anchor
+than the splash radius; other nearby units retain the configured area falloff.
+
 The collision system must not infer these rules from the renderer or from the
 visual asset.
 

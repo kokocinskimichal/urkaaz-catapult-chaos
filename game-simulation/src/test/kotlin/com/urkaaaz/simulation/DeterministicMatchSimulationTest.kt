@@ -53,6 +53,35 @@ class DeterministicMatchSimulationTest {
     private fun durableDefender() =
         UnitFactory.create(GameBalanceFixtures.balance.units.configuration(UnitIds.DEFENDER).copy(maxHealth = 260, supplyCost = 0))
 
+    private fun redDefenderPosition(): com.urkaaaz.contracts.UnitSnapshot {
+        val simulation = DeterministicMatchSimulation(
+            MatchId("red-defender-position"),
+            config,
+        )
+        simulation.start()
+        simulation.deployUnit(durableDefender(), Team.RED)
+        return simulation.snapshot().units.single()
+    }
+
+    private fun horizontalProjectileSimulation(matchId: String, y: Float) =
+        DeterministicMatchSimulation(
+            MatchId(matchId),
+            config.copy(windAccelerationX = 0f),
+            blueCatapult = Catapult(
+                id = EntityId("blue-catapult"),
+                team = Team.BLUE,
+                position = WorldPosition(100f, y),
+                anchorPosition = WorldPosition(100f, y),
+                aim = Aim(directionDegrees = 0f, power = 100f),
+            ),
+            redFortress = Fortress(
+                id = EntityId("red-fortress"),
+                team = Team.RED,
+                center = WorldPosition(950f, -500f),
+                maxHealth = fortressMaximumHealth,
+            ),
+        )
+
     private fun balanceWithGameplaySpeed(multiplier: Float) =
         GameBalanceFixtures.balance.copy(
             runtime = GameBalanceFixtures.balance.runtime.copy(
@@ -453,6 +482,66 @@ class DeterministicMatchSimulationTest {
         )
         assertTrue(simulation.snapshot().projectiles.isEmpty())
         assertTrue(simulation.snapshot().runicBastions.single().health < 360)
+    }
+
+    @Test
+    fun rockProjectileHitsTheUnitBodyHitboxAndDamagesTheDirectTarget() {
+        val referenceUnit = redDefenderPosition()
+        val hitbox = UnitHitboxProfile.forUnitType(referenceUnit.unitType)
+        val projectileY = referenceUnit.y - hitbox.height / 2f
+        val simulation = horizontalProjectileSimulation("rock-unit-body-hit", projectileY)
+        simulation.start()
+        simulation.deployUnit(durableDefender(), Team.RED)
+        val target = simulation.snapshot().units.single()
+        val events = buildList {
+            addAll(simulation.fire(EntityId("blue-catapult"), AmmunitionType.ROCK))
+            repeat(50) { addAll(simulation.advance(33L)) }
+        }
+
+        val hit = events.filterIsInstance<MatchEvent.ProjectileHitEntity>()
+            .firstOrNull { it.targetId == target.entityId && it.targetLayer == "UNIT" }
+            ?: error("expected a direct projectile hit on the unit body")
+        assertEquals(projectileY, hit.y, 0.001f)
+        assertTrue(
+            events.filterIsInstance<MatchEvent.DamageApplied>().any {
+                it.targetId == target.entityId &&
+                    it.sourceProjectileId == hit.projectileId &&
+                    it.targetLayer == "UNIT"
+            },
+            "expected direct-hit damage for the selected target",
+        )
+        assertTrue(
+            simulation.snapshot().units.single { it.entityId == target.entityId }.health <
+                target.maxHealth,
+        )
+    }
+
+    @Test
+    fun rockProjectileMissesWhenItsPathStaysOutsideTheExpandedUnitHitbox() {
+        val target = redDefenderPosition()
+        val hitbox = UnitHitboxProfile.forUnitType(target.unitType)
+        val collisionRadius = GameBalanceFixtures.balance.ammunition
+            .definition(AmmunitionType.ROCK)
+            .collision
+            .hitRadius
+        val projectileY = target.y - hitbox.height - collisionRadius - 20f
+        val simulation = horizontalProjectileSimulation("rock-unit-near-miss", projectileY)
+        simulation.start()
+        simulation.deployUnit(durableDefender(), Team.RED)
+        val deployed = simulation.snapshot().units.single()
+        val events = buildList {
+            addAll(simulation.fire(EntityId("blue-catapult"), AmmunitionType.ROCK))
+            repeat(30) { addAll(simulation.advance(33L)) }
+        }
+
+        assertTrue(
+            events.filterIsInstance<MatchEvent.ProjectileHitEntity>()
+                .none { it.targetId == deployed.entityId && it.targetLayer == "UNIT" },
+        )
+        assertEquals(
+            deployed.maxHealth,
+            simulation.snapshot().units.single { it.entityId == deployed.entityId }.health,
+        )
     }
 
     @Test
