@@ -15,15 +15,11 @@ modułu Gradle ani systemu gameplayowego.
 
 ### Ikony języka
 
-- Pełny LocalizationSystem jest osobnym, jeszcze niezaimplementowanym
-  zadaniem. Globus w nagłówku ma otwierać i zamykać krótki popup zawierający
-  flagi Polski, Wielkiej Brytanii i Hiszpanii.
-- Same flagi są nieklikalne i nie zmieniają języka. Nie dodawaj
-  `SelectLanguage`, callbacków wyboru, use case'u, DataStore, Locale managera,
-  `AppCompatDelegate` ani tłumaczeń.
-- Zamykaj popup po ponownym dotknięciu globusa, dotknięciu poza panelem,
-  systemowym Back lub opuszczeniu Dashboardu. Nie pokazuj stanu aktywnego ani
-  informacji o sukcesie.
+Selektor globusa jest już częścią LocalizationSystem. Zachowuj istniejące
+klikalne flagi PL/UK/ES, aktywny stan, zapis języka, komunikat błędu i zamykanie
+popupu po wyborze, dotknięciu poza panelem, systemowym Back lub opuszczeniu
+Dashboardu. Zobacz `docs/systems/localization-system.md`; nie dodawaj drugiego
+mechanizmu języka ani nie cofaj istniejącej integracji.
 
 ### Kontekst i źródła prawdy
 
@@ -55,11 +51,11 @@ modułu Gradle ani systemu gameplayowego.
   `ScreenHost`. Nie twórz drugiego Dashboardu, nowego routera ani modułu
   Gradle.
 - `MainActivity` pozostaje composition rootem: przekazuje istniejące callbacki
-  odczytu profilu, resetu i nawigacji, bez budowania layoutu Dashboardu.
-  Dashboard nie otrzymuje callbacku zmiany języka; wybór języka należy do
-  przyszłego LocalizationSystem.
+  odczytu profilu, resetu, nawigacji oraz istniejącego use case'u wyboru
+  języka, bez budowania layoutu Dashboardu. Zastosowanie Locale i persystencja
+  pozostają w LocalizationSystem.
 - `DashboardViewModel` przechowuje tylko stan prezentacyjny. Profil, reset i
-  język pozostają własnością istniejących warstw aplikacyjnych/persistencji.
+  wybór języka pozostają własnością warstw aplikacyjnych/persistencji.
 - Nie dodawaj logiki gameplayu, nie zmieniaj symulacji, kampanii, balansów,
   `MatchEvent` ani snapshotów.
 - Użyj screen-owned Android Views zgodnych z obecną implementacją. Nie
@@ -136,11 +132,15 @@ modułu Gradle ani systemu gameplayowego.
 - Umieść sam globus w prawym obszarze nagłówka. Po dotknięciu otwórz przy nim
   krótki, poziomy popup z flagami Polski (`PL`), Wielkiej Brytanii (`EN`) i
   Hiszpanii (`ES`).
-- Flagi w popupie są nieklikalnymi obrazami bez zaznaczenia aktywnego języka.
-  Ich dotknięcie nie zmienia języka i nie pokazuje komunikatu sukcesu.
+- Każda flaga jest klikalnym celem co najmniej `48 dp`, ma opis dostępności z
+  nazwą języka, a aktywna flaga jest widocznie zaznaczona.
+- Wybór wysyła `DashboardUiAction.SelectLanguage` przez
+  `DashboardViewModel`, który wywołuje `SetLanguage`. `Saved` odtwarza
+  Dashboard w nowym języku; `Unchanged` nie odtwarza; `Failure` pokazuje
+  jawny błąd bez nadpisywania zapisu.
 - Zamykaj popup po ponownym dotknięciu globusa, dotknięciu poza nim, systemowym
-  Back lub opuszczeniu Dashboardu. Nie dodawaj integracji z niezaimplementowanym
-  LocalizationSystem.
+  Back, wyborze języka lub opuszczeniu Dashboardu. Korzystaj z istniejącego
+  LocalizationSystem; nie twórz drugiego magazynu języka ani Locale managera.
 
 ### Ukryte sloty eventów
 
@@ -165,8 +165,8 @@ Dodaj lub zaktualizuj testy w `android-app/src/test` dla:
 - resetu wymagającego potwierdzenia, blokady duplikatów, jawnego wyniku i
   odświeżenia summary;
 - braku działania `AD REWARD`;
-- otwierania i zamykania popupu globusa oraz widoczności flag;
-- braku akcji językowej po dotknięciu flag;
+- mapowania flag na `AppLanguage`, stanu aktywnej flagi oraz zamknięcia popupu
+  po wyborze i systemowym Back;
 - dwóch ukrytych slotów bez widocznego renderowania i bez wpływu na layout;
 - lifecycle Dashboardu oraz braku zależności UI w modułach core.
 
@@ -182,5 +182,5 @@ git diff --check
 git status --short
 ```
 
-Nie commituj ani nie pushuj bez osobnego polecenia użytkownika. Nie implementuj
-pełnego LocalizationSystem ani systemu eventów w ramach tego zadania.
+Nie commituj ani nie pushuj bez osobnego polecenia użytkownika. Nie
+reimplementuj LocalizationSystem ani systemu eventów w ramach tego zadania.

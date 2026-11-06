@@ -66,7 +66,11 @@ internal class ManaOrbView(context: Context) : View(context) {
             postOnAnimation(rippleFrame)
             invalidate()
         }
-        contentDescription = "Mana $mana of $maximumMana"
+        contentDescription = context.getString(
+            R.string.match_hud_mana_accessibility,
+            mana,
+            maximumMana,
+        )
     }
 
     override fun onDraw(canvas: Canvas) {
@@ -116,7 +120,7 @@ internal class ManaOrbView(context: Context) : View(context) {
         val valueBaseline = centerY -
             (valuePaint.fontMetrics.ascent + valuePaint.fontMetrics.descent) / 2f
         canvas.drawText(
-            "$mana/$maximumMana",
+            context.getString(R.string.match_hud_mana_short, mana, maximumMana),
             centerX,
             valueBaseline,
             valuePaint,

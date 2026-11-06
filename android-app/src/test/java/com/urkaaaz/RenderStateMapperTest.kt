@@ -490,7 +490,7 @@ class RenderStateMapperTest {
         assertEquals(CombatFeedbackRenderState.Kind.DAMAGE, feedback.kind)
         assertEquals(820f, feedback.x)
         assertEquals(43, feedback.amount)
-        assertEquals("x1.35", feedback.label)
+        assertEquals(1.35f, feedback.synergyMultiplier)
     }
 
     @Test

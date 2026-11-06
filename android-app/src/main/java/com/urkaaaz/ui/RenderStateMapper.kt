@@ -86,7 +86,7 @@ data class RenderState(
     val selectedAmmunitionType: String = "ROCK",
     val activeSpellTypes: Set<String> = emptySet(),
     val activeSpellRemainingMilliseconds: Map<String, Long> = emptyMap(),
-    val spellFeedbackLabel: String? = null,
+    val spellFeedbackLabel: Int? = null,
     val fortressShieldHits: List<FortressShieldHitRenderState> = emptyList(),
     val boss: BossRenderState? = null,
     val bossAttack: BossAttackRenderState? = null,
@@ -172,8 +172,10 @@ data class CombatFeedbackRenderState(
     val x: Float,
     val y: Float,
     val amount: Int = 0,
+    val goldAmount: Long? = null,
     val radius: Float = 0f,
     val label: String? = null,
+    val synergyMultiplier: Float? = null,
     val progress: Float = 0f,
     val sourceUnitType: String? = null,
     val sourceUnitId: String? = null,
@@ -456,11 +458,8 @@ object RenderStateMapper {
                             RunicBastionGeometry.centerY(it.foundationY)
                         } ?: 470f,
                         amount = event.finalDamage,
-                        label = if (event.synergyCount > 1) {
-                            "x${"%.2f".format(event.synergyMultiplier)}"
-                        } else {
-                            null
-                        },
+                        synergyMultiplier = event.synergyMultiplier
+                            .takeIf { event.synergyCount > 1 },
                     )
                 }
                 is MatchEvent.ExplosionTriggered -> CombatFeedbackRenderState(

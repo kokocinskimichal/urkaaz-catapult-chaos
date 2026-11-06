@@ -19,7 +19,7 @@ class MatchHudView(context: Context) : LinearLayout(context) {
     }
     private val windIndicator = ImageView(context).apply {
         setImageResource(R.drawable.wind_low_right)
-        contentDescription = "Wind direction and strength"
+        contentDescription = context.getString(R.string.match_hud_wind_accessibility)
         scaleType = ImageView.ScaleType.FIT_CENTER
     }
     private val retreatButton = ImageButton(context).apply {
@@ -42,7 +42,7 @@ class MatchHudView(context: Context) : LinearLayout(context) {
         minimumWidth = 0
         minimumHeight = 0
         setPadding(0, 0, 0, 0)
-        contentDescription = "Pause match"
+        contentDescription = context.getString(R.string.match_hud_pause)
     }
     private val blueHealth = HealthCardView(
         context = context,

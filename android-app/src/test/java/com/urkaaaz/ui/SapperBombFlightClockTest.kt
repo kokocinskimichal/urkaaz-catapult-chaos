@@ -1,6 +1,8 @@
 package com.urkaaaz.ui
 
 import com.urkaaaz.contracts.CatapultPresentationContract
+import com.urkaaaz.contracts.BossArchetype
+import com.urkaaaz.contracts.BossPhase
 import com.urkaaaz.contracts.FortressHitboxProfile
 import com.urkaaaz.contracts.Team
 import com.urkaaaz.contracts.WorldDimensions
@@ -72,10 +74,47 @@ class SapperBombFlightClockTest {
         assertTrue(halfway.frameIndex > beforePause.frameIndex)
     }
 
+    @Test
+    fun launchesBombTowardBossUsingItsCollisionCenter() {
+        val clock = SapperBombFlightClock()
+        val sapper = sapper(targetId = "boss-mobile")
+        val boss = BossRenderState(
+            entityId = "boss-mobile",
+            profileId = "boss.mobile-test.level-10",
+            presentationKey = "test_boss",
+            archetype = BossArchetype.MOBILE_SIEGE_BOSS,
+            phase = BossPhase.MARCHING,
+            x = 6_500f,
+            groundY = 3_300f,
+            collisionWidth = 400f,
+            collisionHeight = 500f,
+            health = 1_000,
+            maxHealth = 1_000,
+            blueDamage = 0,
+            redDamage = 0,
+        )
+        val beforeRelease = renderState(units = listOf(sapper), boss = boss)
+        clock.update(beforeRelease, nowMilliseconds = 1_000L)
+
+        val release = renderState(
+            units = listOf(sapper.copy(sapperHasBomb = false)),
+            boss = boss,
+        )
+        val launch = clock.update(release, nowMilliseconds = 1_100L).single()
+        val targetX = boss.x
+        val targetY = boss.groundY - boss.collisionHeight / 2f
+        val halfway = clock.update(release, nowMilliseconds = 1_350L).single()
+
+        assertEquals((sapper.x + 12f + targetX) / 2f, halfway.x, 0.01f)
+        assertEquals((sapper.y - 70f + targetY) / 2f - 72f, halfway.y, 0.01f)
+        assertEquals(0, launch.frameIndex)
+    }
+
     private fun renderState(
         units: List<UnitRenderState>,
         runicBastions: List<RunicBastionRenderState> = emptyList(),
         isPaused: Boolean = false,
+        boss: BossRenderState? = null,
     ) = RenderState(
         statusLabel = "RUNNING",
         phaseLabel = "ACTIVE",
@@ -123,6 +162,7 @@ class SapperBombFlightClockTest {
         playerSupply = 0,
         units = units,
         runicBastions = runicBastions,
+        boss = boss,
         matchTimeRemainingMilliseconds = 300_000L,
         windDirection = 0f,
         combatFeedback = emptyList(),

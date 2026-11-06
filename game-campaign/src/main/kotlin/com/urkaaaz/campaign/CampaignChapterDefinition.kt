@@ -4,7 +4,6 @@ import com.urkaaaz.contracts.TerrainBiome
 
 data class CampaignChapterDefinition(
     val id: String,
-    val title: String,
     val firstLevel: Int,
     val lastLevel: Int,
     val biome: TerrainBiome,
@@ -14,7 +13,6 @@ data class CampaignChapterDefinition(
         require(id.matches(Regex("[a-z][a-z0-9_]*"))) {
             "chapter ID must be a stable lowercase identifier"
         }
-        require(title.isNotBlank()) { "chapter title must not be blank" }
         require(firstLevel >= 1 && lastLevel >= firstLevel) {
             "chapter level range must be valid"
         }

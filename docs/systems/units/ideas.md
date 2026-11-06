@@ -343,3 +343,43 @@ wyglądu. Przed uruchomieniem `/addUnit <nazwa>` należy zaakceptować:
 - testy oraz wymagane assety.
 
 Pomysły z tego dokumentu pozostają propozycjami do czasu osobnej akceptacji.
+
+## Pomysły przeniesione ze skrzynki
+
+- **Propozycja — jednostki charakterystyczne dla biomów:** począwszy od
+  drugiego biomu każdy biom otrzymuje własną jednostkę, dostępną graczowi i AI
+  wyłącznie na mapach tego biomu. Przykłady: Chapter II / Frostbound — ork na
+  nartach z szybkim ślizgiem po śniegu, nieco silniejszy od Defendera i droższy
+  w supply (atak pozostaje do ustalenia); Chapter III / Ashen March — Cinder
+  Mauler z powolnym, mocnym uderzeniem zwęglonym młotem; Chapter IV / Sunken
+  Marshes — kruchy Bog Harpooner z większym zasięgiem i krótkim unieruchomieniem
+  celu; Chapter V / Copperwood — powolny, wytrzymały Copperback, opancerzony
+  leśny chrząszcz ze szczypcami. Każda jednostka ma wyraźną przewagę i słabość,
+  a koszt supply przewyższa koszt Defendera. Do rozstrzygnięcia: czy chaptery
+  powtarzające biom używają tej samej jednostki, czy otrzymują własną.
+  **Status: pomysł, niezatwierdzony i niewdrożony.**
+- **Propozycja — jednostki zbierające surowce:** nowe jednostki nie muszą
+  służyć wyłącznie do walki. Przykładem jest kopacz, który wydobywa surowce w
+  terenie, wraca do bazy, a po powrocie zwiększa zapas Supply. Szczegóły
+  działania i balansu pozostają do ustalenia.
+  **Status: pomysł, niezatwierdzony i niewdrożony.**
+- **Propozycja — zielarz:** niemilitarna jednostka zbiera zioła w terenie i
+  wraca z nimi do bazy. Zebrany zapas mógłby służyć do leczenia albo odzyskania
+  many; szczegóły zastosowania i balansu pozostają do ustalenia.
+  **Status: pomysł, niezatwierdzony i niewdrożony.**
+- **Propozycja — inżynier:** niemilitarna jednostka naprawia uszkodzoną
+  fortecę lub katapultę. Mechanika naprawy, jej cele i balans pozostają do
+  ustalenia.
+  **Status: pomysł, niezatwierdzony i niewdrożony.**
+- **Propozycja — herold:** niemilitarna jednostka wspiera sojuszników
+  morale, na przykład przyspieszając ich marsz lub przegrupowanie. Zasięg,
+  czas działania i balans pozostają do ustalenia.
+  **Status: pomysł, niezatwierdzony i niewdrożony.**
+- **Propozycja — archeolog:** niemilitarna jednostka wykopuje złoto w terenie
+  i po powrocie do bazy dodaje je do ogólnej puli złota zdobytego w danym
+  meczu. Sposób rozliczenia puli i balans pozostają do ustalenia.
+  **Status: pomysł, niezatwierdzony i niewdrożony.**
+- **Propozycja — medyk:** niemilitarna jednostka podąża za sojuszniczymi
+  jednostkami i leczy ranne w swoim pobliżu; nie wskrzesza poległych. Zasięg,
+  tempo leczenia i balans pozostają do ustalenia.
+  **Status: pomysł, niezatwierdzony i niewdrożony.**

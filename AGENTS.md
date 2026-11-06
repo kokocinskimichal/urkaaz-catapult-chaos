@@ -93,8 +93,8 @@ do bieżącego zadania według [indeksu dokumentów kontekstu](docs/agent-contex
 - [System reliktów](docs/systems/relic-system.md)
 - [System tutoriala (projekt, niezaimplementowany)](docs/systems/tutorial-system.md)
 - [Prompt systemu tutoriala](docs/systems/tutorial-system-implementation-prompt.md)
-- [System lokalizacji](docs/systems/localization-system.md)
-- [Prompt systemu lokalizacji](docs/systems/localization-system-implementation-prompt.md)
+- [LocalizationSystem PL/EN/ES](docs/systems/localization-system.md)
+- [Prompt implementacji LocalizationSystem](docs/systems/localization-system-implementation-prompt.md)
 - [System czarów](docs/systems/spell-system.md)
 - [Plan globalnego mnożnika tempa rozgrywki](docs/systems/gameplay-tempo-multiplier-plan.md) ·
   [prompt implementacyjny](docs/systems/gameplay-tempo-multiplier-implementation-prompt.md)

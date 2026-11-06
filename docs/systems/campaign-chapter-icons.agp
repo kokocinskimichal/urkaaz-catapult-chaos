@@ -1,6 +1,7 @@
-STATUS: Generate a matched pair of transparent chapter-tab icons for the
-currently visible Chapter 1 and Chapter 2 campaign tabs. Use the two attached
-campaign map backgrounds as visual references only.
+STATUS: Regenerate a matched pair of transparent chapter-tab icons for the
+currently visible Chapter 1 and Chapter 2 campaign tabs, without any
+surrounding frames, ribbons, bands, or loops. Use the two attached campaign
+map backgrounds as visual references only.
 
 ## Reference images
 
@@ -22,9 +23,9 @@ campaign map backgrounds as visual references only.
   2. Chapter 2 icon, using Reference 2.
 - Center one self-contained emblem in each cell. Match their apparent size,
   detail density, lighting, and visual weight so they work as a pair.
-- Keep each emblem within roughly 70% of its cell, with clear transparent
-  padding on every side. Use bold, simple silhouettes that remain recognizable
-  when displayed at about 48 dp.
+- Let each emblem fill about 90% of its cell, leaving only a narrow, even
+  transparent safety margin so the artwork nearly fills a 48 dp chapter tab.
+  Keep the full silhouette inside the canvas and do not crop it.
 - Keep the cells transparent and independent; do not add a background, divider,
   shared frame, or connecting ornament.
 
@@ -38,14 +39,18 @@ campaign map backgrounds as visual references only.
   identity is Frostbound, but the attached map remains the visual source of
   truth for its exact colors and materials. Do not depict a miniature
   landscape.
-- Give both emblems a restrained shared antique-gold accent so they belong to
-  the same selector, while letting each map's palette and subject define its
-  identity.
+- Keep both emblems in a consistent painterly finish and lighting style, while
+  letting each map's palette and subject define its identity. Do not force a
+  shared gold ornament or outline.
 - Use clean edges, strong value contrast, and a readable outer silhouette.
   Avoid fine engraved detail that disappears at phone size.
+- The silhouette must end at the leaf/rock or valley/ice artwork itself. Do not
+  encircle or partially surround it with a gold arc, ribbon, metal band, vine,
+  horn, or decorative stroke. Any gold may appear only as a small detail
+  integrated into the subject, never as a separate enclosing element.
 - The icons are separate artwork placed inside existing chapter tabs. The tab
-  background, border, chapter number, title, selection state, and lock state
-  remain live UI.
+  background, chapter number, title, selection state, and lock state remain
+  live UI.
 
 ## Separation from the map and live UI
 
@@ -54,8 +59,9 @@ campaign map backgrounds as visual references only.
 - Do not include chapter numbers, names, text, letters, runes that resemble
   writing, locks, checkmarks, or progress indicators.
 - Do not include a fortress, boss, character, enemy, or gameplay object.
-- Do not add a circular medallion, shield, pin, plaque, or outer frame around
-  either icon. The transparent emblem itself must be the complete asset.
+- Do not add a circular medallion, shield, pin, plaque, outer frame,
+  surrounding arc, wrapping ribbon, or border around either icon. The
+  transparent emblem itself must be the complete asset.
 - Keep all decoration attached to the emblem; no detached glow, shadow, or
   particles outside its silhouette.
 
@@ -66,6 +72,8 @@ campaign map backgrounds as visual references only.
   overlap across the cell boundary.
 - Confirm the pair has matching scale and finish, but visibly different
   chapter-specific motifs and palettes.
+- Confirm neither icon contains an outline, enclosing ring, gold ribbon,
+  framing arc, or other ornament around its subject.
 - Confirm both silhouettes remain clear at about 48 dp and have clean alpha
   edges.
 - After approval, split the actual sheet into its two equal-width cells without
@@ -78,9 +86,10 @@ campaign map backgrounds as visual references only.
 
 opaque background, checkerboard, campaign map, miniature map, landscape scene,
 map screenshot, UI, chapter tab, button, card, border, frame, divider,
-medallion, shield, pin, plaque, chapter number, chapter name, text, letters,
-writing, lock, checkmark, progress bar, fortress, boss, character, enemy,
-gameplay object, shared connected emblem, extra cells, extra icons, overlapping
-cells, tiny unreadable detail, weak silhouette, inconsistent icon scale,
-inconsistent art style, detached glow, detached shadow, particles,
-watermark, signature
+medallion, shield, pin, plaque, surrounding gold frame, gold ring, gold arc,
+gold ribbon, wrapping band, decorative loop, enclosing vine, chapter number,
+chapter name, text, letters, writing, lock, checkmark, progress bar, fortress,
+boss, character, enemy, gameplay object, shared connected emblem, extra cells,
+extra icons, overlapping cells, tiny unreadable detail, weak silhouette,
+inconsistent icon scale, inconsistent art style, detached glow, detached
+shadow, particles, watermark, signature

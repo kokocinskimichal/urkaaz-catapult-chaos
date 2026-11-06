@@ -1625,6 +1625,15 @@ ustawienia i tutorial progress pozostają przyszłą pracą.
 Milestone'y kampanii nie zapisują tutorial flags; przyszły TutorialSystem
 będzie ich właścicielem.
 
+Ustawienie języka jest osobną odpowiedzialnością od profilu gracza:
+`game-application` udostępnia platformowo niezależny port `LanguageSettings`,
+a `android-app.persistence.DataStoreLanguageSettings` zapisuje je w osobnym
+DataStore `language_settings` z kluczami `language.code` i
+`language.schema_version`. `DataStorePlayerProgressResetRepository` nie
+otrzymuje tego DataStore, więc Dashboard RESET nie usuwa języka. `MainActivity`
+odczytuje go raz przed utworzeniem widoków, w `attachBaseContext`; pozostała
+warstwa aplikacyjna nie importuje Androida.
+
 Nie należy zapisywać bezpośrednio obiektów silnika przez serializację całego
 grafu obiektów.
 

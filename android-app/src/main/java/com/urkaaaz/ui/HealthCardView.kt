@@ -71,7 +71,11 @@ internal class HealthCardView(
 
     fun render(current: Int, maximum: Int) {
         val safeMaximum = maximum.coerceAtLeast(0)
-        healthValue.text = if (safeMaximum == 0) "--/--" else "$current/$safeMaximum"
+        healthValue.text = if (safeMaximum == 0) {
+            "--/--"
+        } else {
+            context.getString(R.string.match_hud_fortress_health, current, safeMaximum)
+        }
         healthProgress.max = safeMaximum.coerceAtLeast(1)
         healthProgress.progress = current.coerceIn(0, healthProgress.max)
     }

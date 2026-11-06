@@ -3,15 +3,16 @@
 ## Status i cel
 
 Przebudowa istniejącego ekranu według zaakceptowanego przez użytkownika
-screenshotu jest zaimplementowana. Globus w nagłówku otwiera krótką listę flag;
-flagi pozostają nieaktywne, dopóki nie powstanie LocalizationSystem. Eventy gry
-także pozostają odłożone. Ten dokument opisuje granice istniejącego ekranu, a
-nie drugi Dashboard, nowy moduł Gradle ani system gameplayowy.
+screenshotu jest zaimplementowana. Globus otwiera działający selektor PL/EN/ES,
+którego właścicielem jest LocalizationSystem; lista tłumaczeń została
+zaakceptowana. Eventy gry pozostają odłożone. Ten dokument opisuje granice
+istniejącego ekranu, a nie drugi Dashboard, nowy moduł Gradle ani system
+gameplayowy.
 
 Cel: odtworzyć zaakceptowaną kompozycję Dashboardu, zachować istniejące
-przepływy profilu, kampanii, sklepu i resetu, otwierać krótką listę flag po
-dotknięciu globusa bez zmiany języka oraz pozostawić dwa niewidoczne punkty
-rozszerzenia dla przyszłych ikon eventów gry.
+przepływy profilu, kampanii, sklepu i resetu, korzystać z selektora języka
+LocalizationSystem oraz pozostawić dwa niewidoczne punkty rozszerzenia dla
+przyszłych ikon eventów gry.
 
 Typ: system prezentacyjny Androida. Nie wpływa na symulację, kampanię ani
 balans.
@@ -27,9 +28,8 @@ balans.
   istniejącego przepływu demo meczu.
 - Zachowanie widocznego przycisku `AD REWARD` wyłącznie jako elementu
   prezentacji; nie dodawać integracji reklam ani nagród.
-- Dodanie przycisku globusa w nagłówku. Dotknięcie otwiera krótki panel flag
-  PL/UK/ES; flagi nie zmieniają języka. Pełny LocalizationSystem pozostaje
-  osobnym zadaniem.
+- Użycie istniejącego selektora globusa LocalizationSystem w nagłówku. Ekran
+  nie tworzy własnej persystencji ani drugiego mechanizmu wyboru języka.
 - Utworzenie dwóch pustych, ukrytych anchorów na przyszłe ikony eventów:
   symetrycznie po lewej i prawej stronie głównego przycisku Campaign.
 - Użycie istniejących assetów Dashboardu i wspólnych helperów Android UI.
@@ -42,7 +42,8 @@ balans.
 - Implementacja systemu eventów gry, harmonogramu eventów, ich ikon,
   dostępności, limitów, backendu ani persystencji.
 - Wprowadzanie eventów do `MatchEvent` albo do runtime state symulacji.
-- Implementacja pełnego LocalizationSystem w ramach zadania Dashboardu.
+- Własna implementacja LocalizationSystem w ramach zadania Dashboardu;
+  Dashboard korzysta z jego istniejącego portu i callbacku use case'u.
 - Zmiana trybu nawigacji, migracja do Compose lub dodawanie modułu Gradle.
 - Zmiana reguł progresji, resetu, życia lub nagród.
 
@@ -78,7 +79,7 @@ Właścicielem ekranu jest `android-app`:
 | Bieżący ekran i stos Back | `AppNavigator` / `ScreenHost` |
 | Odczyt summary profilu | istniejący `DeveloperProgressSummary` i jego właściciel aplikacyjny |
 | Atomowy reset postępu | istniejący `PlayerProgressResetRepository` i adapter Androida |
-| Trwały język, wybór języka i zastosowanie Locale | LocalizationSystem; poza zakresem implementacji Dashboardu |
+| Trwały język, wybór języka i zastosowanie Locale | LocalizationSystem; Dashboard jest jego klientem, nie właścicielem |
 
 `MainActivity` pozostaje cienkim composition root. Ekran nie importuje ani nie
 wywołuje domeny czy symulacji. Dashboard nie staje się właścicielem profilu,
@@ -93,10 +94,9 @@ persistencji ani języka.
   i nawigację. Nie tworzyć równoległego routera ani nowego kontraktu ekranu.
 - Odczyt profilu i reset są już podłączone przez `MainActivity`. Nie dodawać
   drugiego repozytorium ani lokalnej kopii postępu.
-- `localization-system.md` i jego prompt opisują przyszły system języka, ale
-  system nie jest jeszcze zaimplementowany. W tym zadaniu Dashboard otwiera
-  jedynie lokalny popup flag; nie dodaje selekcji języka ani własnego DataStore,
-  Locale czy use case'ów.
+- `localization-system.md` i jego prompt opisują właściciela języka. Selektor
+  jest już podłączony do `SetLanguage` i osobnego DataStore; Dashboard nie
+  dodaje drugiego źródła prawdy ani własnego Locale managera.
 - W kodzie i zasobach nie znaleziono systemu eventów Dashboardu. Dwa ukryte
   sloty są wyłącznie przyszłymi punktami montażowymi, a nie nowym systemem
   eventowym.
@@ -117,9 +117,9 @@ niż wymaga tego prezentacja.
 - Callbacki nawigacyjne Back, Campaign i Shop.
 - Akcje dotykowe widoków ekranu.
 
-Dashboard nie otrzymuje obecnie języka aplikacji, listy eventów, definicji
-eventu ani eventowego runtime state. Widoczność popupu i ukryte sloty są
-prezentacyjne i nie konsumują danych z innych systemów.
+Dashboard otrzymuje bieżący `AppLanguage` i `SetLanguage` z composition rootu.
+Nie otrzymuje listy eventów, definicji eventu ani eventowego runtime state.
+Widoczność popupu i ukryte sloty nie konsumują danych eventowych.
 
 ### Wyjścia
 
@@ -132,8 +132,9 @@ prezentacyjne i nie konsumują danych z innych systemów.
   uruchamia istniejący mecz `DEMO_LEVEL`.
 - RESET → dialog potwierdzenia, a dopiero po akceptacji wywołanie istniejącego
   resetu postępu.
-- Globus → otwarcie lub zamknięcie popupu flag; dotknięcie flag nie wywołuje
-  żadnej akcji językowej.
+- Globus → otwarcie lub zamknięcie selektora; wybór flagi wysyła
+  `DashboardUiAction.SelectLanguage`, a zapisany wybór odtwarza Dashboard w
+  nowym języku.
 - `AD REWARD` pozostaje widoczny, ale nie uruchamia reklamy, nagrody ani nowego
   use case'u.
 
@@ -147,26 +148,27 @@ Stan ekranu ogranicza się do danych prezentacyjnych i bieżących operacji:
 - stan odczytu summary: ładowanie, gotowe dane albo jawny błąd;
 - aktualne `currentLevel`, `lives` i `gold` po udanym odczycie;
 - stan resetu, aby blokować wielokrotne wywołanie podczas zapisu;
+- aktywny język, stan zapisu i błąd wyboru języka w `DashboardUiState`;
 - widoczność popupu flag jako tymczasowy stan należący do `DashboardScreen`;
 
 Przy wejściu/wznowieniu ekranu summary jest odczytywane asynchronicznie.
 `onPause()` anuluje pracę należącą do ekranu. Błąd odczytu nie może wyglądać
 jak poprawny profil domyślny: pokaż jawny stan błędu i pozwól ponowić odczyt.
 Po udanym resecie profil jest odczytywany ponownie; błąd resetu pozostaje jawny.
-RESET czyści wyłącznie postęp gracza; Dashboard nie przechowuje ustawienia
-języka.
+RESET czyści wyłącznie postęp gracza; ustawienie języka w osobnym DataStore
+pozostaje bez zmian.
 
 ### Popup flag
 
 - Globus w nagłówku przełącza widoczność krótkiego popupu z trzema flagami:
   Polski (`PL`), Wielkiej Brytanii (`EN`) i Hiszpanii (`ES`).
-- Flagi są nieklikalnymi obrazami bez stanu aktywnego ani połączenia z
-  LocalizationSystem. Ich wybór nie zmienia języka.
+- Flagi są klikalnymi celami co najmniej `48 dp`; aktywna flaga jest
+  podświetlona i ma opis dostępności z nazwą języka.
+- `Saved` zamyka popup i wywołuje `Activity.recreate()`. `Unchanged` zamyka
+  popup bez odtworzenia; `Failure` pokazuje komunikat na Dashboardzie i
+  pozostawia popup dostępny do ponowienia.
 - Popup zamyka się po ponownym dotknięciu globusa, dotknięciu poza panelem,
   systemowym Back lub opuszczeniu Dashboardu.
-- Nie pokazuj fałszywego sukcesu ani tekstu sugerującego, że język został
-  zmieniony. Późniejsze zadanie LocalizationSystem może podłączyć akcje do
-  tych samych ikon.
 
 ## Ukryte sloty przyszłych eventów
 
@@ -228,10 +230,9 @@ Wspólne helpery:
   wypełniać short-edge display cutouts; kontrolki pozostają odsunięte od
   wycięć ekranu.
 
-W katalogu drawable nie ma dedykowanych flag, globusa, ikony resetu, ikony
-reklamy ani serca regeneracji. Dodano małe wektorowe drawable UI dla globusa,
-flag PL/UK/ES, resetu, clapperboardu i serca z plusem. Nie dodawać nowych
-bitmap przycisków ani ramek.
+Katalog drawable zawiera wektorowe ikony globusa, flag PL/UK/ES, resetu,
+clapperboardu i regeneracji. Dashboard używa istniejących assetów; nie dodawać
+duplikatów ani nowych bitmap przycisków i ramek.
 
 ## Obsługa błędów
 
@@ -239,8 +240,8 @@ bitmap przycisków ani ramek.
   odczytanych danych; zaprezentować jawny stan błędu i ponowienie.
 - `PlayerProgressResetResult.Failure` lub znany błąd IO/argumentu: nie pokazywać
   sukcesu; zachować możliwość ponowienia zgodnie z bieżącym wzorcem.
-- Popup flag jest wyłącznie prezentacyjny; ekran nie zapisuje ani nie zmienia
-  języka.
+- Błąd zapisu języka jest widoczny; nie odtwarza się Activity ani nie
+  nadpisuje nieobsługiwanego zapisu.
 - Nie używać szerokich `catch`, cichych fallbacków ani drugiej kopii profilu.
 - Brak eventów nie jest błędem: sloty pozostają ukryte.
 
@@ -254,8 +255,8 @@ bitmap przycisków ani ramek.
 - RESET wymaga potwierdzenia, blokuje duplikat podczas operacji, pokazuje
   wynik i odświeża summary po sukcesie.
 - `AD REWARD` pozostaje widoczny i nie uruchamia ad callbacku ani nagrody.
-- Globus otwiera popup flag, a flagi pozostają nieklikalne i nie zmieniają
-  języka.
+- Globus otwiera selektor PL/UK/ES; wybór zmienia UI, zapisuje preferencję i
+  wraca na Dashboard. Nieobsługiwany zapis nie jest nadpisywany.
 - Dwa sloty eventów są niewidoczne/puste, bez kliknięć i bez przesunięcia
   istniejącej kompozycji.
 - Ekran respektuje lifecycle `ScreenContent`; nie dodaje nawigacji ani
@@ -273,8 +274,8 @@ pozostają kryteriami przeglądu UI; nie dodano osobnego testu instrumentation.
 3. Campaign, Shop, Back i RESET zachowują opisane przepływy; reset jest
    potwierdzany i nie zmienia ustawień języka.
 4. `AD REWARD` jest widoczny, ale nie implementuje reklam ani nagród.
-5. Globus otwiera krótki popup z flagami Polski, Wielkiej Brytanii i Hiszpanii;
-   wybór flagi nie zmienia języka.
+5. Globus otwiera krótki selektor flag Polski, Wielkiej Brytanii i Hiszpanii;
+   wybór zmienia UI, zapisuje język i po `recreate()` pozostaje na Dashboardzie.
 6. Oba punkty eventowe są całkowicie niewidoczne i nie zmieniają layoutu.
 7. Nie powstaje drugi ekran, nowy moduł, źródło prawdy dla języka ani system
    eventów.
@@ -298,8 +299,8 @@ pozostają kryteriami przeglądu UI; nie dodano osobnego testu instrumentation.
 - `android-app/src/test/java/com/urkaaaz/screens/dashboard/DashboardViewModelTest.kt`
 - `android-app/src/main/res/values/strings.xml`
 - `docs/systems/localization-system.md` i
-  `docs/systems/localization-system-implementation-prompt.md` dla zgodnej
-  specyfikacji przyszłego, funkcjonalnego selektora flag.
+  `docs/systems/localization-system-implementation-prompt.md` jako źródło
+  kontraktu selektora, jego persystencji i tłumaczeń.
 
 Nie zmieniać `AppScreen` ani tworzyć nowego modułu, chyba że implementacja
 wykaże konkretną, wcześniej nieznaną granicę odpowiedzialności.
@@ -311,13 +312,13 @@ wykaże konkretną, wcześniej nieznaną granicę odpowiedzialności.
 | Przebudować istniejący Dashboard w `android-app/screens/dashboard` | Wysoka | Wysoka | Niski | Rekomendowany: reuse nawigacji, profilu, resetu, helperów i assetów. |
 | Dodać Dashboard v2/nowy moduł lub przejść na Compose | Niska dla obecnej architektury | Średnia | Wysoki | Odrzucony: duplikowałby istniejący ekran i nie rozwiązuje nowego problemu granic. |
 | Dodać system eventów gry razem z placeholderami | Niska, nadmierny zakres | Niska bez określenia kontraktu | Wysoki | Odrzucony: użytkownik chce teraz tylko niewidoczne anchory. |
-| Zaimplementować język niezależnie w DashboardViewModel | Niska | Niska | Średni | Odrzucony: duplikowałby planowany LocalizationSystem. |
+| Zaimplementować niezależny magazyn języka w DashboardViewModel | Niska | Niska | Średni | Odrzucony: Dashboard konsumuje `SetLanguage` i nie tworzy drugiego źródła prawdy. |
 
 ## Odłożony zakres
 
-- Pełny LocalizationSystem pozostaje osobnym zadaniem. Dashboard otwiera
-  statyczną listę flag, ale nie implementuje wyboru języka, persistencji,
-  wrappera `Context` ani tłumaczeń.
+- Dashboard nie jest właścicielem `LanguageSettings`, DataStore ani tłumaczeń;
+  całość realizuje LocalizationSystem, z którego Dashboard korzysta przez
+  `DashboardViewModel`.
 - Okazjonalne eventy gry nie mają jeszcze właściciela, definicji ani źródła
   danych; sloty pozostają puste i ukryte.
 - Specyfikacja przyszłych eventów i ich źródło pozostają poza tym zakresem.

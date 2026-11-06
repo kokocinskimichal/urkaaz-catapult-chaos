@@ -93,14 +93,14 @@ export function CampaignTab() {
 
     if (!chapter.mapAvailable) {
       setLoadState("missing");
-      setStatus(`Map artwork is not available for ${chapter.title}.`);
+      setStatus(`Map artwork is not available for ${chapter.id}.`);
       return () => {
         cancelled = true;
       };
     }
 
     setLoadState("loading");
-    setStatus(`Loading ${chapter.title} map…`);
+    setStatus(`Loading ${chapter.id} map…`);
     void (async () => {
       try {
         const document = await fetchCampaignMapLayout(chapterId);
@@ -116,7 +116,7 @@ export function CampaignTab() {
         setYInput(firstAnchor.y.toFixed(3));
         setImages(loadedImages);
         setLoadState("ready");
-        setStatus(`Loaded ${chapter.title}`);
+        setStatus(`Loaded ${chapter.id}`);
       } catch (error) {
         if (cancelled) return;
         setLoadState("error");
@@ -149,7 +149,7 @@ export function CampaignTab() {
       return false;
     }
     setSaving(true);
-    setStatus(`Validating ${chapter.title} layout…`);
+    setStatus(`Validating ${chapter.id} layout…`);
     setValidationErrors([]);
     try {
       const content = encodeCampaignMapLayout(layout);
@@ -169,7 +169,7 @@ export function CampaignTab() {
       setBaselineContent(content);
       setSavedHash(saved.hash);
       setNeedsReload(false);
-      setStatus(`Saved ${chapter.title}; rebuild or restart the game to apply it.`);
+      setStatus(`Saved ${chapter.id}; rebuild or restart the game to apply it.`);
       return true;
     } catch (error) {
       if (error instanceof ApiError && error.status === 409) {
@@ -266,7 +266,7 @@ export function CampaignTab() {
           >
             {chapters.map(item => (
               <option key={item.id} value={item.id}>
-                {item.title}{item.mapAvailable ? "" : " — map missing"}
+                {item.id}{item.mapAvailable ? "" : " — map missing"}
               </option>
             ))}
           </select>
@@ -306,7 +306,7 @@ export function CampaignTab() {
       {loadState === "missing" && chapter && (
         <div className="campaign-editor-missing" role="status">
           <strong>Map artwork missing</strong>
-          <p>{chapter.title} has no campaign map image yet. Marker placement is disabled until the map asset is added.</p>
+          <p>{chapter.id} has no campaign map image yet. Marker placement is disabled until the map asset is added.</p>
         </div>
       )}
 
@@ -399,7 +399,7 @@ export function CampaignTab() {
         <div className="campaign-editor-modal-backdrop">
           <section className="campaign-editor-modal" role="dialog" aria-modal="true" aria-labelledby="campaign-switch-title">
             <h2 id="campaign-switch-title">Unsaved marker positions</h2>
-            <p>Save your changes to {chapter?.title} before switching chapters?</p>
+            <p>Save your changes to {chapter?.id} before switching chapters?</p>
             <div>
               <button type="button" onClick={() => void saveAndSwitch()} disabled={saving}>Save</button>
               <button type="button" onClick={discardAndSwitch} disabled={saving}>Discard</button>

@@ -13,11 +13,10 @@ let server: ReturnType<typeof createStudioServer>;
 let port: number;
 
 const chapters = {
-  schemaVersion: 1,
+  schemaVersion: 2,
   chapters: [
     {
       id: "green_frontier",
-      title: "The Green Frontier",
       firstLevel: 1,
       lastLevel: 10,
       biome: "green_frontier",
@@ -25,7 +24,6 @@ const chapters = {
     },
     {
       id: "broken_valley",
-      title: "The Broken Valley",
       firstLevel: 11,
       lastLevel: 20,
       biome: "frostbound",
@@ -108,7 +106,8 @@ describe("campaign map API", () => {
   });
 
   it("lists chapters and distinguishes chapters without map layouts", async () => {
-    await expect(call("/api/campaign/chapters")).resolves.toMatchObject({
+    const response = await call("/api/campaign/chapters");
+    expect(response).toMatchObject({
       status: 200,
       body: {
         chapters: [
@@ -122,6 +121,20 @@ describe("campaign map API", () => {
       status: 404,
       body: { code: "map_artwork_missing" },
     });
+    if (
+      typeof response.body !== "object" ||
+      response.body === null ||
+      !("chapters" in response.body) ||
+      !Array.isArray(response.body.chapters)
+    ) {
+      throw new Error("campaign chapter response is missing its chapter list");
+    }
+    const listedChapters: unknown[] = response.body.chapters;
+    expect(
+      listedChapters.every(chapter =>
+        typeof chapter === "object" && chapter !== null && !("title" in chapter)
+      ),
+    ).toBe(true);
   });
 
   it("reads a campaign layout with a content hash and serves allowlisted art", async () => {

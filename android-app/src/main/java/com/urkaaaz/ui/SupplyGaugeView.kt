@@ -96,7 +96,7 @@ class SupplyGaugeView(context: Context, private val maximum: Int) : View(context
         canvas.drawBitmap(supplyIconBitmap, null, iconBounds, supplyIconPaint)
 
         valuePaint.textSize = 10f * density
-        val value = "$supply/$maximum"
+        val value = context.getString(R.string.match_hud_supply_short, supply, maximum)
         val fontMetrics = valuePaint.fontMetrics
         val valueBaseline = centerY - (fontMetrics.ascent + fontMetrics.descent) / 2f
         val valueHalfWidth = (

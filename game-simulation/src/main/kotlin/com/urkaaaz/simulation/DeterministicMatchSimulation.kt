@@ -1470,16 +1470,15 @@ class DeterministicMatchSimulation(
             } else {
                 null
             }
-            val bastionStopX = obstacle?.let {
-                it -
-                    direction * (
-                        RunicBastionGeometry.WIDTH / 2f +
-                            UnitHitboxProfile.forUnitType(unit.type.id).halfWidth
-                        )
-            }
+            val bastionStopX = obstacle?.let { runicBastionStopX(unit, direction, it) }
             val combatTarget = if (waveMoving) {
                 val locked = unit.combatState.targetId?.let { id ->
-                    units.firstOrNull { it.id == id && it.isAlive && it.team != unit.team }
+                    units.firstOrNull {
+                        it.id == id &&
+                            it.isAlive &&
+                            it.team != unit.team &&
+                            it.type !is SapperUnit
+                    }
                 }
                 val groupTarget = units
                     .filter {
@@ -1497,7 +1496,8 @@ class DeterministicMatchSimulation(
                                 target.id == targetId &&
                                     target.team != unit.team &&
                                     target.isAlive &&
-                                    !target.returningToGarrison
+                                    !target.returningToGarrison &&
+                                    target.type !is SapperUnit
                             }
                         }
                     }
@@ -1507,6 +1507,7 @@ class DeterministicMatchSimulation(
                         it.team != unit.team &&
                             it.isAlive &&
                             !it.returningToGarrison &&
+                            it.type !is SapperUnit &&
                             (it.position.x - unit.position.x) * direction >= 0f &&
                             kotlin.math.abs(it.position.x - unit.position.x) <=
                                 config.balance.runtime.combat.unitInteractionRange
@@ -1547,7 +1548,9 @@ class DeterministicMatchSimulation(
                                 )
                 }
             }
-            val bossStopX = if (waveMoving && combatTarget == null) {
+            val bossStopX = if (
+                waveMoving && (combatTarget == null || unit.type is SapperUnit)
+            ) {
                 bossSystem?.approachX(unit, movingTeams)
             } else {
                 null
@@ -1860,6 +1863,11 @@ class DeterministicMatchSimulation(
                 }
             }
             val target = lockedOrAcquireTarget(attacker, unitCandidates)
+            val sapperMissionTargetId = if (attacker.type is SapperUnit && target == null) {
+                nearestSapperMissionTarget(attacker, bastionAhead)
+            } else {
+                null
+            }
             val attackIntent: AttackIntent?
             if (target != null) {
                 if (attacker.combatState.targetId != target.id) {
@@ -1900,6 +1908,45 @@ class DeterministicMatchSimulation(
                     !attacker.type.attacksFromRange && canMeleeAttack(attacker, target, current) ->
                         AttackIntent(attacker.id, target.id, AttackType.MELEE)
                     else -> null
+                }
+            } else if (sapperMissionTargetId != null) {
+                if (attacker.combatState.targetId != sapperMissionTargetId) {
+                    emit {
+                        MatchEvent.TargetAcquired(
+                            it,
+                            matchId,
+                            simulationTimeMilliseconds,
+                            attacker.id,
+                            sapperMissionTargetId,
+                        )
+                    }
+                }
+                current[index] = attacker.copy(
+                    combatState = attacker.combatState.copy(
+                        action = UnitActionState.SEEKING_TARGET,
+                        targetId = sapperMissionTargetId,
+                        attackGroupId = null,
+                    ),
+                )
+                val canAttackMissionTarget = when {
+                    bossSystem?.entityId == sapperMissionTargetId ->
+                        canUnitAttackBoss(attacker, current)
+                    else -> bastionById(sapperMissionTargetId)?.let {
+                        canAttackBastion(attacker, it, current)
+                    } ?: canAttackFortress(
+                        attacker,
+                        fortress(opposingTeam(attacker.team)),
+                        current,
+                    )
+                }
+                attackIntent = if (canAttackMissionTarget) {
+                    AttackIntent(
+                        attackerId = attacker.id,
+                        targetId = sapperMissionTargetId,
+                        type = AttackType.SIEGE_MISSION,
+                    )
+                } else {
+                    null
                 }
             } else if (bastionAhead != null) {
                 if (attacker.combatState.targetId != bastionAhead.id) {
@@ -2066,6 +2113,7 @@ class DeterministicMatchSimulation(
         val locked = attacker.combatState.targetId?.let { id ->
             candidates.firstOrNull {
                 it.id == id && it.isAlive && it.team != attacker.team &&
+                    it.type !is SapperUnit &&
                     !it.returningToGarrison &&
                     (
                         attacker.combatState.attackGroupId != null ||
@@ -2075,7 +2123,10 @@ class DeterministicMatchSimulation(
             }
         }
         return locked ?: candidates.filter {
-            it.team != attacker.team && it.isAlive && !it.returningToGarrison &&
+            it.team != attacker.team &&
+                it.isAlive &&
+                it.type !is SapperUnit &&
+                !it.returningToGarrison &&
                 kotlin.math.abs(it.position.x - attacker.position.x) <=
                     config.balance.runtime.combat.unitInteractionRange
         }.minWithOrNull(compareBy({ kotlin.math.abs(it.position.x - attacker.position.x) }, { it.id.value }))
@@ -2355,6 +2406,7 @@ class DeterministicMatchSimulation(
         current: List<Unit>,
     ): Boolean =
         target.team != attacker.team &&
+            target.type !is SapperUnit &&
             target.isAlive &&
             when (attacker.type.attackType) {
                 AttackType.MELEE, AttackType.CONTACT_EXPLOSIVE ->
@@ -2525,18 +2577,25 @@ class DeterministicMatchSimulation(
             return
         }
         val damage = rollUnitDamage(attacker, behavior.fortressDamage)
+        val targetBoss = bossSystem?.takeIf { it.entityId == targetId }
         val targetBastion = bastionById(targetId)
-        if (targetBastion != null) {
-            if (targetBastion.isAlive && targetBastion.team != attacker.team) {
-                damageBastion(
-                    targetBastion,
-                    damage,
-                    attackingUnits = current,
-                    sourceUnitId = attacker.id,
-                )
+        when {
+            targetBoss != null -> applyBossDamage(
+                amount = damage,
+                sourceTeam = attacker.team,
+                sourceId = attacker.id,
+            )
+            targetBastion != null -> {
+                if (targetBastion.isAlive && targetBastion.team != attacker.team) {
+                    damageBastion(
+                        targetBastion,
+                        damage,
+                        attackingUnits = current,
+                        sourceUnitId = attacker.id,
+                    )
+                }
             }
-        } else {
-            damageFortress(fortress(opposingTeam(attacker.team)), damage)
+            else -> damageFortress(fortress(opposingTeam(attacker.team)), damage)
         }
         current[index] = attacker.copy(
             sapperHasBomb = false,
@@ -2581,7 +2640,7 @@ class DeterministicMatchSimulation(
         }
         current.indices.forEach { index ->
             val target = current[index]
-            if (target.isAlive) {
+            if (target.isAlive && target.type !is SapperUnit) {
                 val distance = target.position.distanceTo(attacker.position)
                 if (distance <= demolisherBalance.blastRadius) {
                     val falloff = 1f - distance / demolisherBalance.blastRadius
@@ -2787,6 +2846,45 @@ class DeterministicMatchSimulation(
         val frontFaceOffset = fortressFrontFaceOffset(team)
         return fortress(opposingTeam(team)).center.x + frontFaceOffset -
             direction * config.balance.runtime.combat.sapperFortressStandoffDistance
+    }
+
+    private fun runicBastionStopX(
+        unit: Unit,
+        direction: Float,
+        bastionCenterX: Float,
+    ): Float =
+        bastionCenterX -
+            direction * (
+                RunicBastionGeometry.WIDTH / 2f +
+                    UnitHitboxProfile.forUnitType(unit.type.id).halfWidth
+                )
+
+    private fun nearestSapperMissionTarget(
+        sapper: Unit,
+        bastionTarget: RunicBastion?,
+    ): EntityId? {
+        val direction = if (sapper.team == Team.BLUE) 1f else -1f
+        val candidates = buildList {
+            bossSystem?.takeIf { it.isAlive }?.let { boss ->
+                boss.approachX(sapper, movingTeams)?.let { stopX ->
+                    add(boss.entityId to stopX)
+                }
+            }
+            bastionTarget?.let {
+                add(it.id to runicBastionStopX(sapper, direction, it.center.x))
+            }
+            add(
+                fortress(opposingTeam(sapper.team)).id to
+                    sapperFortressStopX(sapper.team),
+            )
+        }
+        return candidates
+            .map { (targetId, stopX) ->
+                targetId to ((stopX - sapper.position.x) * direction)
+            }
+            .filter { (_, distance) -> distance >= -0.01f }
+            .minByOrNull { (_, distance) -> distance.coerceAtLeast(0f) }
+            ?.first
     }
 
     private fun demolisherFortressStopX(team: Team): Float {

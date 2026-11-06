@@ -10,4 +10,6 @@ treść i status zostały zachowane w miejscu docelowym.
 
 ## Do uporządkowania
 
-Brak pomysłów do przeniesienia.
+Brak. Wszystkie bieżące propozycje jednostek przeniesiono do
+[`docs/systems/units/ideas.md`](../systems/units/ideas.md); nadal są
+niezatwierdzone i niewdrożone.

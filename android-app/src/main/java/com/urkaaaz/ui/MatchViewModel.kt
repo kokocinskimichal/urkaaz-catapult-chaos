@@ -17,6 +17,7 @@ import com.urkaaaz.application.shop.MatchStockSettlementRejection
 import com.urkaaaz.application.shop.MatchStockSettlementResult
 import com.urkaaaz.application.shop.MatchStockSettlementUseCase
 import com.urkaaaz.application.shop.MatchStockUsageTracker
+import com.urkaaaz.android.R
 import com.urkaaaz.contracts.CommandId
 import com.urkaaaz.contracts.CommandResult
 import com.urkaaaz.contracts.EventId
@@ -127,7 +128,7 @@ class MatchViewModel(
     private var paused = false
     private var selectedAmmunition = "ROCK"
     private val forwardedCampaignCompletions = mutableSetOf<Triple<Long, MatchId, EventId>>()
-    private var spellFeedbackLabel: String? = null
+    private var spellFeedbackLabel: Int? = null
     var renderState: RenderState = withProjectileBalance(RenderStateMapper.map(MatchSnapshot()))
         private set
 
@@ -305,7 +306,7 @@ class MatchViewModel(
                 kind = CombatFeedbackRenderState.Kind.GOLD_REWARD,
                 x = notification.x,
                 y = notification.y,
-                label = "+${notification.gold} OrCoins",
+                goldAmount = notification.gold,
             )
         }
         return withProjectileBalance(mapped.copy(
@@ -350,7 +351,7 @@ class MatchViewModel(
         )
         val events = when (result) {
             is CommandResult.Accepted -> {
-                spellFeedbackLabel = "SPELL CAST"
+                spellFeedbackLabel = R.string.match_spell_feedback_cast
                 result.events
             }
             is CommandResult.Rejected -> {
@@ -421,15 +422,15 @@ class MatchViewModel(
         return settlement
     }
 
-    private fun spellRejectionLabel(error: MatchError): String = when (error) {
-        MatchError.INSUFFICIENT_RESOURCE -> "NOT ENOUGH MANA"
-        MatchError.SPELL_ALREADY_ACTIVE -> "SPELL ALREADY ACTIVE"
-        MatchError.SPELL_NOT_IN_LOADOUT -> "SPELL NOT EQUIPPED"
-        MatchError.SPELL_NOT_AVAILABLE -> "SPELL UNAVAILABLE"
+    private fun spellRejectionLabel(error: MatchError): Int = when (error) {
+        MatchError.INSUFFICIENT_RESOURCE -> R.string.match_spell_feedback_not_enough_mana
+        MatchError.SPELL_ALREADY_ACTIVE -> R.string.match_spell_feedback_already_active
+        MatchError.SPELL_NOT_IN_LOADOUT -> R.string.match_spell_feedback_not_equipped
+        MatchError.SPELL_NOT_AVAILABLE -> R.string.match_spell_feedback_unavailable
         MatchError.MATCH_NOT_RUNNING,
         MatchError.ALREADY_FINISHED,
-        -> "MATCH NOT RUNNING"
-        else -> "CAST REJECTED"
+        -> R.string.match_spell_feedback_match_not_running
+        else -> R.string.match_spell_feedback_rejected
     }
 
     internal fun forwardCampaignCompletionEvents(events: List<MatchEvent>) {

@@ -2,7 +2,6 @@ export type CampaignLandmarkKind = "FORTRESS" | "BOSS";
 
 export interface CampaignChapterCatalogEntry {
   id: string;
-  title: string;
   firstLevel: number;
   lastLevel: number;
   biome: string;

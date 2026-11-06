@@ -167,6 +167,9 @@ class BattlefieldView(context: Context) : View(context) {
     private val renderer = BattlefieldRenderer(
         assets = assets,
         textTypeface = UiTypography.typeface(context),
+        stringResolver = { resource, arguments ->
+            context.getString(resource, *arguments.toTypedArray())
+        },
         drawTiledTexture = ::drawTiledTexture,
         drawTexture = ::drawTexture,
         drawTextureAtBaseline = ::drawTextureAtBaseline,

@@ -5,7 +5,6 @@ import { campaignMapIdForSelection, campaignMapSelectionFromId } from "./campaig
 const chapters: CampaignChapterCatalogEntry[] = [
   {
     id: "green_frontier",
-    title: "The Green Frontier",
     firstLevel: 1,
     lastLevel: 10,
     biome: "green_frontier",
@@ -14,7 +13,6 @@ const chapters: CampaignChapterCatalogEntry[] = [
   },
   {
     id: "broken_valley",
-    title: "The Broken Valley",
     firstLevel: 11,
     lastLevel: 20,
     biome: "frostbound",

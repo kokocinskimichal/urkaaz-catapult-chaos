@@ -15,7 +15,6 @@ import com.urkaaaz.application.loadout.LoadoutCatalog
 import com.urkaaaz.screens.loadout.LoadoutAssetCatalog
 import com.urkaaaz.screens.loadout.LoadoutAssetLookup
 import com.urkaaaz.screens.loadout.LoadoutItemReference
-import java.util.Locale
 
 class AmmunitionPanelView(
     context: Context,
@@ -98,10 +97,7 @@ class AmmunitionPanelView(
             slot.reloadShade.coveredFraction = 1f - reloadProgress
             slot.reloadShade.visibility = if (reloading) View.VISIBLE else View.GONE
             val reloadDescription = if (reloading) {
-                context.getString(
-                    R.string.match_hud_reload_seconds,
-                    String.format(Locale.US, "%.1f", reload),
-                )
+                context.getString(R.string.match_hud_reload_seconds, reload)
             } else {
                 context.getString(R.string.match_hud_ready)
             }

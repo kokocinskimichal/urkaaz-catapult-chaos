@@ -32,8 +32,11 @@ kampanię, AI oraz działający match screen. Gałąź robocza: `develop`.
   Używa dwóch kategorii `SPELLS`/`AMMUNITION`, kupuje pojedynczy stock za
   OrCoins i wraca do wybranego przedmiotu bez autoekwipowania.
 - Dashboard używa zaakceptowanego układu, osobnego tła i istniejących assetów
-  przycisków/ramki. Globus otwiera krótką listę flag PL/UK/ES; flagi nie
-  zmieniają jeszcze języka. `AD REWARD` pozostaje nieaktywny, a dwa boczne
+  przycisków/ramki. Globus otwiera selektor PL/UK/ES; wybór zmienia cały język
+  UI, zapisuje się w osobnym DataStore i przetrwa reset profilu. Tytuły
+  rozdziałów są mapowane z lokalizowanych zasobów, a Studio pokazuje stabilne
+  ID. Tłumaczenia PL/ES zostały zaakceptowane, a stałe panele zweryfikowano
+  wizualnie na emulatorze w trzech językach. `AD REWARD` pozostaje nieaktywny, a dwa boczne
   sloty eventów są ukryte i nie mają jeszcze źródła danych. `TEST MODE`
   otwiera demo Loadout, z którego po zatwierdzeniu startuje mecz `DEMO_LEVEL`.
   Demo Debug Tools udostępnia checkbox automatycznej rekrutacji i fal RED,

@@ -2,12 +2,18 @@
 
 ## Status i cel
 
-**LocalizationSystem nie jest zaimplementowany.** Ten dokument opisuje
-zatwierdzoną architekturę przyszłego systemu języka i lokalizacji UI. Nic
-poniżej nie opisuje działającego kodu, dopóki nie zostanie wdrożone zgodnie z
-planem. Wymagania opisane jako „musi” są kryteriami akceptacji przyszłej
-implementacji. Elementy oznaczone **(propozycja)** nie zostały zatwierdzone
-wprost i wymagają akceptacji przed implementacją.
+**Status: zaimplementowany i zatwierdzony.** Kontrakt aplikacyjny,
+persystencja języka, lokalizowany `Context`, selektor Dashboardu, prezentacyjne
+tytuły rozdziałów oraz zasoby PL/ES są zaimplementowane. Użytkownik zaakceptował
+pełną listę tłumaczeń PL/ES. Ręczny przegląd wizualny Dashboardu, kampanii,
+Loadoutu i HUD-u w EN/PL/ES został wykonany na emulatorze Pixel 8; w razie
+zmian tekstów należy go powtórzyć.
+
+Automatyczny `./gradlew test assembleDebug --quiet`, testy i lint Studio oraz
+`git diff --check` przechodzą. `:android-app:lintDebug` nie kończy się
+powodzeniem z powodu dwóch istniejących błędów `AppCompatCustomView`
+(`CampaignBossMarkerImageView` i `MatchFeedbackToastView`); raport nie zawiera
+błędów `MissingTranslation`.
 
 Cel: gracz wybiera język aplikacji (polski, angielski lub hiszpański) na Dashboardzie, a
 cały tekst UI Androida oraz tytuły rozdziałów kampanii są wyświetlane w tym
@@ -33,8 +39,8 @@ Legacy zachowuje język przy resecie postępu. Kodu legacy nie kopiuję.
 | Zastosowanie języka | Własny wrapper `Context` w `attachBaseContext` (`Configuration.setLocale`) plus `recreate()`. Działa od API 24 bez zmiany `Activity` i motywu. |
 | Właściciel języka | Osobny DataStore, odczytany raz synchronicznie przy starcie. Własny wpis w systemowych ustawieniach języka aplikacji nie jest deklarowany, więc nie ma drugiego źródła prawdy. |
 | Tytuły rozdziałów | Presentation-side: dane kampanii trzymają tylko stabilne `id`; tytuły są w `strings.xml` (`values/`, `values-pl/`, `values-es/`). Pole `title` znika z JSON i z kontraktu `game-campaign`. Studio pokazuje `id`. |
-| Tłumaczenia PL | Przeniesione z legacy tam, gdzie znaczenie pasuje; resztę tłumaczy agent. Cała lista idzie do akceptacji użytkownika przed uznaniem lokalizacji za gotową. |
-| Tłumaczenia ES | Legacy nie ma hiszpańskiego, więc całość tłumaczy agent. Lista (klucz, EN, ES; źródło zawsze `nowe`) idzie do akceptacji użytkownika razem z PL. |
+| Tłumaczenia PL | Przeniesione z legacy tam, gdzie znaczenie pasuje; resztę przygotował agent. Pełna lista z rozróżnieniem źródła `legacy`/`nowe` została zaakceptowana przez użytkownika. |
+| Tłumaczenia ES | Legacy nie ma hiszpańskiego, więc całość przygotował agent. Pełna lista (klucz, EN, ES; źródło `nowe`) została zaakceptowana przez użytkownika razem z PL. |
 | Teksty tutoriali | Pozostają w JSON tutoriali (`pl`/`en`/`es`); nie należą do `strings.xml`. Brak `es` w tutorialu to jawny błąd walidacji katalogu. |
 
 ## Zakres
@@ -70,13 +76,13 @@ W zakresie:
 
 | Istniejące | Stan | Decyzja |
 |---|---|---|
-| `android-app/src/main/res/values/strings.xml` | 294 stringi, ok. 324 użyć `R.string.*` w 15 plikach; jedyna baza tekstów. Bez `values-pl`. | Pozostaje angielską bazą i jedynym katalogiem tekstów UI. Dochodzą `values-pl/strings.xml` i `values-es/strings.xml`. Brak `values-en`, bo byłby kopią bazy. |
+| `android-app/src/main/res/values/strings.xml` | Angielska baza; 388 wpisów `string`/`plurals` wraz z pełnymi katalogami `values-pl` i `values-es`. | Baza pozostaje po angielsku; oba katalogi lokalizacji mają parytet kluczy i argumentów. Nie ma `values-en`, bo byłby kopią bazy. Tłumaczenia czekają na akceptację. |
 | `BossPresentationCatalog` (nazwy bossów przez `R.string`) | Wzorzec: stabilne ID → jawny `R.string`. | Ten sam wzorzec dla tytułów rozdziałów. |
-| `campaign-chapters.json` (`title`) | Angielski tytuł, używany przez `CampaignChapterRegistry`, walidację unikalności w `CampaignChapterCatalogRepository`, `CampaignScreen`, Studio (`campaignMapCatalog.ts`, `MapsTab`, `CampaignTab`). | `title` jest usuwany. Gra bierze tytuł z zasobów po `id`; Studio pokazuje `id`. |
-| `TutorialSystem` teksty `pl`/`en` w JSON | Osobny, zatwierdzony mechanizm treści; teksty `pl`/`en` dostają `es`. | Konsumuje tylko `AppLanguage` z portu. |
-| `LocalPreferencesDataStore` / `DataStorePlayerProgressResetRepository` | Jeden Preferences DataStore; RESET czyści go w całości poza hashem presetu. | Język **nie może** tam trafić. Osobny plik DataStore. |
+| `campaign-chapters.json` | Katalog schema 2 przechowuje stabilne ID, zakres poziomów, biom i boss positions; bez `title`. | Gra mapuje ID na `R.string.chapter_title_<id>`; Studio pokazuje ID. |
+| `TutorialSystem` teksty `pl`/`en` w JSON | Osobny mechanizm treści; katalog tutoriala waliduje wszystkie trzy języki. | TutorialSystem konsumuje `AppLanguage` przez `LanguageSettings`; nie przejmuje ustawienia ani nie obserwuje zmian podczas kroku. |
+| `LocalPreferencesDataStore` / `DataStorePlayerProgressResetRepository` | Główny Preferences DataStore jest czyszczony podczas RESET poza hashem presetu. | Język zapisuje osobny `language_settings`; reset progresu go nie dotyka. |
 | Legacy `LanguageManager` | `AppCompatDelegate` + SharedPreferences, `pl` domyślnie. | Tylko odniesienie. `AppCompatDelegate` odrzucone, patrz „Warianty”. |
-| `MainActivity` | `ComponentActivity`, motyw `Theme.Urkaaaz` (platformowy Material), `minSdk 24`, brak odtwarzania stanu nawigacji. | Wrapper kontekstu nie wymaga zmiany klasy ani motywu. Odtwarzanie Dashboardu opisane w „Lifecycle”. |
+| `MainActivity` | `ComponentActivity`, motyw `Theme.Urkaaaz` (platformowy Material), `minSdk 24`; przy odtworzeniu zachowuje Dashboard, ale nie inne ekrany. | `attachBaseContext` opakowuje kontekst; nie używa `AppCompatDelegate`, nie zmienia klasy ani motywu. |
 
 Nie istnieje inny system języka ani drugi katalog tekstów UI; rekomendacja nie
 duplikuje funkcjonalności.
@@ -138,7 +144,7 @@ wartość. Wyjścia: `AppLanguage` dla silnika tutoriala, zlokalizowany
 
 | Dane | Typ | Właściciel |
 |---|---|---|
-| Wybrany język | Ustawienie trwałe | Osobny DataStore (**propozycja** nazwy pliku: `language_settings`), klucz `language.code`, `language.schema_version`. |
+| Wybrany język | Ustawienie trwałe | Osobny DataStore `language_settings`, klucze `language.code` i `language.schema_version`. |
 | Zlokalizowany `Context` | Efemeryczny, na czas życia `Activity` | `LocalizedContext` w `android-app`. |
 | Teksty UI | Zasoby | `values/`, `values-pl/` i `values-es/`. |
 | Tytuły rozdziałów | Zasoby + mapowanie | Katalog prezentacji rozdziałów. |
@@ -162,12 +168,12 @@ Zasady:
 |---|---|
 | Start procesu / `Activity` | `attachBaseContext` odczytuje język raz, synchronicznie, i opakowuje `Context` wybranym `Locale`. Odczyt jest jedynym dopuszczonym blokującym wywołaniem DataStore w aplikacji i jest opisany w kodzie. |
 | Wybór języka | `SelectLanguage(language)` → `SetLanguage`. Przy `Saved`: `recreate()`. Przy `Unchanged`: nic. Przy `Failure`: jawny komunikat na Dashboardzie, bez `recreate()`. |
-| `recreate()` | Po ponownym utworzeniu `Activity` aplikacja wraca na Dashboard **(propozycja)**: przed `recreate()` bieżący ekran (zawsze Dashboard, bo tylko tam można zmienić język) zapisywany jest w `onSaveInstanceState` i odtwarzany w `onCreate`. Inne ekrany nie są odtwarzane. |
+| `recreate()` | `MainActivity` zapisuje w `onSaveInstanceState`, czy aktywny ekran to Dashboard. `onCreate` odtwarza tylko Dashboard; pozostałe ekrany wracają do Splash. |
 | Zmiana konfiguracji (obrót) | Jak dziś; wrapper zostaje, bo działa w `attachBaseContext`. |
 | Mecz w trakcie | Język nie zmienia się w meczu. Przełącznik jest tylko na Dashboardzie. |
 | Aktywny tutorial | Overlay blokuje dotyk poza celem kroku, więc przełącznik jest nieosiągalny, dopóki tutorial jest aktywny. Gdyby cel kroku był samym przełącznikiem, tutorial startuje od pierwszego kroku po `recreate()` (aktywny krok nie jest persystowany). |
 | Dashboard RESET | Język pozostaje. |
-| Failure odczytu przy starcie | Aplikacja startuje w `EN` **bez nadpisywania zapisu**, a błąd jest logowany jawnie **(propozycja; do akceptacji jako wyjątek od zakazu cichych fallbacków, bo aplikacja musi wystartować)**. |
+| Failure odczytu przy starcie | `StartupLanguageReader` loguje błąd i uruchamia aplikację w `EN` bez nadpisywania zapisu. |
 
 ## Przepływ komend, snapshotów i eventów
 
@@ -189,9 +195,9 @@ Lokalizacja nie wpływa na symulację: nie zmienia seeda, komend, snapshotów an
 replayu. Teksty są wyłącznie prezentacją. Formatowanie liczb w logach i
 plikach developerskich pozostaje `Locale.US`, aby logi były porównywalne.
 
-**(propozycja)** Liczby widoczne dla gracza (np. czas przeładowania w
-`AmmunitionPanelView`) są formatowane według `Locale` aplikacji, więc po
-polsku i hiszpańsku z przecinkiem. Wymaga akceptacji, bo zmienia dziś stały `Locale.US`.
+Liczby widoczne dla gracza są formatowane z zasobów zlokalizowanego `Context`
+(w tym czas przeładowania w `AmmunitionPanelView`, zdrowie, mana i mnożnik
+synergii). Logi i współrzędne developerskie pozostają przy `Locale.US`.
 
 ## Integracja z istniejącymi systemami
 
@@ -214,7 +220,7 @@ uzgodnienia w fazie treści tutoriali).
 `CampaignChapterRegistry`, walidacja unikalności i niepustości tytułu w
 `CampaignChapterCatalogRepository` (zastąpiona walidacją unikalności `id`, jeśli
 jej brakuje), pole `title` w `campaign-chapters.json`. Podniesienie
-`schemaVersion` pliku **(propozycja)**, zgodnie z istniejącą praktyką
+`schemaVersion` pliku do `2`, zgodnie z istniejącą praktyką
 wersjonowania katalogów.
 
 Katalog prezentacji ma jawne mapowanie `id → R.string` (bez
@@ -232,7 +238,7 @@ Testy Studio aktualizowane. Studio nie edytuje tłumaczeń.
 
 Używają zasobów w zlokalizowanym `Context` bez zmian logiki. Wymagają
 przeglądu literałów i formatów (patrz „Android UI”). Teksty parametryzowane
-używają pozycyjnych argumentów (`%1$d`); liczby mnogie **(propozycja)**
+używają pozycyjnych argumentów (`%1$d`); liczby mnogie
 `<plurals>` z formami wymaganymi przez polski (one/few/many/other) oraz
 hiszpański (one/many/other).
 
@@ -253,10 +259,10 @@ Błędy są jawne i typowane; brak szerokich `catch` i cichych fallbacków.
 | Brak zapisanej wartości | `Loaded(EN, DEFAULT_NO_STORED_VALUE)`; to reguła kontraktu. |
 | Nieobsługiwana wartość w zapisie | `Failure(UNSUPPORTED_VALUE)`; dane nie są kasowane ani nadpisywane. |
 | Nowsza wersja schematu niż obsługiwana | `Failure(UNSUPPORTED_VALUE)`; dane nie są kasowane. |
-| Błąd IO przy odczycie startowym | `Failure(STORAGE_UNAVAILABLE)`; start w `EN` z jawnym logiem (**propozycja**, patrz Lifecycle). |
+| Błąd IO przy odczycie startowym | `Failure(STORAGE_UNAVAILABLE)`; start w `EN` z jawnym logiem, bez nadpisywania zapisu. |
 | Błąd IO przy zapisie wyboru | `Failure(STORAGE_UNAVAILABLE)`; Dashboard pokazuje błąd, brak `recreate()`, brak ponowienia bez wiedzy gracza. |
 | Wybór aktualnego języka | `Unchanged`, brak `recreate()`. |
-| Brak klucza w `values-pl` lub `values-es` | Test parytetu kończy się błędem; lint `MissingTranslation` jest błędem **(propozycja)**. |
+| Brak klucza w `values-pl` lub `values-es` | Test parytetu kończy się błędem; lint `MissingTranslation` jest błędem. |
 | `id` rozdziału bez wpisu w katalogu prezentacji | Błąd testu; w runtime jawny wyjątek z `id`, nie pusty tytuł. |
 
 ## Android UI i assety
@@ -282,7 +288,7 @@ Błędy są jawne i typowane; brak szerokich `catch` i cichych fallbacków.
    wrappera.
 2. Przegląd literałów tekstowych w kodzie Androida (ok. 240 kandydatów):
    większość to klucze assetów i nazwy techniczne i **zostaje**; literały
-   widoczne dla gracza trafiają do zasobów **(propozycja przeglądu)**. Lista
+   widoczne dla gracza trafiają do zasobów. Lista
    przeniesionych i pozostawionych literałów jest wypisana w podsumowaniu
    implementacji.
 3. Czcionka `cinzel_variable.ttf` (używana przez `Theme.Urkaaaz`) zawiera
@@ -299,20 +305,18 @@ Błędy są jawne i typowane; brak szerokich `catch` i cichych fallbacków.
 
 ### Assety
 
-Pierwsza wersja dodaje niewielkie assety UI: neutralną ikonę globusa oraz
-flagowe ikony Polski, Wielkiej Brytanii i Hiszpanii. W istniejącym katalogu
-zasobów nie ma dedykowanych ikon języka ani flag. Użyj lekkich,
-samodzielnych drawable Androida dopasowanych do rozmiaru przycisku HUD; nie
-twórz pełnoekranowej grafiki ani nie umieszczaj tekstowych skrótów w obrazach.
+Dashboard używa istniejących drawable globusa oraz flag Polski, Wielkiej
+Brytanii i Hiszpanii. Nie dodano nowych assetów graficznych ani tekstowych
+skrótów w obrazach.
 
 ### Tłumaczenia
 
 Polskie teksty: z `values-pl/strings.xml` legacy tam, gdzie znaczenie pasuje
-do aktualnego klucza; resztę tłumaczy agent. Hiszpańskie teksty (neutralny
-`es`) w całości tłumaczy agent, bo legacy nie ma hiszpańskiego. Cała lista
-(klucz, EN, PL, ES, źródło PL: `legacy` lub `nowe`; źródło ES: `nowe`) idzie do
-akceptacji użytkownika; bez niej lokalizacja nie jest uznana za gotową. Teksty
-legacy są źródłem do ręcznego przeniesienia, nie są kopiowane automatycznie.
+do aktualnego klucza; resztę przygotował agent. Hiszpańskie teksty (neutralny
+`es`) przygotował agent, bo legacy nie ma hiszpańskiego. Pełna tabela (klucz,
+EN, PL, ES, źródło PL: `legacy`/`nowe`, źródło ES: `nowe`) została
+zaakceptowana przez użytkownika. Teksty legacy są źródłem do ręcznego
+przeniesienia, nie są kopiowane automatycznie.
 
 ## Plan testów i kryteria akceptacji
 
@@ -344,7 +348,7 @@ legacy są źródłem do ręcznego przeniesienia, nie są kopiowane automatyczni
   wpis i oba tłumaczenia;
 - brak odwołań do `chapter.title` oraz do `applicationContext.getString` dla
   tekstu UI (test lub reguła przeglądu);
-- odtworzenie Dashboardu po `recreate()` **(propozycja)**.
+- odtworzenie Dashboardu po `recreate()` przez `DashboardRestoreState`.
 
 ### `game-campaign` i Studio
 
@@ -367,49 +371,39 @@ legacy są źródłem do ręcznego przeniesienia, nie są kopiowane automatyczni
 8. `./gradlew test assembleDebug --quiet` oraz `npm test && npm run lint` w
    `studio/` przechodzą.
 
-## Plan wdrożenia (fazy)
+## Status wdrożenia
 
-1. **Kontrakty i port** w `game-application`: `AppLanguage`, `LanguageSettings`,
-   `SetLanguage`, testy JVM. To odblokowuje fazę 1 TutorialSystemu.
-2. **Persystencja i start**: adapter DataStore języka, `LocalizedContext`,
-   `attachBaseContext`, testy; RESET nie czyści języka.
-3. **Przełącznik na Dashboardzie** i `recreate()` z odtworzeniem Dashboardu.
-4. **Tytuły rozdziałów**: usunięcie `title` z `game-campaign` i Studio, katalog
-   prezentacji, `strings.xml`.
-5. **Lokalizacja UI**: przegląd literałów, `values-pl`, `values-es`, lista
-   tłumaczeń do akceptacji, testy parytetu, lint.
-6. **Dokumentacja**: aktualizacja `current-state.md`, `knowledge.md`,
-   `architecture.md` (persystencja), glosariusza i `tutorial-system.md`.
+1. **Kontrakty i port** — zaimplementowane w `game-application`, z testami JVM.
+2. **Persystencja i start** — osobny DataStore, synchroniczny odczyt startowy,
+   `LocalizedContext` i testy; RESET profilu nie usuwa języka.
+3. **Selektor Dashboardu** — zaimplementowany; `SetLanguage` jest wywoływany
+   przez `DashboardViewModel`, a wybór zapisany powoduje `recreate()`.
+4. **Tytuły rozdziałów** — usunięte z kontraktu i katalogu schema 2; gra
+   korzysta z jawnego katalogu prezentacji, a Studio pokazuje ID.
+5. **Lokalizacja UI** — katalogi EN/PL/ES, plural forms, test parytetu i lint
+   są dodane; wizualny przegląd wykonano, a tabela tłumaczeń została
+   zaakceptowana.
+6. **Dokumentacja** — aktualizowana razem z implementacją.
 
-Fazy 1–2 wystarczają, aby TutorialSystem miał działający `LanguageSettings`;
-pełna lokalizacja UI (faza 5) dochodzi niezależnie.
+Etapy 1–2 udostępniają port `LanguageSettings` dla TutorialSystemu. Sam
+TutorialSystem pozostaje poza zakresem tej implementacji.
 
-## Proponowane pliki do przyszłej implementacji
+## Główne pliki implementacji
 
-- `game-application/src/main/kotlin/com/urkaaaz/application/language/` —
-  `AppLanguage.kt`, `LanguageSettings.kt`, `LanguageResults.kt`,
-  `SetLanguage.kt`;
-- `game-application/src/test/kotlin/com/urkaaaz/application/language/`;
-- `android-app/.../persistence/DataStoreLanguageSettings.kt` (osobny plik
-  DataStore, obok `LocalPreferencesDataStore`);
-- `android-app/.../localization/` — `LocalizedContext.kt`,
+- `game-application/.../language/AppLanguage.kt`,
+  `LanguageSettings.kt`, `SetLanguage.kt`;
+- `android-app/.../persistence/LanguageSettingsDataStore.kt`;
+- `android-app/.../localization/LocalizedContext.kt` i
   `StartupLanguageReader.kt`;
-- zmiany w `MainActivity` (tylko `attachBaseContext`, `recreate()`, odtworzenie
-  Dashboardu), `DashboardScreen`, `DashboardViewModel`, `DashboardUiAction`,
-  `DashboardUiState`;
-- nowy widok przełącznika w `screens/dashboard/`;
-- `android-app/.../screens/campaign/ChapterPresentationCatalog.kt`, zmiana w
-  `CampaignScreen`;
-- `android-app/src/main/res/values/strings.xml`,
-  `android-app/src/main/res/values-pl/strings.xml`,
-  `android-app/src/main/res/values-es/strings.xml`;
-- `game-campaign/.../CampaignChapterRegistry.kt`,
-  `CampaignChapterCatalogRepository.kt`, `campaign-chapters.json` i testy;
-- `studio/server/src/services/campaignMapCatalog.ts`, kontrakty rozdziałów,
-  `studio/web/src/tabs/maps/MapsTab.tsx`, `studio/web/src/tabs/campaign/CampaignTab.tsx`
-  i testy;
-- `docs/systems/tutorial-system.md` (zapis o zmianie języka w trakcie
-  tutoriala i status dokumentu lokalizacji).
+- `android-app/.../screens/dashboard/DashboardLanguageFlag.kt`,
+  `DashboardScreen.kt`, `DashboardViewModel.kt` oraz
+  `navigation/DashboardRestoreState.kt`;
+- `android-app/.../screens/campaign/CampaignChapterTitleResources.kt` i
+  `CampaignScreen.kt`;
+- zasoby `values/strings.xml`, `values-pl/strings.xml` i
+  `values-es/strings.xml` oraz testy lokalizacji;
+- `game-campaign` chapter definition/catalog/registry i `campaign-chapters.json`;
+- Studio server contracts/catalog i zakładki Campaign/Maps.
 
 ## Rozważone warianty
 
@@ -421,23 +415,10 @@ pełna lokalizacja UI (faza 5) dochodzi niezależnie.
 | Przebudowa widoków bez `recreate()` | Niska | Niska | Wysoki | Wymaga, aby każdy ekran umiał odbudować wszystkie teksty; duże ryzyko pominięć. Odrzucony. |
 | Tytuły w JSON jako `{pl, en}` | Średnia | Średnia | Średni | Druga lokalizacja tłumaczeń obok `strings.xml`, edycja w Studio. Odrzucone na rzecz jednego katalogu tekstów. |
 
-## Otwarte decyzje i niedokończony zakres
+## Pozostałe granice zakresu
 
-Rozstrzygnięte: patrz „Zatwierdzone decyzje”.
-
-Propozycje do akceptacji przed implementacją:
-
-1. Nazwa pliku DataStore (`language_settings`) i klucze `language.*`.
-2. Odtworzenie Dashboardu po `recreate()` przez `onSaveInstanceState`.
-3. Zachowanie przy błędzie odczytu startowego: start w `EN` z logiem, bez
-   nadpisywania zapisu.
-4. Podniesienie `schemaVersion` w `campaign-chapters.json` po usunięciu
-   `title`.
-5. Formatowanie liczb widocznych dla gracza według `Locale` aplikacji zamiast
-   `Locale.US`.
-6. `<plurals>` dla tekstów z liczbami; lint `MissingTranslation` jako błąd;
-   test parytetu kluczy i argumentów.
-7. Przegląd i przeniesienie widocznych literałów z kodu Androida do zasobów.
-
-Niedokończone: listy tłumaczeń PL i ES wymagają akceptacji użytkownika; tytuły
-poziomów nie istnieją i nie są lokalizowane.
+Nie ma otwartych decyzji ani zaległych kroków odbioru LocalizationSystem.
+Tytuły poziomów nie istnieją i nie są lokalizowane; teksty tutoriala pozostają
+właścicielstwem TutorialSystemu. Android lint nadal raportuje dwa istniejące,
+niezwiązane błędy `AppCompatCustomView`; raport nie zawiera błędów
+`MissingTranslation`.

@@ -9,8 +9,12 @@ import androidx.activity.OnBackPressedCallback
 import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.WindowInsetsControllerCompat
+import com.urkaaaz.application.language.AppLanguage
+import com.urkaaaz.application.language.SetLanguage
 import com.urkaaaz.application.campaign.CampaignSystem
 import com.urkaaaz.application.campaign.BundledCampaignBalance
+import com.urkaaaz.localization.LocalizedContext
+import com.urkaaaz.localization.StartupLanguageReader
 import com.urkaaaz.application.loadout.LoadoutUseCases
 import com.urkaaaz.application.loadout.LoadoutCatalog
 import com.urkaaaz.application.progression.CampaignAwareLoadoutProgressionPort
@@ -21,6 +25,7 @@ import com.urkaaaz.application.progression.DeveloperProgressPresetUseCase
 import com.urkaaaz.application.progression.DemoLoadoutProgressionPort
 import com.urkaaaz.navigation.AppNavigator
 import com.urkaaaz.navigation.AppScreen
+import com.urkaaaz.navigation.DashboardRestoreState
 import com.urkaaaz.navigation.ShopLoadoutReturn
 import com.urkaaaz.navigation.ScreenHost
 import com.urkaaaz.persistence.DataStoreCampaignProgressRepository
@@ -28,8 +33,10 @@ import com.urkaaaz.persistence.DataStoreLoadoutRepository
 import com.urkaaaz.persistence.DataStorePlayerProgressionRepository
 import com.urkaaaz.persistence.DataStorePlayerProgressResetRepository
 import com.urkaaaz.persistence.DataStoreDeveloperProgressPresetAdapter
+import com.urkaaaz.persistence.DataStoreLanguageSettings
 import com.urkaaaz.persistence.DataStoreRewardSettlementAdapter
 import com.urkaaaz.persistence.LoadoutStorageScope
+import com.urkaaaz.persistence.urkaazLanguageDataStore
 import com.urkaaaz.persistence.urkaazPreferencesDataStore
 import com.urkaaaz.screens.campaign.CampaignScreen
 import com.urkaaaz.screens.dashboard.DashboardScreen
@@ -57,6 +64,7 @@ class MainActivity : ComponentActivity() {
     private lateinit var screenHost: ScreenHost
     private lateinit var navigator: AppNavigator
     private var activityResumed = false
+    private var startupLanguage = AppLanguage.DEFAULT
     private val startupScope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
     private val loadoutCatalog by lazy { LoadoutCatalog.bundled() }
     private val campaignCompletionPresenter by lazy {
@@ -96,6 +104,10 @@ class MainActivity : ComponentActivity() {
     private val preferencesDataStore by lazy {
         applicationContext.urkaazPreferencesDataStore
     }
+    private val languageSettings by lazy {
+        DataStoreLanguageSettings(applicationContext.urkaazLanguageDataStore)
+    }
+    private val setLanguage by lazy { SetLanguage(languageSettings) }
     private val playerProgressionRepository by lazy {
         DataStorePlayerProgressionRepository(preferencesDataStore)
     }
@@ -142,8 +154,16 @@ class MainActivity : ComponentActivity() {
         )
     }
 
+    override fun attachBaseContext(newBase: android.content.Context) {
+        startupLanguage = StartupLanguageReader(
+            DataStoreLanguageSettings(newBase.urkaazLanguageDataStore),
+        ).read()
+        super.attachBaseContext(LocalizedContext(newBase, startupLanguage))
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        val initialScreen = DashboardRestoreState.restore(savedInstanceState)
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
             window.attributes = window.attributes.apply {
                 layoutInDisplayCutoutMode =
@@ -177,11 +197,19 @@ class MainActivity : ComponentActivity() {
                     DeveloperProgressPresetApply.NotRequested,
                     -> Unit
                 }
-                navigator.start(AppScreen.Splash)
+                navigator.start(initialScreen)
             }
         } else {
-            navigator.start(AppScreen.Splash)
+            navigator.start(initialScreen)
         }
+    }
+
+    override fun onSaveInstanceState(outState: Bundle) {
+        DashboardRestoreState.save(
+            outState,
+            if (::navigator.isInitialized) navigator.currentScreen else null,
+        )
+        super.onSaveInstanceState(outState)
     }
 
     override fun onResume() {
@@ -221,6 +249,9 @@ class MainActivity : ComponentActivity() {
                 },
                 onResetProgress = { playerProgressResetRepository.reset() },
                 loadProgress = { developerProgressPreset.current() },
+                initialLanguage = startupLanguage,
+                setLanguage = setLanguage,
+                onLanguageSaved = { recreate() },
             )
             AppScreen.Campaign -> CampaignScreen(
                 context = this,
@@ -323,4 +354,5 @@ class MainActivity : ComponentActivity() {
             content.onResume()
         }
     }
+
 }

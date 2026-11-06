@@ -11,11 +11,14 @@ own background asset. The splash background source is
 `assets_src/splash/splash_background.png`; its copy-ready prompt is
 [`docs/systems/splash-screen-background.agp`](../systems/splash-screen-background.agp).
 The Dashboard's Campaign button opens `CampaignScreen`, and selecting a level
-opens the loadout screen. A globe button opens a compact list of PL/UK/ES flags,
-but the flags do
-not change the language until LocalizationSystem is implemented. The dashboard
-keeps `AD REWARD` visible but inert. Two hidden side anchors are reserved for
-future game-event icons; there is no Dashboard event feed yet. The Dashboard's
+opens the loadout screen. A globe button opens a compact PL/UK/ES selector that
+changes the Android UI language and persists it in a separate `language_settings`
+DataStore; profile reset does not clear it. Campaign chapter titles are
+presentation resources, while Studio displays stable chapter IDs. The PL/ES
+translation list has been approved by the user. Fixed-size UI panels were
+visually reviewed on the Pixel 8 emulator in EN/PL/ES.
+The dashboard keeps `AD REWARD` visible but inert. Two hidden side anchors are
+reserved for future game-event icons; there is no Dashboard event feed yet. The Dashboard's
 `TEST MODE` action opens demo Loadout and then starts a match with `DEMO_LEVEL`.
 The loadout core, local player profile and
 per-level loadout persistence are implemented with AndroidX DataStore.
@@ -307,11 +310,14 @@ and accessibility behavior; landmarks without a boss profile retain the
 generic boss marker. Boss landmark art now renders at 72 dp, 150% of its former
 48 dp size; fortress art and live level/status overlays are unchanged.
 The Chapter 1 and Chapter 2 selector tabs use separate transparent icon assets
-from `assets_src/campaign/chapter-icons/`, displayed above their live chapter
-number and status text. `CampaignMapPresentationCatalog` maps only those two
-chapter IDs; later chapters keep their existing text-only tabs until their
-icons are prepared. The original 2:1 icon sheet is preserved beside the
-normalized 512x512 source icons.
+from `assets_src/campaign/chapter-icons/`. `CampaignMapPresentationCatalog`
+maps only those two chapter IDs; later chapters keep their existing text-only
+tabs until their icons are prepared. The original 2:1 icon sheet is preserved
+beside the normalized 512x512 source icons. Icon tabs omit visible chapter
+numbers, fill the tab surface with the icon, and overlay completed/locked
+badges at its lower-right instead of below it. Selection uses background fill
+opacity rather than a border; accessibility descriptions retain the chapter
+number.
 
 The Studio Campaign tab edits the same chapter and layout JSON through
 `/api/campaign/*`; it never modifies `MapDefinition` or Android resource IDs.
@@ -557,9 +563,10 @@ The current match HUD also displays:
 - Unit waves resolve legacy-style interactions in the deterministic simulation:
   Defenders and Raging Boars fight nearby enemy units, Slingmasters attack
   visible-range targets, Demolishers detonate on unit contact, and Sappers
-  damage the enemy fortress with their bomb before returning toward their own
-  fortress. Units attack the enemy fortress when no enemy unit is in contact,
-  and fortress damage is emitted through the existing match events.
+  bomb the nearest hostile boss, active Runic Bastion, or enemy fortress along
+  their route before returning toward their own fortress. Units attack the
+  enemy fortress when no enemy unit is in contact, and damage is emitted
+  through the existing match events.
 - At a fortress or Runic Bastion front face, a Demolisher enters `THROWING`,
   moves 90 world units forward over 0.5 seconds, then detonates at the endpoint.
   Unit contact still detonates immediately. Fortress blast falloff uses
@@ -647,9 +654,9 @@ not truncated to a subset; unit frame playback advances at approximately
   simulation remains in `MOVING` during the initial attack delay. Attack
   renders at 2x with `32/256` bottom padding and ends when the bomb leaves his
   hand; on release a small world-space bomb flight reuses the existing Siege
-  Bomb frames at 30 world units, animating from the Sapper to its fortress or
-  Bastion target over 500 ms. This is presentation-only; direct simulation
-  damage timing and impact resolution remain unchanged.
+  Bomb frames at 30 world units, animating from the Sapper to its fortress,
+  Bastion, or boss target over 500 ms. This is presentation-only; direct
+  simulation damage timing and impact resolution remain unchanged.
   Original AnimGen output is retained under
   `assets_src/animgen/sapper/blue/{idle,jog,attack}/`.
 - Sapper return presentation uses shared 15-frame 256x256 `turn` and `return`
@@ -668,9 +675,14 @@ not truncated to a subset; unit frame playback advances at approximately
   `assets_src/animgen/sapper/blue/return-cheerful-jog/`; the previous return
   generations are retained under `assets_src/animgen/sapper/blue/return/` and
   `assets_src/animgen/sapper/blue/return-forward-hop/`.
-- The Sapper stops 200 world units beyond an enemy fortress's front hitbox
-  face before throwing its bomb. The approach and attack check share the
-  `FortressHitboxProfile` geometry and apply symmetrically to BLUE and RED.
+- The Sapper uses the configured 200-world-unit stand-off from a boss or
+  enemy fortress before throwing its bomb; fortress approach and attack checks
+  share the `FortressHitboxProfile` geometry and apply symmetrically to BLUE
+  and RED. When multiple hostile siege objectives are ahead, it chooses the
+  one with the nearest approach point.
+- Ordinary units cannot target or damage the Sapper, and Demolisher explosions
+  exclude it. Physical contact still slows its movement; bosses, catapults,
+  spells, and other area effects remain valid damage sources.
 - The Demolisher death sequence, its masks, pre-impact presentation and
   archived AnimGen outputs were removed at the user's request. A future
   replacement should use the same 256x256 canvas as the existing idle and move

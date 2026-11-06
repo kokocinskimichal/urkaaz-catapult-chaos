@@ -18,6 +18,9 @@ import android.widget.Space
 import android.widget.TextView
 import android.widget.Toast
 import com.urkaaaz.android.R
+import com.urkaaaz.application.language.AppLanguage
+import com.urkaaaz.application.language.LanguageSaveResult
+import com.urkaaaz.application.language.SetLanguage
 import com.urkaaaz.application.progression.DeveloperProgressSummary
 import com.urkaaaz.application.progression.PlayerProgressResetResult
 import com.urkaaaz.navigation.ScreenContent
@@ -38,10 +41,14 @@ class DashboardScreen(
     private val onDemoMode: () -> Unit,
     private val onResetProgress: suspend () -> PlayerProgressResetResult,
     private val loadProgress: suspend () -> DeveloperProgressSummary,
+    initialLanguage: AppLanguage,
+    setLanguage: SetLanguage,
+    private val onLanguageSaved: () -> Unit,
 ) : ScreenContent {
-    private val viewModel = DashboardViewModel()
+    private val viewModel = DashboardViewModel(initialLanguage, setLanguage)
     private var screenScope: CoroutineScope? = null
     private var isResetInProgress = false
+    private val languageFlagButtons = mutableListOf<ImageButton>()
 
     private val livesValue = label(R.string.dashboard_progress_placeholder, 14f)
     private val currentLevelValue = label(R.string.dashboard_progress_placeholder, 12f)
@@ -284,7 +291,7 @@ class DashboardScreen(
         setOnClickListener { showLanguageIcons(this) }
     }
 
-    private fun showLanguageIcons(anchor: View) {
+    internal fun showLanguageIcons(anchor: View) {
         languagePopup?.let { popup ->
             if (popup.isShowing) {
                 popup.dismiss()
@@ -293,36 +300,22 @@ class DashboardScreen(
             }
         }
 
+        languageFlagButtons.clear()
         val content = LinearLayout(context).apply {
             orientation = LinearLayout.HORIZONTAL
             gravity = Gravity.CENTER
             setPadding(dp(8), dp(7), dp(8), dp(7))
             setBackgroundResource(R.drawable.bg_hud_panel)
-            addView(
-                languageFlag(
-                    R.drawable.ic_dashboard_language_flag_poland,
-                    R.string.dashboard_language_flag_poland_accessibility,
-                ),
-                languageFlagParams(),
-            )
-            addView(
-                languageFlag(
-                    R.drawable.ic_dashboard_language_flag_uk,
-                    R.string.dashboard_language_flag_uk_accessibility,
-                ),
-                languageFlagParams(dp(5)),
-            )
-            addView(
-                languageFlag(
-                    R.drawable.ic_dashboard_language_flag_spain,
-                    R.string.dashboard_language_flag_spain_accessibility,
-                ),
-                languageFlagParams(dp(5)),
-            )
+            DashboardLanguageFlag.entries.forEachIndexed { index, flag ->
+                addView(
+                    languageFlag(flag),
+                    languageFlagParams(dp(5).takeIf { index > 0 } ?: 0),
+                )
+            }
         }
         val popup = PopupWindow(
             content,
-            dp(116),
+            dp(166),
             -2,
             true,
         ).apply {
@@ -337,18 +330,68 @@ class DashboardScreen(
         popup.showAsDropDown(anchor, 0, dp(4), Gravity.END)
     }
 
-    private fun languageFlag(resource: Int, description: Int): ImageView =
-        ImageView(context).apply {
-            contentDescription = context.getString(description)
-            importantForAccessibility = View.IMPORTANT_FOR_ACCESSIBILITY_YES
-            scaleType = ImageView.ScaleType.FIT_CENTER
-            setImageResource(resource)
+    private fun languageFlag(flag: DashboardLanguageFlag): View = FrameLayout(context).apply {
+        val selected = flag.isActive(viewModel.state.selectedLanguage)
+        background = GradientDrawable().apply {
+            setColor(if (selected) Color.rgb(82, 62, 33) else Color.TRANSPARENT)
+            cornerRadius = dp(8).toFloat()
+            setStroke(
+                dp(if (selected) 2 else 1),
+                if (selected) Color.rgb(243, 210, 138) else Color.rgb(111, 92, 63),
+            )
         }
+        val languageName = context.getString(flag.languageNameResource)
+        val descriptionResource = if (selected) {
+            R.string.dashboard_language_flag_selected_accessibility
+        } else {
+            R.string.dashboard_language_flag_accessibility
+        }
+        val button = ImageButton(context).apply {
+            contentDescription = context.getString(descriptionResource, languageName)
+            importantForAccessibility = View.IMPORTANT_FOR_ACCESSIBILITY_YES
+            isSelected = selected
+            scaleType = ImageView.ScaleType.FIT_CENTER
+            background = ColorDrawable(Color.TRANSPARENT)
+            setPadding(dp(7), dp(7), dp(7), dp(7))
+            setImageResource(flag.drawableResource)
+            setOnClickListener { selectLanguage(flag.language) }
+        }
+        languageFlagButtons += button
+        addView(button, FrameLayout.LayoutParams(dp(48), dp(48), Gravity.CENTER))
+    }
 
     private fun languageFlagParams(marginStart: Int = 0): LinearLayout.LayoutParams =
-        LinearLayout.LayoutParams(dp(24), dp(16)).apply {
+        LinearLayout.LayoutParams(dp(48), dp(48)).apply {
             if (marginStart > 0) this.marginStart = marginStart
         }
+
+    internal fun selectLanguage(language: AppLanguage) {
+        if (viewModel.state.isLanguageSaving) return
+        val scope = screenScope ?: return
+        languageFlagButtons.forEach { it.isEnabled = false }
+        scope.launch {
+            val result = viewModel.selectLanguage(language)
+            when (result) {
+                is LanguageSaveResult.Saved -> {
+                    languagePopup?.dismiss()
+                    languagePopup = null
+                    onLanguageSaved()
+                }
+                is LanguageSaveResult.Unchanged -> {
+                    languagePopup?.dismiss()
+                    languagePopup = null
+                }
+                is LanguageSaveResult.Failure -> {
+                    languageFlagButtons.forEach { it.isEnabled = true }
+                    Toast.makeText(
+                        context,
+                        R.string.dashboard_language_change_failure,
+                        Toast.LENGTH_LONG,
+                    ).show()
+                }
+            }
+        }
+    }
 
     private fun campaignArea(): View = FrameLayout(context).apply {
         clipChildren = false

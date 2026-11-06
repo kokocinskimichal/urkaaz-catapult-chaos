@@ -4,6 +4,7 @@ import com.urkaaaz.contracts.TerrainBiome
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
+import kotlin.test.assertTrue
 
 class CampaignChapterRegistryTest {
     @Test
@@ -48,6 +49,20 @@ class CampaignChapterRegistryTest {
     }
 
     @Test
+    fun bundledChapterCatalogUsesSchemaTwoAndStableUniqueIds() {
+        val catalog = CampaignChapterCatalogRepository.bundled.load()
+        assertTrue(catalog is CampaignChapterCatalogRead.Available)
+        val document = (catalog as CampaignChapterCatalogRead.Available).document
+
+        assertEquals(2, document.schemaVersion)
+        assertEquals(10, document.chapters.size)
+        assertEquals(
+            document.chapters.size,
+            document.chapters.map(CampaignChapterCatalogEntry::id).distinct().size,
+        )
+    }
+
+    @Test
     fun everyChapterHasBossLandmarksOnlyAtPositionsFiveAndTen() {
         CampaignChapterRegistry.default().chapters.forEach { chapter ->
             val bosses = chapter.landmarkKindsByLevel
@@ -89,7 +104,6 @@ class CampaignChapterRegistryTest {
         assertFailsWith<IllegalArgumentException> {
             CampaignChapterDefinition(
                 id = "broken_chapter",
-                title = "Broken Chapter",
                 firstLevel = 1,
                 lastLevel = 10,
                 biome = TerrainBiome.GREEN_FRONTIER,
@@ -115,7 +129,6 @@ class CampaignChapterRegistryTest {
         val lastLevel = firstLevel + CampaignChapterRegistry.LEVELS_PER_CHAPTER - 1
         return CampaignChapterDefinition(
             id = id,
-            title = "Chapter $firstLevel",
             firstLevel = firstLevel,
             lastLevel = lastLevel,
             biome = TerrainBiome.GREEN_FRONTIER,

@@ -494,6 +494,50 @@ class DeterministicMatchSimulationTest {
     }
 
     @Test
+    fun ordinaryEnemyUnitsCannotTargetOrDamageSapper() {
+        val simulation = DeterministicMatchSimulation(
+            MatchId("sapper-untargetable-by-units"),
+            config.copy(bounds = WorldBounds(width = 2_000f, height = 600f)),
+        )
+        simulation.start()
+        val deployedSapper = simulation.deployUnit(GameBalanceFixtures.unit(UnitIds.SAPPER), Team.BLUE)
+        simulation.deployUnit(GameBalanceFixtures.unit(UnitIds.DEFENDER), Team.RED)
+        simulation.sendWave(Team.BLUE)
+        simulation.sendWave(Team.RED)
+
+        val initialSapperX = simulation.snapshot().units
+            .single { it.entityId == deployedSapper.unitId }
+            .x
+        var furthestSapperX = initialSapperX
+        val events = mutableListOf<MatchEvent>()
+        repeat(200) {
+            events += simulation.advance(50L)
+            simulation.snapshot().units.firstOrNull {
+                it.entityId == deployedSapper.unitId
+            }?.let { sapper ->
+                furthestSapperX = maxOf(furthestSapperX, sapper.x)
+            }
+        }
+
+        assertTrue(furthestSapperX > initialSapperX + 50f)
+        assertTrue(
+            events.none { event ->
+                when (event) {
+                    is MatchEvent.TargetAcquired -> event.targetId == deployedSapper.unitId
+                    is MatchEvent.AttackStarted -> event.targetId == deployedSapper.unitId
+                    is MatchEvent.AttackHit -> event.targetId == deployedSapper.unitId
+                    is MatchEvent.DamageApplied -> event.targetId == deployedSapper.unitId
+                    else -> false
+                }
+            },
+        )
+        assertEquals(
+            GameBalanceFixtures.unit(UnitIds.SAPPER).maxHealth,
+            simulation.snapshot().units.single { it.entityId == deployedSapper.unitId }.health,
+        )
+    }
+
+    @Test
     fun specialSpellStocksUsePlayerInventoryForBlueAndBalanceForRedAi() {
         val playerId = PlayerId("special-stock-player")
         val balance = GameBalanceFixtures.balance.copy(

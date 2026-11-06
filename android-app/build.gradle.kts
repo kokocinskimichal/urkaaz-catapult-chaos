@@ -15,6 +15,14 @@ android {
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 
+        testOptions {
+            unitTests.isIncludeAndroidResources = true
+        }
+
+        lint {
+            error += "MissingTranslation"
+        }
+
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_17
         targetCompatibility = JavaVersion.VERSION_17
@@ -34,4 +42,5 @@ dependencies {
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.9.0")
     testImplementation("junit:junit:4.13.2")
     testImplementation(testFixtures(project(":game-domain")))
+    testImplementation("org.robolectric:robolectric:4.17")
 }

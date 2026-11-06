@@ -89,7 +89,7 @@ class BossSystem(
     )
 
     fun approachX(unit: Unit, movingTeams: Set<Team>): Float? {
-        if (!canUnitTargetBoss(unit, movingTeams)) return null
+        if (!isAlive || !canUnitTargetBoss(unit, movingTeams)) return null
         val direction = if (unit.team == Team.BLUE) 1f else -1f
         if ((x - unit.position.x) * direction < 0f) return null
         val attackRange = unitAttackRange(unit)
@@ -102,11 +102,12 @@ class BossSystem(
         units: List<Unit>,
         movingTeams: Set<Team>,
     ): Int {
-        if (!canUnitTargetBoss(unit, movingTeams)) return 0
+        if (!canUnitTargetBoss(unit, movingTeams) || unit.type is SapperUnit) return 0
         val direction = if (unit.team == Team.BLUE) 1f else -1f
         val peers = units.asSequence()
             .filter { peer ->
                 peer.team == unit.team &&
+                    peer.type !is SapperUnit &&
                     canUnitTargetBoss(peer, movingTeams) &&
                     (peer.id == unit.id ||
                         peer.combatState.targetId == null ||
@@ -332,7 +333,6 @@ class BossSystem(
     private fun canUnitTargetBoss(unit: Unit, movingTeams: Set<Team>): Boolean =
         isActiveUnit(unit, movingTeams) &&
             isHostileToBoss(unit.team) &&
-            unit.type !is SapperUnit &&
             unit.type !is SlingmasterUnit
 
     private fun isHostileToBoss(team: Team): Boolean =
@@ -345,6 +345,7 @@ class BossSystem(
             !unit.returningToGarrison
 
     private fun unitAttackRange(unit: Unit): Float = when {
+        unit.type is SapperUnit -> combatBalance.sapperFortressStandoffDistance
         unit.type.detonatesOnContact ->
             UnitHitboxProfile.forUnitType(unit.type.id).halfWidth
         unit.type.attacksFromRange -> unit.type.attackRange

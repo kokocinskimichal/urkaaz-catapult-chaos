@@ -919,7 +919,7 @@ export function MapsTab() {
               >
                 {campaignChapters.map((chapter, index) => (
                   <option key={chapter.id} value={chapter.id}>
-                    Chapter {index + 1} · {chapter.title}
+                    Chapter {index + 1} · {chapter.id}
                   </option>
                 ))}
               </select>

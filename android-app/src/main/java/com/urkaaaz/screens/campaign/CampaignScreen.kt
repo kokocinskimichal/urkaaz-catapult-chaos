@@ -323,7 +323,13 @@ class CampaignScreen(
                 CampaignChapterPageStatus.PREVIEW ->
                     R.string.campaign_chapter_tab_preview
             }
+            val chapterIcon = CampaignMapPresentationCatalog.chapterTabIconDrawable(
+                page.chapter.id,
+            )
             val tabLabel = context.getString(label, chapterNumber)
+            val chapterTitle = context.getString(
+                CampaignChapterTitleResources.forChapter(page.chapter.id),
+            )
             val tabTextColor = when {
                 isSelected -> Color.rgb(255, 211, 106)
                 page.status == CampaignChapterPageStatus.COMPLETED ->
@@ -335,7 +341,7 @@ class CampaignScreen(
             val tabDescription = context.getString(
                 R.string.campaign_chapter_tab_accessibility,
                 chapterNumber,
-                page.chapter.title,
+                chapterTitle,
                 statusString,
             )
             val onTabClick = View.OnClickListener {
@@ -343,9 +349,6 @@ class CampaignScreen(
                     render(viewModel.state)
                 }
             }
-            val chapterIcon = CampaignMapPresentationCatalog.chapterTabIconDrawable(
-                page.chapter.id,
-            )
             val tab = if (chapterIcon == null) {
                 TextView(context).apply {
                     text = tabLabel
@@ -361,32 +364,40 @@ class CampaignScreen(
                     setOnClickListener(onTabClick)
                 }
             } else {
-                LinearLayout(context).apply {
-                    orientation = LinearLayout.VERTICAL
-                    gravity = Gravity.CENTER
-                    minimumWidth = dp(54)
-                    setPadding(dp(6), dp(1), dp(6), dp(1))
+                val statusIcon = when (page.status) {
+                    CampaignChapterPageStatus.COMPLETED ->
+                        R.drawable.campaign_level_status_completed
+                    CampaignChapterPageStatus.CURRENT -> null
+                    CampaignChapterPageStatus.PREVIEW ->
+                        R.drawable.campaign_level_status_locked
+                }
+                FrameLayout(context).apply {
+                    minimumWidth = dp(48)
                     background = chapterTabBackground(isSelected)
                     contentDescription = tabDescription
                     isFocusable = true
                     addView(ImageView(context).apply {
                         contentDescription = null
                         importantForAccessibility = View.IMPORTANT_FOR_ACCESSIBILITY_NO
-                        scaleType = ImageView.ScaleType.FIT_CENTER
+                        scaleType = ImageView.ScaleType.CENTER_CROP
                         setImageResource(chapterIcon)
-                    }, LinearLayout.LayoutParams(dp(28), dp(28)))
-                    addView(TextView(context).apply {
-                        text = tabLabel
-                        UiTypography.applyButtonTypeface(this)
-                        textSize = 13f
-                        gravity = Gravity.CENTER
-                        maxLines = 1
-                        setTextColor(tabTextColor)
-                    }, LinearLayout.LayoutParams(-1, -2))
+                    }, FrameLayout.LayoutParams(-1, -1))
+                    statusIcon?.let { drawable ->
+                        addView(ImageView(context).apply {
+                            contentDescription = null
+                            importantForAccessibility = View.IMPORTANT_FOR_ACCESSIBILITY_NO
+                            scaleType = ImageView.ScaleType.FIT_CENTER
+                            setImageResource(drawable)
+                        }, FrameLayout.LayoutParams(dp(16), dp(16), Gravity.BOTTOM or Gravity.END).apply {
+                            rightMargin = dp(2)
+                            bottomMargin = dp(2)
+                        })
+                    }
                     setOnClickListener(onTabClick)
                 }
             }
-            chapterTabs.addView(tab, LinearLayout.LayoutParams(-2, -1).apply {
+            val tabWidth = if (chapterIcon == null) -2 else dp(48)
+            chapterTabs.addView(tab, LinearLayout.LayoutParams(tabWidth, -1).apply {
                 setMargins(dp(3), 0, dp(3), 0)
             })
             if (isSelected) {
@@ -402,9 +413,12 @@ class CampaignScreen(
 
     private fun renderChapterHeader(page: CampaignChapterPageState) {
         val chapterNumber = chapterNumber(page.chapter.id)
+        val chapterTitle = context.getString(
+            CampaignChapterTitleResources.forChapter(page.chapter.id),
+        )
         campaignLabelText.text = context.getString(R.string.campaign_header_banner)
         chapterNumberText.text = context.getString(R.string.campaign_chapter_number, chapterNumber)
-        titleText.text = page.chapter.title
+        titleText.text = chapterTitle
         val completedCount = page.markers.count {
             it.status == CampaignLevelMarkerStatus.COMPLETED
         }
@@ -416,8 +430,9 @@ class CampaignScreen(
             completedCount,
             totalCount,
         )
-        chapterProgressPanel.contentDescription = context.getString(
-            R.string.campaign_chapter_progress_accessibility,
+        chapterProgressPanel.contentDescription = context.resources.getQuantityString(
+            R.plurals.campaign_chapter_progress_accessibility,
+            completedCount,
             completedCount,
             totalCount,
         )
@@ -595,10 +610,6 @@ class CampaignScreen(
         GradientDrawable().apply {
             cornerRadius = dp(8).toFloat()
             setColor(Color.argb(if (selected) 245 else 190, 48, 36, 25))
-            setStroke(
-                dp(if (selected) 2 else 1),
-                if (selected) Color.rgb(255, 211, 106) else Color.argb(150, 200, 185, 160),
-            )
         }
 
     private fun progressFailureMessage(reason: CampaignProgressFailure): String =

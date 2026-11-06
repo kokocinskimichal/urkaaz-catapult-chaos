@@ -175,7 +175,9 @@ class MatchScreenController(
             onSpellCast = { spellType ->
                 val state = viewModel.dispatch(MatchUiAction.CastSpell(spellType))
                 render(state)
-                feedbackToast.showFeedback(state.spellFeedbackLabel)
+                feedbackToast.showFeedback(
+                    state.spellFeedbackLabel?.let(activity::getString),
+                )
             }
         }
         commandDock = LinearLayout(activity).apply {
@@ -209,7 +211,7 @@ class MatchScreenController(
             addView(spellPanel, LinearLayout.LayoutParams(0, -1, 1.2f))
         }
         debugButton = TextView(activity).apply {
-                text = "DEBUG"
+                text = activity.getString(R.string.match_debug_button)
                 setTextColor(Color.WHITE)
                 textSize = 11f
                 UiTypography.applyButtonTypeface(this)
@@ -218,7 +220,7 @@ class MatchScreenController(
                 setOnClickListener { showDebugToolsDialog() }
         }
         hitboxToggle = CheckBox(activity).apply {
-            text = "Show hitboxes"
+            text = activity.getString(R.string.match_debug_hitboxes)
             setTextColor(Color.WHITE)
             textSize = 12f
             buttonTintList = ColorStateList.valueOf(Color.rgb(243, 210, 138))
@@ -230,7 +232,7 @@ class MatchScreenController(
             }
         }
         snapshotCloseButton = TextView(activity).apply {
-                text = "CLOSE SNAPSHOT"
+                text = activity.getString(R.string.match_debug_close_snapshot)
                 setTextColor(Color.WHITE)
                 textSize = 12f
                 UiTypography.applyButtonTypeface(this)
@@ -649,14 +651,14 @@ class MatchScreenController(
             setBackgroundResource(com.urkaaaz.android.R.drawable.bg_hud_panel)
         }
         root.addView(TextView(activity).apply {
-            text = "DEBUG TOOLS"
+            text = activity.getString(R.string.match_debug_title)
             setTextColor(Color.WHITE)
             textSize = 19f
             setTypeface(typeface, Typeface.BOLD)
         })
         if (demoMode) {
             root.addView(CheckBox(activity).apply {
-                text = "Show cursor world coordinates"
+                text = activity.getString(R.string.match_debug_coordinates)
                 setTextColor(Color.WHITE)
                 buttonTintList = ColorStateList.valueOf(Color.rgb(243, 210, 138))
                 isChecked = battlefieldView.debugCoordinatesVisible
@@ -666,7 +668,7 @@ class MatchScreenController(
             })
         }
         root.addView(TextView(activity).apply {
-            text = "SNAPSHOT"
+            text = activity.getString(R.string.match_debug_snapshot)
             setTextColor(Color.WHITE)
             textSize = 14f
             UiTypography.applyButtonTypeface(this)
@@ -693,7 +695,7 @@ class MatchScreenController(
             }
         })
         root.addView(TextView(activity).apply {
-            text = "ENEMY UNITS"
+            text = activity.getString(R.string.match_debug_enemy_units)
             setTextColor(Color.WHITE)
             textSize = 15f
             setTypeface(typeface, Typeface.BOLD)
@@ -726,7 +728,10 @@ class MatchScreenController(
             }
             root.addView(checkBox)
             recruitButtons[unitId] = TextView(activity).apply {
-                text = "RECRUIT ENEMY ${debugUnitLabel(unitId).uppercase()}"
+                text = activity.getString(
+                    R.string.match_debug_recruit_enemy,
+                    debugUnitLabel(unitId),
+                )
                 setTextColor(Color.WHITE)
                 textSize = 13f
                 UiTypography.applyButtonTypeface(this)
@@ -749,7 +754,7 @@ class MatchScreenController(
             )
         }
         root.addView(TextView(activity).apply {
-            text = "SEND ENEMY WAVE"
+            text = activity.getString(R.string.match_debug_send_enemy_wave)
             setTextColor(Color.WHITE)
             textSize = 14f
             UiTypography.applyButtonTypeface(this)
@@ -765,7 +770,7 @@ class MatchScreenController(
             topMargin = dp(10)
         })
         root.addView(TextView(activity).apply {
-            text = "CLOSE"
+            text = activity.getString(R.string.match_debug_close)
             setTextColor(Color.WHITE)
             textSize = 14f
             UiTypography.applyButtonTypeface(this)
@@ -821,11 +826,17 @@ class MatchScreenController(
     private fun dp(value: Int): Int =
         (value * activity.resources.displayMetrics.density).toInt()
 
-    private fun debugUnitLabel(id: String): String = when (id) {
-        "RAGING_BOAR" -> "Raging Boar"
-        "SLINGMASTER" -> "Slingmaster"
-        else -> id.lowercase().replace('_', ' ').replaceFirstChar { it.uppercase() }
-    }
+    private fun debugUnitLabel(id: String): String =
+        activity.getString(
+            when (id) {
+                "DEFENDER" -> R.string.loadout_name_defender
+                "SAPPER" -> R.string.loadout_name_sapper
+                "DEMOLISHER" -> R.string.loadout_name_demolisher
+                "RAGING_BOAR" -> R.string.loadout_name_raging_boar
+                "SLINGMASTER" -> R.string.loadout_name_slingmaster
+                else -> R.string.loadout_name_unknown
+            },
+        )
 
     private companion object {
         const val TAG = "MatchScreenController"

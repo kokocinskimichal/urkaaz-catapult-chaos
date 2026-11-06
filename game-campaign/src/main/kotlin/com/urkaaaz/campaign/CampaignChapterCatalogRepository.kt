@@ -16,7 +16,6 @@ data class CampaignChapterCatalogDocument(
 @Serializable
 data class CampaignChapterCatalogEntry(
     val id: String,
-    val title: String,
     val firstLevel: Int,
     val lastLevel: Int,
     val biome: String,
@@ -70,12 +69,9 @@ class CampaignChapterCatalogRepository(
     private fun isValid(document: CampaignChapterCatalogDocument): Boolean {
         if (document.schemaVersion != SCHEMA_VERSION || document.chapters.isEmpty()) return false
         if (document.chapters.map { it.id }.distinct().size != document.chapters.size) return false
-        if (document.chapters.map { it.title }.distinct().size != document.chapters.size) return false
-
         var nextLevel = 1
         for (chapter in document.chapters) {
             if (!chapter.id.matches(CHAPTER_ID) ||
-                chapter.title.isBlank() ||
                 chapter.firstLevel != nextLevel ||
                 chapter.lastLevel != chapter.firstLevel + CampaignChapterRegistry.LEVELS_PER_CHAPTER - 1 ||
                 TerrainBiome.fromMapId(chapter.biome) == null ||
@@ -88,7 +84,7 @@ class CampaignChapterCatalogRepository(
 
     companion object {
         const val CAMPAIGN_CHAPTERS_RESOURCE = "campaign-chapters.json"
-        const val SCHEMA_VERSION = 1
+        const val SCHEMA_VERSION = 2
         private val CHAPTER_ID = Regex("[a-z][a-z0-9_]*")
         private val EXPECTED_BOSS_POSITIONS = listOf(5, 10)
 

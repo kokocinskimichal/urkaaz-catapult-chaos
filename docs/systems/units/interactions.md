@@ -7,35 +7,35 @@ of which team owns the row or column unit.
 ## Implemented Sapper/Demolisher role rework
 
 - **Sapper:** at most one active Sapper is allowed at a time. Ordinary enemy
-  units can attack it on contact, but contact slows it to 65% of its normal
-  movement speed instead of hard-blocking it. Ordinary unit attacks deal 45%
-  of their normal damage to the Sapper. The Sapper cannot push a defender
-  backward while crossing contact range. This gives defenders a short
-  interception window without making the Sapper unable to reach the fortress.
-  It can also take damage from catapult projectiles, spells and area effects.
-- The Sapper travels to an enemy fortress or active Runic Bastion, attacks from
-  its target's stand-off distance, consumes its held bomb, then returns to its
-  own fortress using normal movement in the opposite direction. Before an
-  enemy fortress, it stops 200 world units beyond the front of the fortress
-  hitbox rather than entering the fortress footprint. After returning, it can
-  begin another bomb run.
+  units cannot target or damage it, including Demolisher explosions. Physical
+  contact still slows it to 65% of its normal movement speed without
+  hard-blocking or pushing it. Bosses, catapult projectiles, spells and other
+  area effects can still damage the Sapper.
+- The Sapper travels to the nearest hostile siege objective ahead of it: a boss,
+  active Runic Bastion, or enemy fortress. It compares their approach points,
+  attacks from the selected target's stand-off distance, consumes its held
+  bomb, then returns to its own fortress using normal movement in the opposite
+  direction. Before an enemy fortress or boss, it uses the configured 200-world
+  unit stand-off from the target's front; Runic Bastion keeps its existing
+  front-face approach. After returning, it can begin another bomb run.
 - The Sapper's bomb deals medium damage to the primary target and half that
-  damage to units in the target fortress's garrison. Throwing consumes the bomb
-  and the Sapper returns immediately. Its presentation plays one turn toward
-  its fortress, then loops a bomb-less, cheerful light jog with only a subtle
+  damage to units in the target fortress's garrison. Boss and Bastion targets
+  receive only the primary-target damage. Throwing consumes the bomb and the
+  Sapper returns immediately. Its presentation plays one turn toward its
+  fortress, then loops a bomb-less, cheerful light jog with only a subtle
   spring in each step; simulation movement remains authoritative. A small
-  world-space bomb flight is triggered by the held-bomb transition and is
-  presentation-only; it does not change damage timing. Reaching its own gate
-  refills the bomb and restores the Sapper to full health.
+  world-space bomb flight is triggered by the held-bomb transition and targets
+  the fortress, Bastion, or boss; it is presentation-only and does not change
+  damage timing. Reaching its own gate refills the bomb and restores the Sapper
+  to full health.
 - **Demolisher:** remains a slow, one-use suicide unit. Unit contact triggers an
   immediate detonation. At an enemy fortress or Runic Bastion front face it
   performs a 0.5-second forward throw, moving 90 world units before detonating.
   Its explosion deals 300 damage with a 260 world-unit radius. The unit that
   triggers the detonation receives full explosion damage. Nearby units receive
   damage reduced by distance.
-- Demolishers detonate on contact with Sappers. The explosion kills the Sapper
-  when it is within the blast radius and continues to damage other units using
-  the existing explosion rules.
+- Demolishers do not target Sappers. Their explosions exclude Sappers while
+  continuing to damage other units under the existing explosion rules.
 - Mixed-unit formations are intentionally deferred and are not part of this
   decision.
 - Returning Sapper animation playback is presentation-only and keyed to its
@@ -43,8 +43,8 @@ of which team owns the row or column unit.
   jog cycle; the loop keeps a stable gameplay anchor, and RED uses the existing
   mirrored neutral-frame and team-texture pipeline.
 
-These rules are implemented for the current unit roster, including Runic
-Bastion targeting. Interactions with future obstacle types remain separate
+These rules are implemented for the current unit roster, including boss and
+Runic Bastion targeting. Other future siege objectives remain separate
 follow-up work.
 
 ## Attack types
@@ -64,7 +64,7 @@ rules before a unit is assigned to it.
 | **MELEE** | Defender, Goblin Raging Boar | Approaches an enemy, establishes contact range, and attacks the selected unit directly. Participates in melee synergy. |
 | **RANGED** | Goblin Slingmaster | Keeps distance, attacks a visible target from attack range, and does not participate in melee synergy. |
 | **CONTACT_EXPLOSIVE** | Demolisher | Immediately detonates on a valid unit contact. At a fortress or Runic Bastion front face, performs a forward throw before detonating. It is not a normal melee attacker and does not participate in melee synergy. |
-| **SIEGE_MISSION** | Sapper | Follows a fortress-bomb mission, attacks the enemy fortress from its stand-off point, consumes its bomb, and returns to refill. It does not participate in unit melee synergy unless a future combat profile explicitly grants it a separate melee attack. |
+| **SIEGE_MISSION** | Sapper | Selects the nearest hostile boss, Runic Bastion, or fortress along its route; attacks with its single bomb and returns to refill. It does not participate in unit melee synergy unless a future combat profile explicitly grants it a separate melee attack. |
 
 The attack type is a domain rule and must be available to targeting,
 movement, combat resolution, event generation and presentation. Renderers
@@ -177,13 +177,17 @@ resolved from the same pre-hit state.
 
 ## Current unit interaction matrix
 
+Ordinary units cannot acquire or damage a Sapper. A Demolisher blast also
+ignores Sappers; the Sapper's own contact slowdown remains a movement effect,
+not an attack.
+
 | Unit \ Target | Defender | Sapper | Demolisher | Goblin Raging Boar | Goblin Slingmaster |
 |---|---|---|---|---|---|
-| **Defender** | Standard contact combat. Multiple allied Defenders can receive synergy when attacking the same target. | Attacks on contact. Sapper moves at 65% speed, receives 45% ordinary unit damage, and cannot push Defender backward. | Contact triggers Demolisher explosion; Defender is damaged or killed and Demolisher is destroyed. | Standard contact combat. | Defender advances; Slingmaster attacks from range when visible and in range. |
-| **Sapper** | Attacks are handled by Defender; Sapper is slowed and takes reduced damage. | Neither attacks the other. No hard block; both continue with contact slowdown while overlapping. | Demolisher explodes on contact and kills Sapper within the blast radius. | Boar attacks on contact; Sapper is slowed, takes reduced damage, and cannot push Boar backward. | Slingmaster attacks from range with line of sight; Sapper does not attack back. |
-| **Demolisher** | Contact triggers an explosion damaging Defender and destroying Demolisher. | Contact triggers an explosion killing Sapper within the blast radius. | Contact triggers an explosion affecting both Demolishers and nearby units. | Contact triggers an explosion damaging Boar and destroying Demolisher. | Slingmaster can attack from range; contact with Slingmaster alone does not trigger the explosion. |
-| **Goblin Raging Boar** | Standard contact combat. | Attacks Sapper on contact; Sapper is slowed and takes reduced damage. | Contact triggers Demolisher explosion; Boar is damaged or killed. | Standard contact combat. | Boar advances; Slingmaster attacks from range when visible and in range. |
-| **Goblin Slingmaster** | Attacks from range when Defender is visible and in range; does not need contact. | Attacks Sapper from range with line of sight. | Attacks Demolisher from range; does not trigger it by contact alone. | Attacks Boar from range when visible and in range. | Both use ranged attacks against visible targets. |
+| **Defender** | Standard contact combat. Multiple allied Defenders can receive synergy when attacking the same target. | Ignores Sapper as an attack target; contact only slows the Sapper. | Contact triggers Demolisher explosion; Defender is damaged or killed and Demolisher is destroyed. | Standard contact combat. | Defender advances; Slingmaster attacks from range when visible and in range. |
+| **Sapper** | Neither attacks the other; contact may slow the Sapper. | Neither attacks the other; overlapping Sappers only apply contact slowdown. | Sapper ignores Demolisher; the Demolisher neither targets nor damages Sapper. | Sapper does not attack units; Boar ignores it, though contact slows the Sapper. | Sapper does not attack units; Slingmaster ignores it. |
+| **Demolisher** | Contact triggers an explosion damaging Defender and destroying Demolisher. | Ignores Sapper as a target, and its blast does not damage Sapper. | Contact triggers an explosion affecting both Demolishers and nearby units. | Contact triggers Demolisher explosion; Boar is damaged or killed. | Slingmaster can attack from range; contact with Slingmaster alone does not trigger the explosion. |
+| **Goblin Raging Boar** | Standard contact combat. | Ignores Sapper as an attack target; contact only slows the Sapper. | Contact triggers Demolisher explosion; Boar is damaged or killed. | Standard contact combat. | Boar advances; Slingmaster attacks from range when visible and in range. |
+| **Goblin Slingmaster** | Attacks from range when Defender is visible and in range; does not need contact. | Ignores Sapper as an attack target. | Attacks Demolisher from range; does not trigger it by contact alone. | Attacks Boar from range when visible and in range. | Both use ranged attacks against visible targets. |
 
 ## Future proposal: terrain-aware unit attacks
 

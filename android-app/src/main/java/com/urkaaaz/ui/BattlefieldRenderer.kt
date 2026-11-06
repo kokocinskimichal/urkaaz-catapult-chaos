@@ -9,6 +9,7 @@ import android.graphics.Path
 import android.graphics.RectF
 import android.graphics.Shader
 import android.graphics.Typeface
+import com.urkaaaz.android.R
 import com.urkaaaz.contracts.FortressHitboxProfile
 import com.urkaaaz.contracts.FortressShieldGeometry
 import com.urkaaaz.contracts.RunicBastionGeometry
@@ -19,6 +20,7 @@ import com.urkaaaz.contracts.WorldScale
 internal class BattlefieldRenderer(
     private val assets: BattlefieldAssetCatalog,
     private val textTypeface: Typeface,
+    private val stringResolver: (Int, List<Any>) -> String,
     private val drawTiledTexture: (Canvas, Bitmap?, Float, Float, Float, Int) -> Unit,
     private val drawTexture: (Canvas, Bitmap?, Float, Float, Float) -> Unit,
     private val drawTextureAtBaseline: (Canvas, Bitmap?, Float, Float, Float) -> Unit,
@@ -1437,11 +1439,29 @@ internal class BattlefieldRenderer(
                         setShadowLayer(4f, 1f, 1f, Color.BLACK)
                     }
 
-                    canvas.drawText("-${item.amount}", x - 18f, y - 42f, paint)
-                    item.label?.let {
+                    val damageLabel = stringResolver(
+                        R.string.match_damage_amount,
+                        listOf(item.amount),
+                    )
+                    canvas.drawText(
+                        damageLabel,
+                        x - paint.measureText(damageLabel) / 2f,
+                        y - 42f,
+                        paint,
+                    )
+                    item.synergyMultiplier?.let { multiplier ->
                         paint.color = Color.WHITE
                         paint.textSize = 20f
-                        canvas.drawText(it, x - 18f, y - 66f, paint)
+                        val synergyLabel = stringResolver(
+                            R.string.match_damage_synergy_multiplier,
+                            listOf(multiplier),
+                        )
+                        canvas.drawText(
+                            synergyLabel,
+                            x - paint.measureText(synergyLabel) / 2f,
+                            y - 66f,
+                            paint,
+                        )
                     }
                 }
                 CombatFeedbackRenderState.Kind.HIT_FLASH -> {
@@ -1496,9 +1516,11 @@ internal class BattlefieldRenderer(
                         typeface = textTypeface
                         setShadowLayer(3f, 1f, 1f, Color.BLACK)
                     }
-                    canvas.drawText("GROUP", x - 28f, y - 105f, paint)
+                    val label = stringResolver(R.string.match_battlefield_group, emptyList())
+                    canvas.drawText(label, x - paint.measureText(label) / 2f, y - 105f, paint)
                 }
                 CombatFeedbackRenderState.Kind.GOLD_REWARD -> {
+                    val goldAmount = item.goldAmount ?: return@forEach
                     val progress = item.progress.coerceIn(0f, 1f)
                     val easedProgress = 1f - (1f - progress) * (1f - progress) *
                         (1f - progress)
@@ -1507,7 +1529,10 @@ internal class BattlefieldRenderer(
                     } else {
                         ((1f - progress) / 0.3f).coerceIn(0f, 1f)
                     }
-                    val label = item.label ?: return@forEach
+                    val label = stringResolver(
+                        R.string.match_reward_gold_floating,
+                        listOf(goldAmount),
+                    )
                     val paint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
                         color = Color.rgb(255, 220, 110)
                         alpha = (255f * fade).toInt()
@@ -1534,7 +1559,11 @@ internal class BattlefieldRenderer(
             typeface = textTypeface
             setShadowLayer(3f, 1f, 1f, Color.BLACK)
         }
-        canvas.drawText(if (hasBomb) "BOMB" else "EMPTY", centerX - 24f, centerY, paint)
+        val label = stringResolver(
+            if (hasBomb) R.string.match_battlefield_bomb else R.string.match_battlefield_empty,
+            emptyList(),
+        )
+        canvas.drawText(label, centerX - paint.measureText(label) / 2f, centerY, paint)
     }
 
     private fun drawSapperBombFlights(
@@ -1732,9 +1761,9 @@ internal class BattlefieldRenderer(
             typeface = textTypeface
         }
         val result = when (outcome) {
-            "BLUE_WIN" -> "VICTORY"
-            "RED_WIN" -> "DEFEAT"
-            else -> "DRAW"
+            "BLUE_WIN" -> stringResolver(R.string.match_battlefield_victory, emptyList())
+            "RED_WIN" -> stringResolver(R.string.match_battlefield_defeat, emptyList())
+            else -> stringResolver(R.string.match_battlefield_draw, emptyList())
         }
         canvas.drawText(result, viewportWidth / 2f, viewportHeight / 2f, resultPaint)
     }

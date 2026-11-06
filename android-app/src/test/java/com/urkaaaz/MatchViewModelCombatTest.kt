@@ -1,5 +1,6 @@
 package com.urkaaaz
 
+import com.urkaaaz.android.R
 import com.urkaaaz.contracts.PlayerId
 import com.urkaaaz.contracts.PlayerLoadoutConfig
 import com.urkaaaz.application.loadout.LoadoutCatalog
@@ -113,13 +114,13 @@ class MatchViewModelCombatTest {
 
         assertEquals(20, active.playerMana)
         assertEquals(150, active.blueFortressShieldHealth)
-        assertEquals("SPELL CAST", active.spellFeedbackLabel)
+        assertEquals(R.string.match_spell_feedback_cast, active.spellFeedbackLabel)
 
         val rejected = viewModel.dispatch(MatchUiAction.CastSpell("FORTRESS_SHIELD"))
 
         assertEquals(20, rejected.playerMana)
         assertEquals(150, rejected.blueFortressShieldHealth)
-        assertEquals("SPELL ALREADY ACTIVE", rejected.spellFeedbackLabel)
+        assertEquals(R.string.match_spell_feedback_already_active, rejected.spellFeedbackLabel)
     }
 
     @Test
@@ -144,7 +145,7 @@ class MatchViewModelCombatTest {
         assertEquals(0, refreshed.playerMana)
         assertTrue("HASTE" in refreshed.activeSpellTypes)
         assertEquals(15_000L, refreshed.activeSpellRemainingMilliseconds["HASTE"])
-        assertEquals("SPELL CAST", refreshed.spellFeedbackLabel)
+        assertEquals(R.string.match_spell_feedback_cast, refreshed.spellFeedbackLabel)
     }
 
     @Test
@@ -156,7 +157,7 @@ class MatchViewModelCombatTest {
 
         assertEquals(100, rejected.playerMana)
         assertEquals(null, rejected.blueFortressShieldHealth)
-        assertEquals("SPELL NOT EQUIPPED", rejected.spellFeedbackLabel)
+        assertEquals(R.string.match_spell_feedback_not_equipped, rejected.spellFeedbackLabel)
     }
 
     @Test

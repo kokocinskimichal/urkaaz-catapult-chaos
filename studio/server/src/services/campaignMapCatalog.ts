@@ -20,6 +20,7 @@ const CHAPTER_ID = /^[a-z][a-z0-9_]*$/;
 const ASSET_KEY = /^[a-z][a-z0-9_]*$/;
 const CHAPTER_MAP_KEY = /^campaign_chapter_[0-9]{2}_[a-z0-9_]+_map$/;
 const SCHEMA_VERSION = 1;
+const CHAPTER_CATALOG_SCHEMA_VERSION = 2;
 const lockByChapter = new Map<string, Promise<void>>();
 const FILE_LOCK_WAIT_MILLISECONDS = 10_000;
 const FILE_LOCK_STALE_MILLISECONDS = 5_000;
@@ -243,20 +244,17 @@ export async function readChapterCatalog(
   const parsed: unknown = JSON.parse(content);
   if (!isRecord(parsed) ||
     !hasOnlyKeys(parsed, ["schemaVersion", "chapters"]) ||
-    parsed.schemaVersion !== SCHEMA_VERSION ||
+    parsed.schemaVersion !== CHAPTER_CATALOG_SCHEMA_VERSION ||
     !Array.isArray(parsed.chapters)
   ) {
     throw new Error("Campaign chapter catalog is invalid");
   }
   const chapters: CampaignChapterCatalogEntry[] = [];
   let nextLevel = 1;
-  const titles = new Set<string>();
   for (const [index, item] of parsed.chapters.entries()) {
     if (!isRecord(item) ||
-      !hasOnlyKeys(item, ["id", "title", "firstLevel", "lastLevel", "biome", "bossPositions"]) ||
+      !hasOnlyKeys(item, ["id", "firstLevel", "lastLevel", "biome", "bossPositions"]) ||
       typeof item.id !== "string" || !CHAPTER_ID.test(item.id) ||
-      typeof item.title !== "string" || !item.title.trim() ||
-      titles.has(item.title) ||
       typeof item.firstLevel !== "number" ||
       typeof item.lastLevel !== "number" ||
       !Number.isInteger(item.firstLevel) || !Number.isInteger(item.lastLevel) ||
@@ -272,20 +270,18 @@ export async function readChapterCatalog(
     }
     chapters.push({
       id: item.id,
-      title: item.title,
       firstLevel: item.firstLevel,
       lastLevel: item.lastLevel,
       biome: item.biome,
       bossPositions: [5, 10],
       mapAvailable: false,
     });
-    titles.add(item.title);
     nextLevel = item.lastLevel + 1;
   }
   if (chapters.length === 0 || new Set(chapters.map(chapter => chapter.id)).size !== chapters.length) {
     throw new Error("Campaign chapter catalog must contain unique chapters");
   }
-  return { schemaVersion: SCHEMA_VERSION, chapters };
+  return { schemaVersion: CHAPTER_CATALOG_SCHEMA_VERSION, chapters };
 }
 
 async function readLayoutFile(repoRoot: string, chapterId: string): Promise<string | null> {

@@ -40,6 +40,9 @@
 - Added a campaign-only 32-frame Boulderbloom idle; Chapter 1 boss markers now
   use boss-specific presentation, with Ancient War Oak reusing its existing
   idle without changing match rendering.
+- Added Android LocalizationSystem for EN/PL/ES, with a persistent Dashboard
+  selector, isolated language settings, localized chapter titles, plural
+  resources, and user-approved Polish and Spanish catalogs.
 - Added transparent Chapter 1 and Chapter 2 selector icons and a copy-ready
   campaign chapter icon AGP.
 - Added the `/campaignMapAgp` skill for creating consistent campaign-map
@@ -47,6 +50,16 @@
 
 ### Changed
 
+- Removed chapter display titles from the chapter catalog (schema 2); Android
+  resolves localized titles by stable ID, and Studio displays those IDs.
+- Updated campaign chapter tabs to use borderless, full-cell icons with
+  completion/lock badges, and refined their art brief to exclude framing
+  ornaments.
+- Reworked Sapper siege missions to choose the nearest hostile boss, Bastion,
+  or fortress. Ordinary units and Demolisher blasts ignore Sappers, while boss,
+  projectile, spell, and other area damage remain valid.
+- Moved seven unapproved unit proposals from the inbox to the canonical unit
+  ideas document without changing their proposal status.
 - Enlarged campaign boss artwork from 48 dp to 72 dp (150%) while keeping
   fortress art and live level/status overlays unchanged.
 - Updated Chapter 1 normalized marker anchors in the shared layout for the

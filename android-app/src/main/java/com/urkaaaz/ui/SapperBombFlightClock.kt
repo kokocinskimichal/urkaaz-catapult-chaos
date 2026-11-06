@@ -114,6 +114,10 @@ class SapperBombFlightClock {
             }
         }
 
+        state.boss?.takeIf { it.entityId == targetId }?.let { boss ->
+            return boss.x to (boss.groundY - boss.collisionHeight / 2f)
+        }
+
         val direction = when (sapper.teamLabel) {
             "BLUE" -> 1f
             "RED" -> -1f

@@ -78,7 +78,10 @@ The selector must make it easy to understand:
 - A transparent campaign frame overlays the map. The campaign label, chapter
   number, title, and completion progress appear left-aligned in its upper-left
   plaque. A progress bar reflects completed levels in the selected chapter;
-  chapter tabs sit at the upper-right, and Start Level is at the bottom center.
+  icon tabs sit at the upper-right without a border. Chapter icons fill their
+  tabs, with completed/locked badges overlaid at the lower-right and no visible
+  chapter number; selection uses background opacity. Start Level is at the
+  bottom center.
 - The screen reuses the existing gold button artwork: the full-size
   `loadout_start_match_button` for Start Level and the `xs_short` variant for
   Back, matching the Loadout screen's button dimensions and pressed-state

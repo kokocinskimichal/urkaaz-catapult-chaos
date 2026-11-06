@@ -16,7 +16,7 @@ sealed interface UnitDefinition {
     val attackType: AttackType
     val attacksFromRange: Boolean
     val detonatesOnContact: Boolean
-    val returnsAfterFortressAttack: Boolean
+    val returnsAfterSiegeMission: Boolean
     val participatesInMeleeSynergy: Boolean
     val statusImmunities: Set<UnitStatus>
         get() = emptySet()
@@ -30,7 +30,7 @@ class DefenderUnit(override val configuration: UnitConfiguration) : UnitDefiniti
     override val attackType = AttackType.MELEE
     override val attacksFromRange = false
     override val detonatesOnContact = false
-    override val returnsAfterFortressAttack = false
+    override val returnsAfterSiegeMission = false
     override val participatesInMeleeSynergy = true
 }
 
@@ -38,7 +38,7 @@ class SapperUnit(override val configuration: UnitConfiguration) : UnitDefinition
     override val attackType = AttackType.SIEGE_MISSION
     override val attacksFromRange = false
     override val detonatesOnContact = false
-    override val returnsAfterFortressAttack = true
+    override val returnsAfterSiegeMission = true
     override val participatesInMeleeSynergy = false
 
     override fun incomingDamage(damage: Int): Int =
@@ -49,7 +49,7 @@ class DemolisherUnit(override val configuration: UnitConfiguration) : UnitDefini
     override val attackType = AttackType.CONTACT_EXPLOSIVE
     override val attacksFromRange = false
     override val detonatesOnContact = true
-    override val returnsAfterFortressAttack = false
+    override val returnsAfterSiegeMission = false
     override val participatesInMeleeSynergy = false
 }
 
@@ -57,7 +57,7 @@ class RagingBoarUnit(override val configuration: UnitConfiguration) : UnitDefini
     override val attackType = AttackType.MELEE
     override val attacksFromRange = false
     override val detonatesOnContact = false
-    override val returnsAfterFortressAttack = false
+    override val returnsAfterSiegeMission = false
     override val participatesInMeleeSynergy = true
 }
 
@@ -65,7 +65,7 @@ class SlingmasterUnit(override val configuration: UnitConfiguration) : UnitDefin
     override val attackType = AttackType.RANGED
     override val attacksFromRange = true
     override val detonatesOnContact = false
-    override val returnsAfterFortressAttack = false
+    override val returnsAfterSiegeMission = false
     override val participatesInMeleeSynergy = false
 }
 

@@ -23,8 +23,9 @@
    jest Boss Level z Bossem zbliżającym się do Player Fortress.
 7. **Poziomy w Chapterze nie są identyczne.** Każdy poziom powinien mieć własny profil terenu,
    cel misji, ograniczenie, zachowanie przeciwnika albo inny modyfikator rozgrywki.
-8. **Interfejs obsługuje polski i angielski.** Polski jest językiem domyślnym. Zmiana języka
-   odbywa się przez małą ikonę flagi w prawym górnym rogu Dashboardu.
+8. **Interfejs obsługuje polski, angielski i hiszpański.** Angielski jest
+   językiem domyślnym niezależnie od języka systemu. Zmiana języka odbywa się
+   przez neutralną ikonę globusa w prawym górnym rogu Dashboardu.
 9. **Demo jest izolowane.** Przycisk `TEST` uruchamia obecnie Demo na poziomie 21 z pełną
    zawartością testową; demo nie może
    zmieniać kampanii, własności czarów, waluty ani postępu gracza.
@@ -161,8 +162,8 @@ kontrakty są wyraźnie oddzielone.
 | **Booster** | Tymczasowy bonus meta-gry. Nie zmienia na stałe odblokowania ani klasy czaru, amunicji lub jednostki. |
 | **Battlefield** | Ekran aktywnej bitwy. Zawiera teren, fortece, katapulty, jednostki, pociski, efekty, HUD i interakcje gracza. |
 | **Game Over / Result Screen** | Ekran wyniku po zakończeniu bitwy. Pokazuje zwycięzcę lub rezultat oraz umożliwia restart, powrót do Campaign Map albo przejście do następnego poziomu. |
-| **Language Button** | Mała ikonka flagi w prawym górnym rogu Dashboardu. Przełącza język interfejsu między polskim (🇵🇱) i angielskim (🇬🇧). |
-| **Selected Language Flag** | Flaga aktualnie wybranego języka wyświetlana na Language Button. |
+| **Language Button** | Ikona globusa w prawym górnym rogu Dashboardu. Otwiera selektor języka PL/EN/ES; wybrana flaga jest podświetlona. |
+| **Selected Language Flag** | Flaga Polski, Wielkiej Brytanii lub Hiszpanii wskazująca aktywny język interfejsu. |
 
 ## Meta-game resources / Zasoby meta-gry
 
@@ -301,7 +302,7 @@ hazard, collision rule, movement modifier, damage rule, or projectile rule.
 | **Aerial Bomber** | Proponowana jednostka: goblin w balonie lecący między fortecami i zrzucający małe bomby; bez implementacji. |
 | **Wind Disruptor** | Proponowana jednostka: mały ork na latawcu tworzący lokalne, krótkotrwałe turbulencje; bez globalnej zmiany fizyki pocisków i bez implementacji. |
 | **Burrowing Assault Unit** | Proponowana jednostka: ork na gigantycznym krecie używający kontrolowanego stanu `UNDERGROUND`; nie może dowolnie deformować heightmapy ani fundamentów. |
-| **Sapper** | Zaimplementowany szybki rajder (`260` prędkości), maksymalnie jeden aktywny naraz. Zwykłe jednostki mogą go atakować przy kontakcie, ale nie blokują go całkowicie: kontakt spowalnia go do 65% normalnej prędkości, a ich ataki zadają mu 45% normalnych obrażeń. Dociera do celu, rzuca bombę z dystansu i wraca do własnej fortecy po kolejną. Po powrocie odzyskuje pełne HP i bombę; otrzymuje także obrażenia od katapulty, czarów i efektów obszarowych. |
+| **Sapper** | Zaimplementowany szybki rajder (`260` prędkości), maksymalnie jeden aktywny naraz. Zwykłe jednostki nie mogą go targetować ani ranić, a Demolisher nie zadaje mu obrażeń wybuchem; fizyczny kontakt nadal spowalnia Sappera do 65% normalnej prędkości. Jedną bombą atakuje najbliższy wrogi cel oblężniczy na trasie: bossa, aktywny Runic Bastion albo fortecę, po czym wraca do własnej fortecy po kolejną. Bossy, katapulty, czary i inne efekty obszarowe nadal mogą go zranić. Po powrocie odzyskuje pełne HP i bombę. |
 | **Demolisher** | Zaimplementowana powolna (`110` prędkości), jednorazowa jednostka samobójcza. Przy kontakcie z wrogą jednostką detonuje natychmiast; przy froncie fortecy lub Bastionu wykonuje stan `THROWING`, przesuwa się o `90` jednostek świata przez `0.5` sekundy i detonuje na końcu. Jednostka wywołująca detonację otrzymuje pełne obrażenia, a pozostałe cele obrażenia zależne od odległości. |
 | **Goblin on a Raging Boar** | Jednostka dostępna w Demo: szybki goblin na gigantycznym dziku, koszt `10 SUPPLY`, `80 HP`, `52` obrażenia, prędkość `240`, maksymalnie jeden w garrisonie. Ma 16-klatkową animację biegu; specjalna szarża i dostępność w kampanii pozostają niezaimplementowane. |
 | **Goblin Slingmaster** | Zaimplementowana krucha jednostka dystansowa z ogromną procą, odblokowywana od poziomu 13. Atakuje widoczne cele kamieniami i ma celowo niską wytrzymałość oraz wolniejszy rytm ataku. |

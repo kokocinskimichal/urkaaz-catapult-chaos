@@ -9,6 +9,7 @@ import com.urkaaaz.contracts.BossEncounterConfig
 import com.urkaaaz.contracts.BossPhase
 import com.urkaaaz.contracts.BossVictoryRule
 import com.urkaaaz.contracts.EntityId
+import com.urkaaaz.contracts.MatchEvent
 import com.urkaaaz.contracts.MatchOutcome
 import com.urkaaaz.contracts.MatchId
 import com.urkaaaz.contracts.Team
@@ -495,6 +496,73 @@ class BossSystemTest {
             .toSet()
         assertEquals(4, attackingDefenders.size)
         assertTrue(simulation.snapshot().boss!!.health < profile.maxHealth)
+    }
+
+    @Test
+    fun sapperUsesItsBombOnTheNearestBossAheadOfARunicBastion() {
+        val mobile = mobileProfile(health = 100_000)
+        val profile = mobile.copy(
+            collision = BossCollisionBalance(431f, 518.4f),
+            attacks = mobile.attacks.map { attack ->
+                if (attack.target == BossAttackTarget.UNIT) {
+                    attack.copy(
+                        damage = 1,
+                        minimumDamage = 1,
+                        rangeWorldUnits = 500f,
+                        cooldownSeconds = 100f,
+                        initialCooldownSeconds = 0f,
+                    )
+                } else {
+                    attack
+                }
+            },
+        )
+        val simulation = DeterministicMatchSimulation(
+            matchId = MatchId("sapper-boss-target"),
+            config = SimulationConfig(
+                balance = GameBalanceFixtures.balance,
+                bounds = WorldBounds(7_200f, 4_800f),
+                bossEncounter = BossEncounterConfig(
+                    profileId = profile.id,
+                    spawnXRatio = 0.78f,
+                    victoryRule = BossVictoryRule.DEFEAT_BOSS,
+                ),
+                bossProfile = profile,
+            ),
+        )
+        simulation.start()
+        simulation.castRunicBastion(
+            com.urkaaaz.contracts.PlayerId("red-player"),
+            Team.RED,
+            null,
+        )
+        val bastionHealth = simulation.snapshot().runicBastions.single().health
+        val bossId = requireNotNull(simulation.snapshot().boss).entityId
+        val sapper = simulation.deployUnit(GameBalanceFixtures.unit(UnitIds.SAPPER), Team.BLUE)
+        simulation.sendWave(Team.BLUE)
+
+        var sapperDamagedBoss = false
+        var bossDamagedSapper = false
+        for (step in 0 until 500) {
+            val events = simulation.advance(100L)
+            bossDamagedSapper = bossDamagedSapper || events
+                .filterIsInstance<MatchEvent.DamageApplied>()
+                .any { it.targetId == sapper.unitId }
+            if (events.filterIsInstance<MatchEvent.BossDamaged>().any {
+                    it.sourceId == sapper.unitId && it.bossId == bossId
+                }
+            ) {
+                sapperDamagedBoss = true
+                break
+            }
+        }
+
+        val snapshot = simulation.snapshot()
+        assertTrue(sapperDamagedBoss)
+        assertTrue(bossDamagedSapper)
+        assertTrue(requireNotNull(snapshot.boss).health < profile.maxHealth)
+        assertEquals(bastionHealth, snapshot.runicBastions.single().health)
+        assertEquals(false, snapshot.units.single { it.entityId == sapper.unitId }.sapperHasBomb)
     }
 
     private fun system(

@@ -33,14 +33,14 @@ wyzwala tutoriale kontekstowo.
 | Persystencja | Osobny, wersjonowany namespace DataStore; wliczony w Dashboard RESET. |
 | Demo (`TEST`, poziom 0) | Odizolowane: bez tutoriali, bez zapisu postępu tutoriala. |
 | Teksty | Polski, angielski i hiszpański w JSON. |
-| Język | Przełącznik PL/EN/ES na Dashboardzie, osobny DataStore, lokalizacja całego UI; zaprojektowane w `docs/systems/localization-system.md` (domyślnie EN, RESET nie czyści języka). |
+| Język | `LanguageSettings` i osobny DataStore są zaimplementowane; TutorialSystem pobiera `AppLanguage` przez port. UI PL/EN/ES działa, a akceptacja tłumaczeń pozostaje poza zakresem TutS. |
 | Powtórka meczu | Przy najbliższym meczu spełniającym wyzwalacz; Dashboard pokazuje informację. |
 | Back | Podczas tutoriala wykonuje `Skip`. |
 | Zastępowany stub | `TutorialParameters` w `game-campaign` zostaje usunięty w fazie 1. |
 | Zakres katalogu v1 | Lista tematów zatwierdzona; teksty i kroki w fazie treści z akceptacją. |
 
-Pozostałe punkty w „Otwarte decyzje” (Sklep, podgląd Hintu, dokument
-lokalizacji) nie blokują fazy 1.
+Otwarte kwestie sklepu i podglądu Hintu nie blokują fazy 1. Port języka,
+którego wymaga `TutorialContext`, jest już dostępny.
 
 ## Zakres
 
@@ -533,8 +533,7 @@ atomowy z `expectedHash`.
 
 1. **Kontrakty i engine** w `game-application` plus katalog JSON z
    `match.basics`, bez UI; testy JVM. Usunięcie `TutorialParameters`.
-   Przed fazą 3 musi działać `LanguageSettings` (fazy 1–2 z
-   `localization-system.md`).
+   `LanguageSettings` jest już dostępny dla `TutorialContext`.
 2. **Persystencja**: port, adapter DataStore, test resetu.
 3. **Overlay Android**: Spotlight, Hint, rejestr celów, `TutorialHost`;
    integracja z Matchem (pauza z powodem, AI, blokada paneli).
@@ -564,8 +563,10 @@ atomowy z `expectedHash`.
 - `game-application/.../LocalMatchGateway.kt` (`suspendAi()`/`resumeAi()`) i
   `android-app/.../ui/BattlefieldCameraController.kt`
   (`focusOnWorldRect`) wraz z testami;
-- port `LanguageSettings` i jego adapter DataStore (szczegóły w przyszłym
-  `docs/systems/localization-system.md`);
+- istniejący port `LanguageSettings` z
+  `game-application/src/main/kotlin/com/urkaaaz/application/language/` i adapter
+  `DataStoreLanguageSettings` w `android-app`; TutorialSystem nie tworzy
+  własnego ustawienia języka ani drugiego adaptera;
 - `game-campaign/.../CampaignLevelDefinition.kt` i test (usunięcie
   `TutorialParameters`);
 - `studio/server/src/contracts/tutorials.ts`,
@@ -618,10 +619,10 @@ danych zamiast kodu UI.
 8. **Sklep** pozostaje bez tutoriala do czasu wdrożenia ekranu.
 9. **Podgląd Hintu w Studio** na zrzucie ekranu i ilustracje Hintu —
    poza pierwszą wersją.
-10. **Lokalizacja** jest zaprojektowana w
-    [`localization-system.md`](localization-system.md) (niezaimplementowana).
-    TutorialSystem zależy tylko od portu `LanguageSettings`; jego implementacja
-    (fazy 1–2 lokalizacji) musi poprzedzić fazę 3 tutoriala.
+10. **Lokalizacja** jest opisana w
+    [`localization-system.md`](localization-system.md). Port
+    `LanguageSettings`, adapter DataStore i zaakceptowane tłumaczenia UI są
+    zaimplementowane; TutorialSystem zależy wyłącznie od istniejącego portu.
 
 ## Powiązana dokumentacja
 

@@ -13,10 +13,6 @@ class CampaignChapterRegistry(
         require(this.chapters.map(CampaignChapterDefinition::id).distinct().size == this.chapters.size) {
             "campaign chapter IDs must be unique"
         }
-        require(this.chapters.map(CampaignChapterDefinition::title).distinct().size == this.chapters.size) {
-            "campaign chapter titles must be unique"
-        }
-
         var nextExpectedLevel = 1
         this.chapters.forEach { chapter ->
             require(chapter.firstLevel == nextExpectedLevel) {
@@ -75,7 +71,6 @@ class CampaignChapterRegistry(
             }
             return CampaignChapterDefinition(
                 id = entry.id,
-                title = entry.title,
                 firstLevel = entry.firstLevel,
                 lastLevel = entry.lastLevel,
                 biome = biome,

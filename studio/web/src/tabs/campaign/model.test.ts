@@ -13,7 +13,6 @@ import {
 
 const chapter: CampaignChapterCatalogEntry = {
   id: "broken_valley",
-  title: "The Broken Valley",
   firstLevel: 11,
   lastLevel: 20,
   biome: "frostbound",
@@ -87,7 +86,6 @@ describe("campaign map editor model", () => {
   it("does not warn for the authored Chapter 1 spacing at the game landscape viewport", () => {
     const greenFrontier: CampaignChapterCatalogEntry = {
       id: "green_frontier",
-      title: "The Green Frontier",
       firstLevel: 1,
       lastLevel: 10,
       biome: "green_frontier",
