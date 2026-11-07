@@ -1,7 +1,7 @@
-STATUS: Create a matched pair of low, wide chapter-map-preview thumbnails for
-the campaign selector. These are miniature scenic previews, not symbolic
-chapter icons. They must fit side by side on the existing shallow parchment
-backplate.
+STATUS: Create a matched set of three low, wide chapter-map-preview thumbnails
+for the campaign selector. These are miniature previews of the complete map
+compositions, not symbolic chapter icons. All three must fit side by side on
+the existing shallow parchment backplate.
 
 ## Reference images
 
@@ -15,6 +15,12 @@ backplate.
   `assets_src/campaign/chapter-maps/campaign_chapter_02_broken_valley_map.png`
   as the primary terrain reference for Chapter 2. Do not substitute the
   existing square crystal emblem; it is not a map preview.
+- Attach
+  `assets_src/campaign/chapter-maps/campaign_chapter_03_ashen_march_map.png`
+  as the primary terrain reference for Chapter 3.
+- Attach `assets_src/campaign/ui/campaign_chapter_selector_parchment.png`
+  only to understand the shared panel's shallow horizontal proportions. Do not
+  bake the parchment into any thumbnail.
 - Create a readable miniature preview of each chapter's environment rather
   than inventing a detached emblem.
 
@@ -23,46 +29,59 @@ backplate.
 - Generate exactly one PNG sprite sheet:
   `campaign_chapter_thumbnails_sheet.png`.
 - Save it under `assets_src/campaign/chapter-thumbnails/`.
-- Canvas: exactly 1024 x 256 pixels, horizontal, opaque RGB or RGBA with a
+- Canvas: exactly 1536 x 288 pixels, horizontal, opaque RGB or RGBA with a
   fully opaque alpha channel.
-- Arrange exactly two equal 512 x 256 pixel cells side by side:
-  1. Chapter 1 thumbnail, using Reference 1.
-  2. Chapter 2 thumbnail, using Reference 2.
-- Each cell is a 2:1 landscape thumbnail. Fill the cell edge to edge with
+- Arrange exactly three equal 512 x 288 pixel cells side by side:
+  1. Chapter 1 thumbnail, using the Green Frontier map.
+  2. Chapter 2 thumbnail, using the Broken Valley map.
+  3. Chapter 3 thumbnail, using the Ashen March map.
+- Each cell is a 16:9 landscape thumbnail. Fill the cell edge to edge with
   artwork; do not leave transparent padding or add a gutter between cells.
-- Design the pair to sit side by side within the existing approximately
-  312 x 104 dp shared parchment panel. Leave room for live UI status badges
-  without making either landscape too small.
-- Keep both previews at the same scale, camera distance, detail density, and
+- These are three carousel assets, not three simultaneously visible tiles. The
+  312 x 104 dp parchment viewport shows two framed cards at once. Each card
+  uses a 144 x 74 dp layout slot and is rendered at 80% scale (about
+  115 x 59 dp).
+- Each frame's clear image window is approximately 126 x 51 dp (about 2.47:1).
+  The 80% presentation scale makes the visible window about 101 x 41 dp.
+  Android center-crops the 16:9 thumbnail into this shallow panoramic window;
+  compose each preview so its strongest terrain and route/site pattern remains
+  recognizable in a central horizontal band.
+- Keep all previews at the same scale, camera distance, detail density, and
   painterly finish so they read as a coordinated set.
 
 ## Thumbnail direction
 
-- Show a compact, painterly miniature vista or map-preview of each chapter's
-  environment. Use broad, legible terrain shapes and strong color grouping so
-  the scene remains recognizable at small screen size.
+- Show a compact, painterly miniature map preview of each chapter. Preserve
+  the reference map's geography, route flow, and empty site clearings; do not
+  invent a new route or move sites. Compose the 16:9 source so its central
+  horizontal crop remains representative when shown in the 101 x 41 dp
+  rendered window.
+  Simplify small textures while retaining broad, legible terrain shapes and
+  the distinctive chapter palette.
 - **Chapter 1 — The Green Frontier:** show the lush green frontier from
-  Reference 1, using its characteristic vegetation, hills, waterways, and
-  warm natural palette.
+  the supplied Chapter 1 map, using its characteristic vegetation, hills,
+  waterways, and warm natural palette.
 - **Chapter 2 — The Broken Valley:** match the fractured valley in the
   supplied Chapter 2 map, using its cold palette and broken terrain.
+- **Chapter 3 — The Ashen March:** match the ashen basin, scorched ridges, and
+  restrained ember glow in the supplied Chapter 3 map.
 - Keep the camera angle and degree of detail consistent with the reference
-  maps. A simplified overview or carefully composed map-inspired crop is
-  acceptable; do not turn the scene into a single subject emblem.
+  maps. Do not shift, add, remove, or rearrange the ten site clearings or their
+  connecting route.
 - Let each image fill its wide rectangle. Keep focal terrain and important
-  color contrasts away from the outermost few pixels so small UI badges can
-  overlay a corner without obscuring the scene.
+  route and site details legible after reduction; avoid placing critical detail
+  at the outermost few pixels where the UI may overlay status badges.
 - Use clear, readable silhouettes and restrained details. Avoid tiny
   structures, particles, or textures that collapse into noise when reduced.
-- Keep both thumbnails equally bright and complete. Do not darken Chapter 2
-  to imply its locked state; selection, completion, and lock states are live UI.
+- Keep all thumbnails equally bright and complete. Do not dim locked or
+  completed chapters; selection, completion, and lock states are live UI.
 
 ## Separation from the parchment and live UI
 
-- Generate only the two landscape thumbnails. The shared parchment is a
-  separate asset and must not be baked into either cell.
+- Generate only the three landscape thumbnails. The shared parchment and
+  frame are separate UI assets and must not be baked into any cell.
 - Do not add an individual card, frame, border, tab shape, ribbon, or rounded
-  tile around either thumbnail. The images are placed directly on the shared
+  tile around any thumbnail. The images are placed directly on the shared
   parchment.
 - Do not include chapter numbers, names, title text, letters, runes that
   resemble writing, locks, checkmarks, progress indicators, or selection
@@ -76,20 +95,27 @@ backplate.
 
 ## Review and extraction
 
-- Confirm the output is exactly 1024 x 256 pixels and contains exactly two
-  edge-to-edge 512 x 256 landscape previews in Chapter 1 / Chapter 2 order.
-- Confirm each cell reads as a miniature of its chapter's environment, not as
-  a symbol, crest, or square app icon.
-- Confirm both thumbnails share the same camera scale and visual treatment,
-  while their landscapes and palettes remain clearly distinct.
+- Confirm the output is exactly 1536 x 288 pixels and contains exactly three
+  edge-to-edge 512 x 288 landscape previews in Chapter 1 / Chapter 2 / Chapter
+  3 order.
+- Confirm each cell reads as a miniature of its complete campaign map, not as a
+  symbol, crest, or square app icon.
+- Confirm all three thumbnails share the same camera scale and visual
+  treatment, while their landscapes and palettes remain clearly distinct.
 - Confirm no individual card frame, text, chapter number, lock, checkmark, or
   parchment is baked into the artwork.
-- Confirm the images remain legible when displayed side by side on a shallow
-  312 x 104 dp parchment panel, with room for separate live status badges.
-- After approval, split the actual sprite sheet into two 512 x 256 RGBA source
-  assets without changing the composition or trimming either thumbnail.
-- Do not replace the currently installed square chapter-tab assets until the
-  generated previews have been reviewed and approved.
+- Confirm each map remains recognizable after a center crop to the shallow
+  126 x 51 dp frame window. Confirm the UI can show two framed cards at a time
+  on the 312 x 104 dp parchment panel, with separate captions and status
+  badges.
+- After approval, split the actual sprite sheet into three 512 x 288 RGBA
+  source assets without changing the composition or trimming any thumbnail.
+  Name them `campaign_chapter_01_thumbnail.png`,
+  `campaign_chapter_02_thumbnail.png`, and
+  `campaign_chapter_03_thumbnail.png` in that order.
+- Do not import a newly generated replacement set into Android until all
+  previews have been reviewed and approved; preserve the installed thumbnail
+  set until then.
 
 ## Negative prompt
 
@@ -98,6 +124,8 @@ crystal, isolated object, portrait composition, tall composition, full campaign
 screen, UI screenshot, button, card, individual tile, card frame, border,
 parchment background, ribbon, chapter number, chapter name, title, text,
 letters, writing, runes, lock, checkmark, progress bar, selection glow,
-darkened locked state, badge, HUD, Back control, Start Level control, unrelated
-map, mismatched camera scale, inconsistent art style, tiny unreadable detail,
-noise, detached shadow, detached glow, particles, watermark, signature
+darkened locked state, badge, HUD, Back control, Start Level control,
+single-landscape crop, modified route, added or missing site clearing, changed
+map geography, mismatched camera scale, inconsistent art style, tiny
+unreadable detail, noise, detached shadow, detached glow, particles, watermark,
+signature

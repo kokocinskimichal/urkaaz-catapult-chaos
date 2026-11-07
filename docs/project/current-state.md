@@ -19,7 +19,9 @@ kampanię, AI oraz działający match screen. Gałąź robocza: `develop`.
 - `CampaignChapterRegistry` definiuje dziesięć rozdziałów, ich biomy oraz
   fortress/boss landmarks. Campaign screen pokazuje mapy Chapter 1–3,
   postęp, rozdziały ukończone/bieżący/podgląd oraz znaczniki stanów poziomów;
-  start wymaga zaznaczenia dostępnego poziomu i przycisku **START LEVEL**.
+  miniatury w ramkach z nazwami działają jako karuzela dwóch widocznych kart na
+  wspólnym pergaminie; start wymaga zaznaczenia dostępnego poziomu i przycisku
+  **START LEVEL**.
 - Studio ma zakładkę Campaign do edycji pozycji X/Y wszystkich 10 markerów
   danego rozdziału. Wspólny JSON rozdziałów i osobny layout JSON są czytane
   przez Studio i grę; Chapters 4–10 są tylko do odczytu do czasu dodania map.

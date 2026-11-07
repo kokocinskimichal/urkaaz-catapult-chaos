@@ -1,0 +1,101 @@
+STATUS: Generate two matching transparent overlay frames for the wide
+campaign chapter-map thumbnails. One frame marks the currently selected
+chapter; the other is used by every non-current chapter.
+
+## Reference images
+
+- Attach the user-provided campaign-screen screenshot. Use only its upper-right
+  chapter selector to match the frame silhouette and selected/unselected
+  treatments. Do not recreate the screen.
+- Attach
+  `assets_src/campaign/chapter-thumbnails/campaign_chapter_thumbnails_sheet.png`
+  to match the thumbnail aspect ratio and edge alignment. Use it as a fit
+  reference only; do not include its landscape images in the output.
+- Attach
+  `assets_src/campaign/ui/campaign_chapter_selector_parchment.png` only as a
+  material and color reference for the shared panel behind the frames.
+
+## Output
+
+- Generate exactly one PNG sprite sheet:
+  `campaign_chapter_thumbnail_frames_sheet.png`.
+- Save it under `assets_src/campaign/chapter-thumbnail-frames/`.
+- Canvas: exactly 2000 x 667 pixels, horizontal, RGBA with genuine transparent
+  alpha.
+- Arrange exactly two equal 1000 x 667 pixel cells side by side:
+  1. Current/selected frame on the left.
+  2. Other/non-current frame on the right.
+- Keep each frame cell at 1000 x 667 pixels with transparent outer margins.
+  The visible frame silhouette should be a shallow, wide card that crops to
+  about 1.95:1; Android lays it out in a 144 x 74 dp slot and renders the whole
+  card at 80% scale (about 115 x 59 dp). The parchment viewport is 312 x 104 dp
+  and shows exactly two cards side by side.
+- Keep both versions' outer silhouette and transparent window exactly the same
+  size and shape. Leave a broad transparent image opening of approximately
+  126 x 51 dp (about 2.47:1) for the UI to center-crop a 16:9 thumbnail into;
+  this opening renders at about 101 x 41 dp. The thumbnail fills this opening;
+  keep the lower edge readable beneath a translucent live chapter-name
+  caption.
+- Keep the frame trim narrow enough to leave the map preview legible; do not
+  fill the transparent window or place generated artwork inside it.
+
+## Frame direction
+
+- Use a shallow rectangular frame with restrained, slightly beveled antique
+  gold/bronze trim. Match the campaign screenshot's fantasy UI finish and the
+  aged parchment panel without copying its entire card or screen.
+- **Current/selected:** brighter warm gold, crisp highlights, and a restrained
+  inner edge glow. Make selection immediately readable without overpowering
+  the thumbnail.
+- **Other/non-current:** the same geometry and materials, with darker,
+  subdued bronze/gold and no selection glow. This variant applies equally to
+  completed, locked, and preview chapters; progress state is separate from
+  selection.
+- Keep all ornament attached to the narrow frame. Do not let highlights,
+  shadows, or glow extend outside the cell, where they could be clipped or
+  overlap neighboring thumbnails.
+- Two 144 x 74 dp layout slots fit within the 312 x 104 dp parchment viewport.
+  The selector scrolls horizontally to other chapters; preserve the 80% card
+  scale and do not show more than two cards at once.
+
+## Separation from thumbnails and live UI
+
+- Generate the two frame overlays only. Do not bake in any map image,
+  thumbnail, parchment, card fill, or opaque center.
+- Do not add chapter names, numbers, captions, title plaques, letters, runes,
+  locks, checkmarks, or other status badges. Android draws text and status
+  badges separately.
+- Do not create two different frame shapes. Only brightness, gold intensity,
+  and selection highlighting may differ between the current and other frame.
+- Do not add side panels, ribbons, scroll ends, large corner ornaments,
+  medallions, detached decorations, or a full-screen mockup.
+- Keep the opening transparent and wide enough to show a recognizable
+  panoramic crop of the 16:9 miniature.
+
+## Review and extraction
+
+- Confirm the sheet is exactly 2000 x 667 pixels with two 1000 x 667 RGBA cells
+  in Current / Other order.
+- Confirm both cells share identical geometry, transparent outer margins, a
+  wide image opening, and room for a separate live caption strip.
+- Confirm the current frame reads as selected and the other frame remains
+  subdued, with no lock/completion imagery baked in.
+- Composite both frames over the supplied thumbnail sheet and parchment
+  reference. Check that thumbnails and captions remain legible at 80% display
+  scale, with exactly two cards fitting within the shared 312 x 104 dp panel.
+- After approval, split the actual sheet into:
+  `campaign_chapter_thumbnail_frame_current.png` and
+  `campaign_chapter_thumbnail_frame_other.png`, each 1000 x 667 RGBA.
+- For runtime exports, crop both cells to the same visible frame-content bounds
+  while preserving identical dimensions and transparent windows.
+- Do not integrate the frames into Android until the generated overlays have
+  been reviewed and approved.
+
+## Negative prompt
+
+opaque center, filled card, thumbnail image, landscape, map, parchment
+background, square icon, emblem, medallion, large card, separate title plaque,
+chapter number, chapter name, text, letters, writing, runes, lock, checkmark,
+status badge, different frame geometry, thick border, oversized ornaments,
+scroll ends, ribbon, detached glow, detached shadow, particles, neighboring
+cells touching, divider, UI screenshot, watermark, signature

@@ -18,16 +18,32 @@ class CampaignMapPresentationCatalogTest {
     }
 
     @Test
-    fun chapterTabIconsAreRegisteredOnlyForTheTwoImportedChapters() {
+    fun chapterTabThumbnailsAreRegisteredOnlyForChaptersWithImportedArt() {
         assertEquals(
-            R.drawable.campaign_chapter_01_icon,
-            CampaignMapPresentationCatalog.chapterTabIconDrawable("green_frontier"),
+            R.drawable.campaign_chapter_01_thumbnail,
+            CampaignMapPresentationCatalog.chapterTabThumbnailDrawable("green_frontier"),
         )
         assertEquals(
-            R.drawable.campaign_chapter_02_icon,
-            CampaignMapPresentationCatalog.chapterTabIconDrawable("broken_valley"),
+            R.drawable.campaign_chapter_02_thumbnail,
+            CampaignMapPresentationCatalog.chapterTabThumbnailDrawable("broken_valley"),
         )
-        assertNull(CampaignMapPresentationCatalog.chapterTabIconDrawable("ashen_march"))
+        assertEquals(
+            R.drawable.campaign_chapter_03_thumbnail,
+            CampaignMapPresentationCatalog.chapterTabThumbnailDrawable("ashen_march"),
+        )
+        assertNull(CampaignMapPresentationCatalog.chapterTabThumbnailDrawable("whispering_marsh"))
+    }
+
+    @Test
+    fun chapterTabFramesDistinguishTheSelectedCardFromOtherCards() {
+        assertEquals(
+            R.drawable.campaign_chapter_thumbnail_frame_current,
+            CampaignMapPresentationCatalog.chapterTabFrameDrawable(isSelected = true),
+        )
+        assertEquals(
+            R.drawable.campaign_chapter_thumbnail_frame_other,
+            CampaignMapPresentationCatalog.chapterTabFrameDrawable(isSelected = false),
+        )
     }
 
     @Test

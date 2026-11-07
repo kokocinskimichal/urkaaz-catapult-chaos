@@ -109,24 +109,36 @@ The selector must make it easy to understand:
   markers have no status badge.
 - A two-icon sprite-sheet prompt for the completed check and locked padlock is
   available at `docs/systems/campaign-map-level-status-icons.agp`.
-- A replacement art brief for wide Chapter 1 and Chapter 2 map-preview
+- A replacement art brief for wide Chapter 1–3 map-preview
   thumbnails is `docs/systems/campaign-chapter-icons.agp`. It uses the
   user-provided selector screenshot for proportions and the matching campaign
   map backgrounds as terrain references. Chapter names and status remain live
   UI.
-- The approved icons are separate transparent 512 x 512 assets at
-  `assets_src/campaign/chapter-icons/campaign_chapter_01_icon.png` and
-  `assets_src/campaign/chapter-icons/campaign_chapter_02_icon.png`, with the
-  original 2:1 sheet preserved beside them. Only the Chapter 1 and Chapter 2
-  selector tabs use these icons; remaining chapters retain their existing
-  text-only tabs until their artwork is prepared. The runtime still uses these
-  square icons until the new thumbnails are generated, reviewed, and approved.
-  All tabs sit over one shared,
+- `docs/systems/campaign-chapter-thumbnail-frames.agp` specifies the separate
+  selected and non-current frame overlays for these thumbnails; selection
+  framing remains independent of live completion and lock badges.
+- The original square selector emblems remain under
+  `assets_src/campaign/chapter-icons/`, but the runtime now uses three separate
+  opaque 512 x 288 (16:9) map-preview thumbnails from
+  `assets_src/campaign/chapter-thumbnails/`. Android copies live in
+  `android-app/src/main/res/drawable-nodpi/`; `CampaignMapPresentationCatalog`
+  maps Chapters 1–3, while later chapters retain text-only tabs. Each thumbnail
+  is center-cropped into a 126 x 51 dp image window in a 144 x 74 dp layout
+  slot. The whole card renders at 80% scale (about 115 x 59 dp); a horizontal
+  carousel shows two cards at once on the 312 x 104 dp parchment.
+  The pair is centered within the parchment's visible area; its content is
+  shifted 6 dp upward to compensate for the transparent top trim.
+  Chapter names are live captions; separate current/other frame overlays and
+  completion/lock badges are live UI. The 1536 x 288 thumbnail sheet is
+  preserved for regeneration, along with the 2000 x 667 frame sheet and its
+  two 936 x 479 extracted variants. All cards sit over one shared,
   transparent parchment panel at
   `assets_src/campaign/ui/campaign_chapter_selector_parchment.png`, imported
-  unchanged to `android-app/src/main/res/drawable-nodpi/`. The panel is 312 x
-  104 dp and flush to the screen's upper-right corner; individual tabs retain
-  their existing size and have no card backgrounds.
+  unchanged to `android-app/src/main/res/drawable-nodpi/`. The panel is
+  312 x 104 dp and flush to the screen's upper-right corner; frames and captions
+  are overlays rather than individual parchment backgrounds.
+  The parchment drawable is stretched 20% downward around its top edge, while
+  the panel layout and carousel positions remain unchanged.
 - `CampaignProgress` already persists `highestUnlockedLevel` and
   `completedLevels`.
 - `CampaignChapterRegistry` reads canonical chapter metadata from
@@ -377,7 +389,7 @@ The approved Chapter 1 background is stored at
 `assets_src/campaign/chapter-maps/campaign_chapter_01_green_frontier_map.png`
 and imported unchanged into
 `android-app/src/main/res/drawable-nodpi/campaign_chapter_01_green_frontier_map.png`.
-Its source dimensions are 1670 × 942 pixels. It has ten empty fortress-site
+Its source dimensions are 1544 × 869 pixels. It has ten empty fortress-site
 placeholders along one continuous, non-branching route; the larger sites at
 levels 5 and 10 identify the boss encounters. No marker, number, status, or hit
 target is baked into the image.
@@ -391,16 +403,16 @@ rounded to six decimal places.
 
 | Level | Landmark | x | y |
 |---:|---|---:|---:|
-| 1 | Fortress | 0.905967 | 0.286715 |
-| 2 | Fortress | 0.715496 | 0.351271 |
-| 3 | Fortress | 0.471544 | 0.369729 |
-| 4 | Fortress | 0.227157 | 0.399566 |
-| 5 | Boss | 0.484655 | 0.500928 |
-| 6 | Fortress | 0.865628 | 0.545625 |
-| 7 | Fortress | 0.846475 | 0.698885 |
-| 8 | Fortress | 0.641559 | 0.753433 |
-| 9 | Fortress | 0.389665 | 0.764836 |
-| 10 | Boss | 0.135624 | 0.723839 |
+| 1 | Fortress | 0.911269 | 0.319908 |
+| 2 | Fortress | 0.713731 | 0.364787 |
+| 3 | Fortress | 0.465674 | 0.367089 |
+| 4 | Fortress | 0.221503 | 0.403913 |
+| 5 | Boss | 0.485104 | 0.501726 |
+| 6 | Fortress | 0.866580 | 0.543153 |
+| 7 | Fortress | 0.843912 | 0.720368 |
+| 8 | Fortress | 0.644430 | 0.751438 |
+| 9 | Fortress | 0.367876 | 0.754891 |
+| 10 | Boss | 0.136658 | 0.750288 |
 
 These are presentation coordinates only. Levels 5 and 10 use boss markers;
 the other eight use fortress markers. No marker, number, status, or hit target

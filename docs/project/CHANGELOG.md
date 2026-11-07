@@ -55,6 +55,9 @@
   level anchors, and Android presentation mapping.
 - Added the supplied Chapter 3 Ashen March campaign map, its normalized level
   anchors, and Android presentation mapping.
+- Added three low, wide 16:9 Chapter 1–3 map-preview thumbnails and connected
+  them to the shared parchment selector.
+- Added selected and non-current frame overlays for chapter thumbnails.
 - Imported the transparent 2000 × 667 shared parchment backplate and placed
   the campaign chapter controls over it without individual tab cards.
 - Added a copy-ready desktop landing-page concept AGP for Urkaaaz.
@@ -70,8 +73,8 @@
   ornaments.
 - Refined the shared chapter-selector parchment AGP toward a flat, shallow
   plaque without rolled ends or large ornaments.
-- Reframed the Chapter 1 and Chapter 2 selector art brief as compact, wide
-  campaign-map preview thumbnails instead of square symbolic icons.
+- Expanded the selector art brief to compact, wide map-preview thumbnails for
+  available Chapter 1–3 maps instead of square symbolic icons.
 - Doubled the chapter-selector parchment size and aligned it flush to the
   screen's upper-right corner while keeping the chapter icons unchanged.
 - Set the debug developer-progress preset to Chapter 3, Level 21 for map
@@ -83,8 +86,8 @@
   ideas document without changing their proposal status.
 - Enlarged campaign boss artwork from 48 dp to 72 dp (150%) while keeping
   fortress art and live level/status overlays unchanged.
-- Updated Chapter 1 normalized marker anchors in the shared layout for the
-  approved 1670 × 942 map artwork.
+- Replaced the Chapter 1 Green Frontier map with updated 1544 × 869 artwork
+  and refreshed its ten normalized marker anchors.
 
 ### Fixed
 
@@ -95,6 +98,14 @@
 
 - Removed unused legacy Dashboard background, button, HUD-panel, and logo
   drawables that are not used by the approved Dashboard layout.
+
+## 2026-11-07
+
+### Changed
+
+- Replaced the chapter selector tabs with a centered two-card carousel. The
+  framed miniatures render at 80% scale on a parchment background stretched
+  20% downward from its top edge.
 
 ## 2026-11-03
 

@@ -33,11 +33,19 @@ object CampaignMapPresentationCatalog {
     fun chapterSelectorBackgroundDrawable(): Int =
         R.drawable.campaign_chapter_selector_parchment
 
-    fun chapterTabIconDrawable(chapterId: String): Int? =
+    fun chapterTabThumbnailDrawable(chapterId: String): Int? =
         when (chapterId) {
-            "green_frontier" -> R.drawable.campaign_chapter_01_icon
-            "broken_valley" -> R.drawable.campaign_chapter_02_icon
+            "green_frontier" -> R.drawable.campaign_chapter_01_thumbnail
+            "broken_valley" -> R.drawable.campaign_chapter_02_thumbnail
+            "ashen_march" -> R.drawable.campaign_chapter_03_thumbnail
             else -> null
+        }
+
+    fun chapterTabFrameDrawable(isSelected: Boolean): Int =
+        if (isSelected) {
+            R.drawable.campaign_chapter_thumbnail_frame_current
+        } else {
+            R.drawable.campaign_chapter_thumbnail_frame_other
         }
 
     fun forLayout(layout: CampaignMapLayoutDefinition): CampaignMapPresentationRead {

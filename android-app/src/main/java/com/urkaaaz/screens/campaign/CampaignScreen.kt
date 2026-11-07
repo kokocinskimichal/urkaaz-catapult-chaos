@@ -49,16 +49,27 @@ class CampaignScreen(
     }
     private val chapterTabsScroll = HorizontalScrollView(context).apply {
         isHorizontalScrollBarEnabled = false
-        clipToPadding = false
+        clipToPadding = true
         isFillViewport = true
-        setPadding(dp(6), dp(2), dp(6), dp(2))
-        addView(chapterTabs, LinearLayout.LayoutParams(-2, -1))
+        setPadding(dp(6), 0, dp(6), 0)
+        translationY = -dp(CHAPTER_SELECTOR_CAROUSEL_UPWARD_OFFSET_DP).toFloat()
+        addView(chapterTabs, LinearLayout.LayoutParams(-2, -1).apply {
+            topMargin = dp(CHAPTER_SELECTOR_CAROUSEL_TOP_PADDING_DP)
+            bottomMargin = dp(2)
+        })
     }
     private val chapterSelectorBackplate = ImageView(context).apply {
         contentDescription = null
         importantForAccessibility = View.IMPORTANT_FOR_ACCESSIBILITY_NO
         scaleType = ImageView.ScaleType.FIT_XY
         setImageResource(CampaignMapPresentationCatalog.chapterSelectorBackgroundDrawable())
+        pivotY = 0f
+        scaleY = CHAPTER_SELECTOR_BACKPLATE_VERTICAL_SCALE
+        translationY = -(
+            dp(CHAPTER_SELECTOR_BACKPLATE_HEIGHT_DP) *
+                CHAPTER_SELECTOR_BACKPLATE_TOP_TRANSPARENT_FRACTION *
+                (CHAPTER_SELECTOR_BACKPLATE_VERTICAL_SCALE - 1f)
+            )
     }
     private val chapterSelectorPanel = FrameLayout(context).apply {
         minimumWidth = dp(CHAPTER_SELECTOR_BACKPLATE_MIN_WIDTH_DP)
@@ -67,8 +78,16 @@ class CampaignScreen(
         addView(chapterSelectorBackplate, FrameLayout.LayoutParams(-1, -1))
         addView(
             chapterTabsScroll,
-            FrameLayout.LayoutParams(-1, -1),
+            FrameLayout.LayoutParams(-1, -1).apply {
+                marginEnd = dp(CHAPTER_SELECTOR_BACKPLATE_RIGHT_INSET_DP)
+            },
         )
+        translationX =
+            (dp(CHAPTER_SELECTOR_BACKPLATE_MIN_WIDTH_DP) *
+                CHAPTER_SELECTOR_BACKPLATE_RIGHT_TRANSPARENT_FRACTION).roundToInt().toFloat()
+        translationY =
+            -(dp(CHAPTER_SELECTOR_BACKPLATE_HEIGHT_DP) *
+                CHAPTER_SELECTOR_BACKPLATE_TOP_TRANSPARENT_FRACTION)
     }
     private val campaignLabelText = TextView(context).apply {
         textSize = 10f
@@ -341,13 +360,13 @@ class CampaignScreen(
                 CampaignChapterPageStatus.PREVIEW ->
                     R.string.campaign_chapter_tab_preview
             }
-            val chapterIcon = CampaignMapPresentationCatalog.chapterTabIconDrawable(
+            val chapterThumbnail = CampaignMapPresentationCatalog.chapterTabThumbnailDrawable(
                 page.chapter.id,
             )
-            val tabLabel = context.getString(label, chapterNumber)
             val chapterTitle = context.getString(
                 CampaignChapterTitleResources.forChapter(page.chapter.id),
             )
+            val chapterLabel = context.getString(R.string.campaign_chapter_number, chapterNumber)
             val tabTextColor = when {
                 isSelected -> Color.rgb(255, 211, 106)
                 page.status == CampaignChapterPageStatus.COMPLETED ->
@@ -367,102 +386,130 @@ class CampaignScreen(
                     render(viewModel.state)
                 }
             }
-            val tab = if (chapterIcon == null) {
-                TextView(context).apply {
-                    text = tabLabel
-                    UiTypography.applyButtonTypeface(this)
-                    textSize = 14f
-                    gravity = Gravity.CENTER
-                    minWidth = dp(54)
-                    setPadding(dp(10), dp(7), dp(10), dp(7))
-                    setTextColor(tabTextColor)
-                    background = null
-                    contentDescription = tabDescription
-                    isFocusable = true
-                    this.isSelected = isSelected
-                    setOnClickListener(onTabClick)
-                }
-            } else {
-                val statusIcon = when (page.status) {
-                    CampaignChapterPageStatus.COMPLETED ->
-                        R.drawable.campaign_level_status_completed
-                    CampaignChapterPageStatus.CURRENT -> null
-                    CampaignChapterPageStatus.PREVIEW ->
-                        R.drawable.campaign_level_status_locked
-                }
-                FrameLayout(context).apply {
-                    minimumWidth = dp(48)
-                    contentDescription = tabDescription
-                    isFocusable = true
-                    this.isSelected = isSelected
+            val statusIcon = when (page.status) {
+                CampaignChapterPageStatus.COMPLETED ->
+                    R.drawable.campaign_level_status_completed
+                CampaignChapterPageStatus.CURRENT -> null
+                CampaignChapterPageStatus.PREVIEW ->
+                    R.drawable.campaign_level_status_locked
+            }
+            val frameDrawable =
+                CampaignMapPresentationCatalog.chapterTabFrameDrawable(isSelected)
+            val tab = FrameLayout(context).apply {
+                scaleX = CHAPTER_SELECTOR_CARD_VISUAL_SCALE
+                scaleY = CHAPTER_SELECTOR_CARD_VISUAL_SCALE
+                clipChildren = false
+                contentDescription = tabDescription
+                isFocusable = true
+                this.isSelected = isSelected
+                if (chapterThumbnail != null) {
                     addView(ImageView(context).apply {
                         contentDescription = null
                         importantForAccessibility = View.IMPORTANT_FOR_ACCESSIBILITY_NO
                         scaleType = ImageView.ScaleType.CENTER_CROP
-                        alpha = if (isSelected) 1f else UNSELECTED_CHAPTER_ICON_ALPHA
-                        setImageResource(chapterIcon)
-                    }, FrameLayout.LayoutParams(-1, -1))
-                    statusIcon?.let { drawable ->
-                        addView(ImageView(context).apply {
-                            contentDescription = null
-                            importantForAccessibility = View.IMPORTANT_FOR_ACCESSIBILITY_NO
-                            scaleType = ImageView.ScaleType.FIT_CENTER
-                            setImageResource(drawable)
-                        }, FrameLayout.LayoutParams(dp(16), dp(16), Gravity.BOTTOM or Gravity.END).apply {
-                            rightMargin = dp(2)
-                            bottomMargin = dp(2)
-                        })
-                    }
-                    setOnClickListener(onTabClick)
+                        background = GradientDrawable().apply {
+                            cornerRadius = dp(CHAPTER_SELECTOR_THUMBNAIL_CLIP_RADIUS_DP).toFloat()
+                            setColor(Color.TRANSPARENT)
+                        }
+                        clipToOutline = true
+                        alpha = if (isSelected) 1f else UNSELECTED_CHAPTER_THUMBNAIL_ALPHA
+                        setImageResource(chapterThumbnail)
+                    }, FrameLayout.LayoutParams(
+                        dp(CHAPTER_SELECTOR_THUMBNAIL_WINDOW_WIDTH_DP),
+                        dp(CHAPTER_SELECTOR_THUMBNAIL_WINDOW_HEIGHT_DP),
+                        Gravity.TOP or Gravity.CENTER_HORIZONTAL,
+                    ).apply {
+                        topMargin = dp(CHAPTER_SELECTOR_THUMBNAIL_WINDOW_TOP_DP)
+                    })
+                } else {
+                    addView(TextView(context).apply {
+                        contentDescription = null
+                        importantForAccessibility = View.IMPORTANT_FOR_ACCESSIBILITY_NO
+                        text = "$chapterLabel\n$chapterTitle"
+                        textSize = 9f
+                        maxLines = 2
+                        includeFontPadding = false
+                        setLineSpacing(0f, 0.9f)
+                        gravity = Gravity.CENTER
+                        setTextColor(tabTextColor)
+                        setShadowLayer(2f, 0f, 1f, Color.BLACK)
+                        background = GradientDrawable().apply {
+                            cornerRadius = dp(4).toFloat()
+                            setColor(Color.argb(185, 37, 25, 16))
+                        }
+                    }, FrameLayout.LayoutParams(
+                        dp(CHAPTER_SELECTOR_THUMBNAIL_WINDOW_WIDTH_DP),
+                        dp(CHAPTER_SELECTOR_THUMBNAIL_WINDOW_HEIGHT_DP),
+                        Gravity.CENTER,
+                    ))
                 }
+                addView(ImageView(context).apply {
+                    contentDescription = null
+                    importantForAccessibility = View.IMPORTANT_FOR_ACCESSIBILITY_NO
+                    scaleType = ImageView.ScaleType.FIT_XY
+                    setImageResource(frameDrawable)
+                }, FrameLayout.LayoutParams(-1, -1))
+                if (chapterThumbnail != null) {
+                    addView(TextView(context).apply {
+                        contentDescription = null
+                        importantForAccessibility = View.IMPORTANT_FOR_ACCESSIBILITY_NO
+                        text = "$chapterLabel\n$chapterTitle"
+                        textSize = 8f
+                        maxLines = 2
+                        includeFontPadding = false
+                        setLineSpacing(0f, 0.9f)
+                        gravity = Gravity.CENTER
+                        setPadding(dp(3), 0, dp(3), 0)
+                        setTextColor(Color.rgb(255, 229, 188))
+                        setShadowLayer(2f, 0f, 1f, Color.BLACK)
+                        background = GradientDrawable().apply {
+                            cornerRadius = dp(CHAPTER_SELECTOR_THUMBNAIL_CLIP_RADIUS_DP).toFloat()
+                            setColor(Color.argb(155, 37, 23, 13))
+                            setStroke(dp(1), Color.argb(165, 202, 149, 67))
+                        }
+                    }, FrameLayout.LayoutParams(
+                        dp(CHAPTER_SELECTOR_THUMBNAIL_WINDOW_WIDTH_DP),
+                        dp(CHAPTER_SELECTOR_THUMBNAIL_CAPTION_HEIGHT_DP),
+                        Gravity.TOP or Gravity.CENTER_HORIZONTAL,
+                    ).apply {
+                        topMargin = dp(CHAPTER_SELECTOR_THUMBNAIL_CAPTION_TOP_DP)
+                    })
+                }
+                statusIcon?.let { drawable ->
+                    addView(ImageView(context).apply {
+                        contentDescription = null
+                        importantForAccessibility = View.IMPORTANT_FOR_ACCESSIBILITY_NO
+                        scaleType = ImageView.ScaleType.FIT_CENTER
+                        setImageResource(drawable)
+                    }, FrameLayout.LayoutParams(
+                        dp(CHAPTER_SELECTOR_THUMBNAIL_STATUS_ICON_SIZE_DP),
+                        dp(CHAPTER_SELECTOR_THUMBNAIL_STATUS_ICON_SIZE_DP),
+                        Gravity.TOP or Gravity.END,
+                    ).apply {
+                        topMargin = dp(CHAPTER_SELECTOR_THUMBNAIL_STATUS_ICON_TOP_DP)
+                        marginEnd = dp(CHAPTER_SELECTOR_THUMBNAIL_STATUS_ICON_END_DP)
+                    })
+                }
+                setOnClickListener(onTabClick)
             }
-            val tabWidth = if (chapterIcon == null) -2 else dp(48)
-            val tabHeight = if (chapterIcon == null) -1 else dp(48)
-            chapterTabs.addView(tab, LinearLayout.LayoutParams(tabWidth, tabHeight).apply {
-                setMargins(dp(3), 0, dp(3), 0)
-            })
+            chapterTabs.addView(
+                tab,
+                LinearLayout.LayoutParams(
+                    dp(CHAPTER_SELECTOR_CARD_WIDTH_DP),
+                    dp(CHAPTER_SELECTOR_CARD_HEIGHT_DP),
+                ).apply {
+                    setMargins(dp(1), 0, dp(1), 0)
+                },
+            )
             if (isSelected) {
                 chapterTabsScroll.post {
                     chapterTabsScroll.smoothScrollTo(
-                        (tab.left - dp(6)).coerceAtLeast(0),
+                        tab.left.coerceAtLeast(0),
                         0,
                     )
                 }
             }
         }
-        resizeChapterSelectorPanelToTabs()
-    }
-
-    private fun resizeChapterSelectorPanelToTabs() {
-        var tabsWidth = chapterTabsScroll.paddingLeft + chapterTabsScroll.paddingRight
-        for (index in 0 until chapterTabs.childCount) {
-            val tab = chapterTabs.getChildAt(index)
-            val params = tab.layoutParams as LinearLayout.LayoutParams
-            val tabWidth = if (params.width >= 0) {
-                params.width
-            } else {
-                tab.measure(
-                    View.MeasureSpec.makeMeasureSpec(0, View.MeasureSpec.UNSPECIFIED),
-                    View.MeasureSpec.makeMeasureSpec(0, View.MeasureSpec.UNSPECIFIED),
-                )
-                tab.measuredWidth
-            }
-            tabsWidth += tabWidth + params.leftMargin + params.rightMargin
-        }
-        val minimumWidth = dp(CHAPTER_SELECTOR_BACKPLATE_MIN_WIDTH_DP)
-        val maximumWidth = context.resources.displayMetrics.widthPixels
-            .coerceAtLeast(minimumWidth)
-        val panelWidth = (tabsWidth * CHAPTER_SELECTOR_BACKPLATE_SCALE)
-            .coerceIn(minimumWidth, maximumWidth)
-        chapterSelectorPanel.layoutParams =
-            (chapterSelectorPanel.layoutParams as FrameLayout.LayoutParams).apply {
-                width = panelWidth
-            }
-        chapterSelectorPanel.translationX =
-            (panelWidth * CHAPTER_SELECTOR_BACKPLATE_RIGHT_TRANSPARENT_FRACTION).roundToInt().toFloat()
-        chapterSelectorPanel.translationY =
-            -(dp(CHAPTER_SELECTOR_BACKPLATE_HEIGHT_DP) *
-                CHAPTER_SELECTOR_BACKPLATE_TOP_TRANSPARENT_FRACTION)
     }
 
     private fun renderChapterHeader(page: CampaignChapterPageState) {
@@ -695,9 +742,24 @@ class CampaignScreen(
     private companion object {
         const val CHAPTER_SELECTOR_BACKPLATE_MIN_WIDTH_DP = 312
         const val CHAPTER_SELECTOR_BACKPLATE_HEIGHT_DP = 104
-        const val CHAPTER_SELECTOR_BACKPLATE_SCALE = 2
+        const val CHAPTER_SELECTOR_BACKPLATE_VERTICAL_SCALE = 1.2f
+        const val CHAPTER_SELECTOR_BACKPLATE_RIGHT_INSET_DP = 8
+        const val CHAPTER_SELECTOR_CAROUSEL_TOP_PADDING_DP = 16
+        const val CHAPTER_SELECTOR_CAROUSEL_UPWARD_OFFSET_DP = 6
+        const val CHAPTER_SELECTOR_CARD_VISUAL_SCALE = 0.8f
+        const val CHAPTER_SELECTOR_CARD_WIDTH_DP = 144
+        const val CHAPTER_SELECTOR_CARD_HEIGHT_DP = 74
+        const val CHAPTER_SELECTOR_THUMBNAIL_WINDOW_WIDTH_DP = 126
+        const val CHAPTER_SELECTOR_THUMBNAIL_WINDOW_HEIGHT_DP = 51
+        const val CHAPTER_SELECTOR_THUMBNAIL_WINDOW_TOP_DP = 11
+        const val CHAPTER_SELECTOR_THUMBNAIL_CAPTION_HEIGHT_DP = 16
+        const val CHAPTER_SELECTOR_THUMBNAIL_CAPTION_TOP_DP = 46
+        const val CHAPTER_SELECTOR_THUMBNAIL_CLIP_RADIUS_DP = 8
+        const val CHAPTER_SELECTOR_THUMBNAIL_STATUS_ICON_SIZE_DP = 16
+        const val CHAPTER_SELECTOR_THUMBNAIL_STATUS_ICON_TOP_DP = 14
+        const val CHAPTER_SELECTOR_THUMBNAIL_STATUS_ICON_END_DP = 12
         const val CHAPTER_SELECTOR_BACKPLATE_RIGHT_TRANSPARENT_FRACTION = 47f / 2000f
         const val CHAPTER_SELECTOR_BACKPLATE_TOP_TRANSPARENT_FRACTION = 101f / 667f
-        const val UNSELECTED_CHAPTER_ICON_ALPHA = 0.78f
+        const val UNSELECTED_CHAPTER_THUMBNAIL_ALPHA = 0.78f
     }
 }

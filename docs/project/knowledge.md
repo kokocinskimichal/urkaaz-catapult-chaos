@@ -302,8 +302,8 @@ layers a transparent campaign frame, live chapter/progress UI, fortress/boss
 artwork, state-specific level plaques, completed/locked badges, and a shared
 available-level glow. Chapters 4–10 do not yet have map artwork and use the
 explicit chapter level-list fallback.
-Chapter 1's approved `campaign_chapter_01_green_frontier_map` image is
-1670x942, with ten empty fortress sites on one continuous route and highlighted
+Chapter 1's current `campaign_chapter_01_green_frontier_map` image is
+1544x869, with ten empty fortress sites on one continuous route and highlighted
 boss sites at levels 5 and 10. Its source/runtime copies match. Existing
 normalized marker anchors were updated in the shared layout for this artwork;
 the user can continue repositioning fortresses and boss markers in Studio.
@@ -322,25 +322,35 @@ campaign-marker idle while preserving the existing plaque, status, selection,
 and accessibility behavior; landmarks without a boss profile retain the
 generic boss marker. Boss landmark art now renders at 72 dp, 150% of its former
 48 dp size; fortress art and live level/status overlays are unchanged.
-The Chapter 1 and Chapter 2 selector tabs use separate transparent icon assets
-from `assets_src/campaign/chapter-icons/`. `CampaignMapPresentationCatalog`
-maps only those two chapter IDs; later chapters keep their existing text-only
-tabs until their icons are prepared. The original 2:1 icon sheet is preserved
-beside the normalized 512x512 source icons. Icon tabs omit visible chapter
-numbers, fill the tab surface with the icon, and overlay completed/locked
-badges at its lower-right instead of below it. Selection uses background fill
-opacity rather than a border; accessibility descriptions retain the chapter
-number. One shared transparent 2000x667 parchment backplate is stored in
+The original square selector emblems remain in `assets_src/campaign/chapter-icons/`,
+but Chapters 1–3 now use separate opaque 512x288 (16:9) map-preview thumbnails
+from `assets_src/campaign/chapter-thumbnails/`; the 1536x288 sprite sheet is
+preserved alongside them. Android drawable copies are byte-identical. Each
+thumbnail appears in a 126x51 dp window inside a 144x74 dp layout slot. The
+whole framed card renders at 80% scale (about 115x59 dp), with two cards at a
+time on the 312x104 dp parchment. The pair is centered within the parchment's
+visible area, with a 6 dp upward content offset for the transparent top trim.
+`CampaignMapPresentationCatalog.chapterTabThumbnailDrawable` maps these three
+chapter IDs; later chapters keep text-only tabs until their art is prepared.
+The 2000x667 original selected/other frame sheet and 936x479 extracted frame
+assets are stored in `assets_src/campaign/chapter-thumbnail-frames/`; Android
+drawable copies are byte-identical. Live chapter names appear in captions, and
+completion/lock badges overlay the upper-right of each card. Accessibility
+descriptions retain chapter numbers. One shared transparent 2000x667 parchment
+backplate is stored in
 `assets_src/campaign/ui/campaign_chapter_selector_parchment.png` and rendered
-behind the complete chapter group; individual tabs stay transparent. The
-selector is rendered at 312 x 104 dp, flush with the upper-right screen
-corner, while chapter icons retain their existing size. Its Android copy is
+behind the carousel; the cards use separate frames and live captions. The
+selector is rendered at 312 x 104 dp, flush with the upper-right screen corner.
+The parchment drawable is scaled 20% downward from its top edge without
+changing the selector layout or card positions.
+Its Android copy is
 `R.drawable.campaign_chapter_selector_parchment`. The
 copy-ready art brief is
 `docs/systems/campaign-chapter-selector-parchment.agp`. A replacement brief
-for low, wide chapter-map-preview thumbnails is
-`docs/systems/campaign-chapter-icons.agp`; the installed square icons remain in
-use until replacement artwork is approved and integrated.
+for low, wide Chapter 1–3 map-preview thumbnails is
+`docs/systems/campaign-chapter-icons.agp`. The former square selector emblems
+remain in source/resources for reference but are no longer used by the runtime
+chapter carousel.
 
 The Studio Campaign tab edits the same chapter and layout JSON through
 `/api/campaign/*`; it never modifies `MapDefinition` or Android resource IDs.
