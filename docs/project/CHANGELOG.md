@@ -114,6 +114,9 @@
 - Added Slingmaster idle, movement, attack, and death animations with shared
   BLUE/RED garment-texture masks, Studio preview support, and death-frame
   retention through the end of playback.
+- Added a plan and implementation prompt for preventing character sprites
+  from disappearing during asynchronous animation frame loads, based on
+  emulator diagnostics.
 
 ### Changed
 
@@ -124,6 +127,18 @@
   image and updated its layout dimensions while preserving marker anchors.
 - Updated Defender balance to 80 HP, 20 unit damage, and 10 fortress damage;
   advanced the balance revision to `game-balance-11`.
+- Increased the configured Goblin Slingmaster attack range to 460 world units
+  and advanced the balance revision to `game-balance-12`.
+
+### Fixed
+
+- Prevented unit sprites from flashing as colored circles during asynchronous
+  animation loads by preloading the exact BLUE/RED roster fallbacks and holding
+  the last ready frame in a 4 MiB byte-weighted LRU; asset retries clear only
+  the matching fallback decode failures.
+- Stopped Goblin Slingmasters from moving backward to restore maximum range;
+  target acquisition now honors their configured attack range, and they hold
+  position once a target is within range.
 
 ## 2026-11-03
 

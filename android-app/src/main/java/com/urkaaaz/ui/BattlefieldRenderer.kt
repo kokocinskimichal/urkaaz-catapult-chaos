@@ -9,6 +9,7 @@ import android.graphics.Path
 import android.graphics.RectF
 import android.graphics.Shader
 import android.graphics.Typeface
+import android.util.Log
 import com.urkaaaz.android.R
 import com.urkaaaz.contracts.FortressHitboxProfile
 import com.urkaaaz.contracts.FortressShieldGeometry
@@ -34,10 +35,24 @@ internal class BattlefieldRenderer(
     private val spritePaint = Paint(Paint.ANTI_ALIAS_FLAG or Paint.FILTER_BITMAP_FLAG)
     private val fortressShieldPaint = Paint(Paint.ANTI_ALIAS_FLAG or Paint.FILTER_BITMAP_FLAG)
     private val bossAnimationFrameHold = BossAnimationFrameHold<BossDrawableFrame>()
+    private val unitDrawableFrameHold = UnitDrawableFrameHold<UnitDrawableFrame>(
+        sizeOf = { it.bitmap.allocationByteCount },
+    )
+    private val unitSpriteFallbackLogStateByEntity = mutableMapOf<String, String>()
 
     private data class BossDrawableFrame(
         val bitmap: Bitmap,
         val animation: BossSpriteAnimationDefinition?,
+    )
+
+    private data class UnitDrawableFrame(
+        val bitmap: Bitmap,
+        val animationName: String,
+        val spriteWidthWorld: Float,
+        val spriteHeightWorld: Float,
+        val bottomPaddingWorld: Float,
+        val centerOffsetWorld: Float,
+        val healthBarSpriteHeightWorld: Float,
     )
 
     fun render(
@@ -1086,9 +1101,20 @@ internal class BattlefieldRenderer(
     ) {
         val unitPaint = Paint(Paint.ANTI_ALIAS_FLAG)
         val worldToViewportScale = viewportWidth / WORLD_WIDTH
+        val unitFrameKeys = state.units.mapTo(mutableSetOf()) { unit ->
+            UnitDrawableFrameKey(
+                matchId = state.matchId,
+                matchGeneration = state.matchGeneration,
+                entityId = unit.entityId,
+                unitType = unit.unitType,
+                teamLabel = unit.teamLabel,
+            )
+        }
+        unitDrawableFrameHold.retainOnly(unitFrameKeys)
         val unitEntityIds = state.units.asSequence()
             .map(UnitRenderState::entityId)
             .toSet()
+        unitSpriteFallbackLogStateByEntity.keys.retainAll(unitEntityIds)
         state.units.forEach { unit ->
             val centerX = worldToViewX(unit.x, viewportWidth)
             val baselineY =
@@ -1146,6 +1172,16 @@ internal class BattlefieldRenderer(
                     assets.sapperReturnAnimationFrames(unit.teamLabel)
                 null -> null
             }
+            val animationName = when {
+                deathAnimationPlaying -> "death"
+                sapperReturnPosition?.phase == SapperReturnAnimationFrame.Phase.TURN -> "turn"
+                sapperReturnPosition?.phase == SapperReturnAnimationFrame.Phase.RETURN -> "return"
+                usesDemolisherAttackAnimation -> "throw"
+                useAttackAnimation -> "attack"
+                unit.unitType == "SAPPER" && sapperUsesMoveAnimation -> "move"
+                movingAnimation -> "move"
+                else -> "idle"
+            }
             val frames = if (deathAnimationPlaying) {
                 assets.unitDeathAnimationFrames(unit.unitType, unit.teamLabel)
             } else if (sapperReturnPosition != null) {
@@ -1158,22 +1194,19 @@ internal class BattlefieldRenderer(
                     useAttackAnimation,
                 )
             }
-            val frame = if (frames.frameCount == 0) {
+            val animationFrameIndex = if (frames.frameCount == 0) {
                 null
             } else if (deathAnimationPlaying) {
                 deathAnimationClock.frameIndex(unit.entityId, frames.frameCount)
-                    ?.let(frames::bitmapIfReady)
             } else if (sapperReturnPosition != null) {
-                frames.bitmapIfReady(sapperReturnPosition.index)
+                sapperReturnPosition.index
             } else if (usesDemolisherAttackAnimation) {
-                frames.bitmapIfReady(
-                    requireNotNull(unit.demolisherThrowFrameIndex)
-                        .coerceIn(0, frames.frameCount - 1),
-                )
+                requireNotNull(unit.demolisherThrowFrameIndex)
+                    .coerceIn(0, frames.frameCount - 1)
             } else if (attacking && unit.unitType != "DEMOLISHER") {
-                frames.bitmapIfReady((unit.attackProgress * frames.frameCount)
+                (unit.attackProgress * frames.frameCount)
                     .toInt()
-                    .coerceIn(0, frames.frameCount - 1))
+                    .coerceIn(0, frames.frameCount - 1)
             } else {
                 val renderFramesPerAnimationFrame = if (
                     unit.unitType == "RAGING_BOAR" && unit.moving
@@ -1187,174 +1220,99 @@ internal class BattlefieldRenderer(
                 } else {
                     animationFrame
                 }
-                frames.bitmapIfReady(
-                    (unitAnimationFrame / renderFramesPerAnimationFrame +
-                        Math.floorMod(unit.entityId.hashCode(), frames.frameCount)) %
-                        frames.frameCount,
-                )
+                (unitAnimationFrame / renderFramesPerAnimationFrame +
+                    Math.floorMod(unit.entityId.hashCode(), frames.frameCount)) %
+                    frames.frameCount
             }
-            val bitmap = frame ?: assets.unitBitmap(unit.unitType, unit.teamLabel)
-            if (bitmap != null) {
-                val baseSpriteHeightWorld = when (unit.unitType) {
-                    "SAPPER" -> 144f
-                    "RAGING_BOAR" -> 220f * 1.6f * BOAR_SOURCE_CROP_HEIGHT_RATIO
-                    "SLINGMASTER" -> 170f
-                    else -> 150f
-                } * 0.96f * 0.308f * WorldScale.UNIT_SCALE
-                val usesGeneratedDefenderAnimation =
-                    frame != null &&
-                        unit.unitType == "DEFENDER" &&
-                        (unit.teamLabel == "BLUE" || unit.teamLabel == "RED")
-                val usesGeneratedDemolisherAnimation =
-                    frame != null &&
-                        unit.unitType == "DEMOLISHER" &&
-                        (unit.teamLabel == "BLUE" || unit.teamLabel == "RED")
-                val usesGeneratedSapperAnimation =
-                    frame != null &&
-                        !deathAnimationPlaying &&
-                        unit.unitType == "SAPPER" &&
-                        (unit.teamLabel == "BLUE" || unit.teamLabel == "RED")
-                val usesGeneratedRagingBoarIdleAnimation =
-                    bitmap != null &&
-                        unit.unitType == "RAGING_BOAR" &&
-                        (unit.teamLabel == "BLUE" || unit.teamLabel == "RED") &&
-                        !deathAnimationPlaying &&
-                        (
-                            frame == null ||
-                                (!unit.moving && !attacking)
-                        )
-                val usesGeneratedRagingBoarAttackAnimation =
-                    bitmap != null &&
-                        frame != null &&
-                        unit.unitType == "RAGING_BOAR" &&
-                        (unit.teamLabel == "BLUE" || unit.teamLabel == "RED") &&
-                        !deathAnimationPlaying &&
-                        attacking
-                val usesGeneratedRagingBoarMoveAnimation =
-                    bitmap != null &&
-                        frame != null &&
-                        unit.unitType == "RAGING_BOAR" &&
-                        (unit.teamLabel == "BLUE" || unit.teamLabel == "RED") &&
-                        !deathAnimationPlaying &&
-                        unit.moving &&
-                        !attacking
-                val usesGeneratedRagingBoarDeathAnimation =
-                    frame != null &&
-                        unit.unitType == "RAGING_BOAR" &&
-                        (unit.teamLabel == "BLUE" || unit.teamLabel == "RED") &&
-                        deathAnimationPlaying
-                val usesGeneratedSapperAttackAnimation =
-                    usesGeneratedSapperAnimation && attacking
-                val usesGeneratedSapperMoveAnimation =
-                    usesGeneratedSapperAnimation && sapperUsesMoveAnimation
-                val usesGeneratedSapperTurnAnimation =
-                    usesGeneratedSapperAnimation &&
-                        sapperReturnPosition?.phase == SapperReturnAnimationFrame.Phase.TURN
-                val usesGeneratedSapperReturnAnimation =
-                    usesGeneratedSapperAnimation &&
-                        sapperReturnPosition?.phase == SapperReturnAnimationFrame.Phase.RETURN
-                val usesGeneratedSlingmasterAnimation =
-                    frame != null &&
-                        unit.unitType == "SLINGMASTER" &&
-                        (unit.teamLabel == "BLUE" || unit.teamLabel == "RED") &&
-                        !deathAnimationPlaying
-                val usesGeneratedSlingmasterDeathAnimation =
-                    frame != null &&
-                        unit.unitType == "SLINGMASTER" &&
-                        (unit.teamLabel == "BLUE" || unit.teamLabel == "RED") &&
-                        deathAnimationPlaying
-                val usesGeneratedSlingmasterAttackAnimation =
-                    usesGeneratedSlingmasterAnimation && attacking
-                val generatedAnimationCanvasScale = when {
-                    usesGeneratedDefenderAnimation -> GENERATED_DEFENDER_CANVAS_SCALE
-                    usesGeneratedSlingmasterDeathAnimation ->
-                        GENERATED_SLINGMASTER_DEATH_CANVAS_SCALE
-                    usesGeneratedSlingmasterAttackAnimation ->
-                        GENERATED_SLINGMASTER_ATTACK_CANVAS_SCALE
-                    usesGeneratedSlingmasterAnimation ->
-                        GENERATED_SLINGMASTER_CANVAS_SCALE
-                    usesGeneratedRagingBoarDeathAnimation ->
-                        GENERATED_RAGING_BOAR_DEATH_CANVAS_SCALE
-                    usesGeneratedRagingBoarIdleAnimation ||
-                        usesGeneratedRagingBoarMoveAnimation ||
-                        usesGeneratedRagingBoarAttackAnimation ->
-                        GENERATED_RAGING_BOAR_IDLE_CANVAS_SCALE
-                    usesGeneratedDemolisherAnimation ->
-                        GENERATED_DEMOLISHER_CANVAS_SCALE
-                    usesGeneratedSapperTurnAnimation ->
-                        sapperTurnCanvasScale(
-                            frameIndex = requireNotNull(sapperReturnPosition).index,
-                            frameCount = requireNotNull(sapperReturnFrames).frameCount,
-                        )
-                    usesGeneratedSapperReturnAnimation ->
-                        GENERATED_SAPPER_RETURN_CANVAS_SCALE
-                    usesGeneratedSapperAttackAnimation ->
-                        GENERATED_SAPPER_ATTACK_CANVAS_SCALE
-                    usesGeneratedSapperMoveAnimation -> GENERATED_SAPPER_MOVE_CANVAS_SCALE
-                    usesGeneratedSapperAnimation -> GENERATED_SAPPER_CANVAS_SCALE
-                    else -> 1f
-                }
-                val spriteHeightWorld =
-                    baseSpriteHeightWorld * generatedAnimationCanvasScale
-                val spriteHeight = spriteHeightWorld * worldToViewportScale
-                val spriteWidth = spriteHeight * bitmap.width / bitmap.height
-                val generatedAnimationBottomPaddingRatio = when {
-                    usesGeneratedSlingmasterDeathAnimation ->
-                        GENERATED_SLINGMASTER_DEATH_BOTTOM_PADDING_RATIO
-                    usesGeneratedSlingmasterAttackAnimation ->
-                        GENERATED_SLINGMASTER_ATTACK_BOTTOM_PADDING_RATIO
-                    usesGeneratedSlingmasterAnimation ->
-                        GENERATED_SLINGMASTER_BOTTOM_PADDING_RATIO
-                    usesGeneratedRagingBoarDeathAnimation ->
-                        GENERATED_RAGING_BOAR_DEATH_BOTTOM_PADDING_RATIO
-                    usesGeneratedRagingBoarIdleAnimation ||
-                        usesGeneratedRagingBoarMoveAnimation ||
-                        usesGeneratedRagingBoarAttackAnimation ->
-                        GENERATED_RAGING_BOAR_IDLE_BOTTOM_PADDING_RATIO
-                    usesGeneratedDemolisherAnimation ->
-                        GENERATED_DEMOLISHER_BOTTOM_PADDING_RATIO
-                    usesGeneratedSapperTurnAnimation ->
-                        GENERATED_SAPPER_TURN_BOTTOM_PADDING_RATIO
-                    usesGeneratedSapperReturnAnimation ->
-                        GENERATED_SAPPER_RETURN_BOTTOM_PADDING_RATIO
-                    usesGeneratedSapperAttackAnimation ->
-                        GENERATED_SAPPER_ATTACK_BOTTOM_PADDING_RATIO
-                    usesGeneratedSapperMoveAnimation ->
-                        GENERATED_SAPPER_MOVE_BOTTOM_PADDING_RATIO
-                    usesGeneratedSapperAnimation -> GENERATED_SAPPER_BOTTOM_PADDING_RATIO
-                    !usesGeneratedDefenderAnimation -> 0f
-                    defeated ->
-                        GENERATED_BLUE_DEFENDER_DEATH_BOTTOM_PADDING_RATIO
-                    unit.moving -> GENERATED_DEFENDER_JOG_BOTTOM_PADDING_RATIO
-                    attacking ->
-                        GENERATED_BLUE_DEFENDER_COMBAT_BOTTOM_PADDING_RATIO
-                    else -> GENERATED_BLUE_DEFENDER_IDLE_BOTTOM_PADDING_RATIO
-                }
-                val transparentBottomPadding =
-                    spriteHeight * generatedAnimationBottomPaddingRatio
-                val spriteCenterX = centerX + if (usesGeneratedSlingmasterAttackAnimation) {
-                    val teamDirection = if (unit.teamLabel == "RED") -1f else 1f
-                    spriteWidth *
-                        GENERATED_SLINGMASTER_ATTACK_HORIZONTAL_OFFSET_RATIO *
-                        teamDirection
-                } else {
-                    0f
-                }
-                val healthBarSpriteHeightWorld = if (
-                    usesGeneratedDefenderAnimation ||
-                    usesGeneratedRagingBoarDeathAnimation ||
-                    usesGeneratedRagingBoarIdleAnimation ||
-                    usesGeneratedRagingBoarMoveAnimation ||
-                    usesGeneratedRagingBoarAttackAnimation ||
-                    usesGeneratedDemolisherAnimation ||
-                    usesGeneratedSapperAnimation ||
-                    usesGeneratedSlingmasterAnimation ||
-                    usesGeneratedSlingmasterDeathAnimation
+            val animationRead = animationFrameIndex?.let(frames::requestFrame)
+            val frame = animationRead?.bitmap
+            val fallbackRead = if (frame == null) {
+                assets.unitBitmapRead(unit.unitType, unit.teamLabel)
+            } else {
+                null
+            }
+            val bitmap = frame ?: fallbackRead?.bitmap
+            val drawableFrameKey = UnitDrawableFrameKey(
+                matchId = state.matchId,
+                matchGeneration = state.matchGeneration,
+                entityId = unit.entityId,
+                unitType = unit.unitType,
+                teamLabel = unit.teamLabel,
+            )
+            val lastReadyFrame = unitDrawableFrameHold.lastReady(drawableFrameKey)
+            val animationFrameUnavailable = when (animationRead?.status) {
+                BitmapReadStatus.PENDING,
+                BitmapReadStatus.CACHE_MISS_AFTER_READY,
+                BitmapReadStatus.QUEUE_REJECTED -> true
+                else -> false
+            }
+            val shouldHoldLastReadyFrame =
+                frame == null && animationFrameUnavailable && lastReadyFrame != null
+            val bitmapForPresentation = bitmap.takeUnless { shouldHoldLastReadyFrame }
+            val candidateFrame = bitmapForPresentation?.let {
+                if (lastReadyFrame?.bitmap === it &&
+                    lastReadyFrame.animationName == animationName
                 ) {
-                    baseSpriteHeightWorld
+                    lastReadyFrame
                 } else {
-                    spriteHeightWorld
+                    createUnitDrawableFrame(
+                        unit = unit,
+                        bitmap = it,
+                        animationName = animationName,
+                        frameIsAnimated = frame != null,
+                        attacking = attacking,
+                        defeated = defeated,
+                        deathAnimationPlaying = deathAnimationPlaying,
+                        sapperUsesMoveAnimation = sapperUsesMoveAnimation,
+                        sapperReturnPosition = sapperReturnPosition,
+                        sapperReturnFrames = sapperReturnFrames,
+                    )
                 }
+            }
+            val drawableFrame = unitDrawableFrameHold.resolve(drawableFrameKey, candidateFrame)
+            val isHoldingLastReadyFrame =
+                drawableFrame != null && candidateFrame == null
+            if (drawableFrame != null) {
+                if (isHoldingLastReadyFrame) {
+                    val heldState = listOf(
+                        "held",
+                        state.matchGeneration,
+                        unit.unitType,
+                        unit.teamLabel,
+                        unit.actionState,
+                        animationName,
+                        animationRead?.status ?: BitmapReadStatus.NO_SEQUENCE,
+                        animationRead?.assetKey,
+                        fallbackRead?.status,
+                        fallbackRead?.assetKey,
+                    ).joinToString("|")
+                    if (
+                        assets.debugLoggingEnabled &&
+                        unitSpriteFallbackLogStateByEntity[unit.entityId] != heldState
+                    ) {
+                        Log.d(
+                            UNIT_ANIMATION_FALLBACK_LOG_TAG,
+                            "unit_sprite_frame_held entity=${unit.entityId} " +
+                                "type=${unit.unitType} team=${unit.teamLabel} " +
+                                "state=${unit.actionState} requestedAnimation=$animationName " +
+                                "heldAnimation=${drawableFrame.animationName} " +
+                                "frame=${animationFrameIndex ?: "none"}/${frames.frameCount} " +
+                                "frameStatus=${animationRead?.status ?: BitmapReadStatus.NO_SEQUENCE} " +
+                                "frameAsset=${animationRead?.assetKey ?: "none"} " +
+                                "fallbackStatus=${fallbackRead?.status ?: BitmapReadStatus.NO_SEQUENCE} " +
+                                "fallbackAsset=${fallbackRead?.assetKey ?: "none"}",
+                        )
+                    }
+                    unitSpriteFallbackLogStateByEntity[unit.entityId] = heldState
+                } else {
+                    unitSpriteFallbackLogStateByEntity.remove(unit.entityId)
+                }
+                val spriteHeight = drawableFrame.spriteHeightWorld * worldToViewportScale
+                val spriteWidth = drawableFrame.spriteWidthWorld * worldToViewportScale
+                val transparentBottomPadding =
+                    drawableFrame.bottomPaddingWorld * worldToViewportScale
+                val spriteCenterX =
+                    centerX + drawableFrame.centerOffsetWorld * worldToViewportScale
                 if (
                     HasteOrbitingChevronPresentation.shouldRender(
                         unit.hasted,
@@ -1372,7 +1330,7 @@ internal class BattlefieldRenderer(
                     )
                 }
                 canvas.drawBitmap(
-                    bitmap,
+                    drawableFrame.bitmap,
                     null,
                     RectF(
                         spriteCenterX - spriteWidth / 2f,
@@ -1386,7 +1344,8 @@ internal class BattlefieldRenderer(
                     canvas = canvas,
                     centerX = centerX,
                     centerY = baselineY -
-                        (healthBarSpriteHeightWorld + 14f) * worldToViewportScale,
+                        (drawableFrame.healthBarSpriteHeightWorld + 14f) *
+                        worldToViewportScale,
                     width = UNIT_HEALTH_BAR_WIDTH_WORLD * WorldScale.UNIT_SCALE *
                         worldToViewportScale,
                     health = unit.health,
@@ -1397,12 +1356,43 @@ internal class BattlefieldRenderer(
                         canvas,
                         centerX,
                         baselineY -
-                            (healthBarSpriteHeightWorld + 30f * WorldScale.UNIT_SCALE) *
+                            (drawableFrame.healthBarSpriteHeightWorld +
+                                30f * WorldScale.UNIT_SCALE) *
                             worldToViewportScale,
                         unit.sapperHasBomb,
                     )
                 }
             } else {
+                val resolvedFallbackRead = requireNotNull(fallbackRead)
+                val frameStatus = animationRead?.status ?: BitmapReadStatus.NO_SEQUENCE
+                val fallbackState = listOf(
+                    "fallback",
+                    state.matchGeneration,
+                    unit.unitType,
+                    unit.teamLabel,
+                    unit.actionState,
+                    animationName,
+                    frameStatus,
+                    resolvedFallbackRead.status,
+                ).joinToString("|")
+                if (
+                    assets.debugLoggingEnabled &&
+                    unitSpriteFallbackLogStateByEntity[unit.entityId] != fallbackState
+                ) {
+                    Log.w(
+                        UNIT_ANIMATION_FALLBACK_LOG_TAG,
+                        "unit_sprite_fallback entity=${unit.entityId} " +
+                            "type=${unit.unitType} team=${unit.teamLabel} " +
+                            "state=${unit.actionState} moving=${unit.moving} " +
+                            "attacking=$attacking animation=$animationName " +
+                            "frame=${animationFrameIndex ?: "none"}/${frames.frameCount} " +
+                            "frameStatus=$frameStatus " +
+                            "frameAsset=${animationRead?.assetKey ?: "none"} " +
+                            "fallbackStatus=${resolvedFallbackRead.status} " +
+                            "fallbackAsset=${resolvedFallbackRead.assetKey ?: "none"}",
+                    )
+                }
+                unitSpriteFallbackLogStateByEntity[unit.entityId] = fallbackState
                 unitPaint.color = if (unit.teamLabel == "BLUE") {
                     Color.rgb(65, 125, 220)
                 } else {
@@ -1426,6 +1416,166 @@ internal class BattlefieldRenderer(
                 )
             }
         }
+    }
+
+    private fun createUnitDrawableFrame(
+        unit: UnitRenderState,
+        bitmap: Bitmap,
+        animationName: String,
+        frameIsAnimated: Boolean,
+        attacking: Boolean,
+        defeated: Boolean,
+        deathAnimationPlaying: Boolean,
+        sapperUsesMoveAnimation: Boolean,
+        sapperReturnPosition: SapperReturnAnimationFrame?,
+        sapperReturnFrames: BitmapFrameSequence?,
+    ): UnitDrawableFrame {
+        val baseSpriteHeightWorld = when (unit.unitType) {
+            "SAPPER" -> 144f
+            "RAGING_BOAR" -> 220f * 1.6f * BOAR_SOURCE_CROP_HEIGHT_RATIO
+            "SLINGMASTER" -> 170f
+            else -> 150f
+        } * 0.96f * 0.308f * WorldScale.UNIT_SCALE
+        val usesBlueOrRedTexture = unit.teamLabel == "BLUE" || unit.teamLabel == "RED"
+        val usesGeneratedDefenderAnimation =
+            frameIsAnimated && unit.unitType == "DEFENDER" && usesBlueOrRedTexture
+        val usesGeneratedDemolisherAnimation =
+            frameIsAnimated && unit.unitType == "DEMOLISHER" && usesBlueOrRedTexture
+        val usesGeneratedSapperAnimation =
+            frameIsAnimated &&
+                !deathAnimationPlaying &&
+                unit.unitType == "SAPPER" &&
+                usesBlueOrRedTexture
+        val usesGeneratedRagingBoarIdleAnimation =
+            unit.unitType == "RAGING_BOAR" &&
+                usesBlueOrRedTexture &&
+                !deathAnimationPlaying &&
+                (!frameIsAnimated || (!unit.moving && !attacking))
+        val usesGeneratedRagingBoarAttackAnimation =
+            frameIsAnimated &&
+                unit.unitType == "RAGING_BOAR" &&
+                usesBlueOrRedTexture &&
+                !deathAnimationPlaying &&
+                attacking
+        val usesGeneratedRagingBoarMoveAnimation =
+            frameIsAnimated &&
+                unit.unitType == "RAGING_BOAR" &&
+                usesBlueOrRedTexture &&
+                !deathAnimationPlaying &&
+                unit.moving &&
+                !attacking
+        val usesGeneratedRagingBoarDeathAnimation =
+            frameIsAnimated &&
+                unit.unitType == "RAGING_BOAR" &&
+                usesBlueOrRedTexture &&
+                deathAnimationPlaying
+        val usesGeneratedSapperAttackAnimation = usesGeneratedSapperAnimation && attacking
+        val usesGeneratedSapperMoveAnimation =
+            usesGeneratedSapperAnimation && sapperUsesMoveAnimation
+        val usesGeneratedSapperTurnAnimation =
+            usesGeneratedSapperAnimation &&
+                sapperReturnPosition?.phase == SapperReturnAnimationFrame.Phase.TURN
+        val usesGeneratedSapperReturnAnimation =
+            usesGeneratedSapperAnimation &&
+                sapperReturnPosition?.phase == SapperReturnAnimationFrame.Phase.RETURN
+        val usesGeneratedSlingmasterAnimation =
+            frameIsAnimated &&
+                unit.unitType == "SLINGMASTER" &&
+                usesBlueOrRedTexture &&
+                !deathAnimationPlaying
+        val usesGeneratedSlingmasterDeathAnimation =
+            frameIsAnimated &&
+                unit.unitType == "SLINGMASTER" &&
+                usesBlueOrRedTexture &&
+                deathAnimationPlaying
+        val usesGeneratedSlingmasterAttackAnimation =
+            usesGeneratedSlingmasterAnimation && attacking
+        val generatedAnimationCanvasScale = when {
+            usesGeneratedDefenderAnimation -> GENERATED_DEFENDER_CANVAS_SCALE
+            usesGeneratedSlingmasterDeathAnimation ->
+                GENERATED_SLINGMASTER_DEATH_CANVAS_SCALE
+            usesGeneratedSlingmasterAttackAnimation ->
+                GENERATED_SLINGMASTER_ATTACK_CANVAS_SCALE
+            usesGeneratedSlingmasterAnimation ->
+                GENERATED_SLINGMASTER_CANVAS_SCALE
+            usesGeneratedRagingBoarDeathAnimation ->
+                GENERATED_RAGING_BOAR_DEATH_CANVAS_SCALE
+            usesGeneratedRagingBoarIdleAnimation ||
+                usesGeneratedRagingBoarMoveAnimation ||
+                usesGeneratedRagingBoarAttackAnimation ->
+                GENERATED_RAGING_BOAR_IDLE_CANVAS_SCALE
+            usesGeneratedDemolisherAnimation -> GENERATED_DEMOLISHER_CANVAS_SCALE
+            usesGeneratedSapperTurnAnimation ->
+                sapperTurnCanvasScale(
+                    frameIndex = requireNotNull(sapperReturnPosition).index,
+                    frameCount = requireNotNull(sapperReturnFrames).frameCount,
+                )
+            usesGeneratedSapperReturnAnimation -> GENERATED_SAPPER_RETURN_CANVAS_SCALE
+            usesGeneratedSapperAttackAnimation -> GENERATED_SAPPER_ATTACK_CANVAS_SCALE
+            usesGeneratedSapperMoveAnimation -> GENERATED_SAPPER_MOVE_CANVAS_SCALE
+            usesGeneratedSapperAnimation -> GENERATED_SAPPER_CANVAS_SCALE
+            else -> 1f
+        }
+        val spriteHeightWorld = baseSpriteHeightWorld * generatedAnimationCanvasScale
+        val spriteWidthWorld = spriteHeightWorld * bitmap.width / bitmap.height
+        val generatedAnimationBottomPaddingRatio = when {
+            usesGeneratedSlingmasterDeathAnimation ->
+                GENERATED_SLINGMASTER_DEATH_BOTTOM_PADDING_RATIO
+            usesGeneratedSlingmasterAttackAnimation ->
+                GENERATED_SLINGMASTER_ATTACK_BOTTOM_PADDING_RATIO
+            usesGeneratedSlingmasterAnimation ->
+                GENERATED_SLINGMASTER_BOTTOM_PADDING_RATIO
+            usesGeneratedRagingBoarDeathAnimation ->
+                GENERATED_RAGING_BOAR_DEATH_BOTTOM_PADDING_RATIO
+            usesGeneratedRagingBoarIdleAnimation ||
+                usesGeneratedRagingBoarMoveAnimation ||
+                usesGeneratedRagingBoarAttackAnimation ->
+                GENERATED_RAGING_BOAR_IDLE_BOTTOM_PADDING_RATIO
+            usesGeneratedDemolisherAnimation ->
+                GENERATED_DEMOLISHER_BOTTOM_PADDING_RATIO
+            usesGeneratedSapperTurnAnimation -> GENERATED_SAPPER_TURN_BOTTOM_PADDING_RATIO
+            usesGeneratedSapperReturnAnimation -> GENERATED_SAPPER_RETURN_BOTTOM_PADDING_RATIO
+            usesGeneratedSapperAttackAnimation -> GENERATED_SAPPER_ATTACK_BOTTOM_PADDING_RATIO
+            usesGeneratedSapperMoveAnimation -> GENERATED_SAPPER_MOVE_BOTTOM_PADDING_RATIO
+            usesGeneratedSapperAnimation -> GENERATED_SAPPER_BOTTOM_PADDING_RATIO
+            !usesGeneratedDefenderAnimation -> 0f
+            defeated -> GENERATED_BLUE_DEFENDER_DEATH_BOTTOM_PADDING_RATIO
+            unit.moving -> GENERATED_DEFENDER_JOG_BOTTOM_PADDING_RATIO
+            attacking -> GENERATED_BLUE_DEFENDER_COMBAT_BOTTOM_PADDING_RATIO
+            else -> GENERATED_BLUE_DEFENDER_IDLE_BOTTOM_PADDING_RATIO
+        }
+        val centerOffsetWorld = if (usesGeneratedSlingmasterAttackAnimation) {
+            val teamDirection = if (unit.teamLabel == "RED") -1f else 1f
+            spriteWidthWorld *
+                GENERATED_SLINGMASTER_ATTACK_HORIZONTAL_OFFSET_RATIO *
+                teamDirection
+        } else {
+            0f
+        }
+        val healthBarSpriteHeightWorld = if (
+            usesGeneratedDefenderAnimation ||
+            usesGeneratedRagingBoarDeathAnimation ||
+            usesGeneratedRagingBoarIdleAnimation ||
+            usesGeneratedRagingBoarMoveAnimation ||
+            usesGeneratedRagingBoarAttackAnimation ||
+            usesGeneratedDemolisherAnimation ||
+            usesGeneratedSapperAnimation ||
+            usesGeneratedSlingmasterAnimation ||
+            usesGeneratedSlingmasterDeathAnimation
+        ) {
+            baseSpriteHeightWorld
+        } else {
+            spriteHeightWorld
+        }
+        return UnitDrawableFrame(
+            bitmap = bitmap,
+            animationName = animationName,
+            spriteWidthWorld = spriteWidthWorld,
+            spriteHeightWorld = spriteHeightWorld,
+            bottomPaddingWorld = spriteHeightWorld * generatedAnimationBottomPaddingRatio,
+            centerOffsetWorld = centerOffsetWorld,
+            healthBarSpriteHeightWorld = healthBarSpriteHeightWorld,
+        )
     }
 
     private fun drawHasteOrbitingChevronEffect(
@@ -1820,6 +1970,7 @@ internal class BattlefieldRenderer(
         private const val SOIL_TILE_WIDTH = 256f
         private const val HEALTH_BAR_HEIGHT = 8f
         private const val HEALTH_BAR_CORNER_RADIUS = 3f
+        private const val UNIT_ANIMATION_FALLBACK_LOG_TAG = "UnitAnimationFallback"
         private const val RELOAD_INDICATOR_RADIUS = 12f
         private const val CATAPULT_RELOAD_BADGE_GAP = 8f
         private const val UNIT_HEALTH_BAR_WIDTH_WORLD = 46.2f

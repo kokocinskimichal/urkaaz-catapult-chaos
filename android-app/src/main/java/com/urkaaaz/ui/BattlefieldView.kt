@@ -300,6 +300,14 @@ class BattlefieldView(context: Context) : View(context) {
         invalidate()
     }
 
+    internal fun preloadUnitFallbacks(
+        unitTypesByTeam: Map<Team, Set<String>>,
+    ): UnitFallbackPreloadProgress = assets.preloadUnitFallbacks(unitTypesByTeam)
+
+    internal fun retryUnitFallbacks(unitTypesByTeam: Map<Team, Set<String>>) {
+        assets.retryUnitFallbacks(unitTypesByTeam)
+    }
+
     fun isBossDeathPresentationPending(state: RenderState): Boolean {
         val defeatedBoss = state.boss?.takeIf { it.health <= 0 } ?: return false
         return !bossPresentationClock.isDeathPresentationComplete(defeatedBoss.entityId)

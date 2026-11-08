@@ -71,6 +71,8 @@ do bieżącego zadania według [indeksu dokumentów kontekstu](docs/agent-contex
 
 - [Plan optymalizacji renderowania pola bitwy](docs/performance/battlefield-rendering-optimization-plan.md)
 - [Prompt implementacyjny](docs/performance/battlefield-rendering-implementation-prompt.md)
+- [Plan ciągłości animacji jednostek](docs/performance/unit-animation-fallback-plan.md)
+- [Prompt implementacyjny ciągłości animacji](docs/performance/unit-animation-fallback-implementation-prompt.md)
 
 ### Systemy gry
 

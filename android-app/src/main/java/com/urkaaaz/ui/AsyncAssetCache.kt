@@ -8,8 +8,24 @@ import java.util.concurrent.RejectedExecutionException
 internal sealed interface AsyncAssetResult<out T> {
     data class Ready<T>(val value: T) : AsyncAssetResult<T>
     data object Pending : AsyncAssetResult<Nothing>
+    data object QueueRejected : AsyncAssetResult<Nothing>
     data class Failed(val cause: Exception) : AsyncAssetResult<Nothing>
 }
+
+internal enum class BitmapReadStatus {
+    READY,
+    PENDING,
+    CACHE_MISS_AFTER_READY,
+    QUEUE_REJECTED,
+    MISSING_RESOURCE,
+    NO_SEQUENCE,
+}
+
+internal data class BitmapRead(
+    val bitmap: Bitmap?,
+    val assetKey: String?,
+    val status: BitmapReadStatus,
+)
 
 internal class AsyncAssetCache<T>(
     maxKilobytes: Int,
@@ -60,7 +76,7 @@ internal class AsyncAssetCache<T>(
             executor.execute(task)
         } catch (_: RejectedExecutionException) {
             pendingTasks.remove(key)
-            return@synchronized AsyncAssetResult.Pending
+            return@synchronized AsyncAssetResult.QueueRejected
         }
         AsyncAssetResult.Pending
     }
@@ -70,6 +86,12 @@ internal class AsyncAssetCache<T>(
             pendingTasks.remove(key)?.cancel(true)
             failures.remove(key)
             cache.put(key, value)
+        }
+    }
+
+    fun clearFailure(key: String) {
+        synchronized(lock) {
+            failures.remove(key)
         }
     }
 
@@ -88,12 +110,63 @@ internal class BitmapFrameSequence(
     private val decodeFrame: (Int) -> Bitmap,
     private val prefetchAhead: Int = DEFAULT_PREFETCH_AHEAD,
 ) {
+    private val previouslyReadyFrameKeys = mutableSetOf<String>()
+
     init {
         require(frameCount >= 0) { "frameCount must not be negative" }
         require(prefetchAhead >= 0) { "prefetchAhead must not be negative" }
     }
 
-    fun bitmapIfReady(index: Int): Bitmap? {
+    fun requestFrame(index: Int): BitmapRead {
+        if (frameCount == 0) {
+            return BitmapRead(
+                bitmap = null,
+                assetKey = null,
+                status = BitmapReadStatus.NO_SEQUENCE,
+            )
+        }
+        var currentResult: AsyncAssetResult<Bitmap>? = null
+        var currentFrameKey: String? = null
+        val bitmap = requestFrameBitmap(index) { key, result ->
+            currentFrameKey = key
+            currentResult = result
+            if (result is AsyncAssetResult.Ready) previouslyReadyFrameKeys += key
+        }
+        val key = requireNotNull(currentFrameKey)
+        return when (val result = requireNotNull(currentResult)) {
+            is AsyncAssetResult.Ready ->
+                BitmapRead(bitmap, key, BitmapReadStatus.READY)
+            AsyncAssetResult.Pending ->
+                BitmapRead(
+                    bitmap = null,
+                    assetKey = key,
+                    status = if (key in previouslyReadyFrameKeys) {
+                        BitmapReadStatus.CACHE_MISS_AFTER_READY
+                    } else {
+                        BitmapReadStatus.PENDING
+                    },
+                )
+            AsyncAssetResult.QueueRejected ->
+                BitmapRead(null, key, BitmapReadStatus.QUEUE_REJECTED)
+            is AsyncAssetResult.Failed ->
+                error("Failed animation frame '$key' was already surfaced")
+        }
+    }
+
+    fun bitmapIfReady(index: Int): Bitmap? = requestFrameBitmap(index)
+
+    fun retryFrame(index: Int) {
+        if (frameCount == 0) return
+        require(index in 0 until frameCount) {
+            "Frame index $index is outside 0 until $frameCount"
+        }
+        requireNotNull(cache).clearFailure(frameKey(index))
+    }
+
+    private fun requestFrameBitmap(
+        index: Int,
+        onCurrentResult: ((String, AsyncAssetResult<Bitmap>) -> Unit)? = null,
+    ): Bitmap? {
         if (frameCount == 0) return null
         require(index in 0 until frameCount) {
             "Frame index $index is outside 0 until $frameCount"
@@ -106,19 +179,21 @@ internal class BitmapFrameSequence(
         val lastPrefetchIndex = (index + prefetchAhead).coerceAtMost(frameCount - 1)
         for (frameIndex in index..lastPrefetchIndex) {
             val key = frameKey(frameIndex)
-            when (val result = frameCache.request(key) { decodeFrame(frameIndex) }) {
-                is AsyncAssetResult.Ready -> {
-                    if (frameIndex == index) currentFrame = result.value
+            val result = frameCache.request(key) { decodeFrame(frameIndex) }
+            if (frameIndex == index) {
+                when (result) {
+                    is AsyncAssetResult.Ready -> currentFrame = result.value
+                    AsyncAssetResult.Pending,
+                    AsyncAssetResult.QueueRejected,
+                    is AsyncAssetResult.Failed -> Unit
                 }
-                AsyncAssetResult.Pending -> Unit
-                is AsyncAssetResult.Failed -> {
-                    if (frameIndex == index) {
-                        throw IllegalStateException(
-                            "Failed to decode animation frame '$key'",
-                            result.cause,
-                        )
-                    }
-                }
+                onCurrentResult?.invoke(key, result)
+            }
+            if (frameIndex == index && result is AsyncAssetResult.Failed) {
+                throw IllegalStateException(
+                    "Failed to decode animation frame '$key'",
+                    result.cause,
+                )
             }
         }
         return currentFrame

@@ -3,6 +3,7 @@ package com.urkaaaz
 import com.urkaaaz.android.R
 import com.urkaaaz.contracts.PlayerId
 import com.urkaaaz.contracts.PlayerLoadoutConfig
+import com.urkaaaz.contracts.Team
 import com.urkaaaz.application.loadout.LoadoutCatalog
 import com.urkaaaz.ui.MatchUiAction
 import com.urkaaaz.ui.MatchViewModel
@@ -165,6 +166,13 @@ class MatchViewModelCombatTest {
         val viewModel = MatchViewModel(campaignLevel = 1)
 
         assertEquals(listOf("DEFENDER"), viewModel.selectableUnitTypes)
+        assertEquals(
+            mapOf(
+                Team.BLUE to setOf("DEFENDER"),
+                Team.RED to setOf("DEFENDER"),
+            ),
+            viewModel.unitAnimationPreloadTypesByTeam,
+        )
     }
 
     @Test
@@ -178,6 +186,13 @@ class MatchViewModelCombatTest {
         val viewModel = MatchViewModel(campaignLevel = 8, playerLoadout = loadout)
 
         assertEquals(listOf("DEFENDER"), viewModel.selectableUnitTypes)
+        assertEquals(
+            mapOf(
+                Team.BLUE to setOf("DEFENDER"),
+                Team.RED to setOf("DEFENDER", "SAPPER", "DEMOLISHER"),
+            ),
+            viewModel.unitAnimationPreloadTypesByTeam,
+        )
     }
 
     @Test
@@ -188,6 +203,14 @@ class MatchViewModelCombatTest {
         assertEquals(
             viewModel.selectableUnitTypes.distinct(),
             viewModel.selectableUnitTypes,
+        )
+        assertEquals(
+            mapOf(
+                Team.BLUE to viewModel.selectableUnitTypes.toSet(),
+                Team.RED to
+                    setOf("DEFENDER", "SAPPER", "DEMOLISHER", "RAGING_BOAR", "SLINGMASTER"),
+            ),
+            viewModel.unitAnimationPreloadTypesByTeam,
         )
     }
 

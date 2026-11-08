@@ -72,6 +72,11 @@
     <string name="splash_company_logo_accessibility">Logotipo de AFACODE</string>
     <string name="match_debug_ai_unit_automation">Automatizar el reclutamiento enemigo y las oleadas</string>
     <string name="match_debug_button">DEPURACIÓN</string>
+    <string name="match_loading_unit_assets_progress">Preparando imágenes de unidades (%1$d/%2$d)</string>
+    <string name="match_loading_unit_assets_failed">No se pudo cargar una imagen necesaria de unidad: %1$s</string>
+    <string name="match_loading_unit_assets_retry">REINTENTAR</string>
+    <string name="match_loading_unit_assets_back">VOLVER</string>
+    <string name="match_loading_unknown_asset_error">El cargador no proporcionó un mensaje de error.</string>
     <string name="match_debug_hitboxes">Mostrar áreas de colisión</string>
     <string name="match_debug_close_snapshot">CERRAR CAPTURA</string>
     <string name="match_debug_title">HERRAMIENTAS DE DEPURACIÓN</string>

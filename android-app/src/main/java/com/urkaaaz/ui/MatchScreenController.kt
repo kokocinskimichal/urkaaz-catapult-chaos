@@ -14,6 +14,7 @@ import android.view.View
 import android.widget.FrameLayout
 import android.widget.LinearLayout
 import android.widget.CheckBox
+import android.widget.ProgressBar
 import android.widget.ScrollView
 import android.widget.TextView
 import kotlinx.coroutines.CoroutineScope
@@ -110,7 +111,14 @@ class MatchScreenController(
     private lateinit var stockSettlementOverlay: FrameLayout
     private lateinit var stockSettlementStatusText: TextView
     private lateinit var stockSettlementRetryButton: TextView
+    private lateinit var unitFallbackLoadingOverlay: FrameLayout
+    private lateinit var unitFallbackLoadingSpinner: ProgressBar
+    private lateinit var unitFallbackLoadingProgress: ProgressBar
+    private lateinit var unitFallbackLoadingStatus: TextView
+    private lateinit var unitFallbackLoadingRetryButton: TextView
+    private lateinit var unitFallbackLoadingBackButton: TextView
     private var snapshotMode = false
+    private var matchStarted = false
     private var debugPausedMatch = false
     private var aiUnitAutomationEnabled = true
     private var campaignCompletionRecorded: Boolean? = null
@@ -139,6 +147,12 @@ class MatchScreenController(
                 gameHandler.postDelayed(this, 33L)
             }
 
+        }
+    }
+
+    private val unitFallbackPreloadTick = object : Runnable {
+        override fun run() {
+            preloadUnitFallbacks()
         }
     }
 
@@ -262,6 +276,7 @@ class MatchScreenController(
             )
         }
         stockSettlementOverlay = createStockSettlementOverlay()
+        unitFallbackLoadingOverlay = createUnitFallbackLoadingOverlay()
 
         battlefieldView.onAimChanged = { aim ->
             aimAngle = aim.angleDegrees
@@ -363,10 +378,7 @@ class MatchScreenController(
             )
             addView(resultPopupView, FrameLayout.LayoutParams(-1, -1))
             addView(stockSettlementOverlay, FrameLayout.LayoutParams(-1, -1))
-            render(viewModel.dispatch(MatchUiAction.StartMatch))
-            if (openDebugOnStart) {
-                post { showDebugToolsDialog() }
-            }
+            addView(unitFallbackLoadingOverlay, FrameLayout.LayoutParams(-1, -1))
         }
     }
 
@@ -378,12 +390,19 @@ class MatchScreenController(
         if (::battlefieldView.isInitialized) {
             battlefieldView.setLifecyclePaused(false)
         }
+        if (!matchStarted) {
+            gameHandler.removeCallbacks(unitFallbackPreloadTick)
+            unitFallbackLoadingOverlay.visibility = View.VISIBLE
+            gameHandler.post(unitFallbackPreloadTick)
+            return
+        }
         lastRenderedState?.let(::render)
         gameHandler.postDelayed(gameTick, 33L)
     }
 
     fun onPause() {
         gameHandler.removeCallbacks(gameTick)
+        gameHandler.removeCallbacks(unitFallbackPreloadTick)
         if (stockSettlementJob?.isActive == true) {
             stockSettlementJob?.cancel()
             stockSettlementJob = null
@@ -400,6 +419,11 @@ class MatchScreenController(
     }
 
     fun onBackPressed(): Boolean {
+        if (!matchStarted) {
+            gameHandler.removeCallbacks(unitFallbackPreloadTick)
+            onBackClicked()
+            return true
+        }
         val state = viewModel.renderState
         if (
             !snapshotMode &&
@@ -413,6 +437,162 @@ class MatchScreenController(
         }
         leaveAfterStockSettlement(onBackClicked)
         return true
+    }
+
+    private fun createUnitFallbackLoadingOverlay(): FrameLayout {
+        unitFallbackLoadingSpinner = ProgressBar(
+            activity,
+            null,
+            android.R.attr.progressBarStyleLarge,
+        ).apply {
+            indeterminateTintList = ColorStateList.valueOf(Color.rgb(243, 210, 138))
+        }
+        unitFallbackLoadingProgress = ProgressBar(
+            activity,
+            null,
+            android.R.attr.progressBarStyleHorizontal,
+        ).apply {
+            isIndeterminate = false
+            progressTintList = ColorStateList.valueOf(Color.rgb(243, 210, 138))
+        }
+        unitFallbackLoadingStatus = TextView(activity).apply {
+            text = activity.getString(R.string.match_loading_unit_assets_progress, 0, 1)
+            setTextColor(Color.WHITE)
+            textSize = 16f
+            gravity = Gravity.CENTER
+            UiTypography.applyButtonTypeface(this)
+        }
+        unitFallbackLoadingRetryButton = TextView(activity).apply {
+            text = activity.getString(R.string.match_loading_unit_assets_retry)
+            setTextColor(Color.WHITE)
+            gravity = Gravity.CENTER
+            UiTypography.applyButtonTypeface(this)
+            setPadding(dp(16), dp(10), dp(16), dp(10))
+            setBackgroundResource(com.urkaaaz.android.R.drawable.bg_hud_panel)
+            visibility = View.GONE
+            setOnClickListener {
+                battlefieldView.retryUnitFallbacks(viewModel.unitAnimationPreloadTypesByTeam)
+                visibility = View.GONE
+                unitFallbackLoadingSpinner.visibility = View.VISIBLE
+                unitFallbackLoadingProgress.visibility = View.VISIBLE
+                gameHandler.removeCallbacks(unitFallbackPreloadTick)
+                gameHandler.post(unitFallbackPreloadTick)
+            }
+        }
+        unitFallbackLoadingBackButton = TextView(activity).apply {
+            text = activity.getString(R.string.match_loading_unit_assets_back)
+            setTextColor(Color.WHITE)
+            gravity = Gravity.CENTER
+            UiTypography.applyButtonTypeface(this)
+            setPadding(dp(16), dp(10), dp(16), dp(10))
+            setBackgroundResource(com.urkaaaz.android.R.drawable.bg_hud_panel)
+            setOnClickListener {
+                gameHandler.removeCallbacks(unitFallbackPreloadTick)
+                onBackClicked()
+            }
+        }
+        val actions = LinearLayout(activity).apply {
+            orientation = LinearLayout.HORIZONTAL
+            gravity = Gravity.CENTER
+            addView(
+                unitFallbackLoadingRetryButton,
+                LinearLayout.LayoutParams(0, -2, 1f).apply {
+                    marginEnd = dp(8)
+                },
+            )
+            addView(
+                unitFallbackLoadingBackButton,
+                LinearLayout.LayoutParams(0, -2, 1f),
+            )
+        }
+        val panel = LinearLayout(activity).apply {
+            orientation = LinearLayout.VERTICAL
+            gravity = Gravity.CENTER
+            setPadding(dp(28), dp(24), dp(28), dp(24))
+            setBackgroundResource(com.urkaaaz.android.R.drawable.bg_hud_panel)
+            addView(
+                unitFallbackLoadingSpinner,
+                LinearLayout.LayoutParams(dp(56), dp(56)),
+            )
+            addView(
+                unitFallbackLoadingStatus,
+                LinearLayout.LayoutParams(-1, -2).apply {
+                    topMargin = dp(18)
+                },
+            )
+            addView(
+                unitFallbackLoadingProgress,
+                LinearLayout.LayoutParams(-1, dp(8)).apply {
+                    topMargin = dp(14)
+                },
+            )
+            addView(
+                actions,
+                LinearLayout.LayoutParams(-1, -2).apply {
+                    topMargin = dp(18)
+                },
+            )
+        }
+        return FrameLayout(activity).apply {
+            setBackgroundColor(Color.argb(224, 10, 15, 20))
+            isClickable = true
+            addView(
+                panel,
+                FrameLayout.LayoutParams(dp(420), -2, Gravity.CENTER),
+            )
+        }
+    }
+
+    private fun preloadUnitFallbacks() {
+        if (matchStarted || activity.isFinishing) return
+        val progress = try {
+            battlefieldView.preloadUnitFallbacks(
+                unitTypesByTeam = viewModel.unitAnimationPreloadTypesByTeam,
+            )
+        } catch (exception: IllegalStateException) {
+            showUnitFallbackLoadingFailure(
+                exception.message ?: activity.getString(R.string.match_loading_unknown_asset_error),
+            )
+            return
+        }
+        if (progress.missingAssetKeys.isNotEmpty()) {
+            showUnitFallbackLoadingFailure(progress.missingAssetKeys.first())
+            return
+        }
+        unitFallbackLoadingStatus.text = activity.getString(
+            R.string.match_loading_unit_assets_progress,
+            progress.readyCount,
+            progress.totalCount,
+        )
+        unitFallbackLoadingProgress.max = progress.totalCount.coerceAtLeast(1)
+        unitFallbackLoadingProgress.progress = progress.readyCount
+        if (progress.isReady) {
+            startMatchAfterUnitFallbacks()
+        } else {
+            gameHandler.postDelayed(unitFallbackPreloadTick, UNIT_FALLBACK_PRELOAD_POLL_MILLISECONDS)
+        }
+    }
+
+    private fun showUnitFallbackLoadingFailure(assetKey: String) {
+        unitFallbackLoadingSpinner.visibility = View.GONE
+        unitFallbackLoadingProgress.visibility = View.GONE
+        unitFallbackLoadingStatus.text = activity.getString(
+            R.string.match_loading_unit_assets_failed,
+            assetKey,
+        )
+        unitFallbackLoadingRetryButton.visibility = View.VISIBLE
+    }
+
+    private fun startMatchAfterUnitFallbacks() {
+        if (matchStarted) return
+        matchStarted = true
+        unitFallbackLoadingOverlay.visibility = View.GONE
+        gameHandler.removeCallbacks(unitFallbackPreloadTick)
+        render(viewModel.dispatch(MatchUiAction.StartMatch))
+        if (openDebugOnStart) {
+            gameHandler.post { showDebugToolsDialog() }
+        }
+        gameHandler.postDelayed(gameTick, 33L)
     }
 
     private fun render(state: RenderState) {
@@ -860,6 +1040,7 @@ class MatchScreenController(
 
     private companion object {
         const val TAG = "MatchScreenController"
+        const val UNIT_FALLBACK_PRELOAD_POLL_MILLISECONDS = 50L
         val DEBUG_UNIT_IDS = setOf(
             "DEFENDER",
             "SAPPER",

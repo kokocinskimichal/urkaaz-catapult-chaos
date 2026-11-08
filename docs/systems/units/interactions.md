@@ -62,7 +62,7 @@ rules before a unit is assigned to it.
 | Attack type | Current units | Core behavior |
 |---|---|---|
 | **MELEE** | Defender, Goblin Raging Boar | Approaches an enemy, establishes contact range, and attacks the selected unit directly. Participates in melee synergy. |
-| **RANGED** | Goblin Slingmaster | Keeps distance, attacks a visible target from attack range, and does not participate in melee synergy. |
+| **RANGED** | Goblin Slingmaster | Approaches until a visible target is in attack range, then holds its current position and attacks without backpedaling to restore maximum range. Does not participate in melee synergy. |
 | **CONTACT_EXPLOSIVE** | Demolisher | Immediately detonates on a valid unit contact. At a fortress or Runic Bastion front face, performs a forward throw before detonating. It is not a normal melee attacker and does not participate in melee synergy. |
 | **SIEGE_MISSION** | Sapper | Selects the nearest hostile boss, Runic Bastion, or fortress along its route; attacks with its single bomb and returns to refill. It does not participate in unit melee synergy unless a future combat profile explicitly grants it a separate melee attack. |
 
@@ -70,6 +70,13 @@ The attack type is a domain rule and must be available to targeting,
 movement, combat resolution, event generation and presentation. Renderers
 must select animations from the resolved action and attack type, not infer the
 type from the bitmap or unit name.
+
+Ranged units do not retreat to maintain an exact maximum attack distance. If a
+target is in range, the unit holds its current world position and attacks. If a
+target moves behind and out of range, the unit releases it and resumes its
+forward route or selects another valid target. Target acquisition must honor at
+least the unit's configured attack range so it can stop before approaching
+closer than necessary.
 
 On fortress or Runic Bastion contact, the Demolisher enters `THROWING`
 immediately, advances 90 world units over 0.5 seconds, then applies its

@@ -1478,13 +1478,26 @@ class DeterministicMatchSimulation(
                 null
             }
             val bastionStopX = obstacle?.let { runicBastionStopX(unit, direction, it) }
+            val targetIsAheadOrInRangedRange: (Unit) -> Boolean = { target ->
+                val targetOffset = target.position.x - unit.position.x
+                targetOffset * direction >= 0f ||
+                    (
+                        unit.type.attacksFromRange &&
+                            kotlin.math.abs(targetOffset) <= unit.type.attackRange
+                        )
+            }
+            val targetAcquisitionRange = unitTargetAcquisitionRange(unit)
             val combatTarget = if (waveMoving) {
                 val locked = unit.combatState.targetId?.let { id ->
                     units.firstOrNull {
                         it.id == id &&
                             it.isAlive &&
                             it.team != unit.team &&
-                            it.type !is SapperUnit
+                            it.type !is SapperUnit &&
+                            (
+                                !unit.type.attacksFromRange ||
+                                    targetIsAheadOrInRangedRange(it)
+                                )
                     }
                 }
                 val groupTarget = units
@@ -1509,6 +1522,10 @@ class DeterministicMatchSimulation(
                         }
                     }
                     .firstOrNull()
+                    ?.takeIf {
+                        !unit.type.attacksFromRange ||
+                            targetIsAheadOrInRangedRange(it)
+                    }
                 locked ?: groupTarget ?: units
                     .filter {
                         it.team != unit.team &&
@@ -1517,7 +1534,7 @@ class DeterministicMatchSimulation(
                             it.type !is SapperUnit &&
                             (it.position.x - unit.position.x) * direction >= 0f &&
                             kotlin.math.abs(it.position.x - unit.position.x) <=
-                                config.balance.runtime.combat.unitInteractionRange
+                                targetAcquisitionRange
                     }
                     .minByOrNull { kotlin.math.abs(it.position.x - unit.position.x) }
             } else {
@@ -1544,9 +1561,16 @@ class DeterministicMatchSimulation(
                     unit.type.detonatesOnContact ->
                         target.position.x -
                             direction * unitContactDistance(unit, target)
-                    unit.type.attacksFromRange ->
-                        target.position.x -
-                            direction * (unit.type.attackRange + formationOffset)
+                    unit.type.attacksFromRange -> {
+                        val targetOffset = target.position.x - unit.position.x
+                        when {
+                            kotlin.math.abs(targetOffset) <= unit.type.attackRange ->
+                                unit.position.x
+                            targetOffset * direction >= 0f ->
+                                target.position.x - direction * unit.type.attackRange
+                            else -> null
+                        }
+                    }
                     else ->
                         target.position.x -
                             direction * (
@@ -2125,7 +2149,7 @@ class DeterministicMatchSimulation(
                     (
                         attacker.combatState.attackGroupId != null ||
                         kotlin.math.abs(it.position.x - attacker.position.x) <=
-                            config.balance.runtime.combat.unitInteractionRange
+                            unitTargetAcquisitionRange(attacker)
                         )
             }
         }
@@ -2135,8 +2159,17 @@ class DeterministicMatchSimulation(
                 it.type !is SapperUnit &&
                 !it.returningToGarrison &&
                 kotlin.math.abs(it.position.x - attacker.position.x) <=
-                    config.balance.runtime.combat.unitInteractionRange
+                    unitTargetAcquisitionRange(attacker)
         }.minWithOrNull(compareBy({ kotlin.math.abs(it.position.x - attacker.position.x) }, { it.id.value }))
+    }
+
+    private fun unitTargetAcquisitionRange(unit: Unit): Float {
+        val interactionRange = config.balance.runtime.combat.unitInteractionRange
+        return if (unit.type.attacksFromRange) {
+            maxOf(interactionRange, unit.type.attackRange)
+        } else {
+            interactionRange
+        }
     }
 
     private fun resolveAttackHits(current: MutableList<Unit>, intents: List<AttackIntent>) {

@@ -602,6 +602,10 @@ The current match HUD also displays:
   their route before returning toward their own fortress. Units attack the
   enemy fortress when no enemy unit is in contact, and damage is emitted
   through the existing match events.
+  Slingmasters have a configured 460-world-unit attack range. Target
+  acquisition honors at least that range; once a target is in range, the unit
+  holds its current position instead of retreating to maintain exact maximum
+  range. If a target is behind and out of range, it resumes forward movement.
 - At a fortress or Runic Bastion front face, a Demolisher enters `THROWING`,
   moves 90 world units forward over 0.5 seconds, then detonates at the endpoint.
   Unit contact still detonates immediately. Fortress blast falloff uses
@@ -923,6 +927,25 @@ requested frame is pending, the renderer holds the last ready frame for the
 same boss across idle/attack transitions, including its layout metadata,
 instead of switching to static art or disappearing. This affects only
 presentation and does not change `BossPresentationClock` timing.
+Debug builds log a unit sprite fallback only when the renderer draws its
+colored circle instead of a bitmap. Filter Logcat with
+`adb logcat -s UnitAnimationFallback`; each record includes unit/type/team,
+action and animation state, requested frame index, frame/cache status and
+asset keys for the animation and fallback sprite. `CACHE_MISS_AFTER_READY`
+means the frame had been ready earlier but is no longer present in the cache;
+`QUEUE_REJECTED` means the bounded decoder rejected the request. Repeated
+fallbacks with the same cause are logged once until the sprite recovers or the
+diagnostic state changes.
+Before `MatchCommand.Start`, `MatchScreenController` preloads one pinned
+fallback for each selected BLUE unit type and each RED unit type allowed by the
+scenario. A loading overlay reports progress and offers retry/back on asset
+failure; retry clears cached decode failures only for the required fallback
+keys. `BattlefieldRenderer` holds the last complete `UnitDrawableFrame` per
+match generation/entity in a 4 MiB access-order LRU weighted by bitmap
+allocation size; evicted or first-use entries fall back to the pinned sprite.
+Debug-only `unit_sprite_frame_held` records distinguish `PENDING` from
+`CACHE_MISS_AFTER_READY`. Pixel 8 Level 13 testing observed both states held
+with a ready pinned fallback and no circle-fallback record.
 The baseline, measurements and remaining limitations are recorded in
 [`docs/performance/battlefield-rendering-optimization-plan.md`](../performance/battlefield-rendering-optimization-plan.md).
 

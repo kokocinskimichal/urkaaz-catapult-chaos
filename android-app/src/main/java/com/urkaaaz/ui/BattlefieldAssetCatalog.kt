@@ -1,6 +1,7 @@
 package com.urkaaaz.ui
 
 import android.content.Context
+import android.content.pm.ApplicationInfo
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.graphics.Color
@@ -8,6 +9,7 @@ import android.graphics.Matrix
 import android.util.LruCache
 import com.urkaaaz.android.R
 import com.urkaaaz.contracts.BossPhase
+import com.urkaaaz.contracts.Team
 import org.json.JSONObject
 import java.util.concurrent.ArrayBlockingQueue
 import java.util.concurrent.RejectedExecutionException
@@ -40,6 +42,15 @@ enum class BattlefieldAssetKind {
     RELIC,
 }
 
+internal data class UnitFallbackPreloadProgress(
+    val readyCount: Int,
+    val totalCount: Int,
+    val missingAssetKeys: List<String>,
+) {
+    val isReady: Boolean
+        get() = missingAssetKeys.isEmpty() && readyCount == totalCount
+}
+
 internal data class ProjectileAnimation(
     val flightFrames: BitmapFrameSequence,
     val impactFrames: BitmapFrameSequence,
@@ -68,6 +79,8 @@ internal class BattlefieldAssetCatalog(
 ) {
     private val context = context.applicationContext
     private val resources = this.context.resources
+    val debugLoggingEnabled =
+        (this.context.applicationInfo.flags and ApplicationInfo.FLAG_DEBUGGABLE) != 0
     private val resourceIdCache = mutableMapOf<String, Int>()
     private val decodedStaticBitmaps = mutableMapOf<String, Bitmap?>()
     private val decodeExecutor = ThreadPoolExecutor(
@@ -89,6 +102,7 @@ internal class BattlefieldAssetCatalog(
         onAssetReady = onBitmapReady,
     )
     private val unitAnimationCache = mutableMapOf<String, BitmapFrameSequence>()
+    private val pinnedUnitFallbackBitmaps = mutableMapOf<String, Bitmap>()
     private val teamTextureBitmapCache = TeamTextureBitmapCache()
     private val teamTextureConfigurationCache = mutableMapOf<String, Map<String, String>>()
     private val teamTextureCache = mutableMapOf<String, Bitmap>()
@@ -255,20 +269,87 @@ internal class BattlefieldAssetCatalog(
     val redCatapult: Bitmap =
         BitmapFactory.decodeResource(resources, R.drawable.catapult_right)
 
-    fun unitBitmap(unitType: String, teamLabel: String): Bitmap? {
+    fun unitBitmapRead(unitType: String, teamLabel: String): BitmapRead {
+        val fallbackKey = unitFallbackKey(unitType, teamLabel)
+        pinnedUnitFallbackBitmaps[fallbackKey]?.let { bitmap ->
+            return BitmapRead(
+                bitmap = bitmap,
+                assetKey = "pinned-unit-fallback:$fallbackKey",
+                status = BitmapReadStatus.READY,
+            )
+        }
+        val resourceName = unitFallbackResourceName(unitType, teamLabel)
+            ?: return BitmapRead(
+                bitmap = null,
+                assetKey = "unit:$unitType",
+                status = BitmapReadStatus.MISSING_RESOURCE,
+            )
+        val read = if (unitType == "RAGING_BOAR") {
+            unitAnimationFrames(unitType, teamLabel, moving = false).requestFrame(0)
+        } else {
+            requestBitmapRead(resourceName, required = false)
+        }
+        if (read.status == BitmapReadStatus.READY) {
+            pinnedUnitFallbackBitmaps[fallbackKey] = requireNotNull(read.bitmap)
+        }
+        return read
+    }
+
+    fun preloadUnitFallbacks(
+        unitTypesByTeam: Map<Team, Set<String>>,
+    ): UnitFallbackPreloadProgress {
+        var readyCount = 0
+        val totalCount = unitTypesByTeam.values.sumOf { it.size }
+        val missingAssetKeys = mutableSetOf<String>()
+        unitTypesByTeam.entries.sortedBy { it.key.name }.forEach { (team, unitTypes) ->
+            unitTypes.sorted().forEach { unitType ->
+                val read = unitBitmapRead(unitType, team.name)
+                when (read.status) {
+                    BitmapReadStatus.READY -> readyCount += 1
+                    BitmapReadStatus.MISSING_RESOURCE,
+                    BitmapReadStatus.NO_SEQUENCE -> {
+                        missingAssetKeys += read.assetKey ?: "$unitType:${team.name}"
+                    }
+                    BitmapReadStatus.PENDING,
+                    BitmapReadStatus.CACHE_MISS_AFTER_READY,
+                    BitmapReadStatus.QUEUE_REJECTED -> Unit
+                }
+            }
+        }
+        return UnitFallbackPreloadProgress(
+            readyCount = readyCount,
+            totalCount = totalCount,
+            missingAssetKeys = missingAssetKeys.toList(),
+        )
+    }
+
+    fun retryUnitFallbacks(unitTypesByTeam: Map<Team, Set<String>>) {
+        unitTypesByTeam.forEach { (team, unitTypes) ->
+            unitTypes.forEach { unitType ->
+                if (unitType == "RAGING_BOAR") {
+                    unitAnimationFrames(unitType, team.name, moving = false)
+                        .retryFrame(0)
+                } else {
+                    unitFallbackResourceName(unitType, team.name)?.let { resourceName ->
+                        bitmapCache.clearFailure(bitmapCacheKey(resourceName))
+                    }
+                }
+            }
+        }
+    }
+
+    private fun unitFallbackKey(unitType: String, teamLabel: String): String =
+        "$unitType:$teamLabel"
+
+    private fun unitFallbackResourceName(unitType: String, teamLabel: String): String? {
         val side = if (teamLabel == "BLUE") "left" else "right"
-        val resourceName = when (unitType) {
+        return when (unitType) {
             "SAPPER" -> "sapper_$side"
             "DEFENDER" -> "defender_$side"
             "DEMOLISHER" -> "demolisher_$side"
             "RAGING_BOAR" -> "raging_boar_idle_$side"
             "SLINGMASTER" -> "anim_character_slingmaster_move_000"
-            else -> return null
-        }
-        return if (unitType == "RAGING_BOAR") {
-            unitAnimationFrames(unitType, teamLabel, moving = false).bitmapIfReady(0)
-        } else {
-            requestBitmap(resourceName, required = false)
+            else -> null
         }
     }
 
@@ -673,24 +754,50 @@ internal class BattlefieldAssetCatalog(
         name: String,
         required: Boolean,
         validate: (Bitmap) -> Unit = {},
-    ): Bitmap? {
+    ): Bitmap? = when (val result = requestBitmapResult(name, required, validate)) {
+        null -> null
+        is AsyncAssetResult.Ready -> result.value
+        AsyncAssetResult.Pending,
+        AsyncAssetResult.QueueRejected -> null
+        is AsyncAssetResult.Failed ->
+            throw IllegalStateException("Could not load drawable '$name'", result.cause)
+    }
+
+    private fun requestBitmapRead(
+        name: String,
+        required: Boolean,
+        validate: (Bitmap) -> Unit = {},
+    ): BitmapRead {
+        val assetKey = bitmapCacheKey(name)
+        return when (val result = requestBitmapResult(name, required, validate)) {
+            null -> BitmapRead(null, assetKey, BitmapReadStatus.MISSING_RESOURCE)
+            is AsyncAssetResult.Ready ->
+                BitmapRead(result.value, assetKey, BitmapReadStatus.READY)
+            AsyncAssetResult.Pending ->
+                BitmapRead(null, assetKey, BitmapReadStatus.PENDING)
+            AsyncAssetResult.QueueRejected ->
+                BitmapRead(null, assetKey, BitmapReadStatus.QUEUE_REJECTED)
+            is AsyncAssetResult.Failed ->
+                throw IllegalStateException("Could not load drawable '$name'", result.cause)
+        }
+    }
+
+    private fun requestBitmapResult(
+        name: String,
+        required: Boolean,
+        validate: (Bitmap) -> Unit,
+    ): AsyncAssetResult<Bitmap>? {
         val resourceId = drawableResourceId(name)
         if (resourceId == 0) {
             if (required) error("Missing drawable '$name'")
             return null
         }
-        return when (
-            val result = bitmapCache.request(bitmapCacheKey(name)) {
-                val bitmap = BitmapFactory.decodeResource(resources, resourceId)
-                    ?: error("Could not decode drawable '$name'")
-                validate(bitmap)
-                bitmap
-            }
-        ) {
-            is AsyncAssetResult.Ready -> result.value
-            AsyncAssetResult.Pending -> null
-            is AsyncAssetResult.Failed ->
-                throw IllegalStateException("Could not load drawable '$name'", result.cause)
+        val assetKey = bitmapCacheKey(name)
+        return bitmapCache.request(assetKey) {
+            val bitmap = BitmapFactory.decodeResource(resources, resourceId)
+                ?: error("Could not decode drawable '$name'")
+            validate(bitmap)
+            bitmap
         }
     }
 

@@ -30,6 +30,7 @@ import com.urkaaaz.contracts.PlayerId
 import com.urkaaaz.contracts.PlayerInventoryConfig
 import com.urkaaaz.contracts.PlayerLoadoutConfig
 import com.urkaaaz.contracts.MatchScenario
+import com.urkaaaz.contracts.Team
 import com.urkaaaz.contracts.TerrainBiome
 import com.urkaaaz.simulation.CombatLogSink
 import com.urkaaaz.simulation.NoOpCombatLogSink
@@ -117,6 +118,12 @@ class MatchViewModel(
     } ?: loadoutCatalog.units
         .take(PlayerLoadoutConfig.MAX_UNITS)
         .map { it.id }
+
+    val unitAnimationPreloadTypesByTeam: Map<Team, Set<String>>
+        get() = mapOf(
+            Team.BLUE to selectableUnitTypes.toSet(),
+            Team.RED to aiAllowedUnitIds(),
+        ).filterValues { it.isNotEmpty() }
 
     val selectableSpellTypes: List<String> = campaignScenario?.let { scenario ->
         scenario.playerLoadout?.spellTypes.orEmpty()

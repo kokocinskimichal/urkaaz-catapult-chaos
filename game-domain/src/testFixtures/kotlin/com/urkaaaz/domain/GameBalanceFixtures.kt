@@ -36,7 +36,7 @@ object GameBalanceFixtures {
                 UnitConfiguration(UnitIds.DEFENDER, 5, 80, 150f, 20, 0.8f, 0f, 10, 1f, 1f),
                 UnitConfiguration(UnitIds.DEMOLISHER, 10, 25, 110f, 0, 0.8f, 0f, 0, 1f, 1f),
                 UnitConfiguration(UnitIds.RAGING_BOAR, 10, 80, 240f, 52, 0.8f, 0f, 52, 1f, 1f),
-                UnitConfiguration(UnitIds.SLINGMASTER, 5, 25, 120f, 20, 1.2f, 260f, 20, 1f, 1f),
+                UnitConfiguration(UnitIds.SLINGMASTER, 5, 25, 120f, 20, 1.2f, 460f, 20, 1f, 1f),
             ),
         ),
         ammunition = AmmunitionCatalog(

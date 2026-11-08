@@ -73,6 +73,11 @@
     <string name="splash_company_logo_accessibility">Logo firmy AFACODE</string>
     <string name="match_debug_ai_unit_automation">Automatyzuj rekrutację wrogów i fale</string>
     <string name="match_debug_button">DEBUG</string>
+    <string name="match_loading_unit_assets_progress">Przygotowywanie grafik jednostek (%1$d/%2$d)</string>
+    <string name="match_loading_unit_assets_failed">Nie udało się wczytać wymaganej grafiki jednostki: %1$s</string>
+    <string name="match_loading_unit_assets_retry">PONÓW</string>
+    <string name="match_loading_unit_assets_back">WRÓĆ</string>
+    <string name="match_loading_unknown_asset_error">Nie podano szczegółów błędu ładowania grafiki.</string>
     <string name="match_debug_hitboxes">Pokaż hitboksy</string>
     <string name="match_debug_close_snapshot">ZAMKNIJ MIGAWKĘ</string>
     <string name="match_debug_title">NARZĘDZIA DEBUGOWANIA</string>

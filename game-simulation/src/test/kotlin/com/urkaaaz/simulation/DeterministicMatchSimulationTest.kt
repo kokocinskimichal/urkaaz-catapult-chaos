@@ -1410,6 +1410,107 @@ class DeterministicMatchSimulationTest {
     }
 
     @Test
+    fun slingmasterDoesNotMoveBackwardAsRagingBoarClosesIntoAttackRange() {
+        val simulation = DeterministicMatchSimulation(
+            MatchId("slingmaster-ranged-standoff"),
+            config.copy(bounds = WorldBounds(width = 7_200f, height = 4_800f)),
+        )
+        val ragingBoar = UnitFactory.create(
+            GameBalanceFixtures.balance.units.configuration(UnitIds.RAGING_BOAR).copy(
+                supplyCost = 0,
+                maxHealth = 10_000,
+                attackDamage = 1,
+            ),
+        )
+        simulation.start()
+        simulation.deployUnit(freeUnit(GameBalanceFixtures.unit(UnitIds.SLINGMASTER)), Team.BLUE)
+        simulation.deployUnit(ragingBoar, Team.RED)
+        simulation.sendWave(Team.BLUE)
+        simulation.sendWave(Team.RED)
+
+        val boarId = simulation.snapshot().units.single { it.unitType == UnitIds.RAGING_BOAR }.entityId
+        val attackRange =
+            GameBalanceFixtures.balance.units.configuration(UnitIds.SLINGMASTER).attackRange
+        var previousSlingmasterX =
+            simulation.snapshot().units.single { it.unitType == UnitIds.SLINGMASTER }.x
+        var lockedFrames = 0
+        var targetWasLocked = false
+
+        for (tick in 0 until 1_000) {
+            simulation.advance(33)
+            val units = simulation.snapshot().units
+            val slingmaster = units.single { it.unitType == UnitIds.SLINGMASTER }
+            val boar = units.single { it.entityId == boarId }
+
+            if (slingmaster.targetId == boarId) {
+                lockedFrames += 1
+                if (targetWasLocked) {
+                    assertEquals(previousSlingmasterX, slingmaster.x, 0.001f)
+                } else {
+                    assertTrue(
+                        slingmaster.x >= previousSlingmasterX,
+                        "Slingmaster moved backward from $previousSlingmasterX to ${slingmaster.x}",
+                    )
+                }
+                assertTrue(abs(boar.x - slingmaster.x) <= attackRange)
+                targetWasLocked = true
+                if (lockedFrames >= 30) break
+            } else {
+                targetWasLocked = false
+            }
+            previousSlingmasterX = slingmaster.x
+        }
+
+        assertTrue(lockedFrames >= 30, "Slingmaster did not remain engaged with the Raging Boar")
+    }
+
+    @Test
+    fun slingmasterAcquiresTargetAcrossItsFullAttackRange() {
+        val simulation = DeterministicMatchSimulation(
+            MatchId("slingmaster-full-range"),
+            config.copy(bounds = WorldBounds(width = 7_200f, height = 4_800f)),
+        )
+        val ragingBoar = UnitFactory.create(
+            GameBalanceFixtures.balance.units.configuration(UnitIds.RAGING_BOAR).copy(
+                supplyCost = 0,
+                maxHealth = 10_000,
+                attackDamage = 1,
+            ),
+        )
+        simulation.start()
+        simulation.deployUnit(freeUnit(GameBalanceFixtures.unit(UnitIds.SLINGMASTER)), Team.BLUE)
+        simulation.deployUnit(ragingBoar, Team.RED)
+        simulation.sendWave(Team.BLUE)
+        simulation.sendWave(Team.RED)
+
+        val boarId = simulation.snapshot().units.single { it.unitType == UnitIds.RAGING_BOAR }.entityId
+        val attackRange =
+            GameBalanceFixtures.balance.units.configuration(UnitIds.SLINGMASTER).attackRange
+        val interactionRange = GameBalanceFixtures.balance.runtime.combat.unitInteractionRange
+        var distanceWhenTargeted: Float? = null
+
+        for (tick in 0 until 1_000) {
+            simulation.advance(33)
+            val units = simulation.snapshot().units
+            val slingmaster = units.single { it.unitType == UnitIds.SLINGMASTER }
+            val boar = units.single { it.entityId == boarId }
+            if (slingmaster.targetId == boarId) {
+                distanceWhenTargeted = abs(boar.x - slingmaster.x)
+                break
+            }
+        }
+
+        val distance = requireNotNull(distanceWhenTargeted) {
+            "Slingmaster did not acquire the Raging Boar"
+        }
+        assertTrue(distance <= attackRange)
+        assertTrue(
+            distance > interactionRange,
+            "Slingmaster acquired the target only at the generic interaction range: $distance",
+        )
+    }
+
+    @Test
     fun deployingDuringAnActiveWaveKeepsTheNewUnitInGarrison() {
         val simulation = DeterministicMatchSimulation(MatchId("wave-garrison-match"), config)
         simulation.start()

@@ -1,6 +1,6 @@
 {
   "schemaVersion": 6,
-  "balanceRevision": "game-balance-11",
+  "balanceRevision": "game-balance-12",
   "bosses": [
     {
       "id": "boss.central-ancient-war-oak.level-05",
@@ -429,7 +429,7 @@
       "speed": 120,
       "attackDamage": 20,
       "attackCooldownSeconds": 1.2,
-      "attackRange": 260,
+      "attackRange": 460,
       "fortressDamage": 20,
       "incomingDamageMultiplier": 1,
       "contactMovementSpeedMultiplier": 1
