@@ -1,89 +1,103 @@
 STATUS
 
-Copy-ready prompt for generating one production background image for the
-Urkaaaz Android launch splash. The current approved background is
-`assets_src/splash/splash_background.png`; its Android runtime copy is
-`android-app/src/main/res/drawable-nodpi/splash_background.png`. The app renders
-its runic emblem, the live URKAAAZ wordmark, and the supplied AFACODE company
-logo as separate UI assets over this background.
+Background brief for the Urkaaaz Android launch screen. The current image is
+the supplied Green Frontier fortress scene, installed at
+`assets_src/splash/splash_background.png` and
+`android-app/src/main/res/drawable-nodpi/splash_background.png` as a 1920 × 1080
+PNG. The game logo and AFACODE company logo remain separate runtime overlays.
 
 REFERENCE INPUTS
 
+- Attach `assets_src/splash/urkaaz_game_logo.png` as the primary style and
+  palette reference. Match its colorful, chunky, polished fantasy-game
+  illustration and playful siege mood. Do not copy its composition, redraw
+  its characters, or include any part of the logo in the background.
 - Attach `assets_src/dashboard/dashboard_background_approved.png` as a
-  secondary reference for the Urkaaaz game's painterly fantasy finish, warm
-  light, and material quality. Do not copy its composition or characters.
+  secondary reference for the game's painterly finish, warm lighting, and
+  material quality. Do not copy its composition or characters.
 - The exact company logo is stored at
-  `assets_src/splash/afacode_company_logo.png`. It is rendered by the app as a
-  separate, unmodified transparent overlay over a soft warm glow at the
-  lower-right. Keep that corner quiet and low-detail. Do not add a plaque or
-  opaque backing. Do not draw, regenerate, crop, recolor, distort, or bake the
-  company logo into the background image.
-- The runic emblem and `URKAAAZ` title are also separate live app layers.
-  Leave the central area dark and visually calm enough for them to remain
-  legible.
+  `assets_src/splash/afacode_company_logo.png`. The app renders it as a
+  separate, unmodified transparent overlay at the lower-right over a soft warm
+  glow. Keep that corner quiet and low-detail. Do not draw, regenerate, crop,
+  recolor, distort, or bake the company logo into the background.
+- The game logo is rendered as a separate, unmodified transparent overlay
+  centered slightly above the screen midpoint. Keep the central area visually
+  calm and contrasting enough for its green and gold lettering, goblin, and
+  catapults to read clearly.
 
 PROMPT
 
-Create one restrained, atmospheric landscape background for the opening
-splash screen of Urkaaaz, a colorful fantasy catapult game. The overall
-direction is runic minimalism: mysterious and polished, but quiet enough to
-support a centered gold rune and wordmark that the application adds separately.
+Create one full-bleed landscape background for the opening splash screen of
+Urkaaaz! Catapult Chaos, a playful fantasy siege game. Match the supplied game
+logo's polished, colorful, chunky illustrated style: hand-painted 3D-game
+materials, expressive shapes, warm timber and stone, rich forest greens,
+golden light, and restrained red and blue team accents. The result should feel
+like the same game world as the logo, not a dark runic fantasy wallpaper.
 
-Use a deep charcoal and midnight-navy palette with subtle warm brass-gold
-reflections and a faint trace of cool cyan in the shadows. Suggest an ancient
-stone surface or distant, barely visible fortress silhouettes through soft
-texture and atmospheric depth only. Add a few thin, low-contrast arcane
-geometry marks or etched rune-like strokes around the outer composition. Keep
-these decorative details sparse, soft, and secondary; do not create another
-large standalone rune that competes with the app's centered emblem.
+Show a broad, cinematic view of a whimsical frontier battlefield at a calm
+moment: rolling green hills, distant timber-and-stone fortress walls, layered
+evergreen forest, and a few small red and blue banners near the far edges.
+Use framing environment details along the outer sides and lower edge to give
+the screen depth and a clear catapult-siege setting. Keep any siege
+silhouettes tiny and distant; do not add a foreground character, orc, or
+prominent catapult that competes with or duplicates the supplied logo.
 
-Use a gentle central halo and restrained vignette to create depth without
-turning the screen into a bright illustration. Preserve a clear, uncluttered
-center for the runtime emblem and `URKAAAZ` wordmark. Keep the lower-right
-corner especially simple so the exact transparent AFACODE logo can be
-composited there by the app over a soft radial glow. The logo and glow are
-separate runtime layers; do not draw a plaque or backplate.
+Use a cohesive palette of forest and moss greens, warm amber sunlight,
+weathered brown timber, grey-brown stone, and muted slate-teal shadows. Add
+soft atmospheric depth and painterly light, with a lively, welcoming
+adventure-game mood. Keep the central logo-safe area (roughly the middle 70%
+of the canvas, slightly above center) open and low-detail, using a muted
+slate-teal or deep blue-green sky/haze behind the logo so both its green and
+gold lettering remain distinct. The center must not be black, empty-gradient
+minimalism, or covered in foliage, structures, particles, or runes.
 
-The image is a static background layer, not a finished screenshot. Do not
-include any title, logo, word, letter, number, interface, button, loading
-indicator, device frame, watermark, or signature. Do not include characters,
-catapults, projectiles, battle action, or a busy scene. Favor spacious negative
-space, crisp but subtle texture, and a premium fantasy-game finish.
+Keep the lower-right corner especially quiet and moderately dark so the exact
+transparent AFACODE logo can be composited there by the app over its separate
+soft warm glow. Do not put a bright sun, banner, fortress edge, or strong
+highlight behind that overlay. Respect safe margins around all edges because
+Android may crop a small amount of the 16:9 image on extra-wide landscape
+screens.
+
+This is a static background layer, not a finished screenshot. Do not include
+the game logo, company logo, any text or lettering, numbers, interface,
+buttons, loading indicators, device frames, watermarks, or signatures. Do not
+recreate the exact characters, catapults, banners, or composition from the
+logo reference. The environment should support the supplied foreground logo,
+not become a second focal illustration.
 
 OUTPUT
 
 - Output exactly one file: `splash_background.png`.
 - Canvas: exactly 1920 × 1080 pixels, landscape 16:9.
 - Use an opaque RGB or RGBA PNG suitable for full-screen Android rendering.
-- Fill the entire canvas edge-to-edge; do not add letterboxing, borders, a
-  device frame, a mockup, a contact sheet, or alternate versions.
-- Keep the central emblem/title area and the lower-right company-logo area
-  low-detail and dark enough for the separate runtime overlays.
-- Save the generated source file to `assets_src/splash/splash_background.png`.
-  The Android runtime copy will be
+- Fill the entire canvas edge-to-edge; do not add borders, letterboxing, a
+  device frame, mockup, contact sheet, or alternate versions.
+- Save the generated source to `assets_src/splash/splash_background.png`.
+  The Android runtime copy is
   `android-app/src/main/res/drawable-nodpi/splash_background.png`.
 
 NEGATIVE PROMPT
 
-text, letters, numbers, title, wordmark, logo, AFACODE, watermark, signature,
-UI, buttons, loading bar, progress indicator, phone, device frame, mockup,
-contact sheet, multiple variants, character, orc, catapult, projectile,
-explosion, battlefield action, bright central subject, oversized rune,
-competing emblem, dense runes, pseudo-writing, glowing text, highly detailed
-castle, busy scenery, saturated rainbow palette, bright cyan glow, excessive
-gold bloom, lens flare, strong particles, high contrast behind the title,
-bright or detailed lower-right corner, off-center focal subject, gradient-only
-generic wallpaper, photorealism, unrelated franchise, copied commercial art
+text, letters, numbers, title, game logo, URKAAAZ, AFACODE, watermark,
+signature, UI, buttons, loading bar, progress indicator, phone, device frame,
+mockup, contact sheet, multiple variants, foreground character, orc, goblin,
+prominent catapult, duplicated logo artwork, close-up siege engine, projectile,
+explosion, active battle, damage, blood, central focal subject, crowded center,
+busy foliage behind the logo, bright green or gold clutter behind the logo,
+oversized rune, arcane emblem, dense runes, pseudo-writing, glowing text,
+bright or detailed lower-right corner, direct highlight behind AFACODE,
+near-black minimalist wallpaper, generic empty gradient, photorealism, harsh
+neon colors, excessive bloom, lens flare, unrelated franchise, copied
+commercial art
 
 ACCEPTANCE CHECK
 
 1. The output is one full-bleed 1920 × 1080 PNG background, not a screen mockup.
-2. Its dark, minimal fantasy atmosphere supports a separate central rune and
-   live URKAAAZ title without competing with either.
-3. There is no text or logo embedded in the image; the transparent AFACODE
-   logo remains an exact separate overlay without an opaque plaque.
-4. The lower-right corner is calm enough for the transparent company-logo
-   overlay and its soft glow, and the center is calm enough for the app's
-   emblem and wordmark.
-5. The result uses restrained rune details, warm gold accents, and subtle
-   atmospheric depth without a busy battle scene or excessive glow.
+2. Its playful, colorful fantasy-siege art direction clearly complements the
+   supplied game logo and replaces the previous dark runic mood.
+3. There is no text or logo embedded in the background; the supplied game and
+   AFACODE logos remain exact, separate runtime overlays.
+4. The middle area stays calm and contrasting enough for the game logo, while
+   the lower-right remains quiet for the AFACODE overlay and its warm glow.
+5. The environment gives a recognizable frontier/fortress setting without
+   adding a competing character, foreground catapult, or busy battle scene.

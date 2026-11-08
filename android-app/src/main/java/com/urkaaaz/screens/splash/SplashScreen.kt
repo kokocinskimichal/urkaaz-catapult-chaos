@@ -1,20 +1,15 @@
 package com.urkaaaz.screens.splash
 
-import android.animation.ValueAnimator
 import android.content.Context
 import android.graphics.Color
 import android.os.Handler
 import android.os.Looper
 import android.view.Gravity
 import android.view.View
-import android.view.animation.AccelerateDecelerateInterpolator
 import android.widget.FrameLayout
 import android.widget.ImageView
-import android.widget.LinearLayout
-import android.widget.TextView
 import com.urkaaaz.android.R
 import com.urkaaaz.navigation.ScreenContent
-import com.urkaaaz.ui.UiTypography
 
 class SplashScreen(
     private val context: Context,
@@ -25,11 +20,11 @@ class SplashScreen(
     private var hasPendingTransition = false
     private var hasFinished = false
 
-    private val runeIcon = ImageView(context).apply {
-        contentDescription = null
-        importantForAccessibility = View.IMPORTANT_FOR_ACCESSIBILITY_NO
+    private val gameLogo = ImageView(context).apply {
+        contentDescription = context.getString(R.string.splash_game_logo_accessibility)
+        importantForAccessibility = View.IMPORTANT_FOR_ACCESSIBILITY_YES
         scaleType = ImageView.ScaleType.FIT_CENTER
-        setImageResource(R.drawable.splash_rune_art)
+        setImageResource(R.drawable.splash_game_logo)
     }
     private val companyLogo = ImageView(context).apply {
         contentDescription = context.getString(R.string.splash_company_logo_accessibility)
@@ -50,17 +45,6 @@ class SplashScreen(
             companyLogo,
             FrameLayout.LayoutParams(dp(132), dp(47), Gravity.CENTER),
         )
-    }
-
-    private val runePulse = ValueAnimator.ofFloat(0f, 1f).apply {
-        duration = RUNE_PULSE_DURATION_MILLISECONDS
-        repeatMode = ValueAnimator.REVERSE
-        repeatCount = ValueAnimator.INFINITE
-        interpolator = AccelerateDecelerateInterpolator()
-        addUpdateListener {
-            val pulse = it.animatedValue as Float
-            runeIcon.alpha = 0.72f + pulse * 0.28f
-        }
     }
 
     private val finishTransition = Runnable {
@@ -87,26 +71,11 @@ class SplashScreen(
             setImageResource(R.drawable.splash_background)
         }, FrameLayout.LayoutParams(-1, -1))
 
-        addView(LinearLayout(context).apply {
-            orientation = LinearLayout.VERTICAL
-            gravity = Gravity.CENTER
-
-            addView(runeIcon, LinearLayout.LayoutParams(dp(176), dp(176)))
-
-            addView(TextView(context).apply {
-                text = context.getString(R.string.dashboard_title)
-                contentDescription = context.getString(R.string.app_name)
-                textSize = 28f
-                letterSpacing = 0.18f
-                gravity = Gravity.CENTER
-                includeFontPadding = false
-                setTextColor(Color.rgb(230, 195, 115))
-                setShadowLayer(dp(8).toFloat(), 0f, 0f, Color.rgb(130, 89, 34))
-                UiTypography.applyButtonTypeface(this)
-            }, LinearLayout.LayoutParams(-2, dp(44)).apply {
-                topMargin = dp(8)
-            })
-        }, FrameLayout.LayoutParams(-2, -2, Gravity.CENTER))
+        addView(gameLogo, FrameLayout.LayoutParams(-1, dp(188), Gravity.CENTER).apply {
+            leftMargin = dp(24)
+            rightMargin = dp(24)
+            bottomMargin = dp(68)
+        })
 
         addView(companyLogoComposition, FrameLayout.LayoutParams(dp(216), dp(122)).apply {
             gravity = Gravity.BOTTOM or Gravity.END
@@ -122,14 +91,12 @@ class SplashScreen(
         view.animate().cancel()
         view.alpha = 0f
         view.animate().alpha(1f).setDuration(FADE_DURATION_MILLISECONDS).start()
-        runePulse.start()
         hasPendingTransition = true
         handler.postDelayed(finishTransition, DISPLAY_DURATION_MILLISECONDS)
     }
 
     override fun onPause() {
         isResumed = false
-        runePulse.cancel()
         if (!hasFinished) {
             handler.removeCallbacks(finishTransition)
             hasPendingTransition = false
@@ -144,6 +111,5 @@ class SplashScreen(
     private companion object {
         const val DISPLAY_DURATION_MILLISECONDS = 2_200L
         const val FADE_DURATION_MILLISECONDS = 300L
-        const val RUNE_PULSE_DURATION_MILLISECONDS = 1_400L
     }
 }

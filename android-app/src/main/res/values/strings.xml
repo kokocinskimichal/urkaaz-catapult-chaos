@@ -66,6 +66,7 @@
     <string name="dashboard_progress_unavailable">Player progress could not be loaded.</string>
     <string name="dashboard_progress_retry">RETRY</string>
     <string name="dashboard_back_accessibility">Back or exit the app</string>
+    <string name="splash_game_logo_accessibility">Urkaaaz Catapult Chaos game logo</string>
     <string name="splash_company_logo_accessibility">AFACODE company logo</string>
     <string name="match_debug_ai_unit_automation">Automate enemy recruitment and waves</string>
     <string name="match_debug_button">DEBUG</string>

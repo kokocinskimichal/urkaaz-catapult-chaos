@@ -5,7 +5,7 @@
     "ammunition": ["demolisher", "fire_rain", "plague_cauldron", "powder_barrel", "rock", "siege_bomb"],
     "boss": ["ancient_war_oak", "boulderbloom", "burntwood_warden", "copperwood_final_boss", "copperwood_siege_lord", "frozen_troll", "old_yeti_sovereign", "scorchbound_king", "thorncrown"]
   },
-  "teamTextureTargets": ["defender", "demolisher", "raging_boar", "sapper"],
+  "teamTextureTargets": ["defender", "demolisher", "raging_boar", "sapper", "slingmaster"],
   "runtimeBossIdleTargets": ["ancient_war_oak"],
   "runtimeBossSequences": [
     "anim_boss_boulderbloom_campaign_idle",

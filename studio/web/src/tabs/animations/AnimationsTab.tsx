@@ -52,6 +52,7 @@ export function AnimationsTab() {
 
   if (error) return <p className="error">Could not load animations: {error}</p>;
   if (!catalog) return <p className="hint-text">Loading animation catalog…</p>;
+  const catalogIssues = catalog.catalogIssues ?? [];
 
   return (
     <div className="animations-view">
@@ -105,11 +106,11 @@ export function AnimationsTab() {
               </ul>
             </section>
           )}
-          {catalog.catalogIssues.length > 0 && (
+          {catalogIssues.length > 0 && (
             <section className="animation-category">
-              <h4>Boss presentation issues ({catalog.catalogIssues.length})</h4>
+              <h4>Boss presentation issues ({catalogIssues.length})</h4>
               <ul>
-                {catalog.catalogIssues.map(issue => (
+                {catalogIssues.map(issue => (
                   <li key={issue.path} className="error"><code>{issue.path}</code>: {issue.message}</li>
                 ))}
               </ul>

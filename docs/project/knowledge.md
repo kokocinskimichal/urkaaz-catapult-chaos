@@ -4,11 +4,13 @@
 
 The project is a modular Android game with a deterministic local match
 simulation. The application opens into a roughly 2.5-second `SplashScreen`
-using the generated full-screen background, a layered runic drawable, and the
-exact AFACODE company logo as a separate overlay, then automatically opens the
-redesigned `DashboardScreen`, which uses the approved screen reference and its
-own background asset. The splash background source is
-`assets_src/splash/splash_background.png`; its copy-ready prompt is
+using the generated full-screen background, the supplied URKAAAZ! Catapult
+Chaos logo, and the exact AFACODE company logo as a separate overlay, then
+automatically opens the redesigned `DashboardScreen`, which uses the approved
+screen reference and its own background asset. The splash background source is
+`assets_src/splash/splash_background.png`, and the game logo source is
+`assets_src/splash/urkaaz_game_logo.png`. The 1920x1080 background is copied
+byte-for-byte to Android's `drawable-nodpi`; its generation brief is
 [`docs/systems/splash-screen-background.agp`](../systems/splash-screen-background.agp).
 The Dashboard's Campaign button opens `CampaignScreen`, and selecting a level
 opens the loadout screen. A globe button opens a compact PL/UK/ES selector that
@@ -303,10 +305,10 @@ artwork, state-specific level plaques, completed/locked badges, and a shared
 available-level glow. Chapters 4–10 do not yet have map artwork and use the
 explicit chapter level-list fallback.
 Chapter 1's current `campaign_chapter_01_green_frontier_map` image is
-1544x869, with ten empty fortress sites on one continuous route and highlighted
-boss sites at levels 5 and 10. Its source/runtime copies match. Existing
-normalized marker anchors were updated in the shared layout for this artwork;
-the user can continue repositioning fortresses and boss markers in Studio.
+1672x941, with ten empty fortress sites on one continuous route and highlighted
+boss sites at levels 5 and 10. Its source/runtime copies match. The normalized
+marker anchors remain in the shared layout; the user can continue repositioning
+fortresses and boss markers in Studio.
 Chapter 2 now uses the supplied `campaign_chapter_02_broken_valley_map` image
 (1670x942), with ten site anchors for global levels 11–20 in
 `campaign-map-layouts/broken_valley.json`; the source and Android drawable
@@ -635,8 +637,25 @@ not truncated to a subset; unit frame playback advances at approximately
 - Shared BLUE/RED team-texture masks desaturate the fabric texture by 20%
   toward its original luminance before applying frame lighting. Android
   rendering and the Studio animation preview use the same transform for
-  every masked character, including Defender, Demolisher, Raging Boar and
-  Sapper.
+  every masked character, including Defender, Demolisher, Raging Boar, Sapper,
+  and Slingmaster.
+- Slingmaster idle, movement, attack and death use shared transparent 256x256
+  sequences: `anim_character_slingmaster_idle_NNN` (60 frames),
+  `anim_character_slingmaster_move_NNN` (16 frames),
+  `anim_character_slingmaster_attack_NNN` (27 frames), and
+  `anim_character_slingmaster_death_NNN` (30 frames). Each sequence has
+  per-frame garment masks under
+  `android-app/src/main/assets/animations/slingmaster/masks/`; BLUE and RED use
+  the existing fabric textures, and RED mirrors the shared frames and masks.
+  Idle and movement use a `2.18x` canvas scale and `0.0677` bottom-padding
+  ratio; attack uses `2.88x` with `14/256` padding, and death uses `2.88x`
+  with `0.0533` padding. Attack also applies a team-direction horizontal offset
+  to align its framing with idle and movement. `UnitDeathAnimationRetention`
+  holds a defeated Slingmaster until the non-looping death sequence finishes.
+  Original idle, jog, combat, and death ZIPs/videos are retained under
+  `assets_src/animgen/slingmaster/blue/{idle,jog,combat,death}/`; the replaced
+  16-frame runtime movement sequence is preserved under
+  `assets_src/animgen/slingmaster/legacy-move/`.
 - Raging Boar idle uses one shared 60-frame transparent 368x301 sequence,
   `anim_character_raging_boar_idle_NNN`, with per-frame garment masks and the
   existing BLUE/RED fabric textures. RED mirrors the BLUE-derived neutral
@@ -934,7 +953,7 @@ must go through commands and domain/application boundaries.
 | `android-app/.../navigation/AppScreen.kt` | Screen identity contract |
 | `android-app/.../navigation/AppNavigator.kt` | Navigation and back stack |
 | `android-app/.../navigation/ScreenHost.kt` | Active screen container |
-| `android-app/.../screens/splash/SplashScreen.kt` | Brief runic startup intro |
+| `android-app/.../screens/splash/SplashScreen.kt` | Startup splash with the game logo and AFACODE company logo |
 | `android-app/.../screens/dashboard/DashboardScreen.kt` | Dashboard layout, profile summary, navigation, reset and static language icons |
 | `docs/systems/dashboard-screen.md` and `docs/systems/dashboard-screen-implementation-prompt.md` | Dashboard presentation boundaries, approved assets and implementation requirements |
 | `android-app/.../screens/campaign/CampaignScreen.kt` | Chapter campaign map, chapter selector, and Start Level flow |
@@ -1117,7 +1136,8 @@ must go through commands and domain/application boundaries.
   a shot against a fortress. Entity-impact presentation uses the collision
   coordinates from `ProjectileHitEntity`.
 - Unit maximum health is centralized in `game-balance.json`: Sapper 20,
-  Defender 50, Demolisher 25, Raging Boar 80 and Slingmaster 25. Stable unit
+  Defender 80, Demolisher 25, Raging Boar 80 and Slingmaster 25. The current
+  Defender profile also uses 20 attack damage and 10 fortress damage. Stable unit
   identifiers remain in `UnitIds`.
 - Demo matches configure the BLUE player fortress with 5,000 maximum health
   (ten times the standard 500), while the RED fortress and non-demo matches

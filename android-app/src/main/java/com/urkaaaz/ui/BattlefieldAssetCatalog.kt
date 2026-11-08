@@ -308,6 +308,12 @@ internal class BattlefieldAssetCatalog(
                         team,
                         side,
                     )
+                    "SLINGMASTER" -> loadTeamTextureAnimationFrames(
+                        "slingmaster",
+                        "attack",
+                        team,
+                        side,
+                    )
                     else -> emptyFrameSequence(cacheKey)
                 }
             } else if (!moving) {
@@ -336,6 +342,12 @@ internal class BattlefieldAssetCatalog(
                         team,
                         side,
                     )
+                    "SLINGMASTER" -> loadTeamTextureAnimationFrames(
+                        "slingmaster",
+                        "idle",
+                        team,
+                        side,
+                    )
                     else -> emptyFrameSequence(cacheKey)
                 }
             } else {
@@ -355,6 +367,8 @@ internal class BattlefieldAssetCatalog(
                     loadTeamTextureAnimationFrames("sapper", "move", team, side)
                 } else if (unitType == "RAGING_BOAR") {
                     loadTeamTextureAnimationFrames("raging_boar", "move", team, side)
+                } else if (unitType == "SLINGMASTER") {
+                    loadTeamTextureAnimationFrames("slingmaster", "move", team, side)
                 } else {
                     loadThreeDigitAnimationSequence(prefix)
                 }
@@ -376,6 +390,12 @@ internal class BattlefieldAssetCatalog(
                 )
                 "RAGING_BOAR" -> loadTeamTextureAnimationFrames(
                     "raging_boar",
+                    "death",
+                    team,
+                    side,
+                )
+                "SLINGMASTER" -> loadTeamTextureAnimationFrames(
+                    "slingmaster",
                     "death",
                     team,
                     side,

@@ -1253,8 +1253,26 @@ internal class BattlefieldRenderer(
                 val usesGeneratedSapperReturnAnimation =
                     usesGeneratedSapperAnimation &&
                         sapperReturnPosition?.phase == SapperReturnAnimationFrame.Phase.RETURN
+                val usesGeneratedSlingmasterAnimation =
+                    frame != null &&
+                        unit.unitType == "SLINGMASTER" &&
+                        (unit.teamLabel == "BLUE" || unit.teamLabel == "RED") &&
+                        !deathAnimationPlaying
+                val usesGeneratedSlingmasterDeathAnimation =
+                    frame != null &&
+                        unit.unitType == "SLINGMASTER" &&
+                        (unit.teamLabel == "BLUE" || unit.teamLabel == "RED") &&
+                        deathAnimationPlaying
+                val usesGeneratedSlingmasterAttackAnimation =
+                    usesGeneratedSlingmasterAnimation && attacking
                 val generatedAnimationCanvasScale = when {
                     usesGeneratedDefenderAnimation -> GENERATED_DEFENDER_CANVAS_SCALE
+                    usesGeneratedSlingmasterDeathAnimation ->
+                        GENERATED_SLINGMASTER_DEATH_CANVAS_SCALE
+                    usesGeneratedSlingmasterAttackAnimation ->
+                        GENERATED_SLINGMASTER_ATTACK_CANVAS_SCALE
+                    usesGeneratedSlingmasterAnimation ->
+                        GENERATED_SLINGMASTER_CANVAS_SCALE
                     usesGeneratedRagingBoarDeathAnimation ->
                         GENERATED_RAGING_BOAR_DEATH_CANVAS_SCALE
                     usesGeneratedRagingBoarIdleAnimation ||
@@ -1281,6 +1299,12 @@ internal class BattlefieldRenderer(
                 val spriteHeight = spriteHeightWorld * worldToViewportScale
                 val spriteWidth = spriteHeight * bitmap.width / bitmap.height
                 val generatedAnimationBottomPaddingRatio = when {
+                    usesGeneratedSlingmasterDeathAnimation ->
+                        GENERATED_SLINGMASTER_DEATH_BOTTOM_PADDING_RATIO
+                    usesGeneratedSlingmasterAttackAnimation ->
+                        GENERATED_SLINGMASTER_ATTACK_BOTTOM_PADDING_RATIO
+                    usesGeneratedSlingmasterAnimation ->
+                        GENERATED_SLINGMASTER_BOTTOM_PADDING_RATIO
                     usesGeneratedRagingBoarDeathAnimation ->
                         GENERATED_RAGING_BOAR_DEATH_BOTTOM_PADDING_RATIO
                     usesGeneratedRagingBoarIdleAnimation ||
@@ -1308,6 +1332,14 @@ internal class BattlefieldRenderer(
                 }
                 val transparentBottomPadding =
                     spriteHeight * generatedAnimationBottomPaddingRatio
+                val spriteCenterX = centerX + if (usesGeneratedSlingmasterAttackAnimation) {
+                    val teamDirection = if (unit.teamLabel == "RED") -1f else 1f
+                    spriteWidth *
+                        GENERATED_SLINGMASTER_ATTACK_HORIZONTAL_OFFSET_RATIO *
+                        teamDirection
+                } else {
+                    0f
+                }
                 val healthBarSpriteHeightWorld = if (
                     usesGeneratedDefenderAnimation ||
                     usesGeneratedRagingBoarDeathAnimation ||
@@ -1315,7 +1347,9 @@ internal class BattlefieldRenderer(
                     usesGeneratedRagingBoarMoveAnimation ||
                     usesGeneratedRagingBoarAttackAnimation ||
                     usesGeneratedDemolisherAnimation ||
-                    usesGeneratedSapperAnimation
+                    usesGeneratedSapperAnimation ||
+                    usesGeneratedSlingmasterAnimation ||
+                    usesGeneratedSlingmasterDeathAnimation
                 ) {
                     baseSpriteHeightWorld
                 } else {
@@ -1341,9 +1375,9 @@ internal class BattlefieldRenderer(
                     bitmap,
                     null,
                     RectF(
-                        centerX - spriteWidth / 2f,
+                        spriteCenterX - spriteWidth / 2f,
                         baselineY - spriteHeight + transparentBottomPadding,
-                        centerX + spriteWidth / 2f,
+                        spriteCenterX + spriteWidth / 2f,
                         baselineY + transparentBottomPadding,
                     ),
                     spritePaint,
@@ -1791,6 +1825,13 @@ internal class BattlefieldRenderer(
         private const val UNIT_HEALTH_BAR_WIDTH_WORLD = 46.2f
         private const val BOAR_SOURCE_CROP_HEIGHT_RATIO = 301f / 512f
         private const val GENERATED_DEFENDER_CANVAS_SCALE = 2f
+        internal const val GENERATED_SLINGMASTER_CANVAS_SCALE = 2.18f
+        internal const val GENERATED_SLINGMASTER_BOTTOM_PADDING_RATIO = 0.0677f
+        internal const val GENERATED_SLINGMASTER_ATTACK_CANVAS_SCALE = 2.88f
+        internal const val GENERATED_SLINGMASTER_ATTACK_BOTTOM_PADDING_RATIO = 14f / 256f
+        internal const val GENERATED_SLINGMASTER_ATTACK_HORIZONTAL_OFFSET_RATIO = 0.068f
+        internal const val GENERATED_SLINGMASTER_DEATH_CANVAS_SCALE = 2.88f
+        internal const val GENERATED_SLINGMASTER_DEATH_BOTTOM_PADDING_RATIO = 0.0533f
         internal const val DEFAULT_UNIT_ANIMATION_RENDER_FRAMES_PER_FRAME = 4
         internal const val GENERATED_RAGING_BOAR_MOVE_RENDER_FRAMES_PER_FRAME = 1
         internal const val GENERATED_RAGING_BOAR_IDLE_CANVAS_SCALE = 1.22f

@@ -17,7 +17,7 @@ const config: AnimationConfig = parseAnimationConfig({
     ammunition: ["fire_rain", "rock"],
     boss: ["ancient_war_oak", "boulderbloom", "thorncrown"],
   },
-  teamTextureTargets: ["defender", "demolisher", "sapper"],
+  teamTextureTargets: ["defender", "demolisher", "sapper", "slingmaster"],
   runtimeBossIdleTargets: ["ancient_war_oak"],
   runtimeBossSequences: [
     "anim_boss_boulderbloom_campaign_idle",
@@ -100,9 +100,14 @@ describe("buildAnimationCatalog", () => {
       frameIndices: Array.from({ length: 15 }, (_, index) => index),
       supportsTeamTexture: true,
     });
-    expect(sequenceOf("anim_character_slingmaster_move")).toMatchObject({
-      supportsTeamTexture: false,
-    });
+    for (const type of ["idle", "move", "attack", "death"]) {
+      expect(sequenceOf(`anim_character_slingmaster_${type}`, 2)).toMatchObject({
+        target: "slingmaster",
+        type,
+        variant: null,
+        supportsTeamTexture: true,
+      });
+    }
   });
 
   it("keeps compound types for spells and ammunition", () => {
@@ -258,6 +263,9 @@ describe("animationFramePath", () => {
     expect(teamAnimationMaskPath("/repo", "anim_character_raging_boar_death", 23)).toBe(
       "/repo/android-app/src/main/assets/animations/raging_boar/masks/death/023.png",
     );
+    expect(teamAnimationMaskPath("/repo", "anim_character_slingmaster_death", 23)).toBe(
+      "/repo/android-app/src/main/assets/animations/slingmaster/masks/death/023.png",
+    );
     expect(teamAnimationMaskPath("/repo", "anim_character_sapper_turn", 7)).toBe(
       "/repo/android-app/src/main/assets/animations/sapper/masks/turn/007.png",
     );
@@ -280,6 +288,12 @@ describe("teamTexturePath", () => {
     );
     expect(await teamTexturePath(root, "sapper", "blue")).toContain(
       "/android-app/src/main/assets/animations/defender/",
+    );
+    expect(await teamTexturePath(root, "slingmaster", "blue")).toBe(
+      await teamTexturePath(root, "defender", "blue"),
+    );
+    expect(await teamTexturePath(root, "slingmaster", "red")).toBe(
+      await teamTexturePath(root, "defender", "red"),
     );
     expect(await teamTexturePath(root, "../secret", "blue")).toBeNull();
     expect(await teamTexturePath(root, "demolisher", "green")).toBeNull();
@@ -314,6 +328,22 @@ describe("repository animation catalog", () => {
       variant: null,
       frameIndices: Array.from({ length: 15 }, (_, index) => index),
     });
+    for (const [type, count] of [
+      ["idle", 60],
+      ["move", 16],
+      ["attack", 27],
+      ["death", 30],
+    ] as const) {
+      expect(catalog.sequences.find(sequence => sequence.id === `anim_character_slingmaster_${type}`))
+        .toMatchObject({
+          target: "slingmaster",
+          type,
+          variant: null,
+          supportsTeamTexture: true,
+          hasRuntimeLoader: true,
+          frameIndices: Array.from({ length: count }, (_, index) => index),
+        });
+    }
     expect(catalog.sequences.find(sequence => sequence.id === "anim_boss_ancient_war_oak_idle"))
       .toMatchObject({
         category: "boss",

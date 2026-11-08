@@ -13,8 +13,8 @@ class CampaignMapLayoutRepositoryTest {
         assertTrue(result is CampaignMapLayoutRead.Available)
         val layout = (result as CampaignMapLayoutRead.Available).layout
         assertEquals("campaign_chapter_01_green_frontier_map", layout.backgroundAssetKey)
-        assertEquals(1_544, layout.imageWidthPx)
-        assertEquals(869, layout.imageHeightPx)
+        assertEquals(1_672, layout.imageWidthPx)
+        assertEquals(941, layout.imageHeightPx)
         assertEquals((1..10).toList(), layout.anchors.map { it.level })
     }
 

@@ -144,7 +144,7 @@ describe("Balance form model", () => {
     };
     const revised = withIncrementedBalanceRevision(original, edited);
 
-    expect(revised.balanceRevision).toBe("game-balance-11");
+    expect(revised.balanceRevision).toBe("game-balance-12");
     expect(balanceDocumentMatches(original, original)).toBe(true);
   });
 });

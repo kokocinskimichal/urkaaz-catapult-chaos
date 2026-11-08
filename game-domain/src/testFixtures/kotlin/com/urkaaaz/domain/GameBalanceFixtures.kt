@@ -33,7 +33,7 @@ object GameBalanceFixtures {
         units = UnitCatalog(
             listOf(
                 UnitConfiguration(UnitIds.SAPPER, 10, 20, 260f, 180, 1.75f, 0f, 180, 0.45f, 0.45f),
-                UnitConfiguration(UnitIds.DEFENDER, 5, 50, 150f, 30, 0.8f, 0f, 30, 1f, 1f),
+                UnitConfiguration(UnitIds.DEFENDER, 5, 80, 150f, 20, 0.8f, 0f, 10, 1f, 1f),
                 UnitConfiguration(UnitIds.DEMOLISHER, 10, 25, 110f, 0, 0.8f, 0f, 0, 1f, 1f),
                 UnitConfiguration(UnitIds.RAGING_BOAR, 10, 80, 240f, 52, 0.8f, 0f, 52, 1f, 1f),
                 UnitConfiguration(UnitIds.SLINGMASTER, 5, 25, 120f, 20, 1.2f, 260f, 20, 1f, 1f),

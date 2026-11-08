@@ -351,7 +351,7 @@ class DeterministicMatchSimulationTest {
         var elapsedSteps = 0
         while (
             simulation.snapshot().runicBastions.any { it.entityId == firstBastion.entityId } &&
-            elapsedSteps < 240
+            elapsedSteps < 480
         ) {
             events += simulation.advance(100L)
             elapsedSteps += 1

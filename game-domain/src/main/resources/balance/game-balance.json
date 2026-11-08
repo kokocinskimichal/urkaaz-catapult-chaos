@@ -1,6 +1,6 @@
 {
   "schemaVersion": 6,
-  "balanceRevision": "game-balance-10",
+  "balanceRevision": "game-balance-11",
   "bosses": [
     {
       "id": "boss.central-ancient-war-oak.level-05",
@@ -389,12 +389,12 @@
     {
       "id": "DEFENDER",
       "supplyCost": 5,
-      "maxHealth": 50,
+      "maxHealth": 80,
       "speed": 150,
-      "attackDamage": 30,
+      "attackDamage": 20,
       "attackCooldownSeconds": 0.8,
       "attackRange": 0,
-      "fortressDamage": 30,
+      "fortressDamage": 10,
       "incomingDamageMultiplier": 1,
       "contactMovementSpeedMultiplier": 1
     },

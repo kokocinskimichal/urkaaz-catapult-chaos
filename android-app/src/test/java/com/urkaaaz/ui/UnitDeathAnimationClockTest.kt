@@ -78,6 +78,23 @@ class UnitDeathAnimationRetentionTest {
     }
 
     @Test
+    fun bothTeamsRetainSlingmasterUntilItsGeneratedDeathAnimationFinishes() {
+        listOf("BLUE", "RED").forEach { teamLabel ->
+            val clock = UnitDeathAnimationClock()
+            val retention = UnitDeathAnimationRetention(clock)
+            val slingmaster = unit("$teamLabel-slingmaster", teamLabel, "SLINGMASTER")
+
+            assertEquals(listOf(slingmaster), retention.update(listOf(slingmaster)))
+            repeat(89) {
+                assertEquals(listOf(slingmaster), retention.update(emptyList()))
+            }
+            assertEquals(29, clock.frameIndex(slingmaster.entityId, 30))
+            assertEquals(listOf(slingmaster), retention.update(emptyList()))
+            assertEquals(emptyList<UnitRenderState>(), retention.update(emptyList()))
+        }
+    }
+
+    @Test
     fun demolishedUnitIsNotRetainedAfterItLeavesRenderState() {
         listOf("BLUE", "RED").forEach { teamLabel ->
             val clock = UnitDeathAnimationClock()

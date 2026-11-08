@@ -83,10 +83,15 @@ internal class UnitDeathAnimationRetention(
                 DEFENDER_DEATH_FRAME_COUNT.takeIf {
                     unit.teamLabel == "BLUE" || unit.teamLabel == "RED"
                 }
+            "SLINGMASTER" ->
+                SLINGMASTER_DEATH_FRAME_COUNT.takeIf {
+                    unit.teamLabel == "BLUE" || unit.teamLabel == "RED"
+                }
             else -> null
         }
 
     private companion object {
         const val DEFENDER_DEATH_FRAME_COUNT = 60
+        const val SLINGMASTER_DEATH_FRAME_COUNT = 30
     }
 }

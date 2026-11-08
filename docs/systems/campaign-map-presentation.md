@@ -389,7 +389,7 @@ The approved Chapter 1 background is stored at
 `assets_src/campaign/chapter-maps/campaign_chapter_01_green_frontier_map.png`
 and imported unchanged into
 `android-app/src/main/res/drawable-nodpi/campaign_chapter_01_green_frontier_map.png`.
-Its source dimensions are 1544 × 869 pixels. It has ten empty fortress-site
+Its source dimensions are 1672 × 941 pixels. It has ten empty fortress-site
 placeholders along one continuous, non-branching route; the larger sites at
 levels 5 and 10 identify the boss encounters. No marker, number, status, or hit
 target is baked into the image.
@@ -403,16 +403,16 @@ rounded to six decimal places.
 
 | Level | Landmark | x | y |
 |---:|---|---:|---:|
-| 1 | Fortress | 0.911269 | 0.319908 |
-| 2 | Fortress | 0.713731 | 0.364787 |
-| 3 | Fortress | 0.465674 | 0.367089 |
-| 4 | Fortress | 0.221503 | 0.403913 |
+| 1 | Fortress | 0.903377 | 0.290434 |
+| 2 | Fortress | 0.713245 | 0.349762 |
+| 3 | Fortress | 0.470632 | 0.369351 |
+| 4 | Fortress | 0.227210 | 0.397992 |
 | 5 | Boss | 0.485104 | 0.501726 |
-| 6 | Fortress | 0.866580 | 0.543153 |
-| 7 | Fortress | 0.843912 | 0.720368 |
-| 8 | Fortress | 0.644430 | 0.751438 |
-| 9 | Fortress | 0.367876 | 0.754891 |
-| 10 | Boss | 0.136658 | 0.750288 |
+| 6 | Fortress | 0.862666 | 0.547523 |
+| 7 | Fortress | 0.842425 | 0.700161 |
+| 8 | Fortress | 0.637212 | 0.752593 |
+| 9 | Fortress | 0.388053 | 0.757004 |
+| 10 | Boss | 0.141640 | 0.739510 |
 
 These are presentation coordinates only. Levels 5 and 10 use boss markers;
 the other eight use fortress markers. No marker, number, status, or hit target

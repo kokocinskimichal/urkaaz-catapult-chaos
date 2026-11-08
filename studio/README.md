@@ -4,10 +4,10 @@ Lokalne narzędzie deweloperskie (nie część gry). Architektura i decyzje:
 [`docs/architecture/studio-architecture.md`](../docs/architecture/studio-architecture.md).
 
 Stan: szkielet, wizualizator animacji, edytory Map/Campaign oraz zakładki
-Balance i Progress. Zakładka Animations wyświetla drzewo kategoria → cel → typ, odtwarza klatki
-oraz dla sekwencji
-oznaczonych w `teamTextureTargets` przełącza teksturę BLUE/RED oraz nakładkę
-masek (obecnie Defender oraz idle/move Demolishera). Zakładka Maps to edytor
+Balance i Progress. Zakładka Animations wyświetla drzewo kategoria → cel → typ,
+odtwarza klatki oraz dla sekwencji oznaczonych w `teamTextureTargets` przełącza
+teksturę BLUE/RED i nakładkę masek. Dla Slingmastera obsługuje maski idle,
+move, attack i death. Zakładka Maps to edytor
 gameplayowych `MapDefinition`: ładuje mapy przez `GET /api/maps`, zapisuje obie kopie
 JSON przez `PUT /api/maps/{id}` po walidacji TypeScript i kontroli hasha.
 Szkice nadal zapisują się w `localStorage`, niezależnie od plików repozytorium.

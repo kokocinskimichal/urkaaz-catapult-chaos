@@ -10,8 +10,9 @@ kampanię, AI oraz działający match screen. Gałąź robocza: `develop`.
 
 - Splash → dashboard → campaign → match screen przez lekką nawigację
   single-activity.
-- Splash trwa około 2,5 sekundy, używa runicznego drawable assetu i pokazuje
-  dokładne logo AFACODE jako osobny overlay. Pełnoekranowe tło jest zapisane
+- Splash trwa około 2,5 sekundy, pokazuje dostarczone logo gry na tle
+  pełnoekranowej grafiki oraz dokładne logo AFACODE jako osobny overlay.
+  Pełnoekranowe tło jest zapisane
   w `assets_src/splash/splash_background.png` i załadowane jako runtime asset;
   prompt źródłowy znajduje się w `docs/systems/splash-screen-background.agp`.
 - Typowany wybór campaign level przez `game-campaign`; zwycięstwo kampanii

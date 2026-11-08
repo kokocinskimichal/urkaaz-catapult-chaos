@@ -107,6 +107,24 @@
   framed miniatures render at 80% scale on a parchment background stretched
   20% downward from its top edge.
 
+## 2026-11-08
+
+### Added
+
+- Added Slingmaster idle, movement, attack, and death animations with shared
+  BLUE/RED garment-texture masks, Studio preview support, and death-frame
+  retention through the end of playback.
+
+### Changed
+
+- Replaced the runic splash lockup with the supplied Urkaaaz game logo over
+  the updated full-screen background; the AFACODE logo remains a separate
+  overlay.
+- Replaced the Chapter 1 campaign-map artwork with the supplied 1672 × 941
+  image and updated its layout dimensions while preserving marker anchors.
+- Updated Defender balance to 80 HP, 20 unit damage, and 10 fortress damage;
+  advanced the balance revision to `game-balance-11`.
+
 ## 2026-11-03
 
 ### Added

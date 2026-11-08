@@ -69,6 +69,7 @@
     <string name="dashboard_progress_unavailable">Nie udało się wczytać postępu gracza.</string>
     <string name="dashboard_progress_retry">PONÓW</string>
     <string name="dashboard_back_accessibility">Wróć lub zamknij aplikację</string>
+    <string name="splash_game_logo_accessibility">Logo gry Urkaaaz Katapultowy chaos</string>
     <string name="splash_company_logo_accessibility">Logo firmy AFACODE</string>
     <string name="match_debug_ai_unit_automation">Automatyzuj rekrutację wrogów i fale</string>
     <string name="match_debug_button">DEBUG</string>

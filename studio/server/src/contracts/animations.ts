@@ -24,5 +24,5 @@ export interface AnimationCatalogResponse {
   /** `anim_*` files that do not follow the naming convention. */
   invalidFiles: string[];
   /** Boss profiles whose configured presentation key has no animation or static frame. */
-  catalogIssues: { path: string; message: string }[];
+  catalogIssues?: { path: string; message: string }[];
 }
