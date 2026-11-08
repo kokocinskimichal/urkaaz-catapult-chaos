@@ -113,7 +113,7 @@ class BattlefieldView(context: Context) : View(context) {
     private val sapperMoveAnimationClock = SapperMoveAnimationClock()
     private val sapperBombFlightClock = SapperBombFlightClock()
     private val floatingRewardFeedbackClock = FloatingRewardFeedbackClock()
-    private var sapperBombFlights = emptyList<SapperBombFlightFrame>()
+    private var sapperBombPresentationFrame = SapperBombPresentationFrame()
     private var activeImpact: ImpactRenderState? = null
     private var lastImpactEventId: String? = null
     private var activeFortressShieldHit: FortressShieldHitRenderState? = null
@@ -230,7 +230,7 @@ class BattlefieldView(context: Context) : View(context) {
             fortressShieldHitElapsedRenderFrames = 0
             lastFortressShieldHitEventId = null
         }
-        sapperBombFlights = sapperBombFlightClock.update(presentationState, nowMilliseconds)
+        updateSapperBombPresentation(presentationState, nowMilliseconds)
         sapperReturnAnimationClock.advance(
             units = newState.units,
             isPaused = presentationState.isPaused,
@@ -339,7 +339,7 @@ class BattlefieldView(context: Context) : View(context) {
             ),
             SystemClock.uptimeMillis(),
         )
-        sapperBombFlights = sapperBombFlightClock.update(
+        updateSapperBombPresentation(
             state.copy(
                 isPaused = state.isPaused || lifecyclePaused || !isAttachedToWindow,
             ),
@@ -366,7 +366,7 @@ class BattlefieldView(context: Context) : View(context) {
             state.copy(isPaused = state.isPaused || lifecyclePaused),
             SystemClock.uptimeMillis(),
         )
-        sapperBombFlights = sapperBombFlightClock.update(
+        updateSapperBombPresentation(
             state.copy(isPaused = state.isPaused || lifecyclePaused),
             SystemClock.uptimeMillis(),
         )
@@ -396,7 +396,7 @@ class BattlefieldView(context: Context) : View(context) {
             state.copy(isPaused = true),
             SystemClock.uptimeMillis(),
         )
-        sapperBombFlights = sapperBombFlightClock.update(
+        updateSapperBombPresentation(
             state.copy(isPaused = true),
             SystemClock.uptimeMillis(),
         )
@@ -428,7 +428,7 @@ class BattlefieldView(context: Context) : View(context) {
             bossPresentation = bossPresentationFrame,
             fireRainPresentation = fireRainPresentationFrame,
             plagueCauldronPresentation = plagueCauldronPresentationFrame,
-            sapperBombFlights = sapperBombFlights,
+            sapperBombPresentation = sapperBombPresentationFrame,
             isAiming = aimController.isDragging,
             viewportWidth = width.toFloat(),
             viewportHeight = height.toFloat(),
@@ -439,6 +439,17 @@ class BattlefieldView(context: Context) : View(context) {
         if (debugCoordinatesVisible) {
             drawDebugCursorCoordinates(canvas)
         }
+    }
+
+    private fun updateSapperBombPresentation(
+        presentationState: RenderState,
+        nowMilliseconds: Long,
+    ) {
+        sapperBombPresentationFrame = sapperBombFlightClock.update(
+            state = presentationState,
+            nowMilliseconds = nowMilliseconds,
+            impactFrameCount = assets.animationFor("POWDER_BARREL").impactFrames.frameCount,
+        )
     }
 
     override fun onSizeChanged(width: Int, height: Int, oldWidth: Int, oldHeight: Int) {

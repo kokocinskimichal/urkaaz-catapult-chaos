@@ -1,6 +1,6 @@
 {
   "schemaVersion": 6,
-  "balanceRevision": "game-balance-12",
+  "balanceRevision": "game-balance-13",
   "bosses": [
     {
       "id": "boss.central-ancient-war-oak.level-05",
@@ -892,7 +892,7 @@
       "sapperContactSpeedMultiplier": 0.45,
       "meleeAttackStandoffDistance": 150,
       "attackFormationSpacing": 55,
-      "meleeSynergyDamagePerAdditionalUnit": 0.35,
+      "meleeSynergyDamagePerAdditionalUnit": 0.15,
       "maximumMeleeSynergyMultiplier": 2,
       "demolisher": {
         "explosionDamage": 300,

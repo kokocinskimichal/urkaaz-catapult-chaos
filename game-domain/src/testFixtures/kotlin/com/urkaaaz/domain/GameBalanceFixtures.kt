@@ -186,7 +186,7 @@ object GameBalanceFixtures {
                 sapperContactSpeedMultiplier = 0.45f,
                 meleeAttackStandoffDistance = 150f,
                 attackFormationSpacing = 55f,
-                meleeSynergyDamagePerAdditionalUnit = 0.35f,
+                meleeSynergyDamagePerAdditionalUnit = 0.15f,
                 maximumMeleeSynergyMultiplier = 2f,
                 demolisher = DemolisherBalance(300, 260f, 0.5f, 90f),
             ),

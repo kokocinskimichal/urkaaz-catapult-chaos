@@ -1,6 +1,7 @@
 package com.urkaaaz.ui
 
 import com.urkaaaz.contracts.FortressHitboxProfile
+import com.urkaaaz.contracts.SapperBombFlightTiming
 import com.urkaaaz.contracts.WorldScale
 import kotlin.math.PI
 import kotlin.math.atan2
@@ -13,6 +14,18 @@ data class SapperBombFlightFrame(
     val frameIndex: Int,
 )
 
+data class SapperBombImpactFrame(
+    val entityId: String,
+    val x: Float,
+    val y: Float,
+    val frameIndex: Int,
+)
+
+data class SapperBombPresentationFrame(
+    val flights: List<SapperBombFlightFrame> = emptyList(),
+    val impacts: List<SapperBombImpactFrame> = emptyList(),
+)
+
 class SapperBombFlightClock {
     private data class ActiveFlight(
         val entityId: String,
@@ -23,7 +36,16 @@ class SapperBombFlightClock {
         var elapsedMilliseconds: Long = 0L,
     )
 
+    private data class ActiveImpact(
+        val entityId: String,
+        val x: Float,
+        val y: Float,
+        val frameCount: Int,
+        var elapsedMilliseconds: Long = 0L,
+    )
+
     private val activeFlights = linkedMapOf<String, ActiveFlight>()
+    private val activeImpacts = linkedMapOf<String, ActiveImpact>()
     private var previousState: RenderState? = null
     private var initialized = false
     private var matchId: String? = null
@@ -32,7 +54,11 @@ class SapperBombFlightClock {
     private var lastUpdateMilliseconds: Long? = null
     private var wasPaused = false
 
-    fun update(state: RenderState, nowMilliseconds: Long): List<SapperBombFlightFrame> {
+    fun update(
+        state: RenderState,
+        nowMilliseconds: Long,
+        impactFrameCount: Int,
+    ): SapperBombPresentationFrame {
         val matchChanged = initialized && state.matchId != matchId
         val matchRestartedByGeneration =
             initialized && state.matchGeneration != matchGeneration
@@ -59,9 +85,29 @@ class SapperBombFlightClock {
         }
         if (elapsed > 0L) {
             activeFlights.values.forEach { it.elapsedMilliseconds += elapsed }
+            activeImpacts.values.forEach { it.elapsedMilliseconds += elapsed }
         }
-        activeFlights.entries.removeAll {
-            it.value.elapsedMilliseconds >= FLIGHT_DURATION_MILLISECONDS
+        val completedFlights = activeFlights.values.filter {
+            it.elapsedMilliseconds >= SapperBombFlightTiming.DURATION_MILLISECONDS
+        }
+        completedFlights.forEach { flight ->
+            activeFlights.remove(flight.entityId)
+            if (impactFrameCount > 0) {
+                activeImpacts[flight.entityId] = ActiveImpact(
+                    entityId = flight.entityId,
+                    x = flight.targetX,
+                    y = flight.targetY,
+                    frameCount = impactFrameCount,
+                    elapsedMilliseconds = (
+                        flight.elapsedMilliseconds -
+                            SapperBombFlightTiming.DURATION_MILLISECONDS
+                        ).coerceAtLeast(0L),
+                )
+            }
+        }
+        activeImpacts.entries.removeAll {
+            it.value.elapsedMilliseconds >=
+                it.value.frameCount * IMPACT_FRAME_DURATION_MILLISECONDS
         }
 
         previousState?.let { previous ->
@@ -92,7 +138,10 @@ class SapperBombFlightClock {
         previousState = state
         lastUpdateMilliseconds = nowMilliseconds
         wasPaused = state.isPaused
-        return activeFlights.values.map(::toFrame)
+        return SapperBombPresentationFrame(
+            flights = activeFlights.values.map(::toFrame),
+            impacts = activeImpacts.values.map(::toImpactFrame),
+        )
     }
 
     fun reset() {
@@ -152,7 +201,8 @@ class SapperBombFlightClock {
 
     private fun toFrame(flight: ActiveFlight): SapperBombFlightFrame {
         val progress = (
-            flight.elapsedMilliseconds.toFloat() / FLIGHT_DURATION_MILLISECONDS
+            flight.elapsedMilliseconds.toFloat() /
+                SapperBombFlightTiming.DURATION_MILLISECONDS
             ).coerceIn(0f, 1f)
         val arc = ARC_HEIGHT * 4f * progress * (1f - progress)
         val x = flight.startX + (flight.targetX - flight.startX) * progress
@@ -173,8 +223,19 @@ class SapperBombFlightClock {
         )
     }
 
+    private fun toImpactFrame(impact: ActiveImpact): SapperBombImpactFrame =
+        SapperBombImpactFrame(
+            entityId = impact.entityId,
+            x = impact.x,
+            y = impact.y,
+            frameIndex = (impact.elapsedMilliseconds / IMPACT_FRAME_DURATION_MILLISECONDS)
+                .toInt()
+                .coerceIn(0, impact.frameCount - 1),
+        )
+
     private fun clearRuntimeState() {
         activeFlights.clear()
+        activeImpacts.clear()
         previousState = null
         lastUpdateMilliseconds = null
         wasPaused = false
@@ -182,10 +243,10 @@ class SapperBombFlightClock {
     }
 
     private companion object {
-        const val FLIGHT_DURATION_MILLISECONDS = 500L
         const val FLIGHT_FRAME_COUNT = 32
         const val RELEASE_OFFSET_X = 12f
         const val RELEASE_OFFSET_Y = 70f
-        const val ARC_HEIGHT = 72f
+        const val ARC_HEIGHT = 24f
+        const val IMPACT_FRAME_DURATION_MILLISECONDS = 33L
     }
 }

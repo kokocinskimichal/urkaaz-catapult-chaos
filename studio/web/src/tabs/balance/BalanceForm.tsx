@@ -1607,11 +1607,11 @@ function CombatFields({
           min: 0,
           step: 1,
         })}
-        {numberField(`${path}.meleeSynergyDamagePerAdditionalUnit`, "Melee synergy per additional unit", combat.meleeSynergyDamagePerAdditionalUnit, {
+        {numberField(`${path}.meleeSynergyDamagePerAdditionalUnit`, "Combat synergy per additional unit", combat.meleeSynergyDamagePerAdditionalUnit, {
           min: 0,
           step: 0.01,
         })}
-        {numberField(`${path}.maximumMeleeSynergyMultiplier`, "Maximum melee synergy multiplier", combat.maximumMeleeSynergyMultiplier, {
+        {numberField(`${path}.maximumMeleeSynergyMultiplier`, "Maximum combat synergy multiplier", combat.maximumMeleeSynergyMultiplier, {
           min: 1,
           step: 0.01,
         })}

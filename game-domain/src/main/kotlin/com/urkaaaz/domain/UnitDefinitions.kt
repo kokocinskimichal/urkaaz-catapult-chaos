@@ -17,7 +17,7 @@ sealed interface UnitDefinition {
     val attacksFromRange: Boolean
     val detonatesOnContact: Boolean
     val returnsAfterSiegeMission: Boolean
-    val participatesInMeleeSynergy: Boolean
+    val participatesInCombatSynergy: Boolean
     val statusImmunities: Set<UnitStatus>
         get() = emptySet()
     val statusResistance: Map<UnitStatus, Float>
@@ -31,7 +31,7 @@ class DefenderUnit(override val configuration: UnitConfiguration) : UnitDefiniti
     override val attacksFromRange = false
     override val detonatesOnContact = false
     override val returnsAfterSiegeMission = false
-    override val participatesInMeleeSynergy = true
+    override val participatesInCombatSynergy = true
 }
 
 class SapperUnit(override val configuration: UnitConfiguration) : UnitDefinition {
@@ -39,7 +39,7 @@ class SapperUnit(override val configuration: UnitConfiguration) : UnitDefinition
     override val attacksFromRange = false
     override val detonatesOnContact = false
     override val returnsAfterSiegeMission = true
-    override val participatesInMeleeSynergy = false
+    override val participatesInCombatSynergy = false
 
     override fun incomingDamage(damage: Int): Int =
         (damage * configuration.incomingDamageMultiplier).toInt().coerceAtLeast(1)
@@ -50,7 +50,7 @@ class DemolisherUnit(override val configuration: UnitConfiguration) : UnitDefini
     override val attacksFromRange = false
     override val detonatesOnContact = true
     override val returnsAfterSiegeMission = false
-    override val participatesInMeleeSynergy = false
+    override val participatesInCombatSynergy = false
 }
 
 class RagingBoarUnit(override val configuration: UnitConfiguration) : UnitDefinition {
@@ -58,7 +58,7 @@ class RagingBoarUnit(override val configuration: UnitConfiguration) : UnitDefini
     override val attacksFromRange = false
     override val detonatesOnContact = false
     override val returnsAfterSiegeMission = false
-    override val participatesInMeleeSynergy = true
+    override val participatesInCombatSynergy = true
 }
 
 class SlingmasterUnit(override val configuration: UnitConfiguration) : UnitDefinition {
@@ -66,7 +66,7 @@ class SlingmasterUnit(override val configuration: UnitConfiguration) : UnitDefin
     override val attacksFromRange = true
     override val detonatesOnContact = false
     override val returnsAfterSiegeMission = false
-    override val participatesInMeleeSynergy = false
+    override val participatesInCombatSynergy = true
 }
 
 object UnitFactory {

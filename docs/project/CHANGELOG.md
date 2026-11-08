@@ -129,6 +129,9 @@
   advanced the balance revision to `game-balance-11`.
 - Increased the configured Goblin Slingmaster attack range to 460 world units
   and advanced the balance revision to `game-balance-12`.
+- Extended shared-target combat synergy to Slingmaster ranged hits and reduced
+  the per-additional-participant multiplier to `0.15x`; the `2.00x` cap now
+  starts at eight participants, with balance revision `game-balance-13`.
 
 ### Fixed
 
@@ -139,6 +142,9 @@
 - Stopped Goblin Slingmasters from moving backward to restore maximum range;
   target acquisition now honors their configured attack range, and they hold
   position once a target is within range.
+- Started Sapper bomb flight on the first throw-animation frame without the
+  bomb, flattened its arc, and added a reduced Powder Barrel impact animation;
+  simulation damage is applied when the shared 500 ms flight reaches its target.
 
 ## 2026-11-03
 

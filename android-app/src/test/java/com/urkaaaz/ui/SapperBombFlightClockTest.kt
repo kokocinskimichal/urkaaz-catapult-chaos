@@ -4,6 +4,7 @@ import com.urkaaaz.contracts.CatapultPresentationContract
 import com.urkaaaz.contracts.BossArchetype
 import com.urkaaaz.contracts.BossPhase
 import com.urkaaaz.contracts.FortressHitboxProfile
+import com.urkaaaz.contracts.SapperBombFlightTiming
 import com.urkaaaz.contracts.Team
 import com.urkaaaz.contracts.WorldDimensions
 import com.urkaaaz.contracts.WorldScale
@@ -13,27 +14,67 @@ import org.junit.Test
 
 class SapperBombFlightClockTest {
     @Test
-    fun launchesAtBombReleaseAndFollowsAnArcToFortress() {
+    fun launchesAtVisibleReleaseFrameAndImpactsAfterTheFlight() {
         val clock = SapperBombFlightClock()
-        val sapper = sapper()
+        val sapper = sapper().copy(attackProgress = 0f)
         val beforeRelease = renderState(units = listOf(sapper))
-        clock.update(beforeRelease, nowMilliseconds = 1_000L)
+        clock.update(beforeRelease, nowMilliseconds = 1_000L, impactFrameCount = 32)
+
+        val midAttack = renderState(
+            units = listOf(sapper.copy(attackProgress = 0.5f, actionState = "ATTACKING")),
+        )
+        assertTrue(
+            clock.update(midAttack, nowMilliseconds = 1_050L, impactFrameCount = 32)
+                .flights.isEmpty(),
+        )
 
         val release = renderState(
-            units = listOf(sapper.copy(sapperHasBomb = false)),
+            units = listOf(
+                sapper.copy(
+                    sapperHasBomb = false,
+                    attackProgress = SapperBombFlightTiming.BOMB_RELEASE_PROGRESS,
+                    actionState = "ATTACKING",
+                ),
+            ),
         )
-        val launch = clock.update(release, nowMilliseconds = 1_100L).single()
+        val launch = clock.update(
+            release,
+            nowMilliseconds = 1_100L,
+            impactFrameCount = 32,
+        ).flights.single()
 
         assertEquals(sapper.x + 12f, launch.x, 0f)
         assertEquals(sapper.y - 70f, launch.y, 0f)
         assertEquals(0, launch.frameIndex)
 
-        val halfway = clock.update(release, nowMilliseconds = 1_350L).single()
+        val halfway = clock.update(
+            release,
+            nowMilliseconds = 1_350L,
+            impactFrameCount = 32,
+        ).flights.single()
         val targetX = release.redFortressX + FortressHitboxProfile.rectangles.first().left
         val targetY = release.redFortressFoundationY - WorldScale.FORTRESS_HEIGHT / 2f
         assertEquals((sapper.x + 12f + targetX) / 2f, halfway.x, 0.01f)
-        assertEquals((sapper.y - 70f + targetY) / 2f - 72f, halfway.y, 0.01f)
+        assertEquals((sapper.y - 70f + targetY) / 2f - 24f, halfway.y, 0.01f)
         assertEquals(16, halfway.frameIndex)
+
+        val impact = clock.update(
+            release,
+            nowMilliseconds = 1_600L,
+            impactFrameCount = 32,
+        )
+        assertTrue(impact.flights.isEmpty())
+        assertEquals(1, impact.impacts.size)
+        assertEquals(targetX, impact.impacts.single().x, 0f)
+        assertEquals(targetY, impact.impacts.single().y, 0f)
+        assertEquals(0, impact.impacts.single().frameIndex)
+
+        val nextImpactFrame = clock.update(
+            release,
+            nowMilliseconds = 1_633L,
+            impactFrameCount = 32,
+        ).impacts.single()
+        assertEquals(1, nextImpactFrame.frameIndex)
     }
 
     @Test
@@ -52,25 +93,46 @@ class SapperBombFlightClockTest {
         clock.update(
             renderState(units = listOf(sapper), runicBastions = listOf(bastion)),
             nowMilliseconds = 1_000L,
+            impactFrameCount = 32,
         )
         val releasedState = renderState(
             units = listOf(sapper.copy(sapperHasBomb = false)),
         )
-        clock.update(releasedState, nowMilliseconds = 1_100L)
+        clock.update(releasedState, nowMilliseconds = 1_100L, impactFrameCount = 32)
 
-        val beforePause = clock.update(releasedState, nowMilliseconds = 1_300L).single()
+        val beforePause = clock.update(
+            releasedState,
+            nowMilliseconds = 1_300L,
+            impactFrameCount = 32,
+        ).flights.single()
         val pausedState = releasedState.copy(isPaused = true)
-        val pauseStart = clock.update(pausedState, nowMilliseconds = 1_300L).single()
+        val pauseStart = clock.update(
+            pausedState,
+            nowMilliseconds = 1_300L,
+            impactFrameCount = 32,
+        ).flights.single()
         assertEquals(beforePause, pauseStart)
-        val whilePaused = clock.update(pausedState, nowMilliseconds = 2_000L).single()
+        val whilePaused = clock.update(
+            pausedState,
+            nowMilliseconds = 2_000L,
+            impactFrameCount = 32,
+        ).flights.single()
         assertEquals(beforePause, whilePaused)
 
-        val resumed = clock.update(releasedState, nowMilliseconds = 3_000L).single()
+        val resumed = clock.update(
+            releasedState,
+            nowMilliseconds = 3_000L,
+            impactFrameCount = 32,
+        ).flights.single()
         assertEquals(beforePause, resumed)
 
-        val halfway = clock.update(releasedState, nowMilliseconds = 3_050L).single()
+        val halfway = clock.update(
+            releasedState,
+            nowMilliseconds = 3_050L,
+            impactFrameCount = 32,
+        ).flights.single()
         assertEquals((sapper.x + 12f + bastion.centerX) / 2f, halfway.x, 0.01f)
-        assertEquals((sapper.y - 70f + bastion.centerY) / 2f - 72f, halfway.y, 0.01f)
+        assertEquals((sapper.y - 70f + bastion.centerY) / 2f - 24f, halfway.y, 0.01f)
         assertTrue(halfway.frameIndex > beforePause.frameIndex)
     }
 
@@ -94,19 +156,27 @@ class SapperBombFlightClockTest {
             redDamage = 0,
         )
         val beforeRelease = renderState(units = listOf(sapper), boss = boss)
-        clock.update(beforeRelease, nowMilliseconds = 1_000L)
+        clock.update(beforeRelease, nowMilliseconds = 1_000L, impactFrameCount = 32)
 
         val release = renderState(
             units = listOf(sapper.copy(sapperHasBomb = false)),
             boss = boss,
         )
-        val launch = clock.update(release, nowMilliseconds = 1_100L).single()
+        val launch = clock.update(
+            release,
+            nowMilliseconds = 1_100L,
+            impactFrameCount = 32,
+        ).flights.single()
         val targetX = boss.x
         val targetY = boss.groundY - boss.collisionHeight / 2f
-        val halfway = clock.update(release, nowMilliseconds = 1_350L).single()
+        val halfway = clock.update(
+            release,
+            nowMilliseconds = 1_350L,
+            impactFrameCount = 32,
+        ).flights.single()
 
         assertEquals((sapper.x + 12f + targetX) / 2f, halfway.x, 0.01f)
-        assertEquals((sapper.y - 70f + targetY) / 2f - 72f, halfway.y, 0.01f)
+        assertEquals((sapper.y - 70f + targetY) / 2f - 24f, halfway.y, 0.01f)
         assertEquals(0, launch.frameIndex)
     }
 

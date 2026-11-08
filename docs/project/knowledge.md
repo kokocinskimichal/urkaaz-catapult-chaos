@@ -606,6 +606,11 @@ The current match HUD also displays:
   acquisition honors at least that range; once a target is in range, the unit
   holds its current position instead of retreating to maintain exact maximum
   range. If a target is behind and out of range, it resumes forward movement.
+- Shared-target combat synergy counts living Defenders, Raging Boars and
+  Slingmasters that can attack the same unit or boss. A Slingmaster contributes
+  while its target is in ranged attack range, and its own ranged hits receive
+  the multiplier. Each participant after the first adds `0.15x`, capped at
+  `2.00x` from eight participants; Sappers and Demolishers do not participate.
 - At a fortress or Runic Bastion front face, a Demolisher enters `THROWING`,
   moves 90 world units forward over 0.5 seconds, then detonates at the endpoint.
   Unit contact still detonates immediately. Fortress blast falloff uses
@@ -708,11 +713,16 @@ not truncated to a subset; unit frame playback advances at approximately
   the states. On arriving at a target, a bomb-carrying Sapper keeps the jog
   frames for four presentation updates, then returns to idle even if the
   simulation remains in `MOVING` during the initial attack delay. Attack
-  renders at 2x with `32/256` bottom padding and ends when the bomb leaves his
-  hand; on release a small world-space bomb flight reuses the existing Siege
-  Bomb frames at 30 world units, animating from the Sapper to its fortress,
-  Bastion, or boss target over 500 ms. This is presentation-only; direct
-  simulation damage timing and impact resolution remain unchanged.
+  renders at 2x with `32/256` bottom padding. It releases the bomb when attack
+  frame 11 of 15 first appears (about 1.28 seconds into the configured
+  1.75-second throw); the flight starts on that transition while the Sapper
+  stays in its attack animation through the follow-through. The Sapper then
+  enters its return animation. The flight reuses the existing Siege Bomb
+  frames at 30 world units from the Sapper to its fortress, Bastion, or boss
+  target, follows a flatter 24-world-unit arc, and lasts 500 ms. Simulation
+  damage is rolled and applied when the flight reaches its target. A reduced
+  half-size Powder Barrel impact animation plays at the same point; its clock
+  uses the shared flight duration and pauses with the match.
   Original AnimGen output is retained under
   `assets_src/animgen/sapper/blue/{idle,jog,attack}/`.
 - Sapper return presentation uses shared 15-frame 256x256 `turn` and `return`

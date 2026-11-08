@@ -44,7 +44,7 @@ class GameBalanceRepositoryTest {
         assertEquals(5, result.balance.config.ammunition.all.size)
         assertEquals(11, result.balance.config.spells.all.size)
         assertEquals(6, result.balance.config.schemaVersion)
-        assertEquals("game-balance-12", result.balance.config.balanceRevision)
+        assertEquals("game-balance-13", result.balance.config.balanceRevision)
         assertEquals(8_000, result.balance.config.bosses.first().maxHealth)
         assertEquals(1.2f, result.balance.config.runtime.combat.gameplaySpeedMultiplier)
         assertEquals(0.9f, result.balance.config.runtime.combat.unitMovementSpeedScale)

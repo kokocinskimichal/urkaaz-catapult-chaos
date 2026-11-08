@@ -61,10 +61,10 @@ rules before a unit is assigned to it.
 
 | Attack type | Current units | Core behavior |
 |---|---|---|
-| **MELEE** | Defender, Goblin Raging Boar | Approaches an enemy, establishes contact range, and attacks the selected unit directly. Participates in melee synergy. |
-| **RANGED** | Goblin Slingmaster | Approaches until a visible target is in attack range, then holds its current position and attacks without backpedaling to restore maximum range. Does not participate in melee synergy. |
-| **CONTACT_EXPLOSIVE** | Demolisher | Immediately detonates on a valid unit contact. At a fortress or Runic Bastion front face, performs a forward throw before detonating. It is not a normal melee attacker and does not participate in melee synergy. |
-| **SIEGE_MISSION** | Sapper | Selects the nearest hostile boss, Runic Bastion, or fortress along its route; attacks with its single bomb and returns to refill. It does not participate in unit melee synergy unless a future combat profile explicitly grants it a separate melee attack. |
+| **MELEE** | Defender, Goblin Raging Boar | Approaches an enemy, establishes contact range, and attacks the selected unit directly. Participates in shared-target combat synergy. |
+| **RANGED** | Goblin Slingmaster | Approaches until a visible target is in attack range, then holds its current position and attacks without backpedaling to restore maximum range. Participates in shared-target synergy when it can attack the same target as its allies; its ranged hits receive the multiplier. |
+| **CONTACT_EXPLOSIVE** | Demolisher | Immediately detonates on a valid unit contact. At a fortress or Runic Bastion front face, performs a forward throw before detonating. It does not participate in shared-target combat synergy. |
+| **SIEGE_MISSION** | Sapper | Selects the nearest hostile boss, Runic Bastion, or fortress along its route; attacks with its single bomb and returns to refill. It does not participate in shared-target combat synergy. |
 
 The attack type is a domain rule and must be available to targeting,
 movement, combat resolution, event generation and presentation. Renderers
@@ -85,22 +85,28 @@ the same simulation step. Presentation uses the forward-lunge window from the
 full attack source and starts the standalone explosion as soon as the
 simulation emits `ExplosionTriggered`.
 
-## Melee synergy
+A Sapper releases its bomb when frame 11 of its 15-frame throw animation first
+appears. The bomb flight begins at that transition while the Sapper completes
+the throw follow-through. The 500 ms flight ends in a reduced Powder Barrel
+impact animation; simulation damage is applied at that impact, not at release.
 
-Melee synergy is a shared combat rule, not a Defender-only rule. It applies to
-every unit type whose combat profile is marked as a melee attacker. The initial
-melee attackers are **Defender** and **Goblin Raging Boar**. Additional melee
-units can opt into the same profile in the future without changing the synergy
-algorithm. A unit with a separate mission, such as a Sapper's fortress-bomb
-run, does not participate unless its combat profile explicitly includes melee
-unit attacks.
+## Shared-target combat synergy
 
-For one target, let `N` be the number of living allied melee attackers that
-are simultaneously engaged with that target. Each participating melee
-attacker's damage is multiplied by:
+This rule applies to eligible allies attacking the same unit or boss. Its
+participants are **Defender**, **Goblin Raging Boar**, and **Goblin
+Slingmaster**. Melee units must be able to attack the target in melee; the
+Slingmaster must have the same target within its configured ranged attack
+range. The multiplier applies to each participant's hit, including the
+Slingmaster's ranged hits. Units with separate attack behavior, such as a
+Sapper's siege mission or the Demolisher's contact explosion, do not
+participate.
+
+For one target, let `N` be the number of living allied participants currently
+able to attack that target. Each participating attacker's damage is multiplied
+by:
 
 ```text
-min(1 + (N - 1) * 0.35, 2.0)
+min(1 + (N - 1) * 0.15, 2.0)
 ```
 
 This gives the following progression:
@@ -108,20 +114,25 @@ This gives the following progression:
 | Engaged direct attackers | Damage multiplier |
 |---:|---:|
 | 1 | 1.00x |
-| 2 | 1.35x |
-| 3 | 1.70x |
-| 4 or more | 2.00x |
+| 2 | 1.15x |
+| 3 | 1.30x |
+| 4 | 1.45x |
+| 5 | 1.60x |
+| 6 | 1.75x |
+| 7 | 1.90x |
+| 8 or more | 2.00x |
 
 The rule has these constraints:
 
-- only living melee allies attacking the same target count;
-- a unit must be in its melee-contact engagement range with that target;
+- only living allies with the same target count;
+- each unit must be able to attack that target under its own attack-range
+  rules;
 - all participating attackers must keep the same target identity for the
   current combat decision;
 - the multiplier applies to each participating attack, not only to the first
   attacker;
-- ranged attackers and Demolishers do not participate unless their future
-  combat profile explicitly opts into melee synergy;
+- only Defender, Goblin Raging Boar and Goblin Slingmaster currently
+  participate; Demolisher and Sapper do not;
 - the maximum multiplier is `2.0x`;
 - combat events expose the base damage, synergy count, multiplier and final
   damage so the rule is testable and visible to feedback systems.
@@ -171,7 +182,7 @@ The combat pipeline applies the range in this order:
 ```text
 damage range roll
   → target-specific incoming modifiers
-  → melee synergy multiplier
+  → shared-target combat synergy multiplier
   → final integer damage
 ```
 
@@ -190,11 +201,11 @@ not an attack.
 
 | Unit \ Target | Defender | Sapper | Demolisher | Goblin Raging Boar | Goblin Slingmaster |
 |---|---|---|---|---|---|
-| **Defender** | Standard contact combat. Multiple allied Defenders can receive synergy when attacking the same target. | Ignores Sapper as an attack target; contact only slows the Sapper. | Contact triggers Demolisher explosion; Defender is damaged or killed and Demolisher is destroyed. | Standard contact combat. | Defender advances; Slingmaster attacks from range when visible and in range. |
+| **Defender** | Standard contact combat. Eligible melee and Slingmaster allies attacking the same target share the synergy multiplier. | Ignores Sapper as an attack target; contact only slows the Sapper. | Contact triggers Demolisher explosion; Defender is damaged or killed and Demolisher is destroyed. | Standard contact combat. | Defender advances; Slingmaster attacks from range when visible and in range. |
 | **Sapper** | Neither attacks the other; contact may slow the Sapper. | Neither attacks the other; overlapping Sappers only apply contact slowdown. | Sapper ignores Demolisher; the Demolisher neither targets nor damages Sapper. | Sapper does not attack units; Boar ignores it, though contact slows the Sapper. | Sapper does not attack units; Slingmaster ignores it. |
 | **Demolisher** | Contact triggers an explosion damaging Defender and destroying Demolisher. | Ignores Sapper as a target, and its blast does not damage Sapper. | Contact triggers an explosion affecting both Demolishers and nearby units. | Contact triggers Demolisher explosion; Boar is damaged or killed. | Slingmaster can attack from range; contact with Slingmaster alone does not trigger the explosion. |
-| **Goblin Raging Boar** | Standard contact combat. | Ignores Sapper as an attack target; contact only slows the Sapper. | Contact triggers Demolisher explosion; Boar is damaged or killed. | Standard contact combat. | Boar advances; Slingmaster attacks from range when visible and in range. |
-| **Goblin Slingmaster** | Attacks from range when Defender is visible and in range; does not need contact. | Ignores Sapper as an attack target. | Attacks Demolisher from range; does not trigger it by contact alone. | Attacks Boar from range when visible and in range. | Both use ranged attacks against visible targets. |
+| **Goblin Raging Boar** | Standard contact combat. Eligible melee and Slingmaster allies attacking the same target share the synergy multiplier. | Ignores Sapper as an attack target; contact only slows the Sapper. | Contact triggers Demolisher explosion; Boar is damaged or killed. | Standard contact combat. | Boar advances; Slingmaster attacks from range when visible and in range. |
+| **Goblin Slingmaster** | Attacks from range when Defender is visible and in range; its ranged hit receives synergy when eligible allies attack the same target. | Ignores Sapper as an attack target. | Attacks Demolisher from range; does not trigger it by contact alone. | Attacks Boar from range when visible and in range. | Both use ranged attacks against visible targets. |
 
 ## Future proposal: terrain-aware unit attacks
 

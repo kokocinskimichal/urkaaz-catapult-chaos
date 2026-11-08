@@ -25,6 +25,7 @@ import com.urkaaaz.contracts.ProjectileResolution
 import com.urkaaaz.contracts.ProjectileTargetKind
 import com.urkaaaz.contracts.ResourceSnapshot
 import com.urkaaaz.contracts.EffectSnapshot
+import com.urkaaaz.contracts.SapperBombFlightTiming
 import com.urkaaaz.contracts.Team
 import com.urkaaaz.contracts.UnitHitboxProfile
 import com.urkaaaz.contracts.WorldScale
@@ -61,6 +62,12 @@ private data class RunicBastionDestructionBlocker(
     val bastion: RunicBastion,
     val remainingMilliseconds: Long,
     val heldUnitPositions: Map<EntityId, Float>,
+)
+
+private data class PendingSapperBombImpact(
+    val attacker: Unit,
+    val targetId: EntityId,
+    val impactAtSimulationTimeMilliseconds: Long,
 )
 
 /**
@@ -142,6 +149,7 @@ class DeterministicMatchSimulation(
     private var currentRedRunicBastion: RunicBastion? = null
     private val runicBastionDestructionBlockers =
         linkedMapOf<EntityId, RunicBastionDestructionBlocker>()
+    private val pendingSapperBombImpacts = mutableListOf<PendingSapperBombImpact>()
     private var currentBlueCatapult = blueCatapult
         ?: defaultCatapult(Team.BLUE, config.bounds, config, terrain)
     private var currentRedCatapult = redCatapult
@@ -1760,7 +1768,7 @@ class DeterministicMatchSimulation(
     }
 
     private fun resolveUnitInteractions(deltaSeconds: Float) {
-        if (units.isEmpty()) return
+        if (units.isEmpty() && pendingSapperBombImpacts.isEmpty()) return
         val current = units.map {
             it.copy(
                 combatState = it.combatState.copy(
@@ -1777,6 +1785,20 @@ class DeterministicMatchSimulation(
         current.indices.forEach { index ->
             val attacker = current[index]
             if (!attacker.isAlive) return@forEach
+            if (
+                attacker.type is SapperUnit &&
+                !attacker.sapperHasBomb &&
+                attacker.returningToGarrison &&
+                attacker.combatState.attackProgress >= 1f
+            ) {
+                current[index] = attacker.copy(
+                    combatState = attacker.combatState.copy(
+                        action = UnitActionState.RETURNING,
+                        attackProgress = 0f,
+                    ),
+                )
+                return@forEach
+            }
             if (attacker.isDemolisherThrowing()) {
                 val progress = 1f -
                     attacker.combatState.attackCooldownRemainingSeconds /
@@ -1803,6 +1825,20 @@ class DeterministicMatchSimulation(
                 (1f - attacker.combatState.attackCooldownRemainingSeconds / duration)
                     .coerceIn(0f, 1f)
             }
+            val hitProgressThreshold = if (attacker.type is SapperUnit) {
+                SapperBombFlightTiming.BOMB_RELEASE_PROGRESS
+            } else {
+                0.5f
+            }
+            val hitTriggered = previousProgress < hitProgressThreshold &&
+                progress >= hitProgressThreshold
+            val sapperBombReleased = hitTriggered &&
+                attacker.type is SapperUnit &&
+                attacker.sapperHasBomb
+            val sapperThrowFollowThrough =
+                attacker.type is SapperUnit &&
+                    !attacker.sapperHasBomb &&
+                    attacker.returningToGarrison
             current[index] = attacker.copy(
                 combatState = attacker.combatState.copy(
                     action = if (progress < 1f) {
@@ -1813,7 +1849,7 @@ class DeterministicMatchSimulation(
                     attackProgress = progress,
                 ),
             )
-            if (previousProgress < 0.5f && progress >= 0.5f) {
+            if (hitTriggered) {
                 val targetId = attacker.combatState.targetId
                     ?: return@forEach
                 hitIntents += AttackIntent(
@@ -1839,7 +1875,11 @@ class DeterministicMatchSimulation(
                     },
                 )
             }
-            if (progress >= 1f) {
+            if (
+                progress >= 1f &&
+                !sapperBombReleased &&
+                !sapperThrowFollowThrough
+            ) {
                 current[index] = current[index].copy(
                     combatState = current[index].combatState.copy(
                         action = UnitActionState.SEEKING_TARGET,
@@ -2020,7 +2060,7 @@ class DeterministicMatchSimulation(
                     }
                 }
                 val groupId = if (
-                    attacker.type.participatesInMeleeSynergy &&
+                    attacker.type.participatesInCombatSynergy &&
                     !attacker.type.attacksFromRange
                 ) {
                     AttackGroupId("melee-${boss.entityId.value}")
@@ -2077,6 +2117,7 @@ class DeterministicMatchSimulation(
 
         resolveAttackHits(current, hitIntents)
         startAttackIntents(current, startIntents)
+        resolvePendingSapperBombImpacts(current)
         completedDemolisherThrows.forEach { unitId ->
             val index = current.indexOfFirst { it.id == unitId }
             if (index >= 0) {
@@ -2251,27 +2292,20 @@ class DeterministicMatchSimulation(
                     return@forEach
                 }
                 val roll = rollUnitDamage(attacker, attacker.type.attackDamage)
-                val members = if (intent.type == AttackType.MELEE) {
+                val members = if (
+                    intent.type == AttackType.MELEE || intent.type == AttackType.RANGED
+                ) {
                     current.filter { member ->
                         member.isAlive &&
                             member.team == attacker.team &&
-                            member.type.participatesInMeleeSynergy &&
+                            member.type.participatesInCombatSynergy &&
                             member.combatState.targetId == bossTarget.entityId &&
                             canUnitAttackBoss(member, current)
                     }
                 } else {
                     emptyList()
                 }
-                val combatBalance = config.balance.runtime.combat
-                val synergy = if (intent.type == AttackType.MELEE) {
-                    min(
-                        1f + (members.size - 1).coerceAtLeast(0) *
-                            combatBalance.meleeSynergyDamagePerAdditionalUnit,
-                        combatBalance.maximumMeleeSynergyMultiplier,
-                    )
-                } else {
-                    1f
-                }
+                val synergy = combatSynergyMultiplier(attacker, members.size)
                 val finalDamage = (roll * synergy).toInt()
                     .coerceAtMost(bossTarget.snapshot().health)
                 emit {
@@ -2312,17 +2346,8 @@ class DeterministicMatchSimulation(
                 AttackType.CONTACT_EXPLOSIVE -> detonateDemolisher(current, attackerIndex, attacker)
                 AttackType.MELEE, AttackType.RANGED -> {
                     val roll = rollUnitDamage(attacker, attacker.type.attackDamage)
-                    val members = meleeMembersForTarget(current, target.id)
-                    val combatBalance = config.balance.runtime.combat
-                    val synergy = if (intent.type == AttackType.MELEE) {
-                        min(
-                            1f + (members.size - 1) *
-                                combatBalance.meleeSynergyDamagePerAdditionalUnit,
-                            combatBalance.maximumMeleeSynergyMultiplier,
-                        )
-                    } else {
-                        1f
-                    }
+                    val members = combatSynergyMembersForTarget(current, target.id)
+                    val synergy = combatSynergyMultiplier(attacker, members.size)
                     val rolled = (roll * synergy).toInt()
                     val finalDamage = if (intent.type == AttackType.MELEE) {
                         target.type.incomingDamage(rolled)
@@ -2430,15 +2455,27 @@ class DeterministicMatchSimulation(
         }
     }
 
-    private fun meleeMembersForTarget(current: List<Unit>, targetId: EntityId): List<Unit> =
-        current.filter { attacker ->
-            val target = current.firstOrNull { it.id == targetId }
-            target != null &&
-                attacker.isAlive &&
-                attacker.type.participatesInMeleeSynergy &&
+    private fun combatSynergyMembersForTarget(
+        current: List<Unit>,
+        targetId: EntityId,
+    ): List<Unit> {
+        val target = current.firstOrNull { it.id == targetId } ?: return emptyList()
+        return current.filter { attacker ->
+            attacker.isAlive &&
+                attacker.type.participatesInCombatSynergy &&
                 attacker.combatState.targetId == targetId &&
-                canMeleeAttack(attacker, target, current)
+                isValidAttackTarget(attacker, target, current)
         }
+    }
+
+    private fun combatSynergyMultiplier(attacker: Unit, participantCount: Int): Float {
+        if (!attacker.type.participatesInCombatSynergy || participantCount <= 1) return 1f
+        val combatBalance = config.balance.runtime.combat
+        return min(
+            1f + (participantCount - 1) * combatBalance.meleeSynergyDamagePerAdditionalUnit,
+            combatBalance.maximumMeleeSynergyMultiplier,
+        )
+    }
 
     private fun isValidAttackTarget(
         attacker: Unit,
@@ -2470,7 +2507,8 @@ class DeterministicMatchSimulation(
                 it.team == attacker.team &&
                     it.isAlive &&
                     !it.returningToGarrison &&
-                    it.type.participatesInMeleeSynergy &&
+                    it.type.attackType == AttackType.MELEE &&
+                    it.type.participatesInCombatSynergy &&
                     (
                         it.id == attacker.id ||
                             it.combatState.targetId == target.id
@@ -2616,32 +2654,50 @@ class DeterministicMatchSimulation(
             current[index] = attacker.copy(returningToGarrison = true, inGarrison = false)
             return
         }
-        val damage = rollUnitDamage(attacker, behavior.fortressDamage)
-        val targetBoss = bossSystem?.takeIf { it.entityId == targetId }
-        val targetBastion = bastionById(targetId)
-        when {
-            targetBoss != null -> applyBossDamage(
-                amount = damage,
-                sourceTeam = attacker.team,
-                sourceId = attacker.id,
-            )
-            targetBastion != null -> {
-                if (targetBastion.isAlive && targetBastion.team != attacker.team) {
-                    damageBastion(
-                        targetBastion,
-                        damage,
-                        attackingUnits = current,
-                        sourceUnitId = attacker.id,
-                    )
-                }
-            }
-            else -> damageFortress(fortress(opposingTeam(attacker.team)), damage)
-        }
+        pendingSapperBombImpacts += PendingSapperBombImpact(
+            attacker = attacker,
+            targetId = targetId,
+            impactAtSimulationTimeMilliseconds =
+                simulationTimeMilliseconds + SapperBombFlightTiming.DURATION_MILLISECONDS,
+        )
         current[index] = attacker.copy(
             sapperHasBomb = false,
             returningToGarrison = true,
             inGarrison = false,
         )
+    }
+
+    private fun resolvePendingSapperBombImpacts(current: MutableList<Unit>) {
+        val dueImpacts = pendingSapperBombImpacts.filter {
+            it.impactAtSimulationTimeMilliseconds <= simulationTimeMilliseconds
+        }
+        pendingSapperBombImpacts.removeAll(dueImpacts.toSet())
+        dueImpacts.forEach { impact ->
+            val behavior = impact.attacker.type as? SapperUnit
+                ?: error("Pending Sapper bomb impact must have a Sapper source")
+            val damage = rollUnitDamage(impact.attacker, behavior.fortressDamage)
+            val targetBoss = bossSystem?.takeIf { it.entityId == impact.targetId }
+            val targetBastion = bastionById(impact.targetId)
+            when {
+                targetBoss != null -> applyBossDamage(
+                    amount = damage,
+                    sourceTeam = impact.attacker.team,
+                    sourceId = impact.attacker.id,
+                )
+                targetBastion != null -> {
+                    if (targetBastion.isAlive && targetBastion.team != impact.attacker.team) {
+                        damageBastion(
+                            targetBastion,
+                            damage,
+                            attackingUnits = current,
+                            sourceUnitId = impact.attacker.id,
+                        )
+                    }
+                }
+                impact.targetId == fortress(opposingTeam(impact.attacker.team)).id ->
+                    damageFortress(fortress(opposingTeam(impact.attacker.team)), damage)
+            }
+        }
     }
 
     private fun rollUnitDamage(

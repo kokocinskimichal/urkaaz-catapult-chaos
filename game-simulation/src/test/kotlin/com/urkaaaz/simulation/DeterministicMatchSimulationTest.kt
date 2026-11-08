@@ -14,6 +14,7 @@ import com.urkaaaz.contracts.MatchSnapshot
 import com.urkaaaz.contracts.MatchStatus
 import com.urkaaaz.contracts.RunicBastionAnimationTiming
 import com.urkaaaz.contracts.RunicBastionGeometry
+import com.urkaaaz.contracts.SapperBombFlightTiming
 import com.urkaaaz.contracts.Team
 import com.urkaaaz.contracts.UnitHitboxProfile
 import com.urkaaaz.contracts.PlayerId
@@ -545,7 +546,7 @@ class DeterministicMatchSimulationTest {
     }
 
     @Test
-    fun sapperSpendsItsBombOnRunicBastionAndReturns() {
+    fun sapperSpendsItsBombOnRunicBastionWhenTheFlightArrives() {
         val simulation = DeterministicMatchSimulation(
             MatchId("sapper-runic-bastion"),
             SimulationConfig(
@@ -561,13 +562,31 @@ class DeterministicMatchSimulationTest {
         simulation.sendWave(Team.BLUE)
 
         val events = mutableListOf<MatchEvent>()
+        var bombReleasedAtStep: Int? = null
+        var impactObserved = false
         for (step in 0 until 160) {
-            events += simulation.advance(100L)
-            if (events.any {
-                    it is MatchEvent.DamageApplied && it.targetId == bastionId
+            events += simulation.advance(50L)
+            val snapshot = simulation.snapshot()
+            val sapper = snapshot.units.single { it.entityId == deployed.unitId }
+            val bastion = snapshot.runicBastions.single()
+            if (!sapper.sapperHasBomb && bombReleasedAtStep == null) {
+                bombReleasedAtStep = step
+                assertEquals(360, bastion.health)
+            }
+            val releaseStep = bombReleasedAtStep
+            if (releaseStep != null && !impactObserved) {
+                val elapsedSinceRelease = (step - releaseStep) * 50L
+                if (elapsedSinceRelease < SapperBombFlightTiming.DURATION_MILLISECONDS) {
+                    assertEquals(360, bastion.health)
+                } else {
+                    assertEquals(
+                        SapperBombFlightTiming.DURATION_MILLISECONDS,
+                        elapsedSinceRelease,
+                    )
+                    assertTrue(bastion.health < 360)
+                    impactObserved = true
+                    break
                 }
-            ) {
-                break
             }
         }
 
@@ -575,11 +594,9 @@ class DeterministicMatchSimulationTest {
             events.filterIsInstance<MatchEvent.AttackStarted>()
                 .any { it.targetId == bastionId },
         )
+        assertTrue(bombReleasedAtStep != null, "Sapper should release its bomb")
+        assertTrue(impactObserved, "Bomb should damage the Bastion when it lands")
         assertTrue(simulation.snapshot().runicBastions.single().health < 360)
-        val sapper = simulation.snapshot().units.firstOrNull {
-            it.entityId == deployed.unitId
-        }
-        assertEquals(false, sapper?.sapperHasBomb)
     }
 
     @Test
@@ -1511,6 +1528,59 @@ class DeterministicMatchSimulationTest {
     }
 
     @Test
+    fun slingmasterGetsSynergyWhenAttackingTheSameTargetAsMeleeAllies() {
+        val simulation = DeterministicMatchSimulation(
+            MatchId("slingmaster-combat-synergy"),
+            config.copy(
+                bounds = WorldBounds(width = 1_900f, height = 600f),
+                windAccelerationX = 0f,
+            ),
+        )
+        fun durableUnit(id: String) = UnitFactory.create(
+            GameBalanceFixtures.balance.units.configuration(id).copy(
+                maxHealth = 10_000,
+                attackDamage = 1,
+                supplyCost = 0,
+            ),
+        )
+
+        simulation.start()
+        val defender = simulation.deployUnit(durableUnit(UnitIds.DEFENDER), Team.BLUE)
+        val slingmaster = simulation.deployUnit(durableUnit(UnitIds.SLINGMASTER), Team.BLUE)
+        val ragingBoar = simulation.deployUnit(durableUnit(UnitIds.RAGING_BOAR), Team.RED)
+        simulation.sendWave(Team.BLUE)
+        simulation.sendWave(Team.RED)
+
+        var synergizedSlingmasterHit: MatchEvent.AttackHit? = null
+        for (step in 0 until 1_200) {
+            synergizedSlingmasterHit = simulation.advance(50)
+                .filterIsInstance<MatchEvent.AttackHit>()
+                .firstOrNull {
+                    it.attackerId == slingmaster.unitId &&
+                        it.targetId == ragingBoar.unitId &&
+                        it.synergyCount == 2
+                }
+            if (synergizedSlingmasterHit != null) break
+        }
+
+        val hit = requireNotNull(synergizedSlingmasterHit) {
+            "Slingmaster should receive synergy when attacking the Defender's target"
+        }
+        assertEquals("RANGED", hit.attackType)
+        assertEquals(1.15f, hit.synergyMultiplier)
+        assertEquals((hit.rolledDamage * hit.synergyMultiplier).toInt(), hit.finalDamage)
+        val engagedUnits = simulation.snapshot().units
+        assertEquals(
+            ragingBoar.unitId,
+            engagedUnits.single { it.entityId == defender.unitId }.targetId,
+        )
+        assertEquals(
+            ragingBoar.unitId,
+            engagedUnits.single { it.entityId == slingmaster.unitId }.targetId,
+        )
+    }
+
+    @Test
     fun deployingDuringAnActiveWaveKeepsTheNewUnitInGarrison() {
         val simulation = DeterministicMatchSimulation(MatchId("wave-garrison-match"), config)
         simulation.start()
@@ -1869,7 +1939,8 @@ class DeterministicMatchSimulationTest {
         val initialFortressHealth = simulation.snapshot().fortresses
             .first { it.team == Team.RED }
             .health
-        var hitObserved = false
+        var bombReleasedAtAttempt: Int? = null
+        var impactObserved = false
         var returnedWithBomb = false
 
         for (attempt in 0 until 1_200) {
@@ -1877,17 +1948,48 @@ class DeterministicMatchSimulationTest {
             val snapshot = simulation.snapshot()
             val redFortress = snapshot.fortresses.first { it.team == Team.RED }
             val sapper = snapshot.units.single { it.unitType == "SAPPER" }
-            if (!hitObserved && redFortress.health < initialFortressHealth) {
-                hitObserved = true
-                assertFalse(sapper.sapperHasBomb)
+            if (bombReleasedAtAttempt == null && sapper.sapperHasBomb) {
+                assertTrue(
+                    sapper.sapperHasBomb,
+                    "Sapper must keep its bomb until the throw animation completes",
+                )
             }
-            if (hitObserved && sapper.sapperHasBomb && sapper.actionState == "GARRISONED") {
+            if (!sapper.sapperHasBomb && !impactObserved) {
+                val releaseAttempt = bombReleasedAtAttempt
+                if (releaseAttempt == null) {
+                    bombReleasedAtAttempt = attempt
+                    assertTrue(
+                        sapper.attackProgress >= SapperBombFlightTiming.BOMB_RELEASE_PROGRESS,
+                    )
+                    assertTrue(sapper.attackProgress < 1f)
+                    assertEquals("ATTACKING", sapper.actionState)
+                    assertEquals(initialFortressHealth, redFortress.health)
+                } else {
+                    val elapsedSinceRelease =
+                        (attempt - releaseAttempt) * 50L
+                    if (elapsedSinceRelease < SapperBombFlightTiming.DURATION_MILLISECONDS) {
+                        assertEquals(initialFortressHealth, redFortress.health)
+                    } else {
+                        assertEquals(
+                            SapperBombFlightTiming.DURATION_MILLISECONDS,
+                            elapsedSinceRelease,
+                        )
+                        assertTrue(
+                            redFortress.health < initialFortressHealth,
+                            "Sapper should damage the fortress when the bomb lands",
+                        )
+                        impactObserved = true
+                    }
+                }
+            }
+            if (impactObserved && sapper.sapperHasBomb && sapper.actionState == "GARRISONED") {
                 returnedWithBomb = true
                 break
             }
         }
 
-        assertTrue(hitObserved, "Sapper should damage the enemy fortress")
+        assertTrue(bombReleasedAtAttempt != null, "Sapper should release its bomb")
+        assertTrue(impactObserved, "Sapper should damage the enemy fortress on bomb impact")
         assertTrue(returnedWithBomb, "Sapper should return and refill its bomb")
     }
 
@@ -1903,20 +2005,20 @@ class DeterministicMatchSimulationTest {
             simulation.sendWave(team)
             val enemyTeam = if (team == Team.BLUE) Team.RED else Team.BLUE
             val initialFortress = simulation.snapshot().fortresses.first { it.team == enemyTeam }
-            var firstHit: Pair<MatchSnapshot, Float>? = null
+            var firstRelease: Pair<MatchSnapshot, Float>? = null
 
             for (attempt in 0 until 600) {
-                if (firstHit != null) break
+                if (firstRelease != null) break
                 simulation.advance(50)
                 val snapshot = simulation.snapshot()
-                val fortress = snapshot.fortresses.first { it.team == enemyTeam }
-                if (fortress.health < fortress.maxHealth) {
-                    firstHit = snapshot to requireNotNull(initialFortress.x)
+                val sapper = snapshot.units.single { it.unitType == "SAPPER" }
+                if (!sapper.sapperHasBomb) {
+                    firstRelease = snapshot to requireNotNull(initialFortress.x)
                 }
             }
 
-            assertTrue(firstHit != null, "$team Sapper should damage the enemy fortress")
-            val (snapshot, fortressCenterX) = requireNotNull(firstHit)
+            assertTrue(firstRelease != null, "$team Sapper should release its bomb")
+            val (snapshot, fortressCenterX) = requireNotNull(firstRelease)
             val sapper = snapshot.units.single { it.unitType == "SAPPER" }
             val direction = if (team == Team.BLUE) 1f else -1f
             val frontFaceOffset = if (direction > 0f) {

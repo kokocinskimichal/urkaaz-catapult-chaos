@@ -38,7 +38,7 @@ render frames, wall-clock time or UI state.
 - Make simultaneous attacks independent of collection order.
 - Make damage randomness reproducible through a match seed.
 - Keep target selection deterministic and stable.
-- Support melee synergy without hard-coding Defender-only behavior.
+- Support shared-target combat synergy without hard-coding Defender-only behavior.
 - Make new attack categories such as `AIRBORNE` possible without rewriting the
   existing melee and ranged systems.
 - Expose short-lived combat events for UI feedback instead of making UI infer
@@ -129,7 +129,7 @@ AttackProfile
   attackRange
   engagementRange
   lineOfSightRequired
-  participatesInMeleeSynergy
+  participatesInCombatSynergy
   targetPolicy
 ```
 
@@ -334,25 +334,30 @@ The UI must keep group members readable:
 - spacing is resolved in world coordinates;
 - bottom anchors and depth ordering remain stable.
 
-### 8.2 Melee synergy
+### 8.2 Shared-target combat synergy
 
-Melee synergy applies to all living melee units actually engaged with the same
-target. The initial participants are Defender and Raging Boar.
+Shared-target combat synergy applies to living allied participants that can
+attack the same unit or boss. Defender and Raging Boar qualify while engaged
+within melee reach. Slingmaster qualifies when its same target is within ranged
+attack range, and its ranged hit receives the multiplier too.
 
 ```text
-multiplier = min(1 + (N - 1) * 0.35, 2.0)
+multiplier = min(1 + (N - 1) * 0.15, 2.0)
 ```
 
 ```text
 N = 1 -> 1.00x
-N = 2 -> 1.35x
-N = 3 -> 1.70x
-N >= 4 -> 2.00x
+N = 2 -> 1.15x
+N = 3 -> 1.30x
+N = 4 -> 1.45x
+N = 5 -> 1.60x
+N = 6 -> 1.75x
+N = 7 -> 1.90x
+N >= 8 -> 2.00x
 ```
 
-The multiplier applies to each participating attack. Ranged units, Sapper and
-Demolisher do not participate unless a future profile explicitly opts into
-melee synergy.
+The multiplier applies to each participating attack, including eligible
+ranged attacks. Sapper and Demolisher do not participate.
 
 ## 9. Damage model
 
@@ -382,7 +387,7 @@ base range
   -> seeded damage roll
   -> Luck distribution
   -> target incoming modifier
-  -> melee synergy multiplier
+  -> shared-target combat synergy multiplier
   -> distance/falloff modifier
   -> integer clamp
   -> DamageApplied
@@ -409,7 +414,7 @@ Both use the same `MELEE` policy:
 - approach contact range;
 - join a compatible group;
 - attack at the configured hit moment;
-- receive and contribute to melee synergy;
+- receive and contribute to shared-target combat synergy;
 - retain the target until it becomes invalid.
 
 Their differences are configuration values and presentation. Future Boar-only
@@ -422,7 +427,8 @@ Slingmaster uses `RANGED`:
 - requires a valid target within range;
 - requires line of sight;
 - does not need contact;
-- does not contribute to melee synergy;
+- contributes to shared-target combat synergy when it can attack the same
+  target as its allies, and receives the multiplier on its ranged hits;
 - produces a projectile or ranged attack event;
 - loses or interrupts the attack if the target becomes invalid.
 
@@ -440,7 +446,7 @@ Demolisher uses `CONTACT_EXPLOSIVE`:
 - may damage a fortress in the radius;
 - uses full damage near the center and smooth distance falloff;
 - uses one shared base damage roll for the entire explosion;
-- does not participate in melee synergy.
+- does not participate in shared-target combat synergy.
 
 The explosion is one domain operation that creates one explosion event and
 multiple damage results.
@@ -703,7 +709,8 @@ No system may:
 - compatible units join the existing group;
 - incompatible units create a separate group;
 - group members remain within spacing constraints;
-- melee synergy follows `1.00x`, `1.35x`, `1.70x`, `2.00x`;
+- shared-target combat synergy rises by `0.15x` per additional participant and
+  caps at `2.00x` from eight participants;
 - two equal melee units can kill each other in one simultaneous resolution;
 - damage does not depend on collection order;
 - seeded damage rolls replay identically;
@@ -738,7 +745,7 @@ No system may:
 4. Implement deterministic target acquisition and target locks.
 5. Implement attack groups and world-space group spacing.
 6. Implement attack intents and batched damage resolution.
-7. Add damage ranges, seeded RNG, Luck and melee synergy.
+7. Add damage ranges, seeded RNG, Luck and shared-target combat synergy.
 8. Implement Defender and Raging Boar through the shared melee profile.
 9. Implement Slingmaster ranged targeting and line of sight.
 10. Implement Demolisher explosion and death-position detonation.

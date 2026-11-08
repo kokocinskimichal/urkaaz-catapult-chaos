@@ -213,9 +213,9 @@ data class CombatBalance(
         require(
             meleeSynergyDamagePerAdditionalUnit.isFinite() &&
                 meleeSynergyDamagePerAdditionalUnit >= 0f,
-        ) { "melee synergy increment must be finite and non-negative" }
+        ) { "combat synergy increment must be finite and non-negative" }
         require(maximumMeleeSynergyMultiplier.isFinite() && maximumMeleeSynergyMultiplier >= 1f) {
-            "maximum melee synergy multiplier must be finite and at least 1"
+            "maximum combat synergy multiplier must be finite and at least 1"
         }
     }
 }

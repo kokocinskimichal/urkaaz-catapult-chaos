@@ -70,7 +70,7 @@ internal class BattlefieldRenderer(
         bossPresentation: BossPresentationFrame,
         fireRainPresentation: FireRainPresentationFrame,
         plagueCauldronPresentation: PlagueCauldronPresentationFrame,
-        sapperBombFlights: List<SapperBombFlightFrame>,
+        sapperBombPresentation: SapperBombPresentationFrame,
         isAiming: Boolean,
         viewportWidth: Float,
         viewportHeight: Float,
@@ -310,7 +310,7 @@ internal class BattlefieldRenderer(
         }
         drawSapperBombFlights(
             canvas = canvas,
-            flights = sapperBombFlights,
+            flights = sapperBombPresentation.flights,
             viewportWidth = viewportWidth,
             viewportHeight = viewportHeight,
         )
@@ -390,6 +390,12 @@ internal class BattlefieldRenderer(
                 }
             }
         }
+        drawSapperBombImpacts(
+            canvas = canvas,
+            impacts = sapperBombPresentation.impacts,
+            viewportWidth = viewportWidth,
+            viewportHeight = viewportHeight,
+        )
         drawCombatFeedback(canvas, combatFeedback, viewportWidth, viewportHeight, groundTop)
 
         if (debugHitboxesVisible) {
@@ -1780,6 +1786,33 @@ internal class BattlefieldRenderer(
         }
     }
 
+    private fun drawSapperBombImpacts(
+        canvas: Canvas,
+        impacts: List<SapperBombImpactFrame>,
+        viewportWidth: Float,
+        viewportHeight: Float,
+    ) {
+        if (impacts.isEmpty()) return
+        val animation = assets.animationFor(POWDER_BARREL_AMMUNITION)
+        val frames = animation.impactFrames
+        if (frames.frameCount == 0) return
+        val impactSize = animation.impactRenderSizeAt(frames.frameCount - 1) *
+            SAPPER_BOMB_IMPACT_RENDER_SCALE
+        impacts.forEach { impact ->
+            val bitmap = frames.bitmapIfReady(impact.frameIndex) ?: return@forEach
+            val centerX = worldToViewX(impact.x, viewportWidth)
+            val centerY = worldToViewY(impact.y, viewportHeight)
+            val height = impactSize * bitmap.height.toFloat() / bitmap.width.coerceAtLeast(1)
+            drawTexture(
+                canvas,
+                bitmap,
+                centerX - impactSize / 2f,
+                centerY - height / 2f,
+                impactSize,
+            )
+        }
+    }
+
     private fun drawDebugHitboxes(
         canvas: Canvas,
         state: RenderState,
@@ -2018,7 +2051,9 @@ internal class BattlefieldRenderer(
         private const val FIRE_RAIN_AMMUNITION = "FIRE_RAIN"
         private const val PLAGUE_CAULDRON_AMMUNITION = "PLAGUE_CAULDRON"
         private const val SIEGE_BOMB_AMMUNITION = "SIEGE_BOMB"
+        private const val POWDER_BARREL_AMMUNITION = "POWDER_BARREL"
         internal const val SAPPER_BOMB_FLIGHT_RENDER_SIZE_WORLD = 30f
+        private const val SAPPER_BOMB_IMPACT_RENDER_SCALE = 0.5f
         private const val FIRE_RAIN_FRAGMENT_RENDER_SIZE = 28f
         private const val FIRE_RAIN_SPLIT_FLASH_RENDER_SIZE = 120f
         // Generated frames are mostly transparent; align their visible base to terrain.
