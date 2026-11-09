@@ -1,6 +1,6 @@
 {
   "schemaVersion": 6,
-  "balanceRevision": "game-balance-13",
+  "balanceRevision": "game-balance-17",
   "bosses": [
     {
       "id": "boss.central-ancient-war-oak.level-05",
@@ -379,17 +379,17 @@
       "supplyCost": 10,
       "maxHealth": 20,
       "speed": 260,
-      "attackDamage": 180,
+      "attackDamage": 100,
       "attackCooldownSeconds": 1.75,
       "attackRange": 0,
-      "fortressDamage": 180,
+      "fortressDamage": 100,
       "incomingDamageMultiplier": 0.45,
       "contactMovementSpeedMultiplier": 0.45
     },
     {
       "id": "DEFENDER",
       "supplyCost": 5,
-      "maxHealth": 80,
+      "maxHealth": 60,
       "speed": 150,
       "attackDamage": 20,
       "attackCooldownSeconds": 0.8,
@@ -415,22 +415,22 @@
       "supplyCost": 10,
       "maxHealth": 80,
       "speed": 240,
-      "attackDamage": 52,
+      "attackDamage": 35,
       "attackCooldownSeconds": 0.8,
       "attackRange": 0,
-      "fortressDamage": 52,
+      "fortressDamage": 35,
       "incomingDamageMultiplier": 1,
       "contactMovementSpeedMultiplier": 1
     },
     {
       "id": "SLINGMASTER",
       "supplyCost": 5,
-      "maxHealth": 25,
+      "maxHealth": 40,
       "speed": 120,
       "attackDamage": 20,
       "attackCooldownSeconds": 1.2,
       "attackRange": 460,
-      "fortressDamage": 20,
+      "fortressDamage": 10,
       "incomingDamageMultiplier": 1,
       "contactMovementSpeedMultiplier": 1
     }

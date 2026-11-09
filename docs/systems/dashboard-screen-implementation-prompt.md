@@ -68,7 +68,10 @@ mechanizmu języka ani nie cofaj istniejącej integracji.
   wyraźny przycisk Campaign w centrum,
   przyciski Shop, Test Mode i Ad Reward niżej oraz mały RESET w prawym dolnym
   rejonie.
-- Użyj `loadout_header_frame.png` dla panelu tytułowego i
+- Użyj wspólnego `shared_header_frame_low_profile.png` dla panelu tytułowego
+  Dashboardu; ten sam niski asset jest współdzielony z Shopem i przyszłymi
+  nagłówkami. Loadout zachowuje własny, dwupolowy
+  `loadout_header_frame.png`. Tekst pozostaje osobną warstwą UI. Użyj też
   `match_hud_universal_frame.9.png` dla panelu statystyk profilu.
   Nałóż ramkę profilu na nieprzezroczyste, ciemne, zaokrąglone wypełnienie,
   aby środek NinePatch nie odsłaniał tła sceny.

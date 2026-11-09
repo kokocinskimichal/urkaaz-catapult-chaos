@@ -8,6 +8,7 @@ import android.view.Gravity
 import android.view.View
 import android.widget.FrameLayout
 import android.widget.ImageView
+import android.widget.LinearLayout
 import com.urkaaaz.android.R
 import com.urkaaaz.navigation.ScreenContent
 
@@ -32,18 +33,15 @@ class SplashScreen(
         scaleType = ImageView.ScaleType.FIT_CENTER
         setImageResource(R.drawable.splash_company_logo)
     }
-    private val companyLogoGlow = View(context).apply {
-        importantForAccessibility = View.IMPORTANT_FOR_ACCESSIBILITY_NO
-        background = context.getDrawable(R.drawable.splash_company_logo_glow)
-    }
-    private val companyLogoComposition = FrameLayout(context).apply {
-        addView(
-            companyLogoGlow,
-            FrameLayout.LayoutParams(dp(190), dp(88), Gravity.CENTER),
-        )
+    private val logoStack = LinearLayout(context).apply {
+        orientation = LinearLayout.VERTICAL
+        gravity = Gravity.CENTER
+        addView(gameLogo, LinearLayout.LayoutParams(-1, dp(188)))
         addView(
             companyLogo,
-            FrameLayout.LayoutParams(dp(132), dp(47), Gravity.CENTER),
+            LinearLayout.LayoutParams(dp(132), dp(47)).apply {
+                topMargin = dp(12)
+            },
         )
     }
 
@@ -71,17 +69,17 @@ class SplashScreen(
             setImageResource(R.drawable.splash_background)
         }, FrameLayout.LayoutParams(-1, -1))
 
-        addView(gameLogo, FrameLayout.LayoutParams(-1, dp(188), Gravity.CENTER).apply {
-            leftMargin = dp(24)
-            rightMargin = dp(24)
-            bottomMargin = dp(68)
-        })
-
-        addView(companyLogoComposition, FrameLayout.LayoutParams(dp(216), dp(122)).apply {
-            gravity = Gravity.BOTTOM or Gravity.END
-            marginEnd = dp(16)
-            bottomMargin = dp(16)
-        })
+        addView(
+            logoStack,
+            FrameLayout.LayoutParams(
+                -1,
+                FrameLayout.LayoutParams.WRAP_CONTENT,
+                Gravity.CENTER,
+            ).apply {
+                leftMargin = dp(24)
+                rightMargin = dp(24)
+            },
+        )
     }
 
     override fun onResume() {

@@ -117,6 +117,8 @@ do bieżącego zadania według [indeksu dokumentów kontekstu](docs/agent-contex
 - [Analiza brakujących mechanik UI](docs/ui/mechanics-gap-analysis.md)
 - [Architektura Dashboardu](docs/systems/dashboard-screen.md) ·
   [prompt implementacyjny](docs/systems/dashboard-screen-implementation-prompt.md)
+- [AGP koncepcji ekranu Ad Reward](docs/systems/ad-reward-screen-mockup.agp)
+- [AGP niskiej ramki Dashboardu, Shopu i przyszłych ekranów](docs/systems/dashboard-low-profile-header-frame.agp)
 - [Tło splash screenu](docs/systems/splash-screen-background.agp)
 - [AGP landing page Urkaaaz](docs/systems/urkaaaz-website-landing-page.agp)
 - [Brief koncepcji wizualnej Shop](docs/systems/shop-screen-mockup.agp) ·

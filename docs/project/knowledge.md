@@ -5,13 +5,20 @@
 The project is a modular Android game with a deterministic local match
 simulation. The application opens into a roughly 2.5-second `SplashScreen`
 using the generated full-screen background, the supplied URKAAAZ! Catapult
-Chaos logo, and the exact AFACODE company logo as a separate overlay, then
-automatically opens the redesigned `DashboardScreen`, which uses the approved
-screen reference and its own background asset. The splash background source is
+Chaos logo, and the exact AFACODE company logo centered beneath it without a
+frame or background, then automatically opens the redesigned `DashboardScreen`,
+which uses the approved screen reference and its own background asset. The
+Android 12+ system splash uses a transparent animated icon to prevent the game
+logo from flashing inside the system's rounded icon treatment before this
+screen appears. The splash background source is
 `assets_src/splash/splash_background.png`, and the game logo source is
 `assets_src/splash/urkaaz_game_logo.png`. The 1920x1080 background is copied
 byte-for-byte to Android's `drawable-nodpi`; its generation brief is
 [`docs/systems/splash-screen-background.agp`](../systems/splash-screen-background.agp).
+The Dashboard profile header uses a 40 dp-high universal frame over a lightly
+translucent dark fill. Its 72 dp avatar image extends beyond a 64 dp portrait
+frame and is centered vertically over the panel; level, lives, gold and
+regeneration occupy four equal-width sections.
 The Dashboard's Campaign button opens `CampaignScreen`, and selecting a level
 opens the loadout screen. A globe button opens a compact PL/UK/ES selector that
 changes the Android UI language and persists it in a separate `language_settings`
@@ -116,8 +123,10 @@ five dedicated full-card unit illustrations are mapped by
 `LoadoutAssetCatalog`. Unit, ammunition and spell cards share a full-card
 illustration layout and a centered Cinzel SemiBold title over a slightly
 translucent dark bottom strip, with compact status or item metadata beneath.
-The Loadout header uses `loadout_header_frame.png`; its title and live campaign
-level are centered over the frame's separate upper and lower text panels.
+Loadout keeps its distinct two-panel `loadout_header_frame.png`, with title
+and live campaign level on separate lines. Dashboard, Shop, and future screens
+use `shared_header_frame_low_profile.png`, a separate single-panel title
+frame. Its source and Android drawable copies must remain byte-identical.
 The three Loadout category panels wrap to their headers and carousel cards
 instead of stretching vertically; their horizontal margins and gaps are equal.
 Selection frames, check badges and information buttons use supplied
@@ -374,10 +383,9 @@ not produce a success message. The screen uses the approved background at
 `android-app/src/main/res/drawable-nodpi/dashboard_background_approved.png`;
 the unused legacy Dashboard background and button/logo drawables were removed.
 Its source and accepted screen reference are under `assets_src/dashboard/`.
-The title uses
-`loadout_header_frame.png`; the profile uses
-`match_hud_universal_frame.9.png` over an opaque rounded dark fill because the
-NinePatch center is transparent. The avatar uses
+The title uses the shared low-profile `shared_header_frame_low_profile.png`;
+the profile uses `match_hud_universal_frame.9.png` over a lightly translucent
+rounded dark fill. The avatar uses
 `dashboard_hud_portrait_frame.png`.
 
 Campaign maps use one immutable JSON contract in `game-contracts`:
@@ -1168,10 +1176,11 @@ must go through commands and domain/application boundaries.
 - The AI only considers ammunition with positive fortress damage when choosing
   a shot against a fortress. Entity-impact presentation uses the collision
   coordinates from `ProjectileHitEntity`.
-- Unit maximum health is centralized in `game-balance.json`: Sapper 20,
-  Defender 80, Demolisher 25, Raging Boar 80 and Slingmaster 25. The current
-  Defender profile also uses 20 attack damage and 10 fortress damage. Stable unit
-  identifiers remain in `UnitIds`.
+- Unit balance is centralized in `game-balance.json` revision
+  `game-balance-17`. Current profiles: Sapper 20 HP and 100 siege damage;
+  Defender 60 HP, 20 unit damage and 10 fortress damage; Demolisher 25 HP;
+  Raging Boar 80 HP and 35 unit/fortress damage; Slingmaster 40 HP, 20 unit
+  damage and 10 fortress damage. Stable unit identifiers remain in `UnitIds`.
 - Demo matches configure the BLUE player fortress with 5,000 maximum health
   (ten times the standard 500), while the RED fortress and non-demo matches
   retain 500 maximum health. The value is passed through the application
@@ -1347,7 +1356,7 @@ preserves the player's existing lives and gold. A newly revised, queued preset
 is applied once to the local DataStore; release builds ignore it. The Dashboard
 reads the persisted level/lives/gold summary. Lives are currently stored and
 displayed only; consumption and regeneration remain unimplemented.
-The bundled queued preset currently applies level 21 and 5,000 gold on the next
+The bundled queued preset currently applies level 21 and 10,000 gold on the next
 debug app launch, replacing the persisted gold balance once.
 
 The team-texture animation renderer is shared by units: it combines one neutral

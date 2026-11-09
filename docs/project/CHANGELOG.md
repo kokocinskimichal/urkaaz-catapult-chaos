@@ -1,5 +1,23 @@
 # Changelog
 
+## 2026-11-09
+
+### Changed
+
+- Shortened the Dashboard profile frame and spread its level, lives, gold and
+  regeneration groups across the available width.
+- Added subtle transparency to the Dashboard profile panel and enlarged its
+  vertically centered avatar so it protrudes evenly beyond the panel.
+- Moved Dashboard `TEST MODE` above `RESET`, leaving only Shop and Ad Reward
+  beneath Campaign.
+- Expanded the Dashboard Shop and Ad Reward buttons equally so their combined
+  row matches the Campaign button width.
+- Replaced the Dashboard/Shop header with the approved low-profile shared
+  single-panel asset; Loadout retains its distinct two-panel frame.
+- Tuned Sapper, Defender, Raging Boar and Slingmaster balance profiles and
+  advanced `game-balance.json` to revision `game-balance-17`.
+- Raised the queued level-21 debug progress preset to 10,000 gold.
+
 ## 2026-11-05
 
 ### Added
@@ -121,8 +139,8 @@
 ### Changed
 
 - Replaced the runic splash lockup with the supplied Urkaaaz game logo over
-  the updated full-screen background; the AFACODE logo remains a separate
-  overlay.
+  the updated full-screen background; the AFACODE logo appears centered below
+  it without an oval frame.
 - Replaced the Chapter 1 campaign-map artwork with the supplied 1672 × 941
   image and updated its layout dimensions while preserving marker anchors.
 - Updated Defender balance to 80 HP, 20 unit damage, and 10 fortress damage;

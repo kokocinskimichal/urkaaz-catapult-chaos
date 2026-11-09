@@ -17,9 +17,10 @@ REFERENCE INPUTS
   material quality. Do not copy its composition or characters.
 - The exact company logo is stored at
   `assets_src/splash/afacode_company_logo.png`. The app renders it as a
-  separate, unmodified transparent overlay at the lower-right over a soft warm
-  glow. Keep that corner quiet and low-detail. Do not draw, regenerate, crop,
-  recolor, distort, or bake the company logo into the background.
+  separate, unmodified transparent overlay centered below the game logo, with
+  no frame or background. Keep the area below the game logo calm and readable.
+  Do not draw, regenerate, crop, recolor, distort, or bake the company logo
+  into the background.
 - The game logo is rendered as a separate, unmodified transparent overlay
   centered slightly above the screen midpoint. Keep the central area visually
   calm and contrasting enough for its green and gold lettering, goblin, and
@@ -51,10 +52,10 @@ slate-teal or deep blue-green sky/haze behind the logo so both its green and
 gold lettering remain distinct. The center must not be black, empty-gradient
 minimalism, or covered in foliage, structures, particles, or runes.
 
-Keep the lower-right corner especially quiet and moderately dark so the exact
-transparent AFACODE logo can be composited there by the app over its separate
-soft warm glow. Do not put a bright sun, banner, fortress edge, or strong
-highlight behind that overlay. Respect safe margins around all edges because
+Keep the area directly below the game-logo safe area calm and moderately dark
+so the exact transparent AFACODE logo can be composited there by the app as a
+plain overlay. Do not put a bright sun, banner, fortress edge, or strong
+highlight behind either logo. Respect safe margins around all edges because
 Android may crop a small amount of the 16:9 image on extra-wide landscape
 screens.
 
@@ -85,7 +86,7 @@ prominent catapult, duplicated logo artwork, close-up siege engine, projectile,
 explosion, active battle, damage, blood, central focal subject, crowded center,
 busy foliage behind the logo, bright green or gold clutter behind the logo,
 oversized rune, arcane emblem, dense runes, pseudo-writing, glowing text,
-bright or detailed lower-right corner, direct highlight behind AFACODE,
+busy area directly below the game logo, direct highlight behind AFACODE,
 near-black minimalist wallpaper, generic empty gradient, photorealism, harsh
 neon colors, excessive bloom, lens flare, unrelated franchise, copied
 commercial art
@@ -97,7 +98,7 @@ ACCEPTANCE CHECK
    supplied game logo and replaces the previous dark runic mood.
 3. There is no text or logo embedded in the background; the supplied game and
    AFACODE logos remain exact, separate runtime overlays.
-4. The middle area stays calm and contrasting enough for the game logo, while
-   the lower-right remains quiet for the AFACODE overlay and its warm glow.
+4. The middle area stays calm and contrasting enough for the game logo, with
+   the area below it quiet for the AFACODE overlay.
 5. The environment gives a recognizable frontier/fortress setting without
    adding a competing character, foreground catapult, or busy battle scene.

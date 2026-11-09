@@ -91,9 +91,9 @@ class DashboardScreen(
         background = context.getDrawable(R.drawable.ui_button_dark_m)
         setOnClickListener { showResetConfirmation() }
     }
-    private val livesIcon = image(R.drawable.icon_lives_heart, 24, 22)
-    private val goldIcon = image(R.drawable.icon_orcoins, 28, 22)
-    private val regenerationIcon = image(R.drawable.ic_dashboard_life_regeneration, 24, 22)
+    private val livesIcon = image(R.drawable.icon_lives_heart, 20, 20)
+    private val goldIcon = image(R.drawable.icon_orcoins, 20, 20)
+    private val regenerationIcon = image(R.drawable.ic_dashboard_life_regeneration, 20, 20)
     private val avatarFrame = avatarFrame()
     private val profilePanel = profilePanel()
     private var languagePopup: PopupWindow? = null
@@ -115,9 +115,15 @@ class DashboardScreen(
             bottomMargin = dp(54)
         })
 
-        addView(bottomActions(), FrameLayout.LayoutParams(-1, dp(62)).apply {
-            gravity = Gravity.BOTTOM
+        addView(bottomActions(), FrameLayout.LayoutParams(campaignButtonWidth(), dp(62)).apply {
+            gravity = Gravity.BOTTOM or Gravity.CENTER_HORIZONTAL
             bottomMargin = dp(12)
+        })
+
+        addView(testModeButton(), FrameLayout.LayoutParams(dp(126), dp(44)).apply {
+            gravity = Gravity.BOTTOM or Gravity.END
+            marginEnd = dp(12)
+            bottomMargin = dp(70)
         })
 
         addView(resetProgressButton, FrameLayout.LayoutParams(dp(126), dp(48)).apply {
@@ -164,6 +170,8 @@ class DashboardScreen(
     private fun topHeader(): View = LinearLayout(context).apply {
         orientation = LinearLayout.HORIZONTAL
         gravity = Gravity.CENTER_VERTICAL
+        clipChildren = false
+        clipToPadding = false
         setPadding(
             dp(ScreenChromeMetrics.EDGE_INSET_DP),
             dp(4),
@@ -178,7 +186,7 @@ class DashboardScreen(
             marginEnd = dp(4)
         })
 
-        addView(profilePanel, LinearLayout.LayoutParams(0, dp(66), 1.9f))
+        addView(profilePanel, LinearLayout.LayoutParams(0, dp(40), 1.9f))
         addView(Space(context), LinearLayout.LayoutParams(0, 1, 0.1f))
         addView(languageButton, LinearLayout.LayoutParams(dp(44), dp(44)).apply {
             marginStart = dp(4)
@@ -202,21 +210,19 @@ class DashboardScreen(
         addView(ImageView(context).apply {
             contentDescription = null
             scaleType = ImageView.ScaleType.FIT_XY
-            setImageResource(R.drawable.loadout_header_frame)
+            setImageResource(R.drawable.shared_header_frame_low_profile)
         }, FrameLayout.LayoutParams(-1, -1))
-        addView(label(R.string.dashboard_title, 25f).apply {
+        addView(label(R.string.dashboard_title, 20f).apply {
             setTextColor(Color.rgb(244, 207, 123))
             setShadowLayer(1.5f, 0f, dp(1).toFloat(), Color.BLACK)
-        }, FrameLayout.LayoutParams(-1, dp(28), Gravity.TOP).apply {
-            topMargin = dp(22)
-        })
+        }, FrameLayout.LayoutParams(-1, dp(26), Gravity.CENTER))
     }
 
     private fun profilePanel(): View = FrameLayout(context).apply {
         clipChildren = false
         addView(View(context).apply {
             background = GradientDrawable().apply {
-                setColor(Color.rgb(27, 24, 22))
+                setColor(Color.argb(224, 27, 24, 22))
                 cornerRadius = dp(14).toFloat()
             }
         }, FrameLayout.LayoutParams(-1, -1))
@@ -224,39 +230,33 @@ class DashboardScreen(
         addView(LinearLayout(context).apply {
             orientation = LinearLayout.HORIZONTAL
             gravity = Gravity.CENTER_VERTICAL
-            setPadding(dp(62), 0, dp(7), 0)
-            addView(currentLevelValue, LinearLayout.LayoutParams(-2, -2))
-            addView(statDivider(), dividerParams())
-            addView(stat(livesIcon, livesValue))
-            addView(statDivider(), dividerParams())
-            addView(stat(goldIcon, goldValue), LinearLayout.LayoutParams(-2, -2).apply {
-                marginStart = dp(7)
-            })
-            addView(statDivider(), dividerParams())
-            addView(stat(regenerationIcon, regenerationValue), LinearLayout.LayoutParams(-2, -2).apply {
-                marginStart = dp(7)
-            })
+            setPadding(dp(72), 0, dp(8), 0)
+            addView(profileCell(currentLevelValue, hasDivider = true), profileCellParams())
+            addView(profileCell(stat(livesIcon, livesValue), hasDivider = true), profileCellParams())
+            addView(profileCell(stat(goldIcon, goldValue), hasDivider = true), profileCellParams())
+            addView(profileCell(stat(regenerationIcon, regenerationValue)), profileCellParams())
         }, FrameLayout.LayoutParams(-1, -1))
-
-        addView(avatarFrame, FrameLayout.LayoutParams(dp(56), dp(56)).apply {
-            gravity = Gravity.START or Gravity.CENTER_VERTICAL
-            marginStart = dp(3)
-        })
 
         addView(View(context).apply {
             background = context.getDrawable(R.drawable.match_hud_universal_frame)
             importantForAccessibility = View.IMPORTANT_FOR_ACCESSIBILITY_NO
         }, FrameLayout.LayoutParams(-1, -1))
+
+        addView(avatarFrame, FrameLayout.LayoutParams(dp(64), dp(64)).apply {
+            gravity = Gravity.START or Gravity.CENTER_VERTICAL
+            marginStart = dp(3)
+        })
     }
 
     private fun avatarFrame(): View = FrameLayout(context).apply {
+        clipChildren = false
         contentDescription = context.getString(R.string.dashboard_avatar_accessibility)
         importantForAccessibility = View.IMPORTANT_FOR_ACCESSIBILITY_YES
         addView(ImageView(context).apply {
             contentDescription = null
             scaleType = ImageView.ScaleType.CENTER_CROP
             setImageResource(R.drawable.player_avatar_01)
-        }, FrameLayout.LayoutParams(dp(48), dp(48), Gravity.CENTER))
+        }, FrameLayout.LayoutParams(dp(72), dp(72), Gravity.CENTER))
         foreground = context.getDrawable(R.drawable.dashboard_hud_portrait_frame)
     }
 
@@ -270,16 +270,27 @@ class DashboardScreen(
             })
         }
 
+    private fun profileCell(content: View, hasDivider: Boolean = false): FrameLayout =
+        FrameLayout(context).apply {
+            addView(
+                content,
+                FrameLayout.LayoutParams(-2, -2, Gravity.CENTER),
+            )
+            if (hasDivider) {
+                addView(
+                    statDivider(),
+                    FrameLayout.LayoutParams(dp(1), dp(20), Gravity.END or Gravity.CENTER_VERTICAL),
+                )
+            }
+        }
+
+    private fun profileCellParams(): LinearLayout.LayoutParams =
+        LinearLayout.LayoutParams(0, -1, 1f)
+
     private fun statDivider(): View = View(context).apply {
         setBackgroundColor(Color.rgb(145, 117, 75))
         alpha = 0.75f
     }
-
-    private fun dividerParams(): LinearLayout.LayoutParams =
-        LinearLayout.LayoutParams(dp(1), dp(28)).apply {
-            marginStart = dp(6)
-            marginEnd = dp(6)
-        }
 
     private fun languageButton(): ImageButton = ImageButton(context).apply {
         background = context.getDrawable(R.drawable.ui_button_dark_xs_normal)
@@ -403,13 +414,16 @@ class DashboardScreen(
             gravity = Gravity.END or Gravity.CENTER_VERTICAL
             marginEnd = dp(12)
         })
-        val buttonWidth = minOf(
-            dp(480),
-            (context.resources.displayMetrics.widthPixels * 0.52f).toInt(),
-        )
+        val buttonWidth = campaignButtonWidth()
         val buttonHeight = (buttonWidth * 0.21f).toInt()
         addView(campaignButton(), FrameLayout.LayoutParams(buttonWidth, buttonHeight, Gravity.CENTER))
     }
+
+    private fun campaignButtonWidth(): Int =
+        minOf(
+            dp(480),
+            (context.resources.displayMetrics.widthPixels * 0.52f).toInt(),
+        )
 
     private fun eventSlot(): FrameLayout = FrameLayout(context).apply {
         visibility = View.GONE
@@ -428,18 +442,7 @@ class DashboardScreen(
                 descriptionResource = R.string.dashboard_shop_accessibility,
                 action = onShop,
             ),
-            LinearLayout.LayoutParams(dp(140), dp(52)),
-        )
-        addView(
-            darkActionButton(
-                labelResource = R.string.test_mode,
-                iconResource = null,
-                descriptionResource = R.string.test_mode,
-                action = onDemoMode,
-            ),
-            LinearLayout.LayoutParams(dp(140), dp(52)).apply {
-                marginStart = dp(12)
-            },
+            LinearLayout.LayoutParams(0, dp(52), 1f),
         )
         addView(
             darkActionButton(
@@ -448,11 +451,19 @@ class DashboardScreen(
                 descriptionResource = R.string.dashboard_ad_reward_accessibility,
                 action = null,
             ),
-            LinearLayout.LayoutParams(dp(140), dp(55)).apply {
+            LinearLayout.LayoutParams(0, dp(52), 1f).apply {
                 marginStart = dp(12)
             },
         )
     }
+
+    private fun testModeButton(): View =
+        darkActionButton(
+            labelResource = R.string.test_mode,
+            iconResource = null,
+            descriptionResource = R.string.test_mode,
+            action = onDemoMode,
+        )
 
     private fun campaignButton(): Button = Button(context).apply {
         text = context.getString(R.string.dashboard_campaign_action)

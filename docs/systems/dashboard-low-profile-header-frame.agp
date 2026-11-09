@@ -1,0 +1,68 @@
+# Urkaaaz — shared low-profile title frame
+
+## Purpose and source
+
+This is the shared Android title-frame asset used by Dashboard, Shop, and
+future screen headers. Loadout intentionally retains its separate two-panel
+frame because it displays different title and level text. The low-profile
+asset's canonical source and runtime paths are
+`assets_src/shared/ui/shared_header_frame_low_profile.png` and
+`android-app/src/main/res/drawable-nodpi/shared_header_frame_low_profile.png`.
+Both copies must stay byte-identical.
+
+Use the user-approved low-profile frame image as the visual reference. It is a
+transparent 2000 × 667 PNG: one long, shallow dark plaque with warm bronze/gold
+trim, carved timber, compact iron end fittings, and no lower plaque or tall
+side posts. Keep this simple one-panel silhouette for all future revisions.
+The title and any subtitle/level information are live UI, not part of the
+image. Do not include text, letters, symbols, logos, or a background.
+
+## Prompt
+
+Using the attached approved `shared_header_frame_low_profile.png`, create an
+exact style-matched replacement for Dashboard, Shop, and future Urkaaaz
+screen headers. Do not replace or imitate the separate two-panel Loadout frame.
+Keep one long, low horizontal plaque with the same dark charcoal-brown inset,
+shallow warm bronze/gold rails, carved timber, compact symmetrical iron end
+fittings, and small rivets. Preserve its low silhouette and broad,
+uncluttered live-text area. The frame must work as a flat Android UI overlay
+at varied header widths and heights.
+
+Do not redesign it as a stacked banner. Do not add a bottom plaque, subtitle
+strip, tall posts, pointed towers, dangling trim, or any vertical extension.
+Keep the art centered on transparent canvas with crisp edges and restrained
+highlights. The attached image is the approved design; do not introduce new
+ornaments or change its established frame silhouette.
+
+## Output
+
+- Output exactly one file: `shared_header_frame_low_profile.png`.
+- Canvas: exactly 2000 × 667 pixels, landscape.
+- Format: transparent RGBA PNG.
+- Preserve the approved frame's low-profile silhouette and wide proportions.
+- Preserve transparency everywhere outside the frame.
+- Keep the source copy at
+  `assets_src/shared/ui/shared_header_frame_low_profile.png`;
+  the Android copy belongs at
+  `android-app/src/main/res/drawable-nodpi/shared_header_frame_low_profile.png`.
+- Update both copies together and keep them byte-identical.
+- Do not include a mockup, screenshot, alternate version, or extra files.
+
+## Negative prompt
+
+lower plaque, second plaque, stacked signboards, subtitle panel, hanging
+signboard, dangling plate, tall posts, vertical pillars, pointed towers,
+spikes, long supports, bottom extension, text, letters, numbers, logo,
+watermark, signature, background, scenery, wall, UI screenshot, buttons,
+perspective mockup, bright central panel, oversized ornaments, excessive gold
+glow, strong bloom, clutter, asymmetrical frame, clipped artwork, opaque
+background
+
+## Acceptance check
+
+1. The output is a transparent 2000 × 667 PNG.
+2. Dashboard, Shop, and future screen headers can share this asset; Loadout
+   retains its distinct two-panel frame.
+3. There is one low horizontal plaque, with no second panel or tall post.
+4. The center remains uncluttered for live title and optional level text.
+5. Source and Android runtime copies are byte-identical.

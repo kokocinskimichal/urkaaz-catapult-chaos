@@ -41,6 +41,7 @@ zadanie obejmuje kilka obszarów, wczytaj dokumenty dla każdego z nich.
 | UI meczu, HUD lub ekran wyniku | `docs/ui/mechanics-gap-analysis.md` oraz odpowiedni dokument planu/promptu z `docs/systems/`, np. plan redesignu HUD-u albo popupu wyniku. |
 | Globalne tempo ruchu jednostek i pocisków | `docs/systems/gameplay-tempo-multiplier-plan.md` i `docs/systems/gameplay-tempo-multiplier-implementation-prompt.md`. |
 | Dashboard UI | `docs/systems/dashboard-screen.md` i `docs/systems/dashboard-screen-implementation-prompt.md`. |
+| Koncepcja ekranu Ad Reward | `docs/systems/ad-reward-screen-mockup.agp`; nagroda jest planowana jako dodatkowe Life, ale koncept nie oznacza aktywnej integracji reklam. |
 | Splash screen, runiczne tło lub branding firmy | `docs/systems/splash-screen-background.agp`; dokładne logo firmy znajduje się w `assets_src/splash/afacode_company_logo.png` i jest osobnym overlayem, nie częścią wygenerowanego tła. |
 | Shop UI lub jego wizualny koncept | `docs/systems/shop-system.md`, `docs/systems/shop-system-implementation-prompt.md`, `docs/systems/shop-screen-mockup.agp` oraz `assets_src/shop/screen-concepts/shop_ui_reference.png`; referencja służy do kompozycji, a AGP jest briefem koncepcji, nie implementacją ekranu ani runtime assetem. |
 | Promocyjny landing page Urkaaaz | `docs/systems/urkaaaz-website-landing-page.agp`; dołącz zaakceptowany screenshot kampanii oraz wskazane w AGP assety gry i logo wydawcy. |

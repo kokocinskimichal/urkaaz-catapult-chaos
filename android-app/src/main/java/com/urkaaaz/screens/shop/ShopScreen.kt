@@ -128,19 +128,19 @@ class ShopScreen(
 
             addView(FrameLayout(context).apply {
                 addView(ImageView(context).apply {
-                    setImageResource(R.drawable.loadout_header_frame)
+                    setImageResource(R.drawable.shared_header_frame_low_profile)
                     scaleType = ImageView.ScaleType.FIT_XY
                     contentDescription = null
                 }, FrameLayout.LayoutParams(-1, -1))
                 addView(TextView(context).apply {
                     text = context.getString(R.string.shop_title)
                     gravity = Gravity.CENTER
-                    textSize = 26f
+                    textSize = 17f
                     typeface = headingTypeface
                     setTextColor(Color.rgb(255, 238, 199))
                     setShadowLayer(dp(context, 2).toFloat(), 0f, dp(context, 1).toFloat(), Color.BLACK)
                 }, FrameLayout.LayoutParams(-1, -1))
-            }, LinearLayout.LayoutParams(dp(context, 286), dp(context, 64)).apply {
+            }, LinearLayout.LayoutParams(dp(context, 286), dp(context, 72)).apply {
                 marginStart = dp(context, 18)
             })
 

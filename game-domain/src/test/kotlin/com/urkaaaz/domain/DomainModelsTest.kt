@@ -117,11 +117,11 @@ class DomainModelsTest {
 
     @Test
     fun unitConfigurationsUseRequestedHealthValues() {
-        assertEquals(80, GameBalanceFixtures.balance.units.configuration(UnitIds.DEFENDER).maxHealth)
+        assertEquals(60, GameBalanceFixtures.balance.units.configuration(UnitIds.DEFENDER).maxHealth)
         assertEquals(20, GameBalanceFixtures.balance.units.configuration(UnitIds.SAPPER).maxHealth)
         assertEquals(25, GameBalanceFixtures.balance.units.configuration(UnitIds.DEMOLISHER).maxHealth)
         assertEquals(80, GameBalanceFixtures.balance.units.configuration(UnitIds.RAGING_BOAR).maxHealth)
-        assertEquals(25, GameBalanceFixtures.balance.units.configuration(UnitIds.SLINGMASTER).maxHealth)
+        assertEquals(40, GameBalanceFixtures.balance.units.configuration(UnitIds.SLINGMASTER).maxHealth)
     }
 
     @Test

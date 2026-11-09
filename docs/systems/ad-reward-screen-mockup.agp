@@ -1,0 +1,129 @@
+Create one high-fidelity visual concept for the Urkaaaz Android Ad Reward
+screen. This is a screen-design study only. Do not edit production code,
+implement ads, or generate a production background or runtime asset.
+
+## Reference inputs
+
+- The user will attach screenshots of the current Shop, Dashboard, and Loadout
+  screens. Treat all three as equal references for the shared Urkaaaz visual
+  language: painterly fantasy scenery, dark translucent panels, carved
+  wood/iron details, restrained warm-gold trim, pale readable text, and
+  consistent framed buttons.
+- Use the Dashboard screenshot to understand where the `AD REWARD` entry
+  belongs in the app, but do not copy the Dashboard layout or its profile
+  summary.
+- Use the Shop and Loadout screenshots for shared panel, button, typography,
+  icon, and ornament treatment only. Do not copy their screen layouts or
+  content.
+- The planned Ad Reward is an optional additional Life for watching an ad.
+  The feature is not active without a configured ad provider. This image is a
+  visual proposal and must not imply that ads or the reward currently work in
+  the app.
+- Do not assume any additional reward rules, limits, availability conditions,
+  ad provider, or account state beyond that description.
+
+## Output
+
+- Generate exactly one PNG: `ad_reward_screen_concept_01.png`.
+- Save it under `assets_src/ad-reward/screen-concepts/`.
+- Canvas: exactly 1920 × 1080 pixels, landscape 16:9.
+- Show the complete Android screen edge-to-edge. No phone frame, device
+  mockup, presentation board, annotations, alternate screens, watermark, or
+  signature.
+- This is a visual concept for review. Keep scenery, panels, controls, icon,
+  and text visually separable so the screen can be rebuilt with native
+  Android views and individual assets. Do not flatten the interface into one
+  production background.
+
+## Screen content and hierarchy
+
+- Design a dedicated Ad Reward offer screen reached from the Dashboard.
+  Include a clear `BACK` control at the upper-left and a prominent `AD REWARD`
+  heading. Back returns to the preceding screen; do not add routes to Shop,
+  Loadout, Campaign, or a match.
+- Make the offer immediately understandable: watching an ad is proposed to
+  grant an additional Life. Give the reward a single focal treatment with a
+  life/heart emblem and the short label `EXTRA LIFE`.
+- Show one prominent primary action labeled `WATCH AD`. It is a proposed
+  visual affordance only, not a claim that the action is wired or available.
+- Keep any explanatory copy extremely short and legible. Do not invent a
+  video duration, reward quantity, cooldown, daily cap, eligibility rule,
+  current Life count, or guarantee that an ad is available. If a value or
+  status would otherwise be needed, omit it instead of using fabricated data.
+- Keep the offer calm, optional, and trustworthy rather than urgent or
+  casino-like. The screen should not resemble a third-party ad, a video
+  player, or an ad network landing page.
+- Use one clear visual hierarchy: title and Back control, central reward
+  offer, then one gold-emphasized `WATCH AD` button. Keep decoration
+  subordinate to the reward and action.
+- Do not include an OrCoins balance, player profile summary, campaign map,
+  Shop tabs, Loadout selections, RESET control, language selector, event
+  icons, or unrelated navigation.
+
+## Layout direction
+
+- Create a full-bleed, painterly fantasy atmosphere that feels native to the
+  attached Urkaaaz screen references. Keep the area behind the offer calm and
+  low-detail enough for strong text contrast; do not invent a new named
+  location, character, or story event.
+- Use a centered, generously spaced offer panel, or a composition with
+  similarly clear focus if the attached screenshots establish a stronger
+  shared pattern. Keep all essential controls within generous screen-edge
+  safe margins.
+- Use a dark charcoal/iron panel with restrained bronze or warm-gold edging,
+  subtle carved details, and pale text. Reserve the brightest gold for the
+  reward emblem and primary action rather than every border or element.
+- Render the life emblem as a clear, single reward symbol. Match the shape,
+  color language, and level of detail of the life/heart icon visible in the
+  attached Dashboard screenshot when it is legible; do not substitute a
+  different reward such as gold, a spell, an avatar, or an item.
+- Use the game's Cinzel SemiBold-style typography for the heading and
+  prominent labels, with compact high-contrast supporting text.
+- Keep button text, reward label, and any supporting copy visually separate
+  from scenery and suitable for live UI. Do not bake variable data or
+  changeable UI text into the background.
+
+## Shared component treatment
+
+- Match the shared Shop, Dashboard, and Loadout appearance: painterly
+  atmosphere, charcoal/dark-iron panels, carved wood accents, restrained
+  bronze/gold edging, and pale high-contrast typography.
+- Follow their actual button and frame proportions, corner treatments, border
+  thickness, button depth, typography, and level of ornament. Do not
+  introduce a competing interface style.
+- Reuse visual motifs or approved components apparent in the attached
+  screenshots when available to the generation tool. If the screenshots do
+  not provide a usable exact asset, keep the concept separable and visually
+  compatible; do not claim to reproduce an unseen production asset.
+- Keep the background and every foreground UI layer distinct. Do not use any
+  attached screenshot as a flattened screen background.
+
+## Negative requirements
+
+- No claim that an ad provider, rewarded-video flow, or Life grant is
+  implemented or currently available.
+- No invented reward quantity, timer, cooldown, daily limit, eligibility,
+  availability state, current Life count, or profile data.
+- No provider logos, fake ad footage, video-player controls, countdown,
+  progress bar, subscription, payment, social, login, or account controls.
+- No OrCoins, Shop offer grid, Loadout carousel, campaign map, battle HUD,
+  RESET control, language selector, or event feed.
+- No additional rewards, mechanics, screens, or navigation routes.
+- No copied Shop, Dashboard, or Loadout composition; use those screenshots
+  only as references for the shared visual system.
+- No illegible pseudo-text, excessive ornament, urgent flashing treatment,
+  device bezel, watermark, or signature.
+
+## Review checklist
+
+- Confirm the result is one complete 1920 × 1080 landscape screen concept with
+  no device frame.
+- Confirm Shop, Dashboard, and Loadout references informed a consistent
+  shared Urkaaaz visual style without copying their screen layouts.
+- Confirm the screen clearly presents the proposed additional-Life reward and
+  has one visually dominant `WATCH AD` action.
+- Confirm the reward and action are presented as a design concept only, with
+  no invented quantity, rules, availability, balance, or ad provider.
+- Confirm scenery, offer panel, icon, controls, and text remain visually
+  separable and suitable for native UI recreation.
+- Do not import the result as a single runtime screen background.

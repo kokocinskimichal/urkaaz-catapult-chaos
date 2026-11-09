@@ -59,10 +59,12 @@ Hierarchia ekranu:
 1. Nagłówek: Back, branding Urkaaaz, portret gracza, poziom/życia/złoto/status
    regeneracji i globus; po jego dotknięciu pojawia się krótka lista trzech flag.
 2. Główny, centralny przycisk Campaign.
-3. Niżej drugorzędne przyciski Shop, Test Mode i Ad Reward.
-4. Mały przycisk RESET w prawym dolnym rejonie, oddzielony od głównej
+3. Bezpośrednio pod Campaign: tylko drugorzędne przyciski Shop i Ad Reward;
+   razem zajmują tę samą szerokość co przycisk Campaign.
+4. Test Mode w prawym dolnym rejonie, bezpośrednio nad przyciskiem RESET.
+5. Mały przycisk RESET w prawym dolnym rejonie, oddzielony od głównej
    nawigacji.
-5. Dwa puste, niewidoczne sloty eventów po bokach przycisku Campaign.
+6. Dwa puste, niewidoczne sloty eventów po bokach przycisku Campaign.
 
 Profil i status pozostają tekstem UI aktualizowanym z danych. Grafika tła,
 przyciski i ramki są osobnymi assetami, nie jednym spłaszczonym screenshotem.
@@ -199,14 +201,20 @@ Najpierw użyć istniejących zasobów Androida bez przerysowywania:
   `assets_src/dashboard/dashboard_background_approved.png`;
 - zaakceptowany screenshot referencyjny:
   `assets_src/dashboard/screen-concepts/dashboard_screen_approved_reference.png`;
-- `loadout_header_frame.png` for the `URKAAAZ` title frame;
+- The shared `shared_header_frame_low_profile.png` for the `URKAAAZ` title
+  frame. It is also used by Shop and future screen headers; keep source and
+  Android drawable copies identical. Loadout retains its distinct
+  two-panel `loadout_header_frame.png`. Title text remains a live UI overlay;
 - `match_hud_universal_frame.9.png` for the player-summary panel, layered over
-  an opaque dark rounded fill so its transparent center does not expose the
-  scene background;
+  a lightly translucent dark rounded fill so its transparent center keeps the
+  scene subtly visible. Keep the profile frame 40 dp high; let the 72 dp avatar
+  image extend beyond its 64 dp portrait frame, centered vertically so it
+  protrudes evenly above and below the profile panel. Distribute the
+  level/lives/gold/regeneration groups across four equal-width sections;
 - `dashboard_hud_portrait_frame.png` for the avatar;
 - `loadout_start_match_button` dla głównego, złotego przycisku Campaign i
   `loadout_start_match_button_xs_short` dla Back; ich tekst jest żywym UI;
-- `ui_button_dark_m` dla Shop i Ad Reward oraz istniejąca rodzina
+- `ui_button_dark_m` dla Shop, Ad Reward i Test Mode oraz istniejąca rodzina
   `ui_button_dark_*` dla resetu;
 - `icon_lives_heart.png`, `icon_orcoins.png` i `player_avatar_01`.
 
