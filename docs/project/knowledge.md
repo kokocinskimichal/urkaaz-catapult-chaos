@@ -1173,6 +1173,16 @@ must go through commands and domain/application boundaries.
   before impact.
 - SIEGE_BOMB renders at 18 world units in flight and 54 world units on impact;
   these are presentation sizes and do not affect collision or damage.
+- Siege Bomb flight now uses the approved 32-frame transparent AnimGen
+  source sequence at 512×586 under the existing
+  `anim_ammunition_siege_bomb_flight_NNN` names. Android runtime frames are
+  downsampled to the previous 138×158 dimensions with premultiplied alpha; the
+  renderer remains at 18 world units. The original source frames and ZIP/MP4
+  remain in `assets_src/ammunition/siege-bomb/flight/`, while old runtime
+  frame copies were removed at the user's request. The impact animation remains
+  unchanged and is a separate pending refresh.
+  `SiegeBombAnimationAssetsTest` enforces its flight sequence count, dimensions,
+  alpha channel, and transparent edge margin.
 - The AI only considers ammunition with positive fortress damage when choosing
   a shot against a fortress. Entity-impact presentation uses the collision
   coordinates from `ProjectileHitEntity`.

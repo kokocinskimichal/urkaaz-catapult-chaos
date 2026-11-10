@@ -77,6 +77,7 @@ do bieżącego zadania według [indeksu dokumentów kontekstu](docs/agent-contex
 ### Systemy gry
 
 - [Projekt systemu amunicji](docs/systems/ammunition-design.md)
+- [AGP odświeżenia animacji Siege Bomb](docs/systems/siege-bomb-animation-refresh.agp)
 - [Projekt systemu walki](docs/systems/combat-design.md)
 - [BossSystem](docs/systems/boss-system.md)
 - [Grafika nowego bossa finałowego Chapter 1](docs/systems/green-frontier-chapter1-final-boss-art.agp)

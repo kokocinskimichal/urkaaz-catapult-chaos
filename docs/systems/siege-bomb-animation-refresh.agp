@@ -1,0 +1,140 @@
+# Urkaaaz Siege Bomb — flight and impact animation refresh
+
+## Status and scope
+
+This brief refreshes only the visual animation frames for the existing
+`SIEGE_BOMB`. Preserve its stable ammunition ID, trajectory, collision, damage,
+reload, inventory, and impact behavior. Do not change simulation rules or
+world-space render sizes as part of frame generation.
+
+The flight animation has been generated with AnimGen, approved, and integrated
+as the new 32-frame runtime sequence. The original AnimGen ZIP/MP4 remain
+under `assets_src/ammunition/siege-bomb/flight/`; archived copies of the old
+runtime frames were removed at the user's request. The impact animation still
+needs generation and separate user approval; do not replace its current
+runtime frames without that approval.
+
+The current renderer consumes 32 flight frames and 32 impact frames by the
+existing stable names. Keep the frame count and naming so the replacement can
+be reviewed and imported without changing the runtime animation catalog.
+
+## Reference images
+
+Attach these repository assets as references:
+
+- `android-app/src/main/res/drawable-nodpi/ammo_icon_siege_bomb.png` — primary
+  identity reference for the forged iron sphere, riveted bands, short fuse,
+  lighting, and palette.
+- Representative current flight frames:
+  `anim_ammunition_siege_bomb_flight_000.png`,
+  `_008.png`, `_016.png`, `_024.png`, `_031.png`.
+- Representative current impact frames:
+  `anim_ammunition_siege_bomb_impact_000.png`,
+  `_008.png`, `_016.png`, `_024.png`, `_031.png`.
+
+The runtime frames are visual references only. Preserve the recognizable bomb
+from the icon; improve the motion and impact readability rather than copying
+the current low-contrast smoke timing.
+
+## Shared visual suffix
+
+Append this guidance to both phase prompts:
+
+```text
+Create a polished 2D game sprite animation for the Urkaaaz fantasy siege game.
+Use a fixed orthographic side-view camera. Keep the bomb/effect centered and
+the framing stable across frames; gameplay supplies world-space motion. Use
+genuine transparent RGBA backgrounds with clean alpha edges. Keep every
+visible pixel comfortably inside the canvas. No terrain, scenery, interface,
+text, labels, logo, watermark, signature, camera motion, zoom, or unrelated
+objects. Match the supplied Siege Bomb icon's dark forged-iron sphere, broad
+riveted metal bands, worn bronze highlights, and short burning fuse.
+```
+
+## 1. Flight loop
+
+```text
+Animate one Siege Bomb in flight. Preserve the exact recognizable round
+forged-iron bomb identity: dark iron plates, broad riveted cross-bands, worn
+bronze edges, and its short lit wick. Improve readability with a clear,
+controlled tumbling rotation and lively but restrained fuse flicker. The bomb
+must remain a single intact sphere at a stable center and nearly constant
+scale. Make the last frame transition seamlessly back to the first so the
+sequence can loop for the full projectile flight.
+
+Keep sparks small and close to the wick; do not add a long baked-in trail,
+smoke plume, explosion, extra bomb, debris, or movement across the canvas.
+```
+
+## 2. Impact one-shot
+
+```text
+Create one readable Siege Bomb impact animation, beginning at the instant the
+flight animation reaches its target. Frame 000 should show the same intact
+iron bomb at the point of contact, matching the flight sprite's scale and
+appearance. Quickly transition through a bright, compact white-gold ignition
+flash into a forceful amber-orange blast, a few clearly identifiable dark
+iron fragments, and a short brown-black smoke puff with glowing embers.
+Expand the blast rapidly, then let the fragments and smoke disperse and fade
+cleanly to full transparency by the final frame.
+
+Keep the effect centered on the bomb impact. Make its brightest core readable
+at small battlefield scale; avoid a muddy smoke-only opening, a persistent
+fire field, a long opaque cloud, or debris leaving the canvas. This is a
+single short-lived explosion, not a lingering-area effect.
+```
+
+## Output contract
+
+Create two independent, neutral 32-frame sequences. Frames within each
+sequence must share one fixed canvas size and alignment; do not auto-crop
+individual frames. Preserve the existing aspect ratios to keep the current
+world-space rendering proportions:
+
+- Flight: aspect ratio `138:158` (approximately `0.873`).
+- Impact: aspect ratio `248:181` (approximately `1.370`).
+
+Use the highest practical source resolution, then uniformly fit/crop with
+transparent padding to a consistent canvas for that phase. Do not stretch the
+bomb or effect non-uniformly. Start indices at `000` and keep all 32 frames
+contiguous:
+
+```text
+anim_ammunition_siege_bomb_flight_000.png
+...
+anim_ammunition_siege_bomb_flight_031.png
+
+anim_ammunition_siege_bomb_impact_000.png
+...
+anim_ammunition_siege_bomb_impact_031.png
+```
+
+Save generated source sequences separately under:
+
+```text
+assets_src/ammunition/siege-bomb/flight/
+assets_src/ammunition/siege-bomb/impact/
+```
+
+Retain the high-resolution generated source frames in `assets_src`. For
+Android runtime, downsample the flight frames with a high-quality
+premultiplied-alpha filter to the existing `138 × 158` canvas, and impact
+frames to the existing `248 × 181` canvas. This keeps the small battlefield
+sprite's pixel cost near the previous asset while preserving the original
+AnimGen output for future edits. Runtime replacements use the exact same
+filenames in `android-app/src/main/res/drawable-nodpi/`. Preview both sequences
+at their current renderer sizes (`18` world units for flight and `54` world
+units for impact) before integration. Do not alter those sizes, gameplay, or
+balance without a separate approval.
+
+## Review checklist
+
+1. Both phases contain exactly 32 sequential, transparent RGBA PNG frames.
+2. The flight loop is seamless, remains one intact bomb, and keeps its center
+   and scale stable.
+3. The impact opens immediately and visibly, progresses from bomb/flash to
+   blast, fragments and short smoke, then fades to transparent.
+4. Both phases preserve the Siege Bomb's established iron-and-bronze identity.
+5. Frame canvas alignment and aspect ratio are consistent within each phase.
+6. No gameplay, damage, collision, trajectory, reload or stock behavior is
+   changed by the visual refresh.

@@ -1,6 +1,20 @@
 # Changelog
 
+## 2026-11-10
+
+### Changed
+
+- Replaced the Siege Bomb flight animation with the approved 32-frame
+  AnimGen sequence. Runtime frames are downsampled to the prior 138 × 158
+  resolution while full-resolution source and exports are preserved. Removed
+  the old runtime frame copies at the user's request; impact remains unchanged.
+
 ## 2026-11-09
+
+### Added
+
+- Added a copy-ready AnimGen brief for refreshing the Siege Bomb flight and
+  impact sequences while preserving the existing 32-frame runtime contract.
 
 ### Changed
 
