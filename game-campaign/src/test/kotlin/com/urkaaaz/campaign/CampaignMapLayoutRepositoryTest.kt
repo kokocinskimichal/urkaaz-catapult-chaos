@@ -25,8 +25,8 @@ class CampaignMapLayoutRepositoryTest {
         assertTrue(result is CampaignMapLayoutRead.Available)
         val layout = (result as CampaignMapLayoutRead.Available).layout
         assertEquals("campaign_chapter_02_broken_valley_map", layout.backgroundAssetKey)
-        assertEquals(1_670, layout.imageWidthPx)
-        assertEquals(942, layout.imageHeightPx)
+        assertEquals(1_717, layout.imageWidthPx)
+        assertEquals(916, layout.imageHeightPx)
         assertEquals((11..20).toList(), layout.anchors.map { it.level })
     }
 

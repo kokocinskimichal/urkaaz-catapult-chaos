@@ -25,9 +25,21 @@ class LocalizedContextTest {
         val polish = LocalizedContext(base, AppLanguage.PL)
         val spanish = LocalizedContext(base, AppLanguage.ES)
 
-        assertEquals("LEVEL 3", english.getString(R.string.campaign_level, 3))
-        assertEquals("POZIOM 3", polish.getString(R.string.campaign_level, 3))
-        assertEquals("NIVEL 3", spanish.getString(R.string.campaign_level, 3))
+        assertEquals(
+            "Chapter 2 of 10",
+            english.getString(R.string.campaign_chapter_page_accessibility, 2, 10),
+        )
+        assertEquals(
+            "Rozdział 2 z 10",
+            polish.getString(R.string.campaign_chapter_page_accessibility, 2, 10),
+        )
+        assertEquals(
+            "Capítulo 2 de 10",
+            spanish.getString(R.string.campaign_chapter_page_accessibility, 2, 10),
+        )
+        assertEquals("Previous chapter", english.getString(R.string.campaign_previous_chapter))
+        assertEquals("Poprzedni rozdział", polish.getString(R.string.campaign_previous_chapter))
+        assertEquals("Capítulo anterior", spanish.getString(R.string.campaign_previous_chapter))
         assertEquals("1.5 s", english.getString(R.string.match_hud_reload_seconds, 1.5f))
         assertEquals("1,5 s", polish.getString(R.string.match_hud_reload_seconds, 1.5f))
         assertEquals("1,5 s", spanish.getString(R.string.match_hud_reload_seconds, 1.5f))

@@ -34,11 +34,11 @@ class CampaignMapViewportTest {
         val bounds = CampaignMapViewport.coverBounds(
             viewportWidth = 2400,
             viewportHeight = 1080,
-            imageWidth = 1670,
-            imageHeight = 942,
+            imageWidth = 1717,
+            imageHeight = 916,
         )
 
-        val expectedHeight = 2400f * 942f / 1670f
+        val expectedHeight = 2400f * 916f / 1717f
         assertEquals(0f, bounds.left, 0.001f)
         assertEquals(0f - (expectedHeight - 1080f) / 2f, bounds.top, 0.001f)
         assertEquals(2400f, bounds.width, 0.001f)

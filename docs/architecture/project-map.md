@@ -99,7 +99,7 @@ Dostępne ekrany:
 
 - `SplashScreen` — krótkie runiczne intro, które automatycznie otwiera Dashboard;
 - `DashboardScreen` — dashboard;
-- `CampaignScreen` — wybór poziomu kampanii;
+- `CampaignScreen` — karuzela pełnoekranowych map kampanii i wybór poziomu;
 - `LoadoutScreen` — edytuje jednostki, sloty amunicji i czary; wewnętrzne
   szczegóły zachowują draft/scroll, a start wymaga udanego zapisu;
 - `ShopScreen` — zakupy za OrCoins, dostępny z Dashboardu i Loadoutu;

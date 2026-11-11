@@ -1811,7 +1811,7 @@ bezpośrednio do `MainActivity`.
 Aktualne ekrany:
 
 - `DashboardScreen` — placeholder;
-- `CampaignScreen` — wybór poziomu z nawigacją;
+- `CampaignScreen` — pełnoekranowa karuzela map rozdziałów i wybór poziomu;
 - `LoadoutScreen` — asynchronicznie odczytuje i edytuje draft; szczegóły
   elementu są podstroną ekranu i Back zamyka je przed nawigacją;
 - `ShopScreen` — lokalny sklep za OrCoins, otwierany z Dashboardu i Loadoutu;

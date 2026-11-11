@@ -1,9 +1,10 @@
 package com.urkaaaz.screens.campaign
 
 import com.urkaaaz.android.R
+import com.urkaaaz.campaign.CampaignChapterDefinition
+import com.urkaaaz.campaign.CampaignChapterRegistry
 import com.urkaaaz.campaign.CampaignMapAnchor
 import com.urkaaaz.campaign.CampaignMapLayoutDefinition
-import com.urkaaaz.campaign.CampaignChapterRegistry
 
 data class CampaignMapPresentation(
     val chapterId: String,
@@ -30,24 +31,6 @@ sealed interface CampaignMapPresentationRead {
 }
 
 object CampaignMapPresentationCatalog {
-    fun chapterSelectorBackgroundDrawable(): Int =
-        R.drawable.campaign_chapter_selector_parchment
-
-    fun chapterTabThumbnailDrawable(chapterId: String): Int? =
-        when (chapterId) {
-            "green_frontier" -> R.drawable.campaign_chapter_01_thumbnail
-            "broken_valley" -> R.drawable.campaign_chapter_02_thumbnail
-            "ashen_march" -> R.drawable.campaign_chapter_03_thumbnail
-            else -> null
-        }
-
-    fun chapterTabFrameDrawable(isSelected: Boolean): Int =
-        if (isSelected) {
-            R.drawable.campaign_chapter_thumbnail_frame_current
-        } else {
-            R.drawable.campaign_chapter_thumbnail_frame_other
-        }
-
     fun forLayout(layout: CampaignMapLayoutDefinition): CampaignMapPresentationRead {
         val backgroundDrawable = when (layout.backgroundAssetKey) {
             GREEN_FRONTIER_MAP_ASSET_KEY -> R.drawable.campaign_chapter_01_green_frontier_map
@@ -69,6 +52,53 @@ object CampaignMapPresentationCatalog {
         )
     }
 
+    fun forFallbackChapter(
+        chapter: CampaignChapterDefinition,
+        greenFrontierLayout: CampaignMapLayoutDefinition,
+    ): CampaignMapPresentationRead {
+        val chapters = CampaignChapterRegistry.default().chapters
+        val chapterIndex = chapters.indexOfFirst {
+            it.id == chapter.id
+        }
+        if (chapterIndex < FIRST_FALLBACK_CHAPTER_INDEX ||
+            chapters[chapterIndex] != chapter
+        ) {
+            return CampaignMapPresentationRead.Failure(
+                "Green Frontier fallback is not supported for chapter '${chapter.id}'",
+            )
+        }
+        if (greenFrontierLayout.chapterId != GREEN_FRONTIER_CHAPTER_ID ||
+            greenFrontierLayout.backgroundAssetKey != GREEN_FRONTIER_MAP_ASSET_KEY ||
+            greenFrontierLayout.imageWidthPx <= 0 ||
+            greenFrontierLayout.imageHeightPx <= 0 ||
+            greenFrontierLayout.anchors.size != chapter.levelCount ||
+            greenFrontierLayout.anchors.map { it.level } != (1..chapter.levelCount).toList()
+        ) {
+            return CampaignMapPresentationRead.Failure(
+                "Green Frontier fallback layout is invalid for chapter '${chapter.id}'",
+            )
+        }
+
+        val anchors = greenFrontierLayout.anchors.mapIndexed { index, anchor ->
+            CampaignMapAnchor(
+                level = chapter.firstLevel + index,
+                x = anchor.x,
+                y = anchor.y,
+            )
+        }
+        return CampaignMapPresentationRead.Available(
+            CampaignMapPresentation(
+                chapterId = chapter.id,
+                backgroundDrawable = R.drawable.campaign_chapter_01_green_frontier_map,
+                imageWidthPx = greenFrontierLayout.imageWidthPx,
+                imageHeightPx = greenFrontierLayout.imageHeightPx,
+                anchors = anchors,
+            ),
+        )
+    }
+
+    private const val FIRST_FALLBACK_CHAPTER_INDEX = 3
+    private const val GREEN_FRONTIER_CHAPTER_ID = "green_frontier"
     private const val GREEN_FRONTIER_MAP_ASSET_KEY =
         "campaign_chapter_01_green_frontier_map"
     private const val BROKEN_VALLEY_MAP_ASSET_KEY =

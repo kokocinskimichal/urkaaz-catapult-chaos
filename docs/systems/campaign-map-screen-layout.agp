@@ -1,4 +1,9 @@
-STATUS: Create one high-fidelity visual concept screenshot for the Urkaaaz
+STATUS: Superseded historical CampaignScreen concept. The implemented
+direction is a full-screen chapter-map carousel with a compact HUD, no
+decorative outer frame, and no chapter thumbnail strip. Do not use this older
+framed-screen concept as an implementation reference.
+
+Create one high-fidelity visual concept screenshot for the Urkaaaz
 Android campaign map screen. Follow the newest attached full-screen reference,
 including its prominent Start Level button. It replaces the earlier 0 / 10
 concept without that button. This is a visual design study only; do not edit

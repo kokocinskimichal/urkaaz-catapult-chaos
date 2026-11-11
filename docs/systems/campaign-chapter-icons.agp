@@ -1,4 +1,8 @@
-STATUS: Create a matched set of three low, wide chapter-map-preview thumbnails
+STATUS: Historical brief for the retired campaign chapter-thumbnail selector.
+CampaignScreen now navigates between full-screen chapter maps; do not generate
+or restore these preview thumbnails for its UI.
+
+Create a matched set of three low, wide chapter-map-preview thumbnails
 for the campaign selector. These are miniature previews of the complete map
 compositions, not symbolic chapter icons. All three must fit side by side on
 the existing shallow parchment backplate.

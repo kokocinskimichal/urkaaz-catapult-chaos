@@ -51,11 +51,14 @@ do bieżącego zadania według [indeksu dokumentów kontekstu](docs/agent-contex
 
 ### Kampania i mapy
 
+- [Plan przeimplementowania ekranu kampanii na karuzelę map](docs/systems/campaign-map-carousel-reimplementation-plan.md)
+- [Prompt implementacyjny karuzeli map kampanii](docs/systems/campaign-map-carousel-implementation-prompt.md)
+- [Prezentacja map kampanii](docs/systems/campaign-map-presentation.md)
+- [System kampanii](docs/systems/campaign-system.md)
 - [Migracja map kampanii do JSON](docs/campaign/map-json-migration-plan.md)
 - [Prompt implementacji map JSON](docs/campaign/map-json-implementation-prompt.md)
 - [Rozdział 1 — README map](docs/campaign/maps/chapter1/README.md)
 - [Rozdział 1 — porównanie map](docs/campaign/maps/chapter1/COMPARISON.md)
-- [AGP wspólnego pergaminowego panelu selektora rozdziałów](docs/systems/campaign-chapter-selector-parchment.agp)
 
 ### Edytor map
 
@@ -90,6 +93,8 @@ do bieżącego zadania według [indeksu dokumentów kontekstu](docs/agent-contex
 - [Plan implementacji systemu nagród](docs/systems/reward-system-implementation-plan.md)
 - [System postępu gracza](docs/systems/player-progression-system.md)
 - [Prompt postępu gracza](docs/systems/player-progression-system-implementation-prompt.md)
+- [Projekt LifeSystem](docs/systems/life-system.md) ·
+  [prompt implementacyjny](docs/systems/life-system-implementation-prompt.md)
 - [ShopSystem](docs/systems/shop-system.md) ·
   [prompt implementacyjny](docs/systems/shop-system-implementation-prompt.md)
 - [System loadoutu](docs/systems/loadout-system.md)
@@ -173,7 +178,7 @@ Available screens:
 - `SplashScreen` — brief runic startup intro that automatically opens the
   Dashboard;
 - `DashboardScreen` — legacy-style dashboard, wired to navigation;
-- `CampaignScreen` — legacy-style selector backed by persisted
+- `CampaignScreen` — full-screen map carousel backed by persisted
   `CampaignProgress`;
 - `LoadoutScreen` — reads profile and campaign spell entitlements, preserves
   saved per-level choices, and starts only after successful validation/save;

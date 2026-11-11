@@ -1,4 +1,8 @@
-STATUS: Generate two matching transparent overlay frames for the wide
+STATUS: Historical brief for the retired campaign chapter-thumbnail selector.
+CampaignScreen now navigates between full-screen chapter maps; do not generate
+or restore these thumbnail frames for its UI.
+
+Generate two matching transparent overlay frames for the wide
 campaign chapter-map thumbnails. One frame marks the currently selected
 chapter; the other is used by every non-current chapter.
 

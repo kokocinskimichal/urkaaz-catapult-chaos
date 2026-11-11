@@ -11,6 +11,7 @@ import com.urkaaaz.application.campaign.CampaignSystem
 import kotlinx.coroutines.runBlocking
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
@@ -46,6 +47,37 @@ class CampaignViewModelTest {
         )
         assertEquals(CampaignSelectionRejection.LEVEL_LOCKED, viewModel.state.selectionRejection)
         assertEquals(1, viewModel.state.progress?.highestUnlockedLevel)
+    }
+
+    @Test
+    fun chapterCarouselNavigatesOnlyWithinVisibleCompletedCurrentAndPreviewPages() = runBlocking {
+        val viewModel = CampaignViewModel(
+            CampaignSystem(
+                FakeRepository(
+                    CampaignProgress(
+                        highestUnlockedLevel = 11,
+                        completedLevels = (1..10).toSet(),
+                    ),
+                ),
+            ),
+        )
+        viewModel.load()
+
+        assertEquals("broken_valley", viewModel.state.selectedChapterId)
+        assertTrue(viewModel.navigateChapter(CampaignChapterNavigationDirection.PREVIOUS))
+        assertEquals("green_frontier", viewModel.state.selectedChapterId)
+        assertNull(viewModel.state.selectedLevel)
+        assertFalse(viewModel.navigateChapter(CampaignChapterNavigationDirection.PREVIOUS))
+        assertEquals("green_frontier", viewModel.state.selectedChapterId)
+
+        assertTrue(viewModel.navigateChapter(CampaignChapterNavigationDirection.NEXT))
+        assertEquals("broken_valley", viewModel.state.selectedChapterId)
+        assertEquals(11, viewModel.state.selectedLevel)
+        assertTrue(viewModel.navigateChapter(CampaignChapterNavigationDirection.NEXT))
+        assertEquals("ashen_march", viewModel.state.selectedChapterId)
+        assertNull(viewModel.state.selectedLevel)
+        assertFalse(viewModel.navigateChapter(CampaignChapterNavigationDirection.NEXT))
+        assertEquals("ashen_march", viewModel.state.selectedChapterId)
     }
 
     @Test

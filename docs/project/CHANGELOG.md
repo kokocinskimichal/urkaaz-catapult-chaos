@@ -1,5 +1,25 @@
 # Changelog
 
+## 2026-11-11
+
+### Added
+
+- Added a LifeSystem design and implementation prompt for persistent lives,
+  offline regeneration, campaign access checks, and idempotent future grants.
+  The system remains a proposal and is not implemented.
+
+### Changed
+
+- Imported the approved 1717 × 916 Broken Valley campaign map while
+  preserving its normalized level anchors.
+- Replaced the CampaignScreen chapter-thumbnail strip and decorative frame
+  with a full-screen map carousel navigable by side arrows or horizontal swipe;
+  compressed its live dark HUD header to 52 dp to preserve more map area.
+  Chapters 4–10 temporarily use Green Frontier artwork and anchors as an
+  Android presentation fallback; campaign progression and level authorization
+  are unchanged. Removed the retired selector runtime assets and kept the
+  shared campaign frame for Test Mode and Studio.
+
 ## 2026-11-10
 
 ### Changed

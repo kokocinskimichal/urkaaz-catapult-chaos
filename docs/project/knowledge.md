@@ -304,28 +304,42 @@ markers. The available level is selected by default; tapping it changes
 screen-local selection, and **Start Level** calls the existing
 `CampaignSystem.selectLevel` before opening Loadout.
 
-`CampaignScreen` renders Chapters 1–3 as full-bleed, center-cropped maps and
-positions level markers using the same crop transform as the shared
+`CampaignScreen` is a full-screen map carousel with a compact 52dp-high live
+HUD header, side navigation arrows, horizontal swipes, fortress/boss markers,
+state-specific level plaques, completed/locked badges, and a shared
+available-level glow.
+The visible chapter set remains all completed chapters, the current chapter,
+and at most one locked preview. Chapter navigation is screen-local and does
+not add routes to `AppNavigator`; the page indicator uses the chapter's
+position in the full ten-chapter registry. The map and its markers use the
+same center-crop transform as the shared
 `game-campaign/src/main/resources/campaign-map-layouts/<chapterId>.json`
-layout. Android's `CampaignMapPresentationCatalog` resolves background asset
-keys to drawable resources; it does not own marker coordinates. The screen
-layers a transparent campaign frame, live chapter/progress UI, fortress/boss
-artwork, state-specific level plaques, completed/locked badges, and a shared
-available-level glow. Chapters 4–10 do not yet have map artwork and use the
-explicit chapter level-list fallback.
+anchors.
+`CampaignMapPresentationCatalog` resolves authored map assets for Chapters
+1–3. When a chapter 4–10 layout is absent, Android uses the Green Frontier
+background and anchor coordinates as a presentation-only fallback, remapping
+anchor level IDs to that chapter's global range. Marker kinds and progress
+remain sourced from the chapter registry and `CampaignChapterProgressMapper`.
+`CampaignMapLayoutRepository` remains strict, and Studio continues to report
+the missing authored layouts; invalid data and storage failures do not use
+the fallback.
 Chapter 1's current `campaign_chapter_01_green_frontier_map` image is
 1672x941, with ten empty fortress sites on one continuous route and highlighted
 boss sites at levels 5 and 10. Its source/runtime copies match. The normalized
 marker anchors remain in the shared layout; the user can continue repositioning
 fortresses and boss markers in Studio.
 Chapter 2 now uses the supplied `campaign_chapter_02_broken_valley_map` image
-(1670x942), with ten site anchors for global levels 11–20 in
+(1717x916), with ten site anchors for global levels 11–20 in
 `campaign-map-layouts/broken_valley.json`; the source and Android drawable
 copies are byte-identical.
 Chapter 3 uses the supplied `campaign_chapter_03_ashen_march_map` image
 (1672x941), with ten site anchors for global levels 21–30 in
 `campaign-map-layouts/ashen_march.json`; the source and Android drawable
 copies are byte-identical.
+Transparent 256x256 left/right navigation arrows are stored in
+`assets_src/campaign/ui/campaign_map_nav_arrow_{left,right}.png` and mirrored
+byte-for-byte in Android `drawable-nodpi`; CampaignScreen uses them with
+localized accessibility labels and touch targets of at least 48 dp.
 Boss markers resolve a level's encounter profile through
 `CampaignLevelDefinition.bossProfileIdForLevel` and the balance profile's
 `presentationKey`. `CampaignMapView` uses the matching boss sprite and optional
@@ -333,35 +347,13 @@ campaign-marker idle while preserving the existing plaque, status, selection,
 and accessibility behavior; landmarks without a boss profile retain the
 generic boss marker. Boss landmark art now renders at 72 dp, 150% of its former
 48 dp size; fortress art and live level/status overlays are unchanged.
-The original square selector emblems remain in `assets_src/campaign/chapter-icons/`,
-but Chapters 1–3 now use separate opaque 512x288 (16:9) map-preview thumbnails
-from `assets_src/campaign/chapter-thumbnails/`; the 1536x288 sprite sheet is
-preserved alongside them. Android drawable copies are byte-identical. Each
-thumbnail appears in a 126x51 dp window inside a 144x74 dp layout slot. The
-whole framed card renders at 80% scale (about 115x59 dp), with two cards at a
-time on the 312x104 dp parchment. The pair is centered within the parchment's
-visible area, with a 6 dp upward content offset for the transparent top trim.
-`CampaignMapPresentationCatalog.chapterTabThumbnailDrawable` maps these three
-chapter IDs; later chapters keep text-only tabs until their art is prepared.
-The 2000x667 original selected/other frame sheet and 936x479 extracted frame
-assets are stored in `assets_src/campaign/chapter-thumbnail-frames/`; Android
-drawable copies are byte-identical. Live chapter names appear in captions, and
-completion/lock badges overlay the upper-right of each card. Accessibility
-descriptions retain chapter numbers. One shared transparent 2000x667 parchment
-backplate is stored in
-`assets_src/campaign/ui/campaign_chapter_selector_parchment.png` and rendered
-behind the carousel; the cards use separate frames and live captions. The
-selector is rendered at 312 x 104 dp, flush with the upper-right screen corner.
-The parchment drawable is scaled 20% downward from its top edge without
-changing the selector layout or card positions.
-Its Android copy is
-`R.drawable.campaign_chapter_selector_parchment`. The
-copy-ready art brief is
-`docs/systems/campaign-chapter-selector-parchment.agp`. A replacement brief
-for low, wide Chapter 1–3 map-preview thumbnails is
-`docs/systems/campaign-chapter-icons.agp`. The former square selector emblems
-remain in source/resources for reference but are no longer used by the runtime
-chapter carousel.
+The previous chapter thumbnail strip, its selected/other frames, and the
+shared parchment selector asset have been removed from runtime resources.
+Their source sprite sheets and original square emblems remain in
+`assets_src/campaign/` as historical/regeneration references; they are not
+loaded by CampaignScreen. The full-screen carousel uses no chapter thumbnail
+assets or outer campaign frame. `campaign_map_frame_overlay.png` remains
+available to Test Mode and Studio's Campaign preview.
 
 The Studio Campaign tab edits the same chapter and layout JSON through
 `/api/campaign/*`; it never modifies `MapDefinition` or Android resource IDs.
@@ -997,7 +989,7 @@ must go through commands and domain/application boundaries.
 | `android-app/.../screens/splash/SplashScreen.kt` | Startup splash with the game logo and AFACODE company logo |
 | `android-app/.../screens/dashboard/DashboardScreen.kt` | Dashboard layout, profile summary, navigation, reset and static language icons |
 | `docs/systems/dashboard-screen.md` and `docs/systems/dashboard-screen-implementation-prompt.md` | Dashboard presentation boundaries, approved assets and implementation requirements |
-| `android-app/.../screens/campaign/CampaignScreen.kt` | Chapter campaign map, chapter selector, and Start Level flow |
+| `android-app/.../screens/campaign/CampaignScreen.kt` | Full-screen chapter-map carousel, progression HUD, markers, and Start Level flow |
 | `android-app/.../screens/campaign/CampaignChapterProgressMapper.kt` | Campaign progress to visible chapter and marker states |
 | `game-campaign/.../campaign/CampaignChapterCatalogRepository.kt` | Shared JSON chapter metadata loading |
 | `game-campaign/.../campaign/CampaignMapLayoutRepository.kt` | Validated normalized campaign map layout resources |

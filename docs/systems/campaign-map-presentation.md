@@ -2,16 +2,14 @@
 
 ## Status
 
-**Partially implemented.** The campaign has a canonical ten-chapter registry,
-typed fortress/boss landmarks, chapter-based biome assignments, and a
-progression projection for current/completed/preview chapters. Chapter 1 uses
-the supplied map and Chapter 2 uses its supplied Broken Valley map, both with
-interactive markers. Per the accepted rollout decision, chapters without map
-artwork retain the chapter-specific level-list presentation until their
-backgrounds are supplied; Chapters 4–10 do not yet have map images. Chapter
-metadata and map marker coordinates are stored as shared JSON resources in
-`game-campaign`; the Studio Campaign tab edits the same per-chapter layouts
-that Android reads at runtime.
+**Implemented.** The campaign has a canonical ten-chapter registry, typed
+fortress/boss landmarks, persisted progression, and a full-screen map
+carousel. It displays completed chapters, the current chapter, and at most
+one next-chapter preview. Chapters 1–3 use their authored map backgrounds;
+Chapters 4–10 temporarily reuse the Green Frontier artwork and anchors as an
+Android presentation fallback. The strict layout repository and Studio still
+report missing authored artwork for Chapters 4–10. Campaign metadata and
+authored map anchors remain shared JSON resources in `game-campaign`.
 
 The first version contains ten chapters with ten levels each. The design must
 allow more chapters to be added later without changing the screen navigation
@@ -28,7 +26,7 @@ levels. Eight locations use replaceable fortress marker assets; chapter levels
 communicate level status and handle selection, so neither marker art nor map
 background needs to change when progress changes.
 
-The selector must make it easy to understand:
+The campaign screen must make it easy to understand:
 
 - which chapter is currently active;
 - which level is the next available one;
@@ -38,11 +36,15 @@ The selector must make it easy to understand:
 
 ### In scope
 
-- Replace the vertical level list with chapter map pages.
+- Show one full-screen chapter map page at a time.
 - Show all completed chapters, the current chapter, and at most one next
   chapter as a locked preview.
-- Give each chapter its own biome-themed map background with ten level
-  locations.
+- Use an authored biome-themed background where available and a clearly
+  documented presentation fallback where it is not.
+- Navigate between visible chapter maps with side arrows or a horizontal
+  swipe; do not show chapter thumbnail cards.
+- Keep the compact campaign header, chapter title, chapter progress, global
+  `N / 10` position, level markers, and Start Level action as live UI.
 - Render fortress and boss landmark assets separately from the map background;
   levels 5 and 10 of every chapter use a boss marker instead of a fortress.
 - Overlay level numbers, selection feedback, and completed/current/locked
@@ -69,76 +71,51 @@ The selector must make it easy to understand:
 - Generating, importing, or approving the final map images as part of this
   architecture plan.
 
-## Existing behavior and related systems
-
-- `CampaignScreen` now uses the chapter registry and exposes tabs for all
-  completed chapters, the current chapter, and at most one locked preview.
-  Chapters 1–3 render their supplied maps and ten markers; chapters without
-  map art retain the level-list presentation for the selected chapter. Each
-  map fills its viewport with a center-crop transform shared by the landmark
-  anchors.
-- A transparent campaign frame overlays the map. The campaign label, chapter
-  number, title, and completion progress appear left-aligned in its upper-left
-  plaque. A progress bar reflects completed levels in the selected chapter;
-  icon tabs sit at the upper-right without a border. Chapter icons fill their
-  tabs, with completed/locked badges overlaid at the lower-right and no visible
-  chapter number; selection uses background opacity. Start Level is at the
-  bottom center.
-- The screen reuses the existing gold button artwork: the full-size
-  `loadout_start_match_button` for Start Level and the `xs_short` variant for
-  Back, matching the Loadout screen's button dimensions and pressed-state
-  resources.
+- `CampaignScreen` shows one full-bleed chapter map at a time. Completed
+  chapters, the current chapter, and at most the next locked preview are
+  navigable with the imported left/right arrow assets or a horizontal swipe.
+  The page indicator uses the chapter's global number out of ten, not its
+  index among currently visible pages.
+- The map uses the shared `CampaignMapViewport` center-crop transform for
+  both the image and normalized marker anchors. Chapters 1–3 resolve their
+  authored backgrounds. A missing map for Chapters 4–10 reuses the Green
+  Frontier background and local anchor positions, remapping anchor level IDs
+  to the selected chapter's global level range. Marker kinds and states still
+  come from the canonical chapter and progress projections.
+- The Android fallback is presentation-only. `CampaignMapLayoutRepository`
+  remains strict, does not synthesize map JSON, and reports missing artwork to
+  Studio; it never masks invalid layout data or storage failures.
+- The HUD is a compact 52 dp-high dark translucent header, with Back adjacent
+  to a wider chapter panel. Campaign label, chapter number/title and `N / 10`
+  share the upper rows; progress occupies a thin bottom row. Side navigation
+  arrows and the bottom-centered Start Level button stay outside this header.
+  CampaignScreen does not use the decorative outer frame, chapter thumbnails,
+  or parchment selector.
+- Back and Start Level continue to reuse Loadout's approved button art.
+  Header text and progress remain live Android UI; arrows use the transparent
+  `campaign_map_nav_arrow_left/right.png` assets with 48 dp or larger touch
+  targets and localized accessibility descriptions.
+- The campaign frame overlay remains in the repository because Test Mode and
+  Studio's Campaign preview still use it. It is not layered by CampaignScreen.
 - The current available level is selected by default. Tapping an available
-  marker changes only screen-local selection; the explicit **Start Level**
-  action calls `CampaignSystem.selectLevel` and opens Loadout after successful
+  marker changes only screen-local selection; **Start Level** calls
+  `CampaignSystem.selectLevel` and opens Loadout only after successful
   authorization. Locked and completed markers remain non-interactive.
-- Fortress markers now use the approved transparent blue-banner Orc artwork
-  from `assets_src/campaign/map-markers/campaign_map_marker_fortress.png`.
-  Boss markers use the approved transparent horned-skull shrine artwork from
+- Fortress markers use the approved transparent blue-banner Orc artwork from
+  `assets_src/campaign/map-markers/campaign_map_marker_fortress.png`. Boss
+  markers use the approved transparent horned-skull shrine artwork from
   `assets_src/campaign/map-markers/campaign_map_marker_boss.png`.
 - The current available marker uses the transparent golden glow asset at
   `assets_src/campaign/map-markers/campaign_map_marker_available_glow.png`.
-  The same image is scaled behind either a fortress or boss; completed and
-  locked markers do not receive a glow.
-- `CampaignMapView` renders the completed, available, and locked level-plaque
+  Completed and locked markers do not receive a glow.
+- `CampaignMapView` renders completed, available, and locked plaque
   backgrounds from separate PNGs. Number text remains live UI; completed and
-  locked states use separate check and padlock badge PNGs. The original sprite
-  sheets are preserved for regeneration.
-- Completed and locked markers now use the approved transparent check and
-  padlock badge artwork extracted from the status-icon sprite sheet. Available
-  markers have no status badge.
-- A two-icon sprite-sheet prompt for the completed check and locked padlock is
-  available at `docs/systems/campaign-map-level-status-icons.agp`.
-- A replacement art brief for wide Chapter 1–3 map-preview
-  thumbnails is `docs/systems/campaign-chapter-icons.agp`. It uses the
-  user-provided selector screenshot for proportions and the matching campaign
-  map backgrounds as terrain references. Chapter names and status remain live
-  UI.
-- `docs/systems/campaign-chapter-thumbnail-frames.agp` specifies the separate
-  selected and non-current frame overlays for these thumbnails; selection
-  framing remains independent of live completion and lock badges.
-- The original square selector emblems remain under
-  `assets_src/campaign/chapter-icons/`, but the runtime now uses three separate
-  opaque 512 x 288 (16:9) map-preview thumbnails from
-  `assets_src/campaign/chapter-thumbnails/`. Android copies live in
-  `android-app/src/main/res/drawable-nodpi/`; `CampaignMapPresentationCatalog`
-  maps Chapters 1–3, while later chapters retain text-only tabs. Each thumbnail
-  is center-cropped into a 126 x 51 dp image window in a 144 x 74 dp layout
-  slot. The whole card renders at 80% scale (about 115 x 59 dp); a horizontal
-  carousel shows two cards at once on the 312 x 104 dp parchment.
-  The pair is centered within the parchment's visible area; its content is
-  shifted 6 dp upward to compensate for the transparent top trim.
-  Chapter names are live captions; separate current/other frame overlays and
-  completion/lock badges are live UI. The 1536 x 288 thumbnail sheet is
-  preserved for regeneration, along with the 2000 x 667 frame sheet and its
-  two 936 x 479 extracted variants. All cards sit over one shared,
-  transparent parchment panel at
-  `assets_src/campaign/ui/campaign_chapter_selector_parchment.png`, imported
-  unchanged to `android-app/src/main/res/drawable-nodpi/`. The panel is
-  312 x 104 dp and flush to the screen's upper-right corner; frames and captions
-  are overlays rather than individual parchment backgrounds.
-  The parchment drawable is stretched 20% downward around its top edge, while
-  the panel layout and carousel positions remain unchanged.
+  locked states use separate check and padlock badges. Original level-plaque
+  and status-icon sheets remain as regeneration sources.
+- The old chapter thumbnails, thumbnail frames, and parchment selector were
+  removed from Android runtime resources and their exported source copies.
+  Original sprite sheets and square chapter emblems remain archived under
+  `assets_src/campaign/`; they are not loaded by the current campaign screen.
 - `CampaignProgress` already persists `highestUnlockedLevel` and
   `completedLevels`.
 - `CampaignChapterRegistry` reads canonical chapter metadata from
@@ -179,7 +156,7 @@ progression, level authorization, or gameplay map contracts.
 | Chapter switching, marker input, and rendering | Existing `CampaignScreen` and screen-owned campaign map view/controller |
 | Campaign layout authoring and safe persistence | `CampaignTab` / `campaignMapCatalog.ts` in `studio-web` / `studio-server` |
 | Committed map source images | `assets_src/campaign/chapter-maps/` |
-| Committed campaign frame source image | `assets_src/campaign/ui/campaign_map_frame_overlay.png` |
+| Shared campaign frame source image (Test Mode / Studio) | `assets_src/campaign/ui/campaign_map_frame_overlay.png` |
 | Committed level-plaque sheet and extracted state assets | `assets_src/campaign/ui/` |
 | Android map image resources | `android-app/src/main/res/drawable-nodpi/` |
 
@@ -190,7 +167,7 @@ CampaignScreen / map view (android-app)
   ├── CampaignSystem progress and selectLevel (game-application)
   ├── CampaignChapterRegistry (game-campaign)
   ├── CampaignMapLayoutRepository (game-campaign)
-  └── Android campaign-map asset catalog, frame, and PNG assets
+  └── Android map, marker, and carousel-arrow assets
 
 CampaignLevelDefinition (game-campaign)
   └── MapDefinition.biome set from its chapter's canonical biome
@@ -293,16 +270,14 @@ For valid progress:
 6. If the campaign is complete, the last chapter remains the default and all
    completed chapters remain visible; there is no next-chapter preview.
 
-The chapter selector presents all completed chapters plus the current and
-preview chapter. Its visual placement is not a fixed contract: keep it compact
-and clear of the map's level anchors. The current bottom strip is only the
-existing implementation, not an approved final layout. A redesign concept
-prompt is available at `docs/systems/campaign-map-screen-layout.agp`; review
-the generated screenshot before changing screen composition. The full
-chapter title and completion summary remain visible on the selected map page.
-The reference design's upper-right chapter group uses one shared parchment
-backplate behind separate chapter icons, not a parchment card per icon; its
-asset brief is `docs/systems/campaign-chapter-selector-parchment.agp`.
+The carousel presents all completed chapters plus the current and preview
+chapter. It shows a single full-screen map, compact campaign header, global
+chapter index, and side arrows. Horizontal swipe and arrows select only an
+adjacent page from the current visible chapter set; neither changes progress
+or adds routes to `AppNavigator`. Page and level selections remain
+screen-local. The current design and implementation constraints are recorded
+in `campaign-map-carousel-reimplementation-plan.md` and
+`campaign-map-carousel-implementation-prompt.md`.
 
 The chapter state is presentation-only:
 
@@ -310,9 +285,9 @@ The chapter state is presentation-only:
   non-interactive.
 - **Current chapter:** the level in `highestUnlockedLevel`, if not completed,
   is the only selectable level. Later levels are visibly locked.
-- **Next chapter preview:** show its map and ten locked markers, with a clear
-  preview/locked chapter treatment. No level is selectable.
-- **Hidden future chapter:** no map page or selectable chapter tab is shown.
+- **Next chapter preview:** show its map and ten locked markers. No level is
+  selectable.
+- **Hidden future chapter:** no map page is shown until progression reaches it.
 
 For each marker, completed status is derived from `completedLevels`; the
 available marker is derived from `highestUnlockedLevel`; all other levels are
@@ -424,7 +399,7 @@ The supplied Broken Valley background is stored at
 `assets_src/campaign/chapter-maps/campaign_chapter_02_broken_valley_map.png`
 and imported unchanged into
 `android-app/src/main/res/drawable-nodpi/campaign_chapter_02_broken_valley_map.png`.
-Its source dimensions are 1670 × 942 pixels. Its ten site positions are stored
+Its source dimensions are 1717 × 916 pixels. Its ten site positions are stored
 as normalized anchors for global levels 11–20 in
 `game-campaign/src/main/resources/campaign-map-layouts/broken_valley.json`;
 the larger boss sites correspond to local levels 5 and 10. The source and
@@ -441,6 +416,13 @@ as normalized anchors for global levels 21–30 in
 `game-campaign/src/main/resources/campaign-map-layouts/ashen_march.json`;
 the larger boss sites correspond to local levels 5 and 10. The source and
 runtime images must remain byte-identical.
+
+Transparent 256 × 256 navigation arrow artwork is available at
+`assets_src/campaign/ui/campaign_map_nav_arrow_left.png` and
+`campaign_map_nav_arrow_right.png`, with byte-identical Android copies in
+`android-app/src/main/res/drawable-nodpi/`. These are standalone directional
+icons for the proposed full-map chapter carousel; importing them does not
+change the current chapter-navigation UI or behavior.
 
 ## Navigation and lifecycle
 
@@ -503,8 +485,9 @@ state is required. The screen does not mutate `CampaignProgress` or
 - A chapter with no following chapter has no next-preview page.
 - If all campaign levels are complete, all completed chapters remain
   navigable and the last chapter is the initial selection.
-- Missing chapter map artwork intentionally shows that chapter's level list;
-  no unrelated map or biome art is substituted.
+- Missing chapter map artwork for Chapters 4–10 uses the explicit
+  presentation-only Green Frontier fallback. Invalid layout data and storage
+  failures remain errors rather than falling back.
 - Anchor placement and marker touch targets are checked for every approved
   map at the smallest supported landscape viewport.
 
@@ -531,21 +514,20 @@ state is required. The screen does not mutate `CampaignProgress` or
 3. **Implemented.** Add a pure campaign-map presentation projection in `android-app` that maps
    `CampaignProgress` and the chapter registry to visible chapters, selected
    current chapter, chapter completion state, and ten level-marker states.
-4. **Implemented for Chapter 1.** The shared campaign layout repository
-   provides ten global level anchors; Android maps the background asset key
-   to its drawable and renders the layout with fortress/boss markers for
-   Chapters 1–3. Chapter 4–10 backgrounds remain outstanding.
-5. **Implemented.** Replace the single vertical list in `CampaignScreen` with the chapter
-   selector, chapter map page, and dynamic fortress/boss marker overlays.
-   Keep loading, storage errors, retry, Back behavior, and the current Loadout
-   navigation. Chapters without map art explicitly retain the selected
-   chapter's level-list presentation.
-   Do not add a chapter route to `AppNavigator`.
-6. **Implemented for available artwork.** Chapter 1's map, transparent frame, reusable
-   fortress/boss markers, completed/available/locked plaques, status badges,
-   and available-level glow are supplied. Copy-ready AGPs cover Chapter 1 and
-   the reusable UI/marker assets; map AGPs and images for Chapters 4–10 remain
-   outstanding.
+4. **Implemented for available artwork.** The shared campaign layout repository
+   provides ten global level anchors; Android maps background asset keys to
+   drawables and renders fortress/boss markers for Chapters 1–3. Chapters 4–10
+   currently use the Green Frontier map and anchors as an Android-only
+   presentation fallback.
+5. **Implemented.** `CampaignScreen` renders the completed/current/next-preview
+   chapter pages as a full-screen map carousel with side arrows and horizontal
+   swipe. It keeps loading, storage errors, retry, Back, level authorization,
+   and Loadout navigation. It does not add a chapter route to `AppNavigator`.
+6. **Implemented.** Chapter maps, reusable fortress/boss markers,
+   completed/available/locked plaques, status badges, available-level glow,
+   and carousel arrows are supplied. The old CampaignScreen perimeter frame,
+   thumbnail cards, thumbnail frames, and parchment selector are removed.
+   The reusable campaign frame asset remains for Test Mode and Studio.
 7. **Implemented.** Kotlin/Android tests cover chapter visibility, marker
    states, shared layout decoding, and center-crop geometry. Studio tests cover
    API validation/conflicts and normalized coordinate transforms. Both the
@@ -624,10 +606,11 @@ Remaining artwork and authoring deliverables:
   `assets_src/campaign/ui/campaign_level_status_icons_sheet.png` and imported
   as separate Android images. Their one-sheet prompt is
   `docs/systems/campaign-map-level-status-icons.agp`.
-- The transparent campaign frame is implemented at
+- The transparent campaign frame remains at
   `assets_src/campaign/ui/campaign_map_frame_overlay.png` and
-  `android-app/src/main/res/drawable-nodpi/campaign_map_frame_overlay.png`.
-  Its asset prompt is `docs/systems/campaign-map-frame-overlay.agp`.
+  `android-app/src/main/res/drawable-nodpi/campaign_map_frame_overlay.png`
+  for Test Mode and Studio Campaign preview. CampaignScreen does not render
+  it; its asset prompt remains historical for those other consumers.
 
 `AppScreen`, `AppNavigator`, persistence, reward settlement, and match
 simulation are expected to remain unchanged.
@@ -652,9 +635,14 @@ simulation are expected to remain unchanged.
   hides chapters 3 onward.
 - Completing a chapter makes it visible as completed, advances the current
   chapter, and exposes only its immediate next chapter as preview.
-- All previously completed chapters remain in the chapter selector.
+- All previously completed chapters remain navigable in the map carousel.
 - The next preview chapter displays ten locked markers and cannot start a
   level.
+- Arrows and horizontal swipes navigate only between the visible chapter
+  pages; the page indicator shows the chapter's global position out of ten.
+- Chapters 4–10 use the Green Frontier background and normalized anchors only
+  as a presentation fallback. The selected chapter retains its own global
+  marker levels, boss positions, title, and progression state.
 - The current page marks exactly the unlocked, incomplete level as selectable;
   completed and future levels remain disabled.
 - Selecting an enabled marker goes through `CampaignSystem.selectLevel` and
@@ -663,6 +651,8 @@ simulation are expected to remain unchanged.
   UI.
 - Opening/resuming the campaign selects the current chapter; changing pages
   does not add entries to `AppNavigator`'s Back stack or persist a chapter.
+- CampaignScreen has no decorative perimeter frame, chapter thumbnail strip,
+  or list fallback for chapters 4–10.
 - Every level in the selected chapter has exactly one finite, normalized
   anchor in bounds and mapped to its global campaign level ID. Overlapping
   rendered marker bounds produce a Studio warning but do not block saving.

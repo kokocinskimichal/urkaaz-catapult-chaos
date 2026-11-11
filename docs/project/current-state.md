@@ -19,11 +19,13 @@ kampanię, AI oraz działający match screen. Gałąź robocza: `develop`.
 - Typowany wybór campaign level przez `game-campaign`; zwycięstwo kampanii
   zapisuje ukończenie poziomu i atomowo rozlicza nagrody.
 - `CampaignChapterRegistry` definiuje dziesięć rozdziałów, ich biomy oraz
-  fortress/boss landmarks. Campaign screen pokazuje mapy Chapter 1–3,
-  postęp, rozdziały ukończone/bieżący/podgląd oraz znaczniki stanów poziomów;
-  miniatury w ramkach z nazwami działają jako karuzela dwóch widocznych kart na
-  wspólnym pergaminie; start wymaga zaznaczenia dostępnego poziomu i przycisku
-  **START LEVEL**.
+  fortress/boss landmarks. Campaign screen pokazuje po jednej pełnoekranowej
+  mapie rozdziału; między ukończonymi, bieżącym i najwyżej jednym następnym
+  podglądem można przechodzić strzałkami lub gestem poziomym. HUD pokazuje
+  tytuł, postęp i globalny numer rozdziału. Rozdziały 1–3 używają własnych map,
+  a 4–10 tymczasowo mapy Green Frontier i jej kotwic jako fallbacku wyłącznie
+  prezentacyjnego. Markery poziomów, ich statusy i autoryzacja Start Level
+  nadal pochodzą z istniejącej progresji i `CampaignSystem`.
 - Studio ma zakładkę Campaign do edycji pozycji X/Y wszystkich 10 markerów
   danego rozdziału. Wspólny JSON rozdziałów i osobny layout JSON są czytane
   przez Studio i grę; Chapters 4–10 są tylko do odczytu do czasu dodania map.
@@ -164,8 +166,9 @@ snapshotów i eventów zamiast mutować bezpośrednio stan innych podsystemów.
 
 - `LoadoutScreen` asynchronicznie odczytuje, waliduje i zapisuje loadout.
   `ResultScreen` pozostaje placeholderem.
-- Chapters 1–3 mają zatwierdzone mapy i assety campaign UI; mapy Chapter 4–10 nie
-  są jeszcze dostępne, więc te rozdziały używają listy poziomów.
+- Chapters 1–3 mają zatwierdzone mapy; mapy Chapter 4–10 nie są jeszcze
+  dostępne. CampaignScreen pokazuje dla nich tymczasowo Green Frontier, ale
+  Studio nadal oznacza brak autorskich layoutów jako brak mapy.
 - Mechanika zużywania i regeneracji żyć pozostaje poza obecnym zakresem.
   Campaign progress, nagrody i lokalne zakupy/stock Shop są zapisywane w
   DataStore.

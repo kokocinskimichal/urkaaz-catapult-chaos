@@ -1,4 +1,9 @@
-STATUS: Generate one flat, shared parchment backplate for the campaign chapter
+STATUS: Historical brief for the retired parchment chapter-thumbnail selector.
+CampaignScreen now uses a full-screen map carousel without this panel. Keep
+this prompt only as a record of the retired design; do not generate or restore
+this asset for the campaign screen.
+
+Generate one flat, shared parchment backplate for the campaign chapter
 selector, using the user-provided campaign-screen screenshot as the visual
 reference. Focus only on the grouped chapter controls in the screenshot's
 upper-right corner. This is one reusable background asset for all chapter

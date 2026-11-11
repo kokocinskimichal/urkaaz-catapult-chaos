@@ -1,4 +1,8 @@
-STATUS: Generate one standalone decorative frame overlay for the Urkaaaz
+STATUS: Historical frame brief. CampaignScreen no longer overlays this asset.
+The existing frame asset remains in use by Test Mode and Studio Campaign
+preview; do not restore it to the full-screen campaign carousel.
+
+Generate one standalone decorative frame overlay for the Urkaaaz
 campaign map screen, matching the newly attached campaign-screen reference.
 This image replaces all earlier campaign-screen references; ignore the
 previous red-banner concept. This is not a complete screenshot, map

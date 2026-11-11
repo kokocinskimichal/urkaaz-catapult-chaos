@@ -47,6 +47,20 @@ class CampaignViewModel(
         return true
     }
 
+    fun navigateChapter(direction: CampaignChapterNavigationDirection): Boolean {
+        val progression = state.mapProgression ?: return false
+        val selectedIndex = progression.pages.indexOfFirst {
+            it.chapter.id == state.selectedChapterId
+        }
+        if (selectedIndex < 0) return false
+        val targetIndex = selectedIndex + when (direction) {
+            CampaignChapterNavigationDirection.PREVIOUS -> -1
+            CampaignChapterNavigationDirection.NEXT -> 1
+        }
+        val targetPage = progression.pages.getOrNull(targetIndex) ?: return false
+        return selectChapter(targetPage.chapter.id)
+    }
+
     fun selectMapLevel(level: Int): Boolean {
         val page = state.mapProgression?.pages?.firstOrNull {
             it.chapter.id == state.selectedChapterId
