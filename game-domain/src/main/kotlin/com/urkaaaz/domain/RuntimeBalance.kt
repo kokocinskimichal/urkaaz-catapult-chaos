@@ -388,6 +388,7 @@ data class CampaignBalance(
     val initialWindStrengthStep: Float,
     val initialWindStrengthBands: Int,
     val demoInitialWindStrength: Float,
+    val lives: LifeBalance,
     val aiDifficultyBands: List<CampaignAiDifficultyBand>,
 ) {
     init {
@@ -420,6 +421,22 @@ data class CampaignBalance(
     fun aiDifficultyFor(level: Int): CampaignAiDifficultyBand =
         aiDifficultyBands.firstOrNull { level in it.firstLevel..it.lastLevel }
             ?: error("campaign AI difficulty is not configured for level $level")
+}
+
+data class LifeBalance(
+    val initialLives: Int,
+    val maximumLives: Int,
+    val regenerationIntervalMilliseconds: Long,
+) {
+    init {
+        require(maximumLives > 0) { "maximum lives must be positive" }
+        require(initialLives in 0..maximumLives) {
+            "initial lives must be within life bounds"
+        }
+        require(regenerationIntervalMilliseconds > 0L) {
+            "life regeneration interval must be positive"
+        }
+    }
 }
 
 data class CampaignAiDifficultyBand(

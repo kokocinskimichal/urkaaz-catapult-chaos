@@ -1551,6 +1551,14 @@ profile codec oraz `DataStore.updateData`, by nie nadpisywać równoległych
 zmian salda lub stocku. Settlement ma wersjonowany receipt bieżącej generacji
 meczu; zapisany wybór `MatchLoadout` pozostaje odrębny.
 
+LifeSystem w `game-application.application.progression` zarządza trwałym
+LifeState w tym samym profilu/DataStore, ale nie dodaje go do
+`LoadoutProgressionSnapshot`, `MatchSnapshot` ani replay. Profile codec schema
+2 migruje legacy `profile.lives`, przechowuje timer/high-water i receipts;
+CampaignLevelStartUseCase rewaliduje start z aktualnym LifeSnapshot, a
+kampanijny non-win rozlicza jedno życie atomowo po `MatchId`. Campaign/Reward
+zachowują wyłączną odpowiedzialność za BLUE_WIN, złoto i ukończenie poziomu.
+
 Poziom kampanii tworzy konfigurację meczu:
 
 ```text
@@ -1618,10 +1626,12 @@ ukończenie, następny poziom i nagrody.
 
 Developer-only zakładka Progress może jednorazowo ustawić wybrane pola
 `currentLevel`, `lives` i `gold` w debug buildzie, przez aplikacyjny port oraz
-adapter DataStore w `android-app`. Hash zastosowanego presetu zapobiega
+adapter DataStore w `android-app`. Jawne ustawienie lives ustawia również
+kanoniczny LifeState i pełny timer przy wartości poniżej limitu; ustawienie
+`5/5` czyści timery/granty/receipts. Hash zastosowanego presetu zapobiega
 ponownemu nadpisaniu danych przy kolejnym starcie; release build ignoruje
-preset. Życia są zapisywane i wyświetlane, ale ich zużywanie oraz regeneracja,
-ustawienia i tutorial progress pozostają przyszłą pracą.
+preset. Życia i timer należą do LifeSystem, a ustawienia języka pozostają w
+osobnym DataStore; tutorial progress nadal pozostaje przyszłą pracą.
 Milestone'y kampanii nie zapisują tutorial flags; przyszły TutorialSystem
 będzie ich właścicielem.
 

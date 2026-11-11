@@ -426,6 +426,18 @@ class MatchScreenController(
         }
         val state = viewModel.renderState
         if (
+            blocksBackForUnsettledLife(
+                isFinished = state.statusLabel == MatchStatus.FINISHED.name,
+                hasFinishedEvent = lastMatchFinishedEvent != null,
+                outcome = state.outcomeLabel?.let(MatchOutcome::valueOf),
+                demoMode = demoMode,
+                testMode = testMode,
+                lifeSettlementRecorded = campaignCompletionRecorded,
+            )
+        ) {
+            return true
+        }
+        if (
             !snapshotMode &&
             ::battlefieldView.isInitialized &&
             battlefieldView.isBossDeathPresentationPending(state)
@@ -612,6 +624,7 @@ class MatchScreenController(
             demoMode = demoMode,
             testMode = testMode,
             campaignCompletionRecorded = campaignCompletionRecorded,
+            hasCampaignFinishEvent = lastMatchFinishedEvent != null,
             reward = campaignRewardResult,
             stockSettlementStatus = stockSettlementUiStatus,
         )

@@ -256,6 +256,11 @@ export interface RuntimeBalance {
     initialWindStrengthStep: number;
     initialWindStrengthBands: number;
     demoInitialWindStrength: number;
+    lives: {
+      initialLives: number;
+      maximumLives: number;
+      regenerationIntervalMilliseconds: number;
+    };
     aiDifficultyBands: Array<{
       firstLevel: number;
       lastLevel: number;

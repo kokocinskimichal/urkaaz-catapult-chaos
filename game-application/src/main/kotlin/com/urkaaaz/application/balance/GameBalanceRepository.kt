@@ -41,6 +41,7 @@ import com.urkaaaz.domain.BossCombatBalance
 import com.urkaaaz.domain.RewardBalance
 import com.urkaaaz.domain.CampaignBalance
 import com.urkaaaz.domain.CampaignAiDifficultyBand
+import com.urkaaaz.domain.LifeBalance
 import com.urkaaaz.contracts.AiProfileId
 import com.urkaaaz.domain.InventoryProfile
 import com.urkaaaz.domain.ManaConfiguration
@@ -812,6 +813,7 @@ private data class CampaignBalanceDto(
     val initialWindStrengthStep: Float,
     val initialWindStrengthBands: Int,
     val demoInitialWindStrength: Float,
+    val lives: LifeBalanceDto,
     val aiDifficultyBands: List<CampaignAiDifficultyBandDto>,
 ) {
     fun toDomain() = CampaignBalance(
@@ -819,7 +821,21 @@ private data class CampaignBalanceDto(
         initialWindStrengthStep = initialWindStrengthStep,
         initialWindStrengthBands = initialWindStrengthBands,
         demoInitialWindStrength = demoInitialWindStrength,
+        lives = lives.toDomain(),
         aiDifficultyBands = aiDifficultyBands.map(CampaignAiDifficultyBandDto::toDomain),
+    )
+}
+
+@Serializable
+private data class LifeBalanceDto(
+    val initialLives: Int,
+    val maximumLives: Int,
+    val regenerationIntervalMilliseconds: Long,
+) {
+    fun toDomain() = LifeBalance(
+        initialLives = initialLives,
+        maximumLives = maximumLives,
+        regenerationIntervalMilliseconds = regenerationIntervalMilliseconds,
     )
 }
 

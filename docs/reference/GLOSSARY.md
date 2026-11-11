@@ -68,11 +68,12 @@ kontrakty są wyraźnie oddzielone.
 | **CaS** | **Campaign System** | Poziomy, chaptery, odblokowania, cele, modyfikatory i postęp kampanii. | Częściowy; lokalna progresja oraz milestone'y i nagrody poziomowe działają. Właściciel definicji: `game-campaign`; use case'y: `game-application`. |
 | **SS** | **Spell System** | Definicje czarów, mana, aktywacja, efekty, cooldowny, dostępność i integracja z walką. | Częściowy: `CastSpell`, mana, snapshoty oraz Fortress Shield, HASTE i Runic Bastion działają; AI używa ich sytuacyjnie, a osiem pozostałych efektów nie jest zaimplementowanych. |
 | **TutS** | **Tutorial System** | Kroki tutoriala, hinty, spotlighty, cele, odblokowywanie paneli i ograniczenia AI. | Zaprojektowany w `docs/systems/tutorial-system.md`; niezaimplementowany. |
-| **PSys** | **Persistence System** | Trwały zapis profilu, waluty, loadoutu i postępu kampanii. | Częściowy: profil, lives, zatwierdzony loadout, nagrody i zakupy/stock Shop używają DataStore; lives są tylko ustawiane i wyświetlane, tutorial progress pozostaje poza implementacją. |
-| **PPS** | **Player Progression System** | Trwały profil lokalny, saldo i stock odczytywane przy walidacji loadoutu. | Profil, nagrody złota, atomowe mutacje profilu i debugowy preset działają. Zakupy i settlement stocku realizuje ShopSystem na tym samym profilu; gameplay żyć pozostaje poza zakresem. |
+| **PSys** | **Persistence System** | Trwały zapis profilu, waluty, loadoutu, żyć i postępu kampanii. | Profil schema 2, LifeState, reset, nagrody i zakupy/stock Shop używają wspólnego Preferences DataStore; tutorial progress pozostaje poza implementacją. |
+| **PPS** | **Player Progression System** | Trwały profil lokalny, saldo i stock odczytywane przy walidacji loadoutu. | Profil, nagrody złota, atomowe mutacje profilu i debugowy preset działają. Zakupy i settlement stocku realizuje ShopSystem; LifeSystem jest osobnym właścicielem reguł żyć we wspólnym profilu. |
+| **LifeS** | **LifeSystem** | Trwałe życia kampanii, regeneracja offline, kampanijna bramka startu i skończone/czasowe granty. | Zaimplementowany lokalnie w `game-application.application.progression`; nie zawiera integracji reklam ani event feedu. |
 | **LoS** | **Loadout System** | Konfiguracja jednostek, amunicji i czarów przed poziomem. | Walidacja, normalizacja, interaktywna selekcja, zapis DataStore i bezpieczny start działają; kampanijne odblokowania Haste/Heal są zintegrowane dla poziomów 6/8. Loadout nie wykonuje zakupów ani stock settlementu. |
 | **RS** | **Reward System** | Ocena osiągnięć poziomowych i naliczanie złota po zwycięstwie kampanii. | Zaimplementowany lokalnie: nagrody za wygraną i osiągnięcia są atomowo rozliczane z progresją kampanii; sklep i inne typy nagród pozostają poza zakresem. |
-| **BS** | **Balance System** | Wersjonowane parametry balansu i walidacja konfiguracji. | Katalogi bossów, jednostek, amunicji, czarów i runtime są w `game-balance.json` schema 6; Studio edytuje je formularzem. |
+| **BS** | **Balance System** | Wersjonowane parametry balansu i walidacja konfiguracji. | Katalogi bossów, jednostek, amunicji, czarów i runtime (w tym limit/regeneracja żyć) są w `game-balance.json` schema 6; Studio edytuje je formularzem. |
 | **ObjS** | **Objective System** | Cele główne i specjalne, Central Objective oraz reguły poziomów boss/special. | Częściowy: BossSystem obsługuje central objectives i mobilnych bossów na poziomach 5–50; dalsze profile, ataki i animacje są odłożone. |
 | **AssetS** | **Asset System** | Klucze assetów, cache, mapowanie wariantów wizualnych i ładowanie zasobów. | Działa częściowo dla obecnego zakresu renderingu. |
 | **RenderS** | **Rendering System** | Mapowanie snapshotów na render state, kamera, world-space, HUD i kolejność rysowania. | Działa dla obecnego match screen. |
@@ -150,7 +151,7 @@ kontrakty są wyraźnie oddzielone.
 | Term | Meaning |
 | --- | --- |
 | **Start Menu** | Ekran główny gry. Pozwala rozpocząć wejście do kampanii albo uruchomić TEST Mode. |
-| **Dashboard** | Ekran centralny między Start Menu a Campaign Map. Pokazuje Lives, OrCoins oraz przejścia do Campaign Map i Shop. |
+| **Dashboard** | Ekran centralny między Start Menu a Campaign Map. Pokazuje Lives, timer regeneracji lub unlimited countdown, OrCoins oraz przejścia do Campaign Map i Shop. |
 | **Campaign Map** | Ekran wyboru poziomów trwałej kampanii. Każdy Chapter ma własną mapę w swoim biomie, z dziesięcioma kolejnymi punktami połączonymi jedną ścieżką. Mapa pokazuje punkty ukończone, aktualny, zablokowane, specjalne i Boss Node. |
 | **Chapter Map** | Tematyczna mapa jednego Chapteru zawierająca dziesięć kolejnych poziomów. Jest ekranem wyboru, a nie swobodnie eksplorowaną przestrzenią. |
 | **Boss Node** | Wyraźnie wyróżniony punkt poziomu 10 danego Chapteru, oznaczający finałowego bossa i nagrodę za ukończenie rozdziału. |
@@ -169,8 +170,9 @@ kontrakty są wyraźnie oddzielone.
 
 | Term | Meaning |
 | --- | --- |
-| **Life** | Jedna próba rozpoczęcia kampanijnego poziomu. Przegrana próba zużywa jedno Life; TEST Mode nie zużywa Lives. |
-| **Lives** | Wspólny dla kampanii zasób prób. Maksymalnie gracz posiada 10 Lives, a brakujące Lives odnawiają się automatycznie co 30 minut. |
+| **Life** | Jedno życie bazowe profilu kampanii. Kampanijny wynik inny niż `BLUE_WIN` zużywa jedno Life; Demo/Test oraz aktywny unlimited grant są zwolnione z zużycia. |
+| **Lives** | Wspólny dla kampanii licznik prób: nowy profil zaczyna z 5/5, a brakujące życia regenerują się po jednym co 15 minut offline. |
+| **Unlimited Life Grant** | Idempotentny, źródłem identyfikowany czasowy grant omijający blokadę startu przy 0 żyć; nie zużywa ani nie regeneruje licznika bazowego, a kolejne granty dodają czas. |
 | **OrCoins** | Trwała waluta gracza używana do zakupów stocku w lokalnym Shopie; profil przechowuje saldo w polu `goldBalance`. |
 | **Shop** | Lokalny sklep za OrCoins z zakładkami `SPELLS` i `AMMUNITION`. Dostępny z Dashboardu i Loadoutu; pojedynczy zakup atomowo debituje saldo i dodaje jeden stock. |
 | **Precision Challenge** | Planowany event na płaskiej mapie treningowej. Halloweenowa wersja, **Pumpkin Trial**, używa nieruchomych dyń w różnych rozmiarach i odległościach zamiast tarcz; jest sezonowym theme, a nie stałym biomem kampanii. |

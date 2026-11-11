@@ -1,6 +1,6 @@
 {
   "schemaVersion": 6,
-  "balanceRevision": "game-balance-17",
+  "balanceRevision": "game-balance-18",
   "bosses": [
     {
       "id": "boss.central-ancient-war-oak.level-05",
@@ -979,6 +979,11 @@
       "initialWindStrengthStep": 0.15,
       "initialWindStrengthBands": 4,
       "demoInitialWindStrength": 0.25,
+      "lives": {
+        "initialLives": 5,
+        "maximumLives": 5,
+        "regenerationIntervalMilliseconds": 900000
+      },
       "aiDifficultyBands": [
         {
           "firstLevel": 1,

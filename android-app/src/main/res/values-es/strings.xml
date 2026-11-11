@@ -31,6 +31,11 @@
     <string name="chapter_title_final_warpath">La Senda Final de Guerra</string>
     <string name="chapter_title_last_siege">El Último Asedio</string>
     <string name="campaign_status_loading">Cargando el progreso de campaña…</string>
+    <string name="campaign_lives_required">No quedan vidas. Espera a que se regenere una o usa un beneficio ilimitado activo.</string>
+    <string name="campaign_lives_required_remaining">No quedan vidas. Próxima vida en %1$s.</string>
+    <string name="campaign_lives_unavailable">No se pudo cargar el estado de vidas. El inicio de campaña está bloqueado.</string>
+    <string name="campaign_lives_invalid">Los datos de vidas no son válidos. El inicio de campaña está bloqueado.</string>
+    <string name="campaign_lives_version">Los datos de vidas usan una versión no compatible.</string>
     <string name="campaign_retry">REINTENTAR</string>
     <string name="campaign_map_layout_invalid">La disposición del mapa de campaña no es válida; no se pueden colocar marcadores.</string>
     <string name="campaign_map_layout_unavailable">No se pudo cargar la disposición del mapa de campaña.</string>
@@ -48,6 +53,8 @@
     <string name="dashboard_reset_progress">REINICIAR</string>
     <string name="dashboard_current_level">NIVEL %1$d</string>
     <string name="dashboard_life_regeneration_unavailable">N/D</string>
+    <string name="dashboard_life_regeneration_remaining">En %1$s</string>
+    <string name="dashboard_life_regeneration_unlimited">∞ %1$s</string>
     <string name="dashboard_title">URKAAAZ</string>
     <string name="dashboard_back_action">VOLVER</string>
     <string name="dashboard_campaign_action">CAMPAÑA</string>
@@ -88,7 +95,7 @@
     <string name="dashboard_language_flag_selected_accessibility">Idioma %1$s, seleccionado</string>
     <string name="dashboard_language_change_failure">No se pudo guardar el idioma. Inténtalo de nuevo.</string>
     <string name="dashboard_reset_progress_title">¿Reiniciar el progreso del jugador?</string>
-    <string name="dashboard_reset_progress_message">Esto borrará el progreso de campaña, el oro, los desbloqueos, el inventario y los equipamientos guardados de este dispositivo. Se conservará el idioma. ¿Continuar?</string>
+    <string name="dashboard_reset_progress_message">Esto borrará el progreso de campaña, las vidas y su regeneración, el oro, los desbloqueos, el inventario y los equipamientos guardados de este dispositivo. Se conservará el idioma. ¿Continuar?</string>
     <string name="dashboard_reset_progress_confirm">REINICIAR PROGRESO</string>
     <string name="dashboard_reset_cancel">CANCELAR</string>
     <string name="dashboard_reset_progress_success">Se reinició el progreso del jugador.</string>
@@ -133,8 +140,11 @@
     <string name="match_result_exit_campaign">SALIR A LA CAMPAÑA</string>
     <string name="match_result_back_dashboard">VOLVER AL PANEL</string>
     <string name="match_result_back_test_levels">VOLVER A ELEGIR NIVEL</string>
-    <string name="match_result_saving_status">Se está guardando el progreso de campaña.</string>
-    <string name="match_result_completion_failed">No se pudo guardar el progreso. Reintenta este nivel o vuelve.</string>
+    <string name="match_result_saving_status">Guardando el resultado de campaña…</string>
+    <string name="match_result_completion_failed">No se pudo guardar el resultado. Reintenta antes de continuar.</string>
+    <string name="match_life_settlement_unavailable">No se pudo guardar el resultado de vidas. Reintenta antes de salir.</string>
+    <string name="match_life_settlement_invalid">No se pudo validar el resultado de vidas. Reintenta antes de salir.</string>
+    <string name="match_life_settlement_conflict">El resultado de esta partida entra en conflicto con un ajuste previo de vidas.</string>
     <string name="match_result_saving_stock">Guardando el inventario usado…</string>
     <string name="match_result_stock_settlement_failed">No se pudo guardar el inventario usado. Reintenta antes de continuar.</string>
     <string name="match_result_reward_line">%1$s  +%2$d de oro</string>

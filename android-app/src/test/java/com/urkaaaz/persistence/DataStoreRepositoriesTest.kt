@@ -30,6 +30,9 @@ import com.urkaaaz.application.progression.DeveloperProgressPreset
 import com.urkaaaz.application.progression.DeveloperProgressPreset.DeveloperProgressField
 import com.urkaaaz.application.progression.DeveloperProgressPresetApply
 import com.urkaaaz.application.progression.DeveloperProgressSummary
+import com.urkaaaz.application.progression.LifeSystem
+import com.urkaaaz.application.progression.LifeSystemResult
+import com.urkaaaz.application.progression.WallClock
 import com.urkaaaz.application.reward.EarnedReward
 import com.urkaaaz.application.reward.LevelRewardResult
 import com.urkaaaz.application.reward.RewardSettlementFailure
@@ -123,6 +126,10 @@ class DataStoreRepositoriesTest {
         testStore().use { store ->
             store.dataStore.updateData { current ->
                 current.toMutablePreferences().apply {
+                    this[intPreferencesKey("profile.schema_version")] = 1
+                    this[stringPreferencesKey("profile.unlocked_spells")] = "FORTRESS_SHIELD"
+                    this[stringPreferencesKey("profile.ammunition_stocks")] = ""
+                    this[stringPreferencesKey("profile.special_spell_stocks")] = ""
                     this[intPreferencesKey("profile.gold_balance")] = 1200
                     this[intPreferencesKey("profile.lives")] = 2
                 }
@@ -203,6 +210,17 @@ class DataStoreRepositoriesTest {
         testStore().use { store ->
             val progressionRepository = DataStorePlayerProgressionRepository(store.dataStore)
             progressionRepository.loadOrInitialize(initialProfile().copy(goldBalance = 1_000))
+            val lifeSystem = LifeSystem(
+                repository = DataStoreLifeStateRepository(store.dataStore),
+                wallClock = WallClock { 100L },
+                initialProfile = initialProfile().copy(goldBalance = 1_000),
+            )
+            assertTrue(
+                lifeSystem.settleCampaignResult(
+                    MatchId("profile-race-life"),
+                    MatchOutcome.RED_WIN,
+                ) is LifeSystemResult.Success,
+            )
             val rewardRegistry = BundledCampaignBalance.rewardRegistry()
             val campaign = CampaignSystem(
                 DataStoreCampaignProgressRepository(store.dataStore),
@@ -242,6 +260,14 @@ class DataStoreRepositoriesTest {
             val finalProfile = (finalProgression as LoadoutProgressionRead.Available).snapshot
             assertEquals(850, finalProfile.goldBalance)
             assertEquals(1, finalProfile.ammunitionStock("POWDER_BARREL"))
+            val decoded = PlayerProgressionDataStoreCodec.decode(
+                store.dataStore.updateData { it },
+            )
+            assertTrue(decoded is PlayerProgressionProfileDecode.Available)
+            assertEquals(
+                4,
+                (decoded as PlayerProgressionProfileDecode.Available).lifeState?.lives,
+            )
         }
     }
 

@@ -1,11 +1,13 @@
 package com.urkaaaz.screens.campaign
 
-import com.urkaaaz.application.campaign.CampaignLevelSelection
+import com.urkaaaz.application.campaign.CampaignLevelStartResult
+import com.urkaaaz.application.campaign.CampaignLevelStartRejection
+import com.urkaaaz.application.campaign.CampaignLevelStartUseCase
 import com.urkaaaz.application.campaign.CampaignProgressRead
-import com.urkaaaz.application.campaign.CampaignSystem
+import com.urkaaaz.application.progression.LifeSystemResult
 
 class CampaignViewModel(
-    private val campaignSystem: CampaignSystem,
+    private val campaignLevelStart: CampaignLevelStartUseCase,
     private val chapterProgressMapper: CampaignChapterProgressMapper =
         CampaignChapterProgressMapper(),
 ) {
@@ -14,12 +16,22 @@ class CampaignViewModel(
 
     suspend fun load(): CampaignUiState {
         state = CampaignUiState(isLoading = true)
-        state = when (val result = campaignSystem.progress()) {
+        state = when (val result = campaignLevelStart.progress()) {
             is CampaignProgressRead.Available -> {
                 val mapProgression = chapterProgressMapper.map(result.progress)
+                val lifeRead = campaignLevelStart.lifeSnapshot()
+                val lifeSnapshot = (lifeRead as? LifeSystemResult.Success)?.value
+                val lifeFailure = when (lifeRead) {
+                    is LifeSystemResult.Failure -> lifeRead.reason
+                    is LifeSystemResult.Rejected ->
+                        com.urkaaaz.application.progression.LifeSystemFailure.INVALID_PROFILE
+                    is LifeSystemResult.Success -> null
+                }
                 CampaignUiState(
                     isLoading = false,
                     progress = result.progress,
+                    lifeSnapshot = lifeSnapshot,
+                    lifeFailure = lifeFailure,
                     mapProgression = mapProgression,
                     selectedChapterId = mapProgression.selectedChapterId,
                     selectedLevel = availableLevel(
@@ -35,6 +47,36 @@ class CampaignViewModel(
         return state
     }
 
+    suspend fun refreshLifeSnapshot(): CampaignUiState {
+        val lifeRead = campaignLevelStart.lifeSnapshot()
+        state = when (lifeRead) {
+            is LifeSystemResult.Success ->
+                state.copy(lifeSnapshot = lifeRead.value, lifeFailure = null)
+            is LifeSystemResult.Failure ->
+                state.copy(lifeSnapshot = null, lifeFailure = lifeRead.reason)
+            is LifeSystemResult.Rejected ->
+                state.copy(
+                    lifeSnapshot = null,
+                    lifeFailure =
+                        com.urkaaaz.application.progression.LifeSystemFailure.INVALID_PROFILE,
+                )
+        }
+        return state
+    }
+
+    fun elapseLifeCountdown(milliseconds: Long): CampaignUiState {
+        val life = state.lifeSnapshot ?: return state
+        state = state.copy(
+            lifeSnapshot = life.copy(
+                regenerationTimeRemainingMilliseconds =
+                    life.regenerationTimeRemainingMilliseconds?.minus(milliseconds)?.coerceAtLeast(0L),
+                unlimitedTimeRemainingMilliseconds =
+                    life.unlimitedTimeRemainingMilliseconds?.minus(milliseconds)?.coerceAtLeast(0L),
+            ),
+        )
+        return state
+    }
+
     fun selectChapter(chapterId: String): Boolean {
         val page = state.mapProgression?.pages?.firstOrNull {
             it.chapter.id == chapterId
@@ -43,6 +85,7 @@ class CampaignViewModel(
             selectedChapterId = page.chapter.id,
             selectedLevel = availableLevel(page),
             selectionRejection = null,
+            startFailure = null,
         )
         return true
     }
@@ -70,20 +113,46 @@ class CampaignViewModel(
         state = state.copy(
             selectedLevel = level,
             selectionRejection = null,
+            startFailure = null,
         )
         return true
     }
 
-    suspend fun dispatch(action: CampaignUiAction): CampaignLevelSelection {
+    suspend fun dispatch(action: CampaignUiAction): CampaignLevelStartResult {
         val result = when (action) {
-            is CampaignUiAction.SelectLevel -> campaignSystem.selectLevel(action.level)
+            is CampaignUiAction.SelectLevel -> campaignLevelStart.authorize(action.level)
+        }
+        val refreshedLives = if (
+            result == CampaignLevelStartResult.Rejected(CampaignLevelStartRejection.NO_LIVES)
+        ) {
+            campaignLevelStart.lifeSnapshot()
+        } else {
+            null
         }
         state = when (result) {
-            is CampaignLevelSelection.Selected -> state.copy(selectionRejection = null)
-            is CampaignLevelSelection.Rejected ->
-                state.copy(selectionRejection = result.reason)
-            is CampaignLevelSelection.Failure ->
-                CampaignUiState(isLoading = false, failure = result.reason)
+            is CampaignLevelStartResult.Allowed ->
+                state.copy(selectionRejection = null, startFailure = null)
+            is CampaignLevelStartResult.Rejected ->
+                state.copy(
+                    selectionRejection = result.reason,
+                    startFailure = null,
+                    lifeSnapshot = when (refreshedLives) {
+                        is LifeSystemResult.Success -> refreshedLives.value
+                        else -> state.lifeSnapshot
+                    },
+                    lifeFailure = when (refreshedLives) {
+                        is LifeSystemResult.Failure -> refreshedLives.reason
+                        is LifeSystemResult.Rejected ->
+                            com.urkaaaz.application.progression.LifeSystemFailure.INVALID_PROFILE
+                        else -> state.lifeFailure
+                    },
+                )
+            is CampaignLevelStartResult.Failure ->
+                state.copy(
+                    startFailure = result.reason,
+                    selectionRejection = null,
+                    lifeSnapshot = null,
+                )
         }
         return result
     }

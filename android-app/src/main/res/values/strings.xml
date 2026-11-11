@@ -29,6 +29,11 @@
     <string name="chapter_title_final_warpath">The Final Warpath</string>
     <string name="chapter_title_last_siege">The Last Siege</string>
     <string name="campaign_status_loading">Loading campaign progress…</string>
+    <string name="campaign_lives_required">No lives available. Wait for regeneration or use an active unlimited grant.</string>
+    <string name="campaign_lives_required_remaining">No lives available. Next life in %1$s.</string>
+    <string name="campaign_lives_unavailable">Life status could not be loaded. Campaign start is blocked.</string>
+    <string name="campaign_lives_invalid">Player life data is invalid. Campaign start is blocked.</string>
+    <string name="campaign_lives_version">Player life data uses an unsupported version.</string>
     <string name="campaign_retry">RETRY</string>
     <string name="campaign_map_layout_invalid">Campaign map layout is invalid; map placement is unavailable.</string>
     <string name="campaign_map_layout_unavailable">Campaign map layout could not be loaded.</string>
@@ -46,6 +51,8 @@
     <string name="dashboard_reset_progress">RESET</string>
     <string name="dashboard_current_level">LEVEL %1$d</string>
     <string name="dashboard_life_regeneration_unavailable">N/A</string>
+    <string name="dashboard_life_regeneration_remaining">%1$s</string>
+    <string name="dashboard_life_regeneration_unlimited">∞ %1$s</string>
     <string name="dashboard_title">URKAAAZ</string>
     <string name="dashboard_back_action">BACK</string>
     <string name="dashboard_campaign_action">CAMPAIGN</string>
@@ -86,7 +93,7 @@
     <string name="dashboard_language_flag_selected_accessibility">%1$s, selected</string>
     <string name="dashboard_language_change_failure">Could not save your language preference. Try again.</string>
     <string name="dashboard_reset_progress_title">Reset player progress?</string>
-    <string name="dashboard_reset_progress_message">This clears campaign progress, gold, unlocks, inventory and saved loadouts on this device. Your language preference will be kept. Continue?</string>
+    <string name="dashboard_reset_progress_message">This clears campaign progress, lives and regeneration, gold, unlocks, inventory and saved loadouts on this device. Your language preference will be kept. Continue?</string>
     <string name="dashboard_reset_progress_confirm">Reset progress</string>
     <string name="dashboard_reset_cancel">Cancel</string>
     <string name="dashboard_reset_progress_success">Player progress has been reset.</string>
@@ -131,8 +138,11 @@
     <string name="match_result_exit_campaign">EXIT TO CAMPAIGN</string>
     <string name="match_result_back_dashboard">BACK TO DASHBOARD</string>
     <string name="match_result_back_test_levels">BACK TO TEST LEVELS</string>
-    <string name="match_result_saving_status">Campaign progress is being saved.</string>
-    <string name="match_result_completion_failed">Progress save failed. Retry this level or return.</string>
+    <string name="match_result_saving_status">Saving campaign result…</string>
+    <string name="match_result_completion_failed">The result could not be saved. Retry before continuing.</string>
+    <string name="match_life_settlement_unavailable">Life result could not be saved. Retry before leaving.</string>
+    <string name="match_life_settlement_invalid">Life result could not be validated. Retry before leaving.</string>
+    <string name="match_life_settlement_conflict">This match result conflicts with an earlier life settlement.</string>
     <string name="match_result_saving_stock">Saving used inventory…</string>
     <string name="match_result_stock_settlement_failed">Used inventory could not be saved. Retry before continuing.</string>
     <string name="match_result_reward_line">%1$s  +%2$d gold</string>

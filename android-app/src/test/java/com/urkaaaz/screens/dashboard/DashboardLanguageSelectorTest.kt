@@ -7,7 +7,9 @@ import com.urkaaaz.application.language.LanguageLoadSource
 import com.urkaaaz.application.language.LanguageSaveResult
 import com.urkaaaz.application.language.LanguageSettings
 import com.urkaaaz.application.language.SetLanguage
-import com.urkaaaz.application.progression.DeveloperProgressSummary
+import com.urkaaaz.application.progression.DashboardProgressRead
+import com.urkaaaz.application.progression.DashboardProgressSummary
+import com.urkaaaz.application.progression.LifeSnapshot
 import com.urkaaaz.application.progression.PlayerProgressResetResult
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
@@ -59,7 +61,15 @@ class DashboardLanguageSelectorTest {
         onShop = {},
         onDemoMode = {},
         onResetProgress = { PlayerProgressResetResult.Reset },
-        loadProgress = { DeveloperProgressSummary(currentLevel = 1, lives = 5, gold = 0) },
+        loadProgress = {
+            DashboardProgressRead.Available(
+                DashboardProgressSummary(
+                    currentLevel = 1,
+                    gold = 0,
+                    lifeSnapshot = LifeSnapshot(5, 5, true, null, null),
+                ),
+            )
+        },
         initialLanguage = AppLanguage.EN,
         setLanguage = SetLanguage(object : LanguageSettings {
             override suspend fun load(): LanguageLoadResult =

@@ -11,7 +11,8 @@ RewardSettlementUseCase zapisuje je atomowo wraz ze złotem i receipt.
 Read model loadoutu łączy odblokowania czarów z profilem. Zakupy i rozliczanie stocku
 obsługuje teraz ShopSystem przez atomowy port mutacji profilu. RewardSystem
 przyznaje złoto za wygrane poziomy, a profil pozostaje jedynym trwałym
-właścicielem salda i zapasów.
+właścicielem salda i zapasów. LifeSystem jest osobnym właścicielem reguł żyć,
+ale zapisuje swój LifeState w tym samym profilu/DataStore.
 
 ## 1. Cel i zakres
 
@@ -25,6 +26,8 @@ W pierwszym zakresie system zapewnia:
   specjalnych i salda wymaganego przez istniejący kontrakt loadoutu;
 - zachowanie zmian schematu profilu w nowej aplikacji przez wersjonowany,
   lokalny zapis;
+- współdzielony profil/DataStore z LifeSystemem bez przejmowania jego reguł
+  regeneracji, zużycia ani grantów;
 - jawny wynik odczytu/odmowy, bez udawania dostępności przy błędzie;
 - kontraktowy punkt integracji dla LoadoutSystemu.
 
@@ -44,6 +47,8 @@ loadoutem. Nie stanowi pełnej ekonomii ani pełnego zapisu kampanii.
   jawnym stopem/restartem; ten use case nie zmienia stanu symulacji.
 - Naliczanie złota za wygraną kampanii pozostaje wyłączną odpowiedzialnością
   RewardSystem.
+- Reguły, timestampy, granty i dostępność startu żyć należą do LifeSystemu;
+  PlayerProgression udostępnia wspólny profil i atomowy storage, nie drugą kopię.
 - Stan runtime meczu, replay, aktywacja czarów i ich efekty.
 - Synchronizacja chmurowa, konto, wiele profili, import zapisów/preferencji z
   legacy oraz współdzielenie postępu między urządzeniami.
@@ -58,6 +63,7 @@ używane jako jego wartość domyślna.
 | Odpowiedzialność | Właściciel |
 |---|---|
 | Profil, snapshot progresji, use case'y i port repozytorium profilu | `game-application` |
+| LifeState, regeneracja, granty i campaign life gate | LifeSystem w `game-application.application.progression` |
 | Katalog ofert, zakupy i rozliczenie zapasów | ShopSystem w `game-application`, korzystający z portu profilu |
 | Walidacja wyboru, normalizacja i zapis `MatchLoadout` | istniejący LoadoutSystem w `game-application` |
 | Definicje poziomu i dostępność jednostek, amunicji oraz czarów na poziomie | `game-campaign` / `CampaignLevelDefinition` |
@@ -164,13 +170,14 @@ ogranicza zapis do wybranych wartości. `DataStoreDeveloperProgressPresetAdapter
 stosuje kolejkę jednorazowo tylko w debug buildzie i chroni ją hashem treści.
 Zmiana poziomu aktualizuje `CampaignProgress` wraz z ukończonymi wcześniejszymi
 poziomami i milestone'ami, ale nie nadpisuje niezaznaczonych pól profilu.
-Preset nie zmienia właściciela progresji kampanii ani nie dodaje mechaniki
-zużywania/regeneracji żyć.
+Jawne ustawienie pola `lives` używa kanonicznej fabryki LifeState: stan poniżej
+limitu otrzymuje pełny interwał regeneracji, a stan pełny czyści timer, granty
+i receipts. Pozostałe zaznaczone pola nie nadpisują niezaznaczonych wartości.
 
 Przycisk `RESET` w prawym górnym rogu Dashboardu resetuje lokalne dane gracza
 po potwierdzeniu. `PlayerProgressResetRepository` atomowo czyści wspólny
-Preferences DataStore, obejmując kampanię, profil (w tym złoto i odblokowania),
-stocki, zapisy loadoutu oraz paragony rozliczeń, zachowując hash już
+Preferences DataStore, obejmując kampanię, profil (w tym złoto, odblokowania i
+LifeState), stocki, zapisy loadoutu oraz paragony rozliczeń, zachowując hash już
 zastosowanego developer presetu. Błąd zapisu jest zwracany jako
 `STORAGE_UNAVAILABLE`; UI nie pokazuje wtedy sukcesu. Reset nie obejmuje
 ustawień Androida ani zewnętrznych danych.

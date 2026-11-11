@@ -32,6 +32,11 @@
     <string name="chapter_title_final_warpath">Ostatni Szlak Wojenny</string>
     <string name="chapter_title_last_siege">Ostatnie Oblężenie</string>
     <string name="campaign_status_loading">Wczytywanie postępu kampanii…</string>
+    <string name="campaign_lives_required">Brak żyć. Poczekaj na regenerację lub skorzystaj z aktywnego grantu nielimitowanych żyć.</string>
+    <string name="campaign_lives_required_remaining">Brak żyć. Następne życie za %1$s.</string>
+    <string name="campaign_lives_unavailable">Nie udało się odczytać stanu żyć. Start kampanii jest zablokowany.</string>
+    <string name="campaign_lives_invalid">Dane żyć gracza są nieprawidłowe. Start kampanii jest zablokowany.</string>
+    <string name="campaign_lives_version">Dane żyć gracza mają nieobsługiwaną wersję.</string>
     <string name="campaign_retry">PONÓW</string>
     <string name="campaign_map_layout_invalid">Układ mapy kampanii jest nieprawidłowy; rozmieszczanie znaczników jest niedostępne.</string>
     <string name="campaign_map_layout_unavailable">Nie udało się wczytać układu mapy kampanii.</string>
@@ -49,6 +54,8 @@
     <string name="dashboard_reset_progress">RESETUJ</string>
     <string name="dashboard_current_level">POZIOM %1$d</string>
     <string name="dashboard_life_regeneration_unavailable">ND</string>
+    <string name="dashboard_life_regeneration_remaining">Za %1$s</string>
+    <string name="dashboard_life_regeneration_unlimited">∞ %1$s</string>
     <string name="dashboard_title">URKAAAZ</string>
     <string name="dashboard_back_action">WRÓĆ</string>
     <string name="dashboard_campaign_action">KAMPANIA</string>
@@ -89,7 +96,7 @@
     <string name="dashboard_language_flag_selected_accessibility">Język %1$s, aktywny</string>
     <string name="dashboard_language_change_failure">Nie udało się zapisać języka. Spróbuj ponownie.</string>
     <string name="dashboard_reset_progress_title">Zresetować postęp gracza?</string>
-    <string name="dashboard_reset_progress_message">To usunie postęp kampanii, złoto, odblokowane elementy, ekwipunek i zapisane wyposażenia z tego urządzenia. Preferencje językowe zostaną zachowane. Kontynuować?</string>
+    <string name="dashboard_reset_progress_message">To usunie postęp kampanii, życia i regenerację, złoto, odblokowane elementy, ekwipunek i zapisane wyposażenia z tego urządzenia. Preferencje językowe zostaną zachowane. Kontynuować?</string>
     <string name="dashboard_reset_progress_confirm">RESETUJ POSTĘP</string>
     <string name="dashboard_reset_cancel">ANULUJ</string>
     <string name="dashboard_reset_progress_success">Postęp gracza został zresetowany.</string>
@@ -134,8 +141,11 @@
     <string name="match_result_exit_campaign">WRÓĆ DO KAMPANII</string>
     <string name="match_result_back_dashboard">WRÓĆ DO PANELU</string>
     <string name="match_result_back_test_levels">WRÓĆ DO WYBORU POZIOMU</string>
-    <string name="match_result_saving_status">Postęp kampanii jest zapisywany.</string>
-    <string name="match_result_completion_failed">Nie udało się zapisać postępu. Ponów próbę na tym poziomie lub wróć.</string>
+    <string name="match_result_saving_status">Zapisywanie wyniku kampanii…</string>
+    <string name="match_result_completion_failed">Nie udało się zapisać wyniku. Ponów próbę przed kontynuacją.</string>
+    <string name="match_life_settlement_unavailable">Nie udało się zapisać wyniku życia. Ponów próbę przed wyjściem.</string>
+    <string name="match_life_settlement_invalid">Nie udało się zweryfikować wyniku życia. Ponów próbę przed wyjściem.</string>
+    <string name="match_life_settlement_conflict">Wynik tego meczu koliduje z wcześniejszym rozliczeniem życia.</string>
     <string name="match_result_saving_stock">Zapisywanie zużytego ekwipunku…</string>
     <string name="match_result_stock_settlement_failed">Nie udało się zapisać zużytego ekwipunku. Ponów próbę przed kontynuowaniem.</string>
     <string name="match_result_reward_line">%1$s  +%2$d złota</string>

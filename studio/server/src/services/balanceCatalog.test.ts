@@ -85,6 +85,47 @@ describe("game balance catalog", () => {
     }
   });
 
+  it("validates the campaign life limit and regeneration interval", () => {
+    const valid = JSON.parse(validBalance) as Record<string, unknown>;
+    const runtime = valid.runtime as Record<string, unknown>;
+    const campaign = runtime.campaign as Record<string, unknown>;
+    campaign.lives = {
+      initialLives: 0,
+      maximumLives: 5,
+      regenerationIntervalMilliseconds: 900000,
+    };
+    expect(validateBalanceContent(JSON.stringify(valid))).toEqual({
+      valid: true,
+      issues: [],
+    });
+
+    for (const [field, value] of [
+      ["initialLives", -1],
+      ["initialLives", 6],
+      ["maximumLives", 0],
+      ["maximumLives", 5.5],
+      ["regenerationIntervalMilliseconds", 0],
+      ["regenerationIntervalMilliseconds", "900000"],
+    ] as const) {
+      const document = JSON.parse(validBalance) as Record<string, unknown>;
+      const runtimeBalance = document.runtime as Record<string, unknown>;
+      const campaignBalance = runtimeBalance.campaign as Record<string, unknown>;
+      const lives = campaignBalance.lives as Record<string, unknown>;
+      lives[field] = value;
+      expect(validateBalanceContent(JSON.stringify(document)).issues).toContainEqual(
+        expect.objectContaining({ path: `runtime.campaign.lives.${field}` }),
+      );
+    }
+
+    const missing = JSON.parse(validBalance) as Record<string, unknown>;
+    const missingRuntime = missing.runtime as Record<string, unknown>;
+    const missingCampaign = missingRuntime.campaign as Record<string, unknown>;
+    delete missingCampaign.lives;
+    expect(validateBalanceContent(JSON.stringify(missing)).issues).toContainEqual(
+      expect.objectContaining({ path: "runtime.campaign.lives" }),
+    );
+  });
+
   it("validates nullable non-negative shop prices only for limited ammunition", () => {
     for (const [type, price] of [
       ["ROCK", null],

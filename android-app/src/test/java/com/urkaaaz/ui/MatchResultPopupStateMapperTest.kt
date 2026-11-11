@@ -87,15 +87,69 @@ class MatchResultPopupStateMapperTest {
     }
 
     @Test
-    fun defeatOffersRetryAndCampaignReturnWithoutCampaignProgression() {
+    fun failedDefeatSettlementOnlyAllowsRetryingTheLifeSave() {
         val state = popup(outcome = MatchOutcome.RED_WIN, completionRecorded = false)
 
         assertEquals(MatchResultKind.DEFEAT, state?.result)
         assertEquals(
+            listOf(MatchResultActionType.RETRY_SAVE),
+            state?.actions?.map { it.type },
+        )
+        assertEquals(MatchResultPopupStatus.COMPLETION_FAILED, state?.status)
+    }
+
+    @Test
+    fun pendingDefeatSettlementBlocksRetryAndCampaignReturn() {
+        val state = popup(outcome = MatchOutcome.RED_WIN, completionRecorded = null)
+
+        assertEquals(MatchResultPopupStatus.SAVING_PROGRESS, state?.status)
+        assertTrue(state?.actions.isNullOrEmpty())
+    }
+
+    @Test
+    fun defeatWithoutCanonicalFinishEventDoesNotWaitForLifeSettlement() {
+        val state = MatchResultPopupStateMapper.map(
+            isFinished = true,
+            outcome = MatchOutcome.DRAW,
+            campaignLevel = 4,
+            biomeName = "GREEN_FRONTIER",
+            demoMode = false,
+            campaignCompletionRecorded = null,
+            hasCampaignFinishEvent = false,
+        )
+
+        assertEquals(
             listOf(MatchResultActionType.RETRY, MatchResultActionType.EXIT_TO_CAMPAIGN),
             state?.actions?.map { it.type },
         )
-        assertNull(state?.status)
+    }
+
+    @Test
+    fun systemBackIsBlockedUntilCampaignLifeSettlementSucceeds() {
+        fun blocked(recorded: Boolean?, outcome: MatchOutcome = MatchOutcome.DRAW) =
+            blocksBackForUnsettledLife(
+                isFinished = true,
+                hasFinishedEvent = true,
+                outcome = outcome,
+                demoMode = false,
+                testMode = false,
+                lifeSettlementRecorded = recorded,
+            )
+
+        assertTrue(blocked(null))
+        assertTrue(blocked(false))
+        assertFalse(blocked(true))
+        assertFalse(blocked(null, MatchOutcome.BLUE_WIN))
+        assertFalse(
+            blocksBackForUnsettledLife(
+                isFinished = true,
+                hasFinishedEvent = false,
+                outcome = MatchOutcome.DRAW,
+                demoMode = false,
+                testMode = false,
+                lifeSettlementRecorded = null,
+            ),
+        )
     }
 
     @Test

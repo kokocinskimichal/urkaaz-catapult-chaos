@@ -21,8 +21,9 @@ balans.
 
 - Przebudowa istniejącego `DashboardScreen` według zaakceptowanego przez
   użytkownika pełnoekranowego screenshotu i osobno dostarczonego obrazu tła.
-- Zachowanie live summary profilu: poziom, życia, złoto i status regeneracji
-  `N/A`; wartości zawsze pochodzą z danych aplikacji, nie ze screenshotu.
+- Zachowanie live summary: poziom, życie bazowe, złoto i status regeneracji;
+  pełny licznik pokazuje `N/A`, brakujące życie — countdown, a aktywny
+  unlimited grant — `∞` i jego pozostały czas.
 - Zachowanie Back, Campaign, Shop i potwierdzanego RESET.
 - Umieszczenie przycisku `TEST MODE` na Dashboardzie, który otwiera niezależny
   od postępu gracza wybór poziomów kampanii 1–54.
@@ -79,7 +80,7 @@ Właścicielem ekranu jest `android-app`:
 | Stan prezentacyjny Dashboardu i mapowanie akcji | `DashboardViewModel`, `DashboardUiState`, `DashboardUiAction` |
 | Przekazanie callbacków nawigacji, profilu i resetu | `MainActivity` |
 | Bieżący ekran i stos Back | `AppNavigator` / `ScreenHost` |
-| Odczyt summary profilu | istniejący `DeveloperProgressSummary` i jego właściciel aplikacyjny |
+| Odczyt Dashboard summary | `DashboardProgressSummaryUseCase` łączy CampaignProgress, profil i LifeSnapshot |
 | Atomowy reset postępu | istniejący `PlayerProgressResetRepository` i adapter Androida |
 | Trwały język, wybór języka i zastosowanie Locale | LocalizationSystem; Dashboard jest jego klientem, nie właścicielem |
 
@@ -112,8 +113,9 @@ niż wymaga tego prezentacja.
 
 ### Wejścia
 
-- `DeveloperProgressSummary` ładowany przez istniejący callback
-  `loadProgress`.
+- `DashboardProgressSummary` ładowany przez
+  `DashboardProgressSummaryUseCase`; LifeSnapshot pochodzi z LifeSystem, nie
+  z Developer Progress Preset API.
 - Wynik istniejącego `PlayerProgressResetRepository.reset()` przekazany przez
   `onResetProgress`.
 - Callbacki nawigacyjne Back, Campaign i Shop.
@@ -247,7 +249,7 @@ duplikatów ani nowych bitmap przycisków i ramek.
 
 ## Obsługa błędów
 
-- Błąd odczytu `DeveloperProgressSummary`: nie pokazywać liczb 1/5/0 jako
+- Błąd odczytu Dashboard summary: nie pokazywać liczb 1/5/0 jako
   odczytanych danych; zaprezentować jawny stan błędu i ponowienie.
 - `PlayerProgressResetResult.Failure` lub znany błąd IO/argumentu: nie pokazywać
   sukcesu; zachować możliwość ponowienia zgodnie z bieżącym wzorcem.
@@ -260,7 +262,9 @@ duplikatów ani nowych bitmap przycisków i ramek.
 
 ### Testy Android
 
-- Mapowanie `DeveloperProgressSummary` na poziom, życia i złoto.
+- Mapowanie `DashboardProgressSummary` na poziom, LifeSnapshot i złoto.
+- Countdown jest prezentacyjny i lifecycle-safe; life state odświeża się po
+  wygaśnięciu odliczania, a nie mutuje się co sekundę.
 - Stan ładowania i jawny błąd odczytu bez podstawiania przykładowych wartości.
 - Back, Campaign i Shop wywołują właściwe callbacki.
 - RESET wymaga potwierdzenia, blokuje duplikat podczas operacji, pokazuje
@@ -281,7 +285,8 @@ pozostają kryteriami przeglądu UI; nie dodano osobnego testu instrumentation.
 
 1. Dashboard odtwarza zaakceptowaną kompozycję i używa istniejącego tła,
    logo, przycisków, ramek oraz ikon profilu.
-2. Poziom, życia, złoto i `N/A` pochodzą z aktualnego stanu aplikacji.
+2. Poziom, życia, złoto, countdown, `N/A` i unlimited `∞` pochodzą z aktualnego
+   stanu aplikacji.
 3. Campaign, Shop, Back i RESET zachowują opisane przepływy; reset jest
    potwierdzany i nie zmienia ustawień języka.
 4. `AD REWARD` jest widoczny, ale nie implementuje reklam ani nagród.

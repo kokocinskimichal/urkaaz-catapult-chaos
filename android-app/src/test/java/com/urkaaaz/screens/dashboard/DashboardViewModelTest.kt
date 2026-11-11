@@ -7,7 +7,8 @@ import com.urkaaaz.application.language.LanguageSaveResult
 import com.urkaaaz.application.language.LanguageSettings
 import com.urkaaaz.application.language.LanguageSettingsFailure
 import com.urkaaaz.application.language.SetLanguage
-import com.urkaaaz.application.progression.DeveloperProgressSummary
+import com.urkaaaz.application.progression.DashboardProgressSummary
+import com.urkaaaz.application.progression.LifeSnapshot
 import kotlinx.coroutines.runBlocking
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -29,10 +30,10 @@ class DashboardViewModelTest {
     @Test
     fun successfulProgressLoadPublishesTheSummary() {
         val viewModel = viewModel()
-        val summary = DeveloperProgressSummary(
+        val summary = DashboardProgressSummary(
             currentLevel = 4,
-            lives = 3,
             gold = 120,
+            lifeSnapshot = LifeSnapshot(3, 5, true, 600_000L, null),
         )
 
         val loaded = viewModel.updateProgress(summary)
@@ -46,10 +47,10 @@ class DashboardViewModelTest {
     fun failedProgressLoadDoesNotRetainStaleSummary() {
         val viewModel = viewModel()
         viewModel.updateProgress(
-            DeveloperProgressSummary(
+            DashboardProgressSummary(
                 currentLevel = 4,
-                lives = 3,
                 gold = 120,
+                lifeSnapshot = LifeSnapshot(3, 5, true, 600_000L, null),
             ),
         )
 

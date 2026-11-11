@@ -39,8 +39,10 @@ Balance używa pełnego formularza dla kanonicznego
 `game-domain/src/main/resources/balance/game-balance.json` schema 6. Zakładki
 Bosses, Units, Ammunition, Spells & Mana i Runtime udostępniają wszystkie
 istniejące pola przez typowane inputy i selektory, w tym nullable cenę
-`shopCostGold` dla amunicji oraz globalny mnożnik tempa; stabilne ID, rozmiary
-i kolejność list pozostają stałe. Raw JSON nie jest wyświetlany ani edytowalny.
+`shopCostGold` dla amunicji, globalny mnożnik tempa oraz
+`runtime.campaign.lives` (initial/max/regeneration interval); stabilne ID,
+rozmiary i kolejność list pozostają stałe. Raw JSON nie jest wyświetlany ani
+edytowalny.
 `GET /api/balance` zwraca treść i SHA-256, `POST /api/balance/validate`
 raportuje błędy ze ścieżkami, a `PUT /api/balance` wymaga aktualnego hasha,
 waliduje profile i atomowo zapisuje zmianę. Puste albo niekompletne pola

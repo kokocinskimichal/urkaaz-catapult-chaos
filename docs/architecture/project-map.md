@@ -17,7 +17,7 @@ Android jest nazywana **match screen**, a wybrana definicja kampanii —
 | `game-contracts` | stabilne, niemutowalne kontrakty komunikacji | komendy, snapshoty, eventy, scenariusze, identyfikatory |
 | `game-domain` | reguły i stan domeny gry | `Match`, fortece, jednostki, amunicja, obrażenia, konfiguracje |
 | `game-simulation` | deterministyczne wykonywanie meczu | ticki, pociski, kolizje, teren, wiatr, jednostki, eventy |
-| `game-application` | cykl życia meczu, lokalny gateway, loadout, Shop, reward tracking i przypadki użycia kampanii | `MatchSession`, `LocalMatchGateway`, `application.loadout`, `application.shop`, `application.campaign`, `application.reward` |
+| `game-application` | cykl życia meczu, lokalny gateway, loadout, Shop, reward tracking, LifeSystem i przypadki użycia kampanii | `MatchSession`, `LocalMatchGateway`, `application.loadout`, `application.shop`, `application.progression`, `application.campaign`, `application.reward` |
 | `game-campaign` | definicje poziomów, nagród, milestone'ów i konfiguracja kampanii | `CampaignLevelDefinition`, `CampaignRewardRegistry`, `CampaignMilestoneRegistry`, biom, wiatr, scenariusz |
 | `game-ai` | decyzje AI na podstawie snapshotu | `AiAgent`, rekrutacja, dobór kontr, wysyłanie fal |
 | `android-app` | lifecycle, nawigacja, input i renderowanie | `MainActivity`, ekrany, ViewModel, HUD, battlefield |
@@ -80,7 +80,10 @@ przez komendy i granice domeny/aplikacji.
    milestone'y i receipt. ShopSystem niezależnie rozlicza użyty stock po każdym
    `MatchFinished` oraz przed jawnym stopem/restartem; niewykorzystane stocki
    zostają. Demo, porażka, remis i poddanie nie dają nagrody kampanii.
-10. Etykiety trafieniowych bonusów są prezentacyjne i tymczasowe; popup meczu
+10. Kampanijny non-win atomowo zużywa jedno życie przez LifeSystem i zapisuje
+    receipt `MatchId`; Demo/Test i wygrana nie zużywają życia. Nieudany zapis
+    blokuje zamknięcie popupu wyniku do retry.
+11. Etykiety trafieniowych bonusów są prezentacyjne i tymczasowe; popup meczu
     pokazuje zapisany wynik nagrody, a błąd zapisu można ponowić bez
     restartowania meczu. Powrót do CampaignScreen odczytuje trwały postęp,
     oznacza ukończone levele i wyłącza ich wybór; pełny `ResultScreen`
@@ -173,7 +176,10 @@ loadoutu, nie nadpisują istniejącego. Tutoriale należą do przyszłego
 TutorialSystem. `ShopUseCases` korzysta z cen w `GameBalanceConfig` i atomowego
 portu profilu. `DataStorePlayerProgressionRepository` oraz
 `DataStoreRewardSettlementAdapter` współdzielą profile codec, a transakcje
-stocku używają tego samego DataStore.
+stocku używają tego samego DataStore. LifeSystem w `application.progression`
+zarządza życiami między meczami przez osobny read model i port atomowej mutacji
+profilu; `CampaignLevelStartUseCase` świeżo rewaliduje start, a non-win flow
+rozlicza receipt bez zmiany `CampaignProgress`.
 
 ## Kluczowe pliki
 
@@ -191,11 +197,16 @@ stocku używają tego samego DataStore.
 | `game-application/src/main/kotlin/com/urkaaaz/application/LocalMatchGateway.kt` | lokalny gateway |
 | `game-application/src/main/kotlin/com/urkaaaz/application/loadout/` | loadout, walidacja, jawne porty progresji/zapisu i read-only projekcja katalogów dla Android UI |
 | `game-application/src/main/kotlin/com/urkaaaz/application/progression/PlayerProgressionUseCases.kt` | inicjalizacja i walidacja snapshotu profilu |
+| `game-application/src/main/kotlin/com/urkaaaz/application/progression/LifeSystem.kt` | życie, regeneracja, granty i read model |
+| `game-application/src/main/kotlin/com/urkaaaz/application/campaign/CampaignLevelStartUseCase.kt` | świeża autoryzacja startu kampanii z gate LifeSystemu |
+| `game-application/src/main/kotlin/com/urkaaaz/application/campaign/CampaignMatchCompletionUseCase.kt` | routing BLUE_WIN/non-win rozliczeń kampanii i żyć |
 | `game-application/src/main/kotlin/com/urkaaaz/application/shop/ShopUseCases.kt` | katalog ofert i atomowe zakupy |
 | `game-application/src/main/kotlin/com/urkaaaz/application/shop/MatchStockUsageTracker.kt` | zliczanie udanych użyć stocku w generacji meczu |
 | `game-application/src/main/kotlin/com/urkaaaz/application/shop/MatchStockSettlementUseCase.kt` | idempotentne rozliczenie użyć stocku |
 | `android-app/src/main/java/com/urkaaaz/persistence/DataStorePlayerProgressionRepository.kt` | wersjonowany adapter profilu |
-| `android-app/src/main/java/com/urkaaaz/persistence/PlayerProgressionDataStoreCodec.kt` | wspólny codec profilu dla zakupów, nagród i settlementu stocku |
+| `android-app/src/main/java/com/urkaaaz/persistence/PlayerProgressionDataStoreCodec.kt` | wspólny codec profilu schema 2 dla życia, zakupów, nagród i settlementu stocku |
+| `android-app/src/main/java/com/urkaaaz/persistence/DataStoreLifeStateRepository.kt` | migracja i atomowe transakcje LifeState w profilu |
+| `android-app/src/main/java/com/urkaaaz/persistence/SystemWallClock.kt` | lokalny adapter wall-clock dla LifeSystem |
 | `android-app/src/main/java/com/urkaaaz/persistence/DataStoreLoadoutRepository.kt` | wersjonowany adapter loadoutu |
 | `game-simulation/src/main/kotlin/com/urkaaaz/simulation/DeterministicMatchSimulation.kt` | wykonanie symulacji |
 | `game-contracts/src/main/kotlin/com/urkaaaz/contracts/MatchSnapshot.kt` | read model |

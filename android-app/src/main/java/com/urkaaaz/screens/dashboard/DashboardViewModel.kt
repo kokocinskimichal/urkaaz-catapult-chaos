@@ -3,7 +3,7 @@ package com.urkaaaz.screens.dashboard
 import com.urkaaaz.application.language.AppLanguage
 import com.urkaaaz.application.language.LanguageSaveResult
 import com.urkaaaz.application.language.SetLanguage
-import com.urkaaaz.application.progression.DeveloperProgressSummary
+import com.urkaaaz.application.progression.DashboardProgressSummary
 
 class DashboardViewModel(
     initialLanguage: AppLanguage,
@@ -35,11 +35,27 @@ class DashboardViewModel(
         return state
     }
 
-    fun updateProgress(summary: DeveloperProgressSummary): DashboardUiState {
+    fun updateProgress(summary: DashboardProgressSummary): DashboardUiState {
         state = state.copy(
             progressSummary = summary,
             isLoading = false,
             hasProgressError = false,
+        )
+        return state
+    }
+
+    fun elapseLifeCountdown(milliseconds: Long): DashboardUiState {
+        val summary = state.progressSummary ?: return state
+        val life = summary.lifeSnapshot
+        state = state.copy(
+            progressSummary = summary.copy(
+                lifeSnapshot = life.copy(
+                    regenerationTimeRemainingMilliseconds =
+                        life.regenerationTimeRemainingMilliseconds?.minus(milliseconds)?.coerceAtLeast(0L),
+                    unlimitedTimeRemainingMilliseconds =
+                        life.unlimitedTimeRemainingMilliseconds?.minus(milliseconds)?.coerceAtLeast(0L),
+                ),
+            ),
         )
         return state
     }

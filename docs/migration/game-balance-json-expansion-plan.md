@@ -7,6 +7,10 @@ jednostek, amunicji, czarów i many. Schema 3 przenosi również wspólne parame
 runtime ekonomii, fortec, meczu, fizyki, wiatru, walki, bossów, AI, nagród i
 kampanii. Poniższe etapy schema 2 opisują zakończoną migrację bazową.
 
+Późniejsze rozszerzenia utrzymały bieżący kontrakt na schema 6. Revision
+`game-balance-18` dodaje `runtime.campaign.lives` dla LifeSystemu; bieżący
+Studio Balance nadal używa tego samego strict schema 6.
+
 Plan przenosi obecne charakterystyki jednostek, amunicji i czarów do
 `game-domain/src/main/resources/balance/game-balance.json`. Jest to migracja
 źródła konfiguracji, nie zmiana balansu ani dodanie nowych mechanik. Wartości

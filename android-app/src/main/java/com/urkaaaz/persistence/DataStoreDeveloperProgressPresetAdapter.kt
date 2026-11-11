@@ -10,6 +10,7 @@ import com.urkaaaz.application.progression.DeveloperProgressPresetApply
 import com.urkaaaz.application.progression.DeveloperProgressPresetFailure
 import com.urkaaaz.application.progression.DeveloperProgressPresetPort
 import com.urkaaaz.application.progression.DeveloperProgressSummary
+import com.urkaaaz.application.progression.LifeStateFactory
 import com.urkaaaz.application.progression.PlayerProgressionUseCases
 import com.urkaaaz.campaign.CampaignLevelDefinition
 import com.urkaaaz.campaign.CampaignMilestoneRegistry
@@ -19,12 +20,14 @@ import kotlinx.coroutines.flow.first
 class DataStoreDeveloperProgressPresetAdapter(
     private val dataStore: DataStore<Preferences>,
     private val milestones: CampaignMilestoneRegistry = CampaignMilestoneRegistry.default(),
+    private val nowEpochMilliseconds: () -> Long = System::currentTimeMillis,
 ) : DeveloperProgressPresetPort {
     override suspend fun apply(
         preset: DeveloperProgressPreset,
         contentHash: String,
     ): DeveloperProgressPresetApply {
         if (!preset.applyOnNextLaunch) return DeveloperProgressPresetApply.NotRequested
+        val presetTime = nowEpochMilliseconds()
         var result: DeveloperProgressPresetApply = DeveloperProgressPresetApply.AlreadyApplied
         return try {
             dataStore.updateData { current ->
@@ -32,8 +35,45 @@ class DataStoreDeveloperProgressPresetAdapter(
                     result = DeveloperProgressPresetApply.AlreadyApplied
                     current
                 } else {
+                    var updated = current
+                    if (
+                        DeveloperProgressField.LIVES in preset.fieldsToApply ||
+                        DeveloperProgressField.GOLD in preset.fieldsToApply
+                    ) {
+                        val profile = when (
+                            val decoded = PlayerProgressionDataStoreCodec.decode(current)
+                        ) {
+                            PlayerProgressionProfileDecode.Missing ->
+                                PlayerProgressionUseCases.INITIAL_PROFILE
+                            is PlayerProgressionProfileDecode.Available -> decoded.snapshot
+                            is PlayerProgressionProfileDecode.Failure ->
+                                throw ProfileDataException(decoded.reason)
+                        }
+                        val nextProfile = profile.copy(
+                            goldBalance = if (DeveloperProgressField.GOLD in preset.fieldsToApply) {
+                                preset.gold
+                            } else {
+                                profile.goldBalance
+                            },
+                        )
+                        updated = if (DeveloperProgressField.LIVES in preset.fieldsToApply) {
+                            val lifeState = LifeStateFactory.create(
+                                preset.lives,
+                                presetTime,
+                            ) ?: throw ProfileDataException(
+                                com.urkaaaz.application.progression.PlayerProgressionRepositoryFailure.INVALID_PROFILE,
+                            )
+                            PlayerProgressionDataStoreCodec.encodeWithLifeState(
+                                current,
+                                nextProfile,
+                                lifeState,
+                            )
+                        } else {
+                            PlayerProgressionDataStoreCodec.encode(current, nextProfile)
+                        }
+                    }
                     result = DeveloperProgressPresetApply.Applied
-                    current.toMutablePreferences().apply {
+                    updated.toMutablePreferences().apply {
                         if (DeveloperProgressField.CURRENT_LEVEL in preset.fieldsToApply) {
                             this[CAMPAIGN_SCHEMA_VERSION] = DATA_SCHEMA_VERSION
                             this[CAMPAIGN_HIGHEST_LEVEL] = preset.currentLevel
@@ -47,36 +87,19 @@ class DataStoreDeveloperProgressPresetAdapter(
                                     .sorted()
                                     .joinToString("|")
                         }
-                        if (
-                            DeveloperProgressField.LIVES in preset.fieldsToApply ||
-                            DeveloperProgressField.GOLD in preset.fieldsToApply
-                        ) {
-                            val initialProfile = PlayerProgressionUseCases.INITIAL_PROFILE
-                            this[PROFILE_SCHEMA_VERSION] = DATA_SCHEMA_VERSION
-                            if (!contains(PROFILE_UNLOCKED_SPELLS)) {
-                                this[PROFILE_UNLOCKED_SPELLS] =
-                                    initialProfile.unlockedSpellTypes.sorted().joinToString("|")
-                            }
-                            if (!contains(PROFILE_AMMUNITION_STOCKS)) {
-                                this[PROFILE_AMMUNITION_STOCKS] =
-                                    encodeStocks(initialProfile.ammunitionStocks)
-                            }
-                            if (!contains(PROFILE_SPECIAL_SPELL_STOCKS)) {
-                                this[PROFILE_SPECIAL_SPELL_STOCKS] =
-                                    encodeStocks(initialProfile.specialSpellStocks)
-                            }
-                            if (DeveloperProgressField.GOLD in preset.fieldsToApply) {
-                                this[PROFILE_GOLD] = preset.gold
-                            }
-                            if (DeveloperProgressField.LIVES in preset.fieldsToApply) {
-                                this[PROFILE_LIVES] = preset.lives
-                            }
-                        }
                         this[APPLIED_PROGRESS_PRESET_HASH] = contentHash
                     }
                 }
             }
             result
+        } catch (error: ProfileDataException) {
+            DeveloperProgressPresetApply.Failure(
+                if (error.reason == com.urkaaaz.application.progression.PlayerProgressionRepositoryFailure.STORAGE_UNAVAILABLE) {
+                    DeveloperProgressPresetFailure.STORAGE_UNAVAILABLE
+                } else {
+                    DeveloperProgressPresetFailure.INVALID_DATA
+                },
+            )
         } catch (_: IOException) {
             DeveloperProgressPresetApply.Failure(
                 DeveloperProgressPresetFailure.STORAGE_UNAVAILABLE,
@@ -86,9 +109,15 @@ class DataStoreDeveloperProgressPresetAdapter(
 
     override suspend fun summary(): DeveloperProgressSummary {
         val preferences = dataStore.data.first()
+        val profile = when (val decoded = PlayerProgressionDataStoreCodec.decode(preferences)) {
+            PlayerProgressionProfileDecode.Missing -> null
+            is PlayerProgressionProfileDecode.Available -> decoded
+            is PlayerProgressionProfileDecode.Failure ->
+                throw IllegalStateException("stored player profile is invalid: ${decoded.reason}")
+        }
         val storedLevel = preferences[CAMPAIGN_HIGHEST_LEVEL] ?: 1
-        val lives = preferences[PROFILE_LIVES] ?: DEFAULT_LIVES
-        val gold = preferences[PROFILE_GOLD] ?: 0
+        val lives = profile?.lifeState?.lives ?: profile?.legacyLives ?: DEFAULT_LIVES
+        val gold = profile?.snapshot?.goldBalance ?: 0
         require(storedLevel in 1..CampaignLevelDefinition.MAX_LEVELS) {
             "stored campaign level is invalid"
         }
@@ -102,11 +131,6 @@ class DataStoreDeveloperProgressPresetAdapter(
         )
     }
 
-    private fun encodeStocks(stocks: Map<String, Int>): String =
-        stocks.toSortedMap().entries.joinToString("|") { (identifier, count) ->
-            "$identifier:$count"
-        }
-
     companion object {
         const val DEFAULT_LIVES = 5
         internal val APPLIED_PROGRESS_PRESET_HASH =
@@ -117,13 +141,9 @@ class DataStoreDeveloperProgressPresetAdapter(
         private val CAMPAIGN_COMPLETED_LEVELS = stringPreferencesKey("campaign.completed_levels")
         private val CAMPAIGN_APPLIED_MILESTONES =
             stringPreferencesKey("campaign.applied_milestones")
-        private val PROFILE_SCHEMA_VERSION = intPreferencesKey("profile.schema_version")
-        private val PROFILE_UNLOCKED_SPELLS = stringPreferencesKey("profile.unlocked_spells")
-        private val PROFILE_AMMUNITION_STOCKS =
-            stringPreferencesKey("profile.ammunition_stocks")
-        private val PROFILE_SPECIAL_SPELL_STOCKS =
-            stringPreferencesKey("profile.special_spell_stocks")
-        private val PROFILE_GOLD = intPreferencesKey("profile.gold_balance")
-        private val PROFILE_LIVES = intPreferencesKey("profile.lives")
     }
+
+    private class ProfileDataException(
+        val reason: com.urkaaaz.application.progression.PlayerProgressionRepositoryFailure,
+    ) : Exception()
 }

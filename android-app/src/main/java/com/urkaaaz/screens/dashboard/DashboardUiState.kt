@@ -1,10 +1,10 @@
 package com.urkaaaz.screens.dashboard
 
 import com.urkaaaz.application.language.AppLanguage
-import com.urkaaaz.application.progression.DeveloperProgressSummary
+import com.urkaaaz.application.progression.DashboardProgressSummary
 
 data class DashboardUiState(
-    val progressSummary: DeveloperProgressSummary? = null,
+    val progressSummary: DashboardProgressSummary? = null,
     val isLoading: Boolean = true,
     val hasProgressError: Boolean = false,
     val selectedLanguage: AppLanguage = AppLanguage.DEFAULT,

@@ -11,7 +11,8 @@ RewardSystemu.
 spełnione w jego trakcie osiągnięcia. Warunki osiągnięć są oceniane na
 podstawie eventów meczu, a nagrody są rozliczane dopiero po zwycięstwie BLUE.
 Po zapisanym zwycięstwie poziom jest ukończony i nie można go rozegrać ponownie;
-porażka, remis lub poddanie nie zużywają podejścia i nie przyznają złota.
+porażka, remis lub poddanie nie zapisują postępu ani nie przyznają złota.
+LifeSystem niezależnie zużywa przy takim kampanijnym wyniku jedno życie.
 
 Katalog kampanii jest rozszerzalny o kolejne poziomowe warunki i typy nagród
 bez przenoszenia reguł do Android UI ani tworzenia równoległego właściciela
@@ -542,7 +543,7 @@ Kluczowe pliki wdrożenia:
 - powtórzenie eventu lub retry zwraca ten sam receipt i nie zmienia salda
   drugi raz;
 - przegrana, remis i poddanie pozwalają ponowić poziom i nie zmieniają
-  salda ani CampaignProgress;
+  salda ani CampaignProgress; zużycie jednego życia należy do LifeSystemu;
 - ukończony poziom zostaje odrzucony przez `selectLevel`;
 - błąd magazynu, błędne dane i przepełnienie salda nie zapisują częściowego
   completion ani payoutu;
@@ -555,8 +556,8 @@ Kluczowe pliki wdrożenia:
 ### Kryteria akceptacji
 
 - tylko BLUE_WIN może przyznać złoto;
-- porażka pozwala na kolejne podejście, a zapisane zwycięstwo kończy możliwość
-  wyboru tego poziomu;
+- porażka pozwala na kolejne podejście po rozliczeniu życia, a zapisane
+  zwycięstwo kończy możliwość wyboru tego poziomu;
 - eventy meczu są jedynym źródłem postępu specjalnych osiągnięć;
 - jedna atomowa operacja zapisuje saldo, ukończenie, odblokowanie i receipt;
 - duplicate delivery oraz retry nigdy nie dublują wypłaty;

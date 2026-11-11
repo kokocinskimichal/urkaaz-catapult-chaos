@@ -44,7 +44,13 @@ class GameBalanceRepositoryTest {
         assertEquals(5, result.balance.config.ammunition.all.size)
         assertEquals(11, result.balance.config.spells.all.size)
         assertEquals(6, result.balance.config.schemaVersion)
-        assertEquals("game-balance-17", result.balance.config.balanceRevision)
+        assertEquals("game-balance-18", result.balance.config.balanceRevision)
+        assertEquals(5, result.balance.config.runtime.campaign.lives.initialLives)
+        assertEquals(5, result.balance.config.runtime.campaign.lives.maximumLives)
+        assertEquals(
+            900_000L,
+            result.balance.config.runtime.campaign.lives.regenerationIntervalMilliseconds,
+        )
         assertEquals(8_000, result.balance.config.bosses.first().maxHealth)
         assertEquals(1.2f, result.balance.config.runtime.combat.gameplaySpeedMultiplier)
         assertEquals(0.9f, result.balance.config.runtime.combat.unitMovementSpeedScale)
@@ -124,6 +130,31 @@ class GameBalanceRepositoryTest {
                 ByteArrayInputStream(invalid.toByteArray())
             }
 
+            assertEquals(
+                GameBalanceRead.Failure(GameBalanceFailure.INVALID_DATA),
+                repository.load(),
+            )
+        }
+    }
+
+    @Test
+    fun invalidCampaignLifeBalanceIsRejected() {
+        val bundled = javaClass.getResourceAsStream("/balance/game-balance.json")!!
+            .bufferedReader()
+            .use { it.readText() }
+        val invalidDocuments = listOf(
+            bundled.replace("\"initialLives\": 5", "\"initialLives\": 6"),
+            bundled.replace("\"maximumLives\": 5", "\"maximumLives\": 0"),
+            bundled.replace(
+                "\"regenerationIntervalMilliseconds\": 900000",
+                "\"regenerationIntervalMilliseconds\": 0",
+            ),
+        )
+
+        invalidDocuments.forEach { invalid ->
+            val repository = GameBalanceRepository {
+                ByteArrayInputStream(invalid.toByteArray())
+            }
             assertEquals(
                 GameBalanceRead.Failure(GameBalanceFailure.INVALID_DATA),
                 repository.load(),

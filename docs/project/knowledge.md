@@ -52,6 +52,28 @@ campaign completion, milestone grants and an idempotent receipt in the local
 DataStore. The match result popup presents the committed reward and can retry
 a failed save without replaying the match.
 
+LifeSystem is implemented in `game-application.application.progression`.
+`runtime.campaign.lives` in `game-balance.json` is the canonical source for
+initial/max lives and the 900,000 ms regeneration interval; the current balance
+revision is `game-balance-18`. New profiles start at 5/5, and non-BLUE_WIN
+campaign results consume one life exactly once by `MatchId`. Offline catch-up,
+local wall-clock high-water handling, finite capped grants, and additive
+time-limited unlimited grants are handled by LifeSystem, not Android UI or
+match simulation. `CampaignLevelStartUseCase` revalidates both campaign
+progress and LifeSnapshot before entering Loadout and again before starting a
+campaign match; Test/Demo bypass the life gate.
+
+LifeState shares the existing `urkaaz_local_progress` Preferences DataStore.
+`PlayerProgressionDataStoreCodec` reads profile v1 and writes profile v2 with
+life timing, high-water and idempotency receipts; legacy `profile.lives` is
+clamped to the configured cap and migrated with a full interval when below
+the cap. `DataStoreLifeStateRepository`, reward settlement, stock settlement
+and profile mutations preserve one another's fields in atomic updates.
+Dashboard reads `DashboardProgressSummaryUseCase`, not the developer preset
+summary; Campaign preserves map browsing at zero lives. A failed non-win life
+settlement blocks result dismissal and system Back until the same MatchId is
+successfully retried. Ad Reward and event sources are not integrated yet.
+
 Terminology convention: **mecz** means the gameplay session and runtime
 simulation only. The Android UI is called the **match screen**, while the
 selected campaign data is a **campaign level**.
@@ -1179,7 +1201,7 @@ must go through commands and domain/application boundaries.
   a shot against a fortress. Entity-impact presentation uses the collision
   coordinates from `ProjectileHitEntity`.
 - Unit balance is centralized in `game-balance.json` revision
-  `game-balance-17`. Current profiles: Sapper 20 HP and 100 siege damage;
+  `game-balance-18`. Current profiles: Sapper 20 HP and 100 siege damage;
   Defender 60 HP, 20 unit damage and 10 fortress damage; Demolisher 25 HP;
   Raging Boar 80 HP and 35 unit/fortress damage; Slingmaster 40 HP, 20 unit
   damage and 10 fortress damage. Stable unit identifiers remain in `UnitIds`.
@@ -1196,9 +1218,10 @@ must go through commands and domain/application boundaries.
 
 ## Known incomplete areas
 
-- Loadout profile and persistence adapters are implemented using DataStore
-  schema v1; first-run values are Fortress Shield, zero gold, and zero
-  limited-ammunition/special-spell stock. The screen supports interactive
+- Player profile DataStore schema v2 includes LifeState; per-level Loadout
+  persistence remains schema v1. First-run progression values are Fortress
+  Shield, zero gold, and zero limited-ammunition/special-spell stock, with 5/5
+  base lives. The screen supports interactive
   selection, normalized-loadout status, item details and guarded commit.
   Campaign progression and Haste/Heal milestone persistence are implemented;
   tutorials remain deferred to TutorialSystem. ShopSystem passes an immutable
@@ -1355,9 +1378,10 @@ It defines the campaign level to make available, lives, gold, and whether to
 apply the preset on the next debug app launch. `fieldsToApply` selects which
 values the Android adapter writes, so changing only the campaign level
 preserves the player's existing lives and gold. A newly revised, queued preset
-is applied once to the local DataStore; release builds ignore it. The Dashboard
-reads the persisted level/lives/gold summary. Lives are currently stored and
-displayed only; consumption and regeneration remain unimplemented.
+is applied once to the local DataStore; release builds ignore it. Explicitly
+applying the lives field updates the canonical LifeState, including its
+regeneration timer and grants; the Dashboard reads lives from the dedicated
+LifeSystem summary instead of the developer preset API.
 The bundled queued preset currently applies level 21 and 10,000 gold on the next
 debug app launch, replacing the persisted gold balance once.
 

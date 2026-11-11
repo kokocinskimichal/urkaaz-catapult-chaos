@@ -15,10 +15,12 @@ import android.widget.ImageView
 import android.widget.ProgressBar
 import android.widget.TextView
 import com.urkaaaz.android.R
-import com.urkaaaz.application.campaign.CampaignLevelSelection
+import com.urkaaaz.application.campaign.CampaignLevelStartFailure
+import com.urkaaaz.application.campaign.CampaignLevelStartRejection
+import com.urkaaaz.application.campaign.CampaignLevelStartResult
+import com.urkaaaz.application.campaign.CampaignLevelStartUseCase
 import com.urkaaaz.application.campaign.CampaignProgressFailure
-import com.urkaaaz.application.campaign.CampaignSelectionRejection
-import com.urkaaaz.application.campaign.CampaignSystem
+import com.urkaaaz.application.progression.LifeSystemFailure
 import com.urkaaaz.campaign.CampaignChapterRegistry
 import com.urkaaaz.campaign.CampaignMapLayoutFailure
 import com.urkaaaz.campaign.CampaignMapLayoutRead
@@ -26,20 +28,23 @@ import com.urkaaaz.campaign.CampaignMapLayoutRepository
 import com.urkaaaz.navigation.ScreenContent
 import com.urkaaaz.ui.ScreenChromeMetrics
 import com.urkaaaz.ui.UiTypography
+import com.urkaaaz.screens.life.LifeCountdownFormatter
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlin.math.roundToInt
 
 class CampaignScreen(
     private val context: Context,
-    campaignSystem: CampaignSystem,
+    campaignLevelStart: CampaignLevelStartUseCase,
     private val onBack: () -> Unit,
     private val onLevelSelected: (Int) -> Unit,
 ) : ScreenContent {
-    private val viewModel = CampaignViewModel(campaignSystem)
+    private val viewModel = CampaignViewModel(campaignLevelStart)
     private val pageContent = CampaignMapGestureContainer(context) { direction ->
         if (viewModel.navigateChapter(direction)) render(viewModel.state)
     }
@@ -171,6 +176,14 @@ class CampaignScreen(
         )
         setOnClickListener { startSelectedLevel() }
     }
+    private val lifeStatusText = TextView(context).apply {
+        textSize = 12f
+        setTextColor(Color.rgb(255, 229, 183))
+        gravity = Gravity.CENTER
+        setPadding(dp(10), dp(6), dp(10), dp(6))
+        setBackgroundResource(R.drawable.bg_hud_panel)
+        visibility = View.GONE
+    }
     private var screenScope: CoroutineScope? = null
 
     override val view: View = createView()
@@ -185,6 +198,19 @@ class CampaignScreen(
         screenScope = scope
         scope.launch {
             render(viewModel.load())
+            while (isActive) {
+                delay(LIFE_COUNTDOWN_TICK_MILLISECONDS)
+                val life = viewModel.state.lifeSnapshot ?: continue
+                val remaining = life.unlimitedTimeRemainingMilliseconds
+                    ?: life.regenerationTimeRemainingMilliseconds
+                    ?: continue
+                val updated = if (remaining <= LIFE_COUNTDOWN_TICK_MILLISECONDS) {
+                    viewModel.refreshLifeSnapshot()
+                } else {
+                    viewModel.elapseLifeCountdown(LIFE_COUNTDOWN_TICK_MILLISECONDS)
+                }
+                updateLifePresentation(updated)
+            }
         }
     }
 
@@ -227,6 +253,12 @@ class CampaignScreen(
             FrameLayout.LayoutParams(dp(220), dp(54), Gravity.BOTTOM or Gravity.CENTER_HORIZONTAL),
         )
         addView(
+            lifeStatusText,
+            FrameLayout.LayoutParams(dp(420), -2, Gravity.BOTTOM or Gravity.CENTER_HORIZONTAL).apply {
+                bottomMargin = dp(58)
+            },
+        )
+        addView(
             createTopBar(),
             FrameLayout.LayoutParams(dp(TOP_BAR_WIDTH_DP), dp(TOP_BAR_HEIGHT_DP), Gravity.TOP or Gravity.START).apply {
                 topMargin = dp(ScreenChromeMetrics.EDGE_INSET_DP)
@@ -267,6 +299,7 @@ class CampaignScreen(
         pageContent.removeAllViews()
         pageContent.swipeEnabled = false
         startLevelButton.visibility = View.GONE
+        lifeStatusText.visibility = View.GONE
         previousChapterButton.visibility = View.INVISIBLE
         nextChapterButton.visibility = View.INVISIBLE
         chapterHeaderPanel.visibility = View.GONE
@@ -304,10 +337,13 @@ class CampaignScreen(
         renderChapterHeader(page)
         renderChapterNavigation(state.mapProgression, page)
         renderChapterMap(page, state.selectedLevel)
-        renderStartLevelButton(page, state.selectedLevel)
-        state.selectionRejection?.let { rejection ->
-            addSelectionRejection(rejection)
-        }
+        renderStartLevelButton(page, state.selectedLevel, state)
+        renderLifeStatus(state)
+        state.selectionRejection
+            ?.takeUnless { it == CampaignLevelStartRejection.NO_LIVES }
+            ?.let { rejection ->
+                addSelectionRejection(rejection)
+            }
     }
 
     private fun renderChapterHeader(page: CampaignChapterPageState) {
@@ -445,7 +481,7 @@ class CampaignScreen(
         }
     }
 
-    private fun addSelectionRejection(reason: CampaignSelectionRejection) {
+    private fun addSelectionRejection(reason: CampaignLevelStartRejection) {
         val message = selectionRejectionMessage(reason)
         pageContent.addView(TextView(context).apply {
             text = message
@@ -489,22 +525,62 @@ class CampaignScreen(
         })
     }
 
-    private fun renderStartLevelButton(page: CampaignChapterPageState, selectedLevel: Int?) {
+    private fun renderStartLevelButton(
+        page: CampaignChapterPageState,
+        selectedLevel: Int?,
+        state: CampaignUiState,
+    ) {
         val availableLevel = page.markers.firstOrNull {
             it.status == CampaignLevelMarkerStatus.AVAILABLE
         }?.level ?: run {
             startLevelButton.visibility = View.GONE
             return
         }
-        val canStart = selectedLevel == availableLevel
+        val canStart = selectedLevel == availableLevel &&
+            state.lifeSnapshot?.canStartCampaign == true &&
+            state.lifeFailure == null &&
+            state.startFailure == null
         startLevelButton.visibility = View.VISIBLE
         startLevelButton.isEnabled = canStart
         startLevelButton.alpha = if (canStart) 1f else 0.45f
         startLevelButton.contentDescription = if (canStart) {
             context.getString(R.string.campaign_start_level_accessibility, availableLevel)
+        } else if (state.lifeSnapshot?.canStartCampaign == false) {
+            context.getString(R.string.campaign_lives_required)
         } else {
             context.getString(R.string.campaign_start_level_unavailable_accessibility)
         }
+    }
+
+    private fun renderLifeStatus(state: CampaignUiState) {
+        val message = when {
+            state.lifeFailure != null ->
+                context.getString(lifeFailureMessage(state.lifeFailure))
+            state.lifeSnapshot?.canStartCampaign == false -> {
+                val remaining = state.lifeSnapshot.regenerationTimeRemainingMilliseconds
+                if (remaining != null) {
+                    context.getString(
+                        R.string.campaign_lives_required_remaining,
+                        LifeCountdownFormatter.format(remaining),
+                    )
+                } else {
+                    context.getString(R.string.campaign_lives_required)
+                }
+            }
+            state.startFailure != null ->
+                context.getString(startFailureMessage(state.startFailure))
+            else -> null
+        } ?: return
+        lifeStatusText.text = message
+        lifeStatusText.visibility = View.VISIBLE
+    }
+
+    private fun updateLifePresentation(state: CampaignUiState) {
+        val page = state.mapProgression?.pages?.firstOrNull {
+            it.chapter.id == state.selectedChapterId
+        } ?: return
+        renderStartLevelButton(page, state.selectedLevel, state)
+        renderLifeStatus(state)
     }
 
     private fun selectMapLevel(level: Int) {
@@ -515,10 +591,10 @@ class CampaignScreen(
         val level = viewModel.state.selectedLevel ?: return
         screenScope?.launch {
             when (val result = viewModel.dispatch(CampaignUiAction.SelectLevel(level))) {
-                is CampaignLevelSelection.Selected ->
+                is CampaignLevelStartResult.Allowed ->
                     onLevelSelected(result.definition.level)
-                is CampaignLevelSelection.Rejected,
-                is CampaignLevelSelection.Failure -> render(viewModel.state)
+                is CampaignLevelStartResult.Rejected,
+                is CampaignLevelStartResult.Failure -> render(viewModel.state)
             }
         }
     }
@@ -538,15 +614,43 @@ class CampaignScreen(
                 R.string.campaign_progress_version
         })
 
-    private fun selectionRejectionMessage(reason: CampaignSelectionRejection): String =
+    private fun selectionRejectionMessage(reason: CampaignLevelStartRejection): String =
         context.getString(when (reason) {
-            CampaignSelectionRejection.INVALID_LEVEL ->
+            CampaignLevelStartRejection.INVALID_LEVEL ->
                 R.string.campaign_selection_invalid
-            CampaignSelectionRejection.LEVEL_LOCKED ->
+            CampaignLevelStartRejection.LEVEL_LOCKED ->
                 R.string.campaign_selection_locked
-            CampaignSelectionRejection.LEVEL_ALREADY_COMPLETED ->
+            CampaignLevelStartRejection.LEVEL_ALREADY_COMPLETED ->
                 R.string.campaign_completion_already_completed
+            CampaignLevelStartRejection.NO_LIVES ->
+                R.string.campaign_lives_required
         })
+
+    private fun lifeFailureMessage(reason: LifeSystemFailure): Int =
+        when (reason) {
+            LifeSystemFailure.STORAGE_UNAVAILABLE ->
+                R.string.campaign_lives_unavailable
+            LifeSystemFailure.INVALID_PROFILE ->
+                R.string.campaign_lives_invalid
+            LifeSystemFailure.UNSUPPORTED_PROFILE_VERSION ->
+                R.string.campaign_lives_version
+        }
+
+    private fun startFailureMessage(reason: CampaignLevelStartFailure): Int =
+        when (reason) {
+            CampaignLevelStartFailure.CAMPAIGN_STORAGE_UNAVAILABLE ->
+                R.string.campaign_progress_unavailable
+            CampaignLevelStartFailure.CAMPAIGN_INVALID_DATA ->
+                R.string.campaign_progress_invalid
+            CampaignLevelStartFailure.CAMPAIGN_UNSUPPORTED_VERSION ->
+                R.string.campaign_progress_version
+            CampaignLevelStartFailure.LIFE_STORAGE_UNAVAILABLE ->
+                R.string.campaign_lives_unavailable
+            CampaignLevelStartFailure.LIFE_INVALID_PROFILE ->
+                R.string.campaign_lives_invalid
+            CampaignLevelStartFailure.LIFE_UNSUPPORTED_PROFILE_VERSION ->
+                R.string.campaign_lives_version
+        }
 
     private fun campaignMapLayoutFailureMessage(reason: CampaignMapLayoutFailure): Int =
         when (reason) {
@@ -561,6 +665,7 @@ class CampaignScreen(
         (value * context.resources.displayMetrics.density).roundToInt()
 
     private companion object {
+        const val LIFE_COUNTDOWN_TICK_MILLISECONDS = 1_000L
         const val GREEN_FRONTIER_CHAPTER_ID = "green_frontier"
         const val TOP_BAR_WIDTH_DP = 480
         const val TOP_BAR_HEIGHT_DP = 52

@@ -2,13 +2,17 @@
 
 ## Status
 
-**Zatwierdzony zakres; system nie jest zaimplementowany.** Istniejący profil
-zawiera liczbę `lives` ustawianą przez debugowy Developer Progress Preset oraz
-wyświetlaną na Dashboardzie, ale nie ma jeszcze reguł zużywania, regeneracji,
-grantów ani bramki startu kampanii.
+**Zaimplementowano lokalnie.** Trwały profil kampanii ma kanoniczny LifeState,
+regenerację offline, idempotentne rozliczenie kampanijnych porażek i wspólne
+API grantów skończonych oraz czasowych unlimited. Campaign oraz Dashboard
+odczytują aplikacyjny `LifeSnapshot`; nie dodano integracji reklamowej ani
+event feedu.
 
-Ten dokument opisuje przyszły LifeSystem. Nie dodaje kodu, kontraktów runtime,
-balansu ani integracji reklamowej.
+Prompt wykonania pozostaje w
+[`life-system-implementation-prompt.md`](life-system-implementation-prompt.md).
+Lokalny wall-clock nie zabezpiecza przed ręcznym przyspieszeniem czasu do
+przodu, a wymuszone zamknięcie procesu przed zapisaniem wyniku może utracić
+zdarzenie — trwały outbox nie należy do zakresu.
 
 ## Cel i zakres
 
@@ -87,9 +91,10 @@ Nie powstaje nowy moduł Gradle.
 |---|---|
 | LifeSystem: reguły żyć, timerów, grantów i blokady dostępu | `game-application.application.progression` |
 | Wspólny limit, wartość początkowa i interwał regeneracji | `game-domain` `GameBalanceConfig`, edytowany przez istniejący Studio Balance |
-| Trwały profil i transakcyjne mutacje | istniejąca granica `PlayerProgressionRepository` |
+| Trwały profil i transakcyjne mutacje | wspólny profile codec/DataStore przez `PlayerProgressionRepository` i `LifeStateRepository` |
 | Adapter lokalnego zegara i DataStore | `android-app` |
-| Autoryzacja poziomu i widoczność kampanii | `CampaignSystem` |
+| Odblokowanie/ukończenie poziomu | `CampaignSystem` |
+| Start gate łączący progres kampanii i życie | `CampaignLevelStartUseCase` |
 | Wyświetlenie licznika i CTA | `DashboardScreen` oraz `CampaignScreen` |
 | Rozliczenie ukończenia i złota wygranej | istniejący `CampaignSystem` / `RewardSystem` |
 | Runtime state meczu | istniejący `MatchSession` / symulacja, bez żyć |
@@ -102,15 +107,13 @@ nie oblicza regeneracji i nie przyznaje grantów.
 
 ### Już istnieje
 
-- `DeveloperProgressPreset` i `DeveloperProgressSummary` zawierają pole
-  `lives`. `DataStoreDeveloperProgressPresetAdapter` zapisuje je jako
-  `profile.lives` i zwraca `DEFAULT_LIVES = 5`.
-- Ta liczba jest obecnie używana przez Dashboard wyłącznie jako prezentacja
-  profilu i może być ustawiona przez debugowy preset. Nie ma terminu
-  następnego życia, zużycia ani reguł grantów.
+- `DeveloperProgressPreset` i `DeveloperProgressSummary` zachowują pole
+  `lives` dla debugowego narzędzia. Adapter zapisuje je przez `LifeStateFactory`
+  do kanonicznego LifeState; `profile.lives` jest wyłącznie legacy kluczem
+  odczytywanym przez migrację.
 - `PlayerProgressionRepository` i `PlayerProgressionDataStoreCodec` zarządzają
-  innymi polami profilu, ale codec nie modeluje `profile.lives` ani stanu
-  regeneracji.
+  inventory i złotem. Codec schema 2 współdzieli profil z
+  `LifeStateRepository`, który mutuje życie w tym samym atomowym DataStore.
 - `CampaignSystem.selectLevel` sprawdza poprawność, odblokowanie i ukończenie
   poziomu; nie sprawdza liczby żyć.
 - `CampaignSystem.completeLevel` zwraca `NoProgress` dla wyniku innego niż
@@ -119,7 +122,8 @@ nie oblicza regeneracji i nie przyznaje grantów.
 - Wspólny lokalny Preferences DataStore jest już używany przez profil,
   CampaignProgress, reward receipts i reset. RESET atomowo czyści postęp,
   zachowując hash zastosowanego Developer Progress Preset.
-- Dashboard ma pole regeneracji, które obecnie zawsze pokazuje `N/A`.
+- Dashboard korzysta z osobnego `DashboardProgressSummaryUseCase` i pokazuje
+  countdown, `N/A` przy pełnym stanie lub `∞` z czasem aktywnego grantu.
 
 ### Ryzyko duplikacji
 
@@ -140,8 +144,8 @@ po to, by spełnić wymagania Loadoutu; dostarczać oddzielny read model
 istniejący codec, port persystencji, debugowy preset i reset tak, aby
 wszystkie operacje odczytywały/mutowały tę samą kanoniczną wartość.
 
-`CampaignSystem` pozostaje właścicielem level selection. Do autoryzacji
-startu konsultuje LifeSystem przez jawny application boundary i zwraca
+`CampaignSystem` pozostaje właścicielem progress/unlock selection.
+`CampaignLevelStartUseCase` łączy jego walidację z LifeSystemem i zwraca
 typowane odrzucenie `NO_LIVES`; nie kopiuje reguł ani stanu żyć. Kampania może
 przeglądać i wybierać mapę przy zerze, lecz świeża walidacja startu w warstwie
 aplikacyjnej odrzuca rozpoczęcie, chyba że jest aktywny unlimited grant.
@@ -151,8 +155,9 @@ LifeSystem konsumuje wyłącznie kanoniczny `MatchFinished` prawdziwej kampanii;
 `MatchViewModel` już odfiltrowuje Demo i Test Mode. Life settlement dla
 wyniku niebędącego wygraną jest osobną, atomową mutacją profilu z receipt po
 `MatchId`; nie dodaje reguł żyć do `RewardSystem` ani do symulacji.
-`CampaignCompletionPresenter` pozostaje adapterem prezentacyjnym, a retry
-uruchamia ten sam idempotentny application use case.
+`CampaignMatchCompletionUseCase` routuje wynik do Campaign/Reward albo
+LifeSystem. `CampaignCompletionPresenter` pozostaje adapterem prezentacyjnym,
+a retry uruchamia ten sam idempotentny application use case.
 
 Alternatywa — osobny Gradle module / drugi DataStore — pogarsza spójność,
 reset i testowalność. Umieszczenie żyć w `game-simulation` błędnie związałoby
@@ -400,51 +405,51 @@ settlement ukończenia/nagrody i nie obciąża życia.
 8. Ad Reward i event sources nie są implementowane; ich przyszłe wywołania
    korzystają z tego samego grant API.
 
-## Proponowany plan wdrożenia
+## Zrealizowana implementacja
 
-1. Dodać `LifeBalance` do typed balance pod `runtime.campaign.lives`, strict
-   loader/validator, Studio Balance form, defaults, fixtures i revision tests.
-2. Zdefiniować immutable `LifeState`/`LifeSnapshot`, typed requests/results,
-   injected wall-clock port oraz LifeSystem use cases w
-   `game-application.application.progression`.
-3. Rozszerzyć kanoniczny profil/persistence transaction i codec, zachowując
-   istniejące DataStore; dodać migrację `profile.lives` oraz receipt store.
-4. Spiąć `DeveloperProgressPreset` i `PlayerProgressResetRepository` z
-   canonical life mutation, tak aby preset/reset atomowo ustawiały również
-   timer/unlimited/receipts.
-5. Dodać application-level campaign eligibility check i settlement flow:
-   CampaignSystem zachowuje postęp leveli; LifeSystem zużywa tylko kampanijny
-   non-win po canonical `MatchFinished`; Demo/Test pozostają wyłączone.
-6. Rozszerzyć read model Dashboardu i CampaignScreen: timer/∞, disabled start
-   i lokalizowany komunikat przy zero, bez własnej reguły UI.
-7. Dodać domain/config, application, DataStore, replay-boundary i Android
-   presentation tests z kontrolowanym zegarem.
-8. Uruchomić `./gradlew test assembleDebug --quiet`, `git diff --check` i
-   review granic Clean Architecture.
+1. `runtime.campaign.lives` dodaje typed `LifeBalance` z limitem, wartością
+   początkową i interwałem. Strict decoder, Studio Balance i testy walidują
+   ten sam profil; zmiana podniosła revision do `game-balance-18`.
+2. `LifeSystem` w `game-application.application.progression` używa wstrzykniętego
+   `WallClock`, niezmiennych state/snapshot/receipt oraz atomowego portu
+   `LifeStateRepository`.
+3. Preferences DataStore zachowuje jedno źródło prawdy. `profile.schema_version`
+   migruje z v1 do v2, `profile.lives` jest przenoszone do LifeState, a
+   zużycia/granty zapisują receipts z tym samym atomowym profilem. RESET czyści
+   LifeState, granty i receipts, zachowując hash debug presetu.
+4. Developer Progress Preset ustawia LifeState przez wspólną fabrykę. Preset
+   bez pola `lives` nie nadpisuje go.
+5. `CampaignLevelStartUseCase` sprawdza poziom i świeży LifeSnapshot zarówno
+   przed Loadoutem, jak i przed uruchomieniem kampanijnego meczu. Przy zerze
+   nadal można przeglądać mapę i zaznaczyć poziom; CTA startu jest blokowane.
+6. `CampaignMatchCompletionUseCase` kieruje BLUE_WIN do dotychczasowego
+   Campaign/Reward flow, a pozostałe kampanijne wyniki do LifeSystem.
+   Niepowodzenie zapisu wymaga retry; popup i systemowy Back nie pozwalają
+   opuścić wyniku przed settlementem.
+7. Dashboard czyta nowy `DashboardProgressSummaryUseCase` i prezentuje życie,
+   odliczanie, `N/A` lub unlimited `∞`. Dashboard i Campaign aktualizują
+   wyłącznie lokalny countdown w czasie lifecycle ekranu.
+8. Testy obejmują reguły i czas, migrację/receipt/reset DataStore, bramkę
+   kampanii, settlement wyniku, Studio Balance oraz Android presentation.
 
-## Proponowane pliki do przyszłej implementacji
+## Główne pliki implementacji
 
-- `game-domain/.../RuntimeBalance.kt` — typed `LifeBalance` w konfiguracji
-  kampanii;
-- `game-domain/src/main/resources/balance/game-balance.json` — cap, initial
-  lives i regeneracja;
-- `game-application/.../progression/LifeSystem.kt` — immutable state,
-  requests/results i use cases;
-- `game-application/.../progression/PlayerProgressionRepository.kt` oraz
-  wspólny profile contract/codec — atomowa persistence boundary;
-- `game-application/.../application/campaign/CampaignSystem.kt` albo
-  jawny campaign entry use case — eligibility recheck;
-- `android-app/.../persistence/DataStorePlayerProgressionRepository.kt` oraz
-  `DataStoreDeveloperProgressPresetAdapter.kt` — wspólny backend/preset;
-- `android-app/.../persistence/DataStorePlayerProgressResetRepository.kt` —
-  reset wszystkich LifeSystem pól;
-- `android-app/.../screens/campaign/CampaignScreen.kt` i
-  `CampaignViewModel.kt` — disabled CTA/message przy 0;
-- `android-app/.../screens/dashboard/DashboardScreen.kt`, `DashboardViewModel.kt`
-  i profile summary mapping — timer, N/A, unlimited status;
-- `android-app/.../screens/match/CampaignCompletionPresenter.kt` lub jego
-  application-level caller — wynik kampanii i retry Life settlement;
-- odpowiadające testy progression, campaign, DataStore, Dashboard i Campaign UI.
+- `game-domain/src/main/kotlin/com/urkaaaz/domain/RuntimeBalance.kt`
+- `game-domain/src/main/resources/balance/game-balance.json`
+- `game-application/src/main/kotlin/com/urkaaaz/application/progression/LifeStateRepository.kt`
+- `game-application/src/main/kotlin/com/urkaaaz/application/progression/LifeSystem.kt`
+- `game-application/src/main/kotlin/com/urkaaaz/application/progression/DashboardProgressSummaryUseCase.kt`
+- `game-application/src/main/kotlin/com/urkaaaz/application/campaign/CampaignLevelStartUseCase.kt`
+- `game-application/src/main/kotlin/com/urkaaaz/application/campaign/CampaignMatchCompletionUseCase.kt`
+- `android-app/src/main/java/com/urkaaaz/persistence/PlayerProgressionDataStoreCodec.kt`
+- `android-app/src/main/java/com/urkaaaz/persistence/DataStoreLifeStateRepository.kt`
+- `android-app/src/main/java/com/urkaaaz/persistence/SystemWallClock.kt`
+- `android-app/src/main/java/com/urkaaaz/persistence/DataStoreDeveloperProgressPresetAdapter.kt`
+- `android-app/src/main/java/com/urkaaaz/screens/campaign/CampaignScreen.kt`
+- `android-app/src/main/java/com/urkaaaz/screens/dashboard/DashboardScreen.kt`
+- `android-app/src/main/java/com/urkaaaz/screens/match/CampaignCompletionPresenter.kt`
+- `studio/server/src/services/balanceCatalog.ts`
+- `studio/web/src/tabs/balance/model.ts` i `BalanceForm.tsx`
 
 ## Poza zakresem i ograniczenia
 
@@ -454,5 +459,5 @@ settlement ukończenia/nagrody i nie obciąża życia.
 - lokalny clock nie zabezpiecza przed ręcznym przyspieszeniem czasu;
 - `ResultScreen` pozostaje placeholderem; retry korzysta z istniejącego
   match-result popup;
-- wartości balance są zatwierdzone przez użytkownika, ale nie są jeszcze
-  wdrożone ani dodane do JSON/Studio.
+- Ad Reward, event source, backend i synchronizacja chmurowa pozostają
+  niezaimplementowane; ich przyszłe adaptery mają używać wspólnego grant API.

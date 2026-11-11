@@ -419,7 +419,9 @@ overlap oraz rejestrację zakładki. Studio dodatkowo przechodzi `npm test`,
 Zakładka Balance edytuje jedyne źródło wartości balansu:
 `game-domain/src/main/resources/balance/game-balance.json`, schema 6.
 Formularz udostępnia zakładki Bosses, Units, Ammunition, Spells & Mana i
-Runtime. Profile, stabilne ID, liczebność i kolejność rekordów są stałe;
+Runtime. Campaign zawiera również typed pola żyć: initial/maximum lives oraz
+interwał regeneracji z `runtime.campaign.lives`. Profile, stabilne ID,
+liczebność i kolejność rekordów są stałe;
 wszystkie pozostałe pola schema 6, w tym nullable `ammunition[].shopCostGold`
 oraz `runtime.combat.gameplaySpeedMultiplier` z zakresem 1.0–1.5, są
 edytowane przez typowane kontrolki. Cena jest nieujemną liczbą całkowitą albo

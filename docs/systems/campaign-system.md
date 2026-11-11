@@ -80,6 +80,10 @@ Invalid, locked and completed selections are typed rejections. The campaign
 screen marks completed levels and disables their controls. Storage errors and
 invalid persisted progress are typed failures. No level lookup may treat
 `CampaignLevelDefinition.forLevel` clamping as authorization.
+Campaign eligibility based on lives is owned by the separate
+`CampaignLevelStartUseCase`: it first asks `CampaignSystem.selectLevel`, then
+revalidates LifeSystem state. The map can remain browsable/selectable at zero
+life, while that start use case rejects the transition to Loadout/Match.
 
 Only `BLUE_WIN` changes progress. `RED_WIN`, `DRAW`, and `SURRENDER` return an
 explicit no-progress result. A missing/aborted match does not emit a finish
@@ -129,9 +133,11 @@ Dashboard
   → MatchSession event observer / RewardTracker
   → MatchEvent.MatchFinished → CampaignSystem / RewardSettlementUseCase
   → atomic gold + completion + unlock + milestone + receipt update
-  → existing match result popup shows the committed reward
-  → CampaignScreen reloads durable progress on return
-```
+    ├── BLUE_WIN → no life debit
+    └── other campaign outcome → LifeSystem atomically settles one life by MatchId
+    → existing match result popup shows the committed reward
+    → CampaignScreen reloads durable progress on return
+  ```
 
 The match screen forwards finish events with their selected campaign level.
 Demo-mode matches are excluded. The callback uses the event, not `MatchSnapshot.outcome`, as the completion

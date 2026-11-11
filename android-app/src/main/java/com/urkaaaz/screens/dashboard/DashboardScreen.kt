@@ -21,16 +21,20 @@ import com.urkaaaz.android.R
 import com.urkaaaz.application.language.AppLanguage
 import com.urkaaaz.application.language.LanguageSaveResult
 import com.urkaaaz.application.language.SetLanguage
-import com.urkaaaz.application.progression.DeveloperProgressSummary
+import com.urkaaaz.application.progression.DashboardProgressRead
+import com.urkaaaz.application.progression.LifeSnapshot
 import com.urkaaaz.application.progression.PlayerProgressResetResult
 import com.urkaaaz.navigation.ScreenContent
 import com.urkaaaz.ui.ScreenChromeMetrics
 import com.urkaaaz.ui.UiTypography
+import com.urkaaaz.screens.life.LifeCountdownFormatter
 import java.io.IOException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 
 class DashboardScreen(
@@ -40,7 +44,7 @@ class DashboardScreen(
     private val onShop: () -> Unit,
     private val onDemoMode: () -> Unit,
     private val onResetProgress: suspend () -> PlayerProgressResetResult,
-    private val loadProgress: suspend () -> DeveloperProgressSummary,
+    private val loadProgress: suspend () -> DashboardProgressRead,
     initialLanguage: AppLanguage,
     setLanguage: SetLanguage,
     private val onLanguageSaved: () -> Unit,
@@ -147,6 +151,22 @@ class DashboardScreen(
         screenScope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
         resetProgressButton.isEnabled = true
         loadProgressSummary()
+        screenScope?.launch {
+            while (isActive) {
+                delay(LIFE_COUNTDOWN_TICK_MILLISECONDS)
+                val life = viewModel.state.progressSummary?.lifeSnapshot ?: continue
+                val remaining = life.unlimitedTimeRemainingMilliseconds
+                    ?: life.regenerationTimeRemainingMilliseconds
+                    ?: continue
+                if (remaining <= LIFE_COUNTDOWN_TICK_MILLISECONDS) {
+                    loadProgressSummary()
+                } else {
+                    renderProgress(
+                        viewModel.elapseLifeCountdown(LIFE_COUNTDOWN_TICK_MILLISECONDS),
+                    )
+                }
+            }
+        }
     }
 
     override fun onPause() {
@@ -528,8 +548,10 @@ class DashboardScreen(
         currentLevelValue.text = summary?.let {
             context.getString(R.string.dashboard_current_level, it.currentLevel)
         } ?: placeholder
-        livesValue.text = summary?.lives?.toString() ?: placeholder
+        livesValue.text = summary?.lifeSnapshot?.lives?.toString() ?: placeholder
         goldValue.text = summary?.gold?.toString() ?: placeholder
+        regenerationValue.text = summary?.lifeSnapshot?.let(::lifeRegenerationText)
+            ?: placeholder
 
         progressStatusMessage.text = when {
             state.isLoading -> context.getString(R.string.dashboard_progress_loading)
@@ -547,7 +569,12 @@ class DashboardScreen(
         renderProgress(viewModel.beginProgressLoad())
         scope.launch {
             try {
-                renderProgress(viewModel.updateProgress(loadProgress()))
+                when (val result = loadProgress()) {
+                    is DashboardProgressRead.Available ->
+                        renderProgress(viewModel.updateProgress(result.summary))
+                    is DashboardProgressRead.Failure ->
+                        renderProgress(viewModel.failProgressLoad())
+                }
             } catch (error: IOException) {
                 Log.e("DashboardScreen", "Could not load player progress summary", error)
                 renderProgress(viewModel.failProgressLoad())
@@ -556,6 +583,22 @@ class DashboardScreen(
                 renderProgress(viewModel.failProgressLoad())
             }
         }
+    }
+
+    private fun lifeRegenerationText(snapshot: LifeSnapshot): String {
+        snapshot.unlimitedTimeRemainingMilliseconds?.let { remaining ->
+            return context.getString(
+                R.string.dashboard_life_regeneration_unlimited,
+                LifeCountdownFormatter.format(remaining),
+            )
+        }
+        snapshot.regenerationTimeRemainingMilliseconds?.let { remaining ->
+            return context.getString(
+                R.string.dashboard_life_regeneration_remaining,
+                LifeCountdownFormatter.format(remaining),
+            )
+        }
+        return context.getString(R.string.dashboard_life_regeneration_unavailable)
     }
 
     private fun showResetConfirmation() {
@@ -610,4 +653,8 @@ class DashboardScreen(
 
     private fun dp(value: Int): Int =
         (value * context.resources.displayMetrics.density).toInt()
+
+    private companion object {
+        const val LIFE_COUNTDOWN_TICK_MILLISECONDS = 1_000L
+    }
 }

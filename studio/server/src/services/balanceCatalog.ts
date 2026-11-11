@@ -1038,7 +1038,7 @@ function validateCampaignBalance(value: unknown, issues: BalanceValidationIssue[
     "runtime.campaign",
     [
       "initialWindStrength", "initialWindStrengthStep", "initialWindStrengthBands",
-      "demoInitialWindStrength", "aiDifficultyBands",
+      "demoInitialWindStrength", "lives", "aiDifficultyBands",
     ],
     issues,
   );
@@ -1050,6 +1050,34 @@ function validateCampaignBalance(value: unknown, issues: BalanceValidationIssue[
   }
   if (!positiveInteger(campaign.initialWindStrengthBands)) {
     issues.push(issue("runtime.campaign.initialWindStrengthBands", "must be a positive integer"));
+  }
+  const lives = requiredRecord(
+    campaign.lives,
+    "runtime.campaign.lives",
+    ["initialLives", "maximumLives", "regenerationIntervalMilliseconds"],
+    issues,
+  );
+  if (lives) {
+    if (!positiveInteger(lives.maximumLives)) {
+      issues.push(issue("runtime.campaign.lives.maximumLives", "must be a positive integer"));
+    }
+    if (!nonNegativeInteger(lives.initialLives)) {
+      issues.push(issue("runtime.campaign.lives.initialLives", "must be a non-negative integer"));
+    } else if (
+      positiveInteger(lives.maximumLives) &&
+      lives.initialLives > lives.maximumLives
+    ) {
+      issues.push(issue(
+        "runtime.campaign.lives.initialLives",
+        "must not exceed maximumLives",
+      ));
+    }
+    if (!positiveInteger(lives.regenerationIntervalMilliseconds)) {
+      issues.push(issue(
+        "runtime.campaign.lives.regenerationIntervalMilliseconds",
+        "must be a positive integer",
+      ));
+    }
   }
   if (!Array.isArray(campaign.aiDifficultyBands) || campaign.aiDifficultyBands.length === 0) {
     issues.push(issue("runtime.campaign.aiDifficultyBands", "must contain at least one band"));

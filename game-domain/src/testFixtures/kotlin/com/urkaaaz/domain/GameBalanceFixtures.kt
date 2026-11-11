@@ -233,6 +233,7 @@ object GameBalanceFixtures {
                 initialWindStrengthStep = 0.15f,
                 initialWindStrengthBands = 4,
                 demoInitialWindStrength = 0.25f,
+                lives = LifeBalance(5, 5, 900_000L),
                 aiDifficultyBands = listOf(
                     CampaignAiDifficultyBand(1, 10, AiProfileId.CADET, 0, 0),
                     CampaignAiDifficultyBand(11, 30, AiProfileId.VETERAN, 0, 0),

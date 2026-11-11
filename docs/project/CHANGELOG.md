@@ -4,9 +4,14 @@
 
 ### Added
 
-- Added a LifeSystem design and implementation prompt for persistent lives,
-  offline regeneration, campaign access checks, and idempotent future grants.
-  The system remains a proposal and is not implemented.
+- Implemented LifeSystem with 5-life campaign profiles, 15-minute offline
+  regeneration, high-water clock handling, idempotent finite/unlimited grants,
+  profile migration/reset, campaign start gating, and retryable non-win
+  settlement.
+- Added `runtime.campaign.lives` to `game-balance.json` and Studio Balance;
+  advanced the balance revision to `game-balance-18`.
+- Updated Dashboard and Campaign life presentation/localization, and blocked
+  leaving a campaign result until its life settlement succeeds.
 
 ### Changed
 

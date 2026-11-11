@@ -92,8 +92,18 @@ kampanię, AI oraz działający match screen. Gałąź robocza: `develop`.
   blokuje poziomy 55–100 bez kompletnych profili bossów i assetów.
 - Studio Progress edytuje developer preset z poziomem kampanii, liczbą żyć i
   złotem. Preset stosuje wyłącznie jawnie zaznaczone pola, jednorazowo w
-  debug buildzie po rebuildzie i restarcie; liczba żyć jest wyświetlana, ale
-  nie jest jeszcze konsumowana ani regenerowana przez mechanikę gry.
+  debug buildzie po rebuildzie i restarcie. Jawnie ustawione życia synchronizują
+  timer i granty LifeSystemu; niezaznaczone wartości profilu pozostają bez zmian.
+- LifeSystem rozpoczyna nowy profil z 5/5 żyć; każdy kampanijny wynik poza
+  `BLUE_WIN` zużywa jedno życie, a jedno życie regeneruje się co 15 minut
+  lokalnego czasu ściennego, także offline. Zegar chroni przed cofnięciem czasu;
+  przyspieszenie wall-clock do przodu pozostaje ograniczeniem trybu lokalnego.
+  Skończone i czasowe unlimited granty są idempotentne i współdzielą profile
+  DataStore, ale Ad Reward i event sources nie są jeszcze podłączone.
+- Campaign pozostaje przeglądalna przy 0 żyć, lecz CTA i aplikacyjny start
+  poziomu są zablokowane; aktywny unlimited grant omija blokadę. Dashboard
+  pokazuje countdown / `N/A` / `∞`, a nieudane rozliczenie porażki wymaga retry
+  i blokuje opuszczenie popupu wyniku.
 - Rekrutacja, supply, garrison, przesuwanie jednostek, fale i ruch w symulacji.
 - Wspólny standard rozmiarów meczu: fortece mają 70% poprzedniej szerokości i
   hitboxu, a jednostki mają 3x poprzedni rozmiar prezentacji. Jednostki używają
@@ -169,9 +179,11 @@ snapshotów i eventów zamiast mutować bezpośrednio stan innych podsystemów.
 - Chapters 1–3 mają zatwierdzone mapy; mapy Chapter 4–10 nie są jeszcze
   dostępne. CampaignScreen pokazuje dla nich tymczasowo Green Frontier, ale
   Studio nadal oznacza brak autorskich layoutów jako brak mapy.
-- Mechanika zużywania i regeneracji żyć pozostaje poza obecnym zakresem.
-  Campaign progress, nagrody i lokalne zakupy/stock Shop są zapisywane w
-  DataStore.
+- Ad Reward, eventowy grant życia, backend i synchronizacja cloud nie są
+  zaimplementowane. Wymuszone zamknięcie procesu przed zapisem wyniku może
+  utracić zdarzenie; lokalny zegar nie chroni przed ręcznym przyspieszeniem
+  czasu do przodu. Campaign progress, życie, nagrody i lokalne zakupy/stock
+  Shop są zapisywane w istniejącym DataStore.
 - Match result popup prezentuje rozliczoną nagrodę i pozwala przejść do
   następnego poziomu po zapisaniu ukończenia; przegrana i błąd zapisu mają
   osobne ścieżki retry/powrotu.

@@ -1494,6 +1494,26 @@ function RuntimeFields({
               step: 0.01,
             })}
           </FieldGroup>
+          <FieldGroup title="Campaign lives">
+            {numberField(
+              "runtime.campaign.lives.initialLives",
+              "Initial lives",
+              runtime.campaign.lives.initialLives,
+              { min: 0, step: 1 },
+            )}
+            {numberField(
+              "runtime.campaign.lives.maximumLives",
+              "Maximum lives",
+              runtime.campaign.lives.maximumLives,
+              { min: 1, step: 1 },
+            )}
+            {numberField(
+              "runtime.campaign.lives.regenerationIntervalMilliseconds",
+              "Regeneration interval",
+              runtime.campaign.lives.regenerationIntervalMilliseconds,
+              { unit: "ms", min: 1, step: 1 },
+            )}
+          </FieldGroup>
           <FieldGroup title="AI difficulty bands" description="Band entries and order are fixed.">
             {runtime.campaign.aiDifficultyBands.map((band, index) => {
               const path = `runtime.campaign.aiDifficultyBands[${index}]`;

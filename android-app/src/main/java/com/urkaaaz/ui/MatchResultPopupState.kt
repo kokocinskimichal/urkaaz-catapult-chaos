@@ -65,6 +65,7 @@ internal object MatchResultPopupStateMapper {
         demoMode: Boolean,
         testMode: Boolean = false,
         campaignCompletionRecorded: Boolean?,
+        hasCampaignFinishEvent: Boolean = true,
         reward: LevelRewardResult? = null,
         stockSettlementStatus: MatchStockSettlementUiStatus =
             MatchStockSettlementUiStatus.NOT_REQUIRED,
@@ -129,6 +130,23 @@ internal object MatchResultPopupStateMapper {
                     MatchResultPopupAction(
                         MatchResultActionType.BACK_TO_DASHBOARD,
                         MatchResultButtonStyle.DARK,
+                    ),
+                )
+            }
+            result != MatchResultKind.VICTORY &&
+                hasCampaignFinishEvent &&
+                campaignCompletionRecorded == null -> {
+                status = MatchResultPopupStatus.SAVING_PROGRESS
+                actions = emptyList()
+            }
+            result != MatchResultKind.VICTORY &&
+                hasCampaignFinishEvent &&
+                campaignCompletionRecorded == false -> {
+                status = MatchResultPopupStatus.COMPLETION_FAILED
+                actions = listOf(
+                    MatchResultPopupAction(
+                        MatchResultActionType.RETRY_SAVE,
+                        MatchResultButtonStyle.RED,
                     ),
                 )
             }
@@ -207,6 +225,22 @@ internal object MatchResultPopupStateMapper {
         )
     }
 }
+
+internal fun blocksBackForUnsettledLife(
+    isFinished: Boolean,
+    hasFinishedEvent: Boolean,
+    outcome: MatchOutcome?,
+    demoMode: Boolean,
+    testMode: Boolean,
+    lifeSettlementRecorded: Boolean?,
+): Boolean =
+    isFinished &&
+        hasFinishedEvent &&
+        !demoMode &&
+        !testMode &&
+        outcome != null &&
+        outcome != MatchOutcome.BLUE_WIN &&
+        lifeSettlementRecorded != true
 
 internal fun dispatchMatchResultAction(
     action: MatchResultActionType,

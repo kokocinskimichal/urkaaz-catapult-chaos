@@ -4,6 +4,7 @@ import android.os.Build
 import android.os.Bundle
 import android.util.Log
 import android.view.WindowManager
+import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.OnBackPressedCallback
 import androidx.core.view.WindowCompat
@@ -13,11 +14,18 @@ import com.urkaaaz.application.language.AppLanguage
 import com.urkaaaz.application.language.SetLanguage
 import com.urkaaaz.application.campaign.CampaignSystem
 import com.urkaaaz.application.campaign.BundledCampaignBalance
+import com.urkaaaz.application.campaign.CampaignLevelStartFailure
+import com.urkaaaz.application.campaign.CampaignLevelStartRejection
+import com.urkaaaz.application.campaign.CampaignLevelStartResult
+import com.urkaaaz.application.campaign.CampaignLevelStartUseCase
+import com.urkaaaz.application.campaign.CampaignMatchCompletionUseCase
 import com.urkaaaz.localization.LocalizedContext
 import com.urkaaaz.localization.StartupLanguageReader
 import com.urkaaaz.application.loadout.LoadoutUseCases
 import com.urkaaaz.application.loadout.LoadoutCatalog
 import com.urkaaaz.application.progression.CampaignAwareLoadoutProgressionPort
+import com.urkaaaz.application.progression.DashboardProgressSummaryUseCase
+import com.urkaaaz.application.progression.LifeSystem
 import com.urkaaaz.application.progression.PlayerProgressionUseCases
 import com.urkaaaz.application.progression.DeveloperProgressPresetApply
 import com.urkaaaz.application.progression.DeveloperProgressPresetRepository
@@ -32,6 +40,8 @@ import com.urkaaaz.persistence.DataStoreCampaignProgressRepository
 import com.urkaaaz.persistence.DataStoreLoadoutRepository
 import com.urkaaaz.persistence.InMemoryLoadoutRepository
 import com.urkaaaz.persistence.DataStorePlayerProgressionRepository
+import com.urkaaaz.persistence.DataStoreLifeStateRepository
+import com.urkaaaz.persistence.SystemWallClock
 import com.urkaaaz.persistence.DataStorePlayerProgressResetRepository
 import com.urkaaaz.persistence.DataStoreDeveloperProgressPresetAdapter
 import com.urkaaaz.persistence.DataStoreLanguageSettings
@@ -55,6 +65,7 @@ import com.urkaaaz.screens.result.ResultScreen
 import com.urkaaaz.screens.shop.ShopScreen
 import com.urkaaaz.screens.splash.SplashScreen
 import com.urkaaaz.screens.testmode.TestLevelPickerScreen
+import com.urkaaaz.android.R
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -72,7 +83,7 @@ class MainActivity : ComponentActivity() {
     private val startupScope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
     private val loadoutCatalog by lazy { LoadoutCatalog.bundled() }
     private val campaignCompletionPresenter by lazy {
-        CampaignCompletionPresenter(this, campaignSystem)
+        CampaignCompletionPresenter(this, campaignMatchCompletionUseCase)
     }
 
     private fun LoadoutItemReference.toShopItemReference(): ShopItemReference =
@@ -117,6 +128,25 @@ class MainActivity : ComponentActivity() {
     }
     private val playerProgressionUseCases by lazy {
         PlayerProgressionUseCases(playerProgressionRepository)
+    }
+    private val lifeSystem by lazy {
+        LifeSystem(
+            repository = DataStoreLifeStateRepository(preferencesDataStore),
+            wallClock = SystemWallClock,
+        )
+    }
+    private val campaignLevelStartUseCase by lazy {
+        CampaignLevelStartUseCase(campaignSystem, lifeSystem)
+    }
+    private val campaignMatchCompletionUseCase by lazy {
+        CampaignMatchCompletionUseCase(campaignSystem, lifeSystem)
+    }
+    private val dashboardProgressSummaryUseCase by lazy {
+        DashboardProgressSummaryUseCase(
+            campaignSystem = campaignSystem,
+            progression = playerProgressionRepository,
+            lifeSystem = lifeSystem,
+        )
     }
     private val shopUseCases by lazy {
         ShopUseCases(playerProgressionRepository)
@@ -261,14 +291,14 @@ class MainActivity : ComponentActivity() {
                     navigator.navigate(AppScreen.TestLevelPicker)
                 },
                 onResetProgress = { playerProgressResetRepository.reset() },
-                loadProgress = { developerProgressPreset.current() },
+                loadProgress = { dashboardProgressSummaryUseCase.load() },
                 initialLanguage = startupLanguage,
                 setLanguage = setLanguage,
                 onLanguageSaved = { recreate() },
             )
             AppScreen.Campaign -> CampaignScreen(
                 context = this,
-                campaignSystem = campaignSystem,
+                campaignLevelStart = campaignLevelStartUseCase,
                 onBack = { navigator.back() },
                 onLevelSelected = { level ->
                     navigator.navigate(
@@ -314,20 +344,46 @@ class MainActivity : ComponentActivity() {
                     )
                 },
                 onStart = { playerLoadout, playerInventory ->
-                    navigator.replace(
-                        AppScreen.Match(
-                            levelId = if (screen.demoMode) {
-                                "DEMO_LEVEL"
-                            } else {
-                                "LEVEL_${screen.campaignLevel}"
-                            },
-                            campaignLevel = screen.campaignLevel,
-                            testMode = screen.testMode,
-                            matchId = MatchId(UUID.randomUUID().toString()),
-                            playerLoadout = playerLoadout,
-                            playerInventory = playerInventory.takeUnless { screen.demoMode },
-                        ),
-                    )
+                    val startMatch = {
+                        navigator.replace(
+                            AppScreen.Match(
+                                levelId = if (screen.demoMode) {
+                                    "DEMO_LEVEL"
+                                } else {
+                                    "LEVEL_${screen.campaignLevel}"
+                                },
+                                campaignLevel = screen.campaignLevel,
+                                testMode = screen.testMode,
+                                matchId = MatchId(UUID.randomUUID().toString()),
+                                playerLoadout = playerLoadout,
+                                playerInventory = playerInventory.takeUnless { screen.demoMode },
+                            ),
+                        )
+                    }
+                    if (screen.demoMode || screen.testMode) {
+                        startMatch()
+                    } else {
+                        startupScope.launch {
+                            when (
+                                val authorization =
+                                    campaignLevelStartUseCase.authorize(screen.campaignLevel)
+                            ) {
+                                is CampaignLevelStartResult.Allowed -> startMatch()
+                                is CampaignLevelStartResult.Rejected ->
+                                    Toast.makeText(
+                                        this@MainActivity,
+                                        campaignStartRejectionMessage(authorization.reason),
+                                        Toast.LENGTH_LONG,
+                                    ).show()
+                                is CampaignLevelStartResult.Failure ->
+                                    Toast.makeText(
+                                        this@MainActivity,
+                                        campaignStartFailureMessage(authorization.reason),
+                                        Toast.LENGTH_LONG,
+                                    ).show()
+                            }
+                        }
+                    }
                 },
             )
             is AppScreen.Shop -> ShopScreen(
@@ -388,5 +444,33 @@ class MainActivity : ComponentActivity() {
             content.onResume()
         }
     }
+
+    private fun campaignStartRejectionMessage(reason: CampaignLevelStartRejection): Int =
+        when (reason) {
+            CampaignLevelStartRejection.INVALID_LEVEL ->
+                R.string.campaign_selection_invalid
+            CampaignLevelStartRejection.LEVEL_LOCKED ->
+                R.string.campaign_selection_locked
+            CampaignLevelStartRejection.LEVEL_ALREADY_COMPLETED ->
+                R.string.campaign_completion_already_completed
+            CampaignLevelStartRejection.NO_LIVES ->
+                R.string.campaign_lives_required
+        }
+
+    private fun campaignStartFailureMessage(reason: CampaignLevelStartFailure): Int =
+        when (reason) {
+            CampaignLevelStartFailure.CAMPAIGN_STORAGE_UNAVAILABLE ->
+                R.string.campaign_progress_unavailable
+            CampaignLevelStartFailure.CAMPAIGN_INVALID_DATA ->
+                R.string.campaign_progress_invalid
+            CampaignLevelStartFailure.CAMPAIGN_UNSUPPORTED_VERSION ->
+                R.string.campaign_progress_version
+            CampaignLevelStartFailure.LIFE_STORAGE_UNAVAILABLE ->
+                R.string.campaign_lives_unavailable
+            CampaignLevelStartFailure.LIFE_INVALID_PROFILE ->
+                R.string.campaign_lives_invalid
+            CampaignLevelStartFailure.LIFE_UNSUPPORTED_PROFILE_VERSION ->
+                R.string.campaign_lives_version
+        }
 
 }
