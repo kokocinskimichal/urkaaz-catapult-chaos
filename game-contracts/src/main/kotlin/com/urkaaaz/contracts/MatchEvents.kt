@@ -278,4 +278,5 @@ enum class ProjectileResolution {
     TERRAIN_IMPACT,
     OUT_OF_BOUNDS,
     LIFETIME_EXPIRED,
+    PROJECTILE_COLLISION,
 }

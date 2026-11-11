@@ -49,6 +49,13 @@ wymagający decyzji użytkownika.
 - Teksty `pl`/`en`/`es` w JSON; walidacja wymaga wszystkich trzech języków.
 - Język: port `LanguageSettings` należy do osobnego systemu lokalizacji;
   TutorialSystem tylko go konsumuje.
+- Rozszerzalność: nowe mechaniki i eventy pochodzą od ich kanonicznych
+  właścicieli; TutorialSystem nie tworzy własnego katalogu dostępności ani
+  gameplayowych eventów. `targetId` identyfikuje typ/znaczenie celu, a
+  opcjonalny stabilny `targetInstanceId` wskazuje konkretną dynamiczną
+  instancję.
+- Studio edytuje wyłącznie zarejestrowane mechanic/event/target IDs.
+  `targetInstanceId` jest wyłącznie runtime i nie jest wpisywany w JSON.
 - Powtórka tutoriala meczu uruchamia się przy najbliższym meczu spełniającym
   wyzwalacz; Dashboard pokazuje informację „uruchomi się w następnym meczu”.
 - `TutorialParameters` w `game-campaign` jest usuwany; poziom nie wskazuje
@@ -76,21 +83,21 @@ je w podsumowaniu do akceptacji. Pozostałe tutoriale (`dashboard.welcome`,
 katalogu dopiero po akceptacji ich treści; `shop.intro` może istnieć jako
 `enabled = false`.
 
-### Bramka zależności i zakresu
+### Preflight
 
-Zanim zaczniesz kod, sprawdź:
+Przed edycją sprawdź bieżący stan repozytorium i:
 
-- czy w kodzie istnieje działający port `LanguageSettings` z adapterem
-  (fazy 1–2 z `docs/systems/localization-system.md`, prompt:
-  `docs/systems/localization-system-implementation-prompt.md`);
-- aktualny stan `git status`; nie nadpisuj cudzych zmian.
+- potwierdź użycie istniejącego `LanguageSettings` i jego Android adaptera;
+  TutorialSystem nie dodaje drugiego portu ani ustawienia języka;
+- zinwentaryzuj istniejące zmiany `git status`; zachowaj cudze i integruj
+  zmiany bez ich nadpisywania;
+- sprawdź aktualne symbole, pakiety i zależności, bo ścieżki w tym promptcie
+  oraz dokumentacji są wskazówkami, a nie dowodem stanu kodu.
 
-Etapy 1–2 są niezależne od lokalizacji i **wykonaj je zawsze**. Etapy 3–5
-wymagają działającego `LanguageSettings`. Jeśli go brakuje w kodzie,
-zaimplementuj w etapie 1 wyłącznie interfejs portu zgodny z
-`localization-system.md` i fake do testów, zatrzymaj się po etapie 2 i zgłoś
-blocker: implementacja lokalizacji (fazy 1–2) musi poprzedzić etap 3. Nie
-implementuj własnego adaptera języka w tym zadaniu.
+Nie blokuj wdrożenia na lokalizacji: kontrakt `LanguageSettings` i adapter
+DataStore należą do istniejącego systemu lokalizacji. Jeśli w aktualnym
+checkoutcie brakuje któregokolwiek z nich, nie twórz duplikatu; zgłoś
+konkretny blocker wraz z dowodami i kontynuuj niezależne etapy.
 
 ### Workflow i ochrona pracy użytkownika
 
@@ -123,8 +130,18 @@ Pakiet `com.urkaaaz.application.tutorial`:
   indeks kroku, licznik akcji, kolejka). Deterministyczny: bez zegara i
   losowości. Wyjście: `TutorialUiState`, `TutorialEffect`, `TutorialEvent`;
   engine nie wywołuje niczego poza portami;
+- kontrakt rozszerzalności: `MatchStarted` konsumuje stabilne
+  `availableMechanicIds` wyprowadzone z kanonicznego ownera, a
+  `MatchEventObserved` może przenosić opcjonalny stabilny
+  `targetInstanceId`. Engine przekazuje go w `TutorialUiState`; nowy tutorial
+  nie wymaga gałęzi per poziom/mechanika ani tutorialowego eventu gameplayu;
+- `targetId` jest stabilnym, znaczeniowym identyfikatorem typu celu
+  z rejestru/katalogu;
+  `targetInstanceId` identyfikuje konkretną dynamiczną encję i nie jest
+  zapisywany w definicji tutoriala;
 - porty: `TutorialProgressRepository`, `MatchTutorialPort`,
-  `LanguageSettings` (tylko interfejs, jeśli nie istnieje);
+  istniejący `LanguageSettings` (nie kopiować ani nie implementować ustawienia
+  lub adaptera w TutorialSystemie);
 - reguły: wybór po sygnale, jednokrotność, `requires`, `priority`, `Next`,
   `Skip`, `PlayerAction`, `MatchEventCount`, ignorowanie sygnałów w Demo,
   `Rejected(NO_ACTIVE_TUTORIAL)`, przerwanie bez statusu przy restarcie lub
@@ -154,7 +171,12 @@ Pakiet `com.urkaaaz.application.tutorial`:
   gdy zbiór jest pusty; istniejące `TogglePause` zachowuje zachowanie;
 - `BattlefieldCameraController.focusOnWorldRect(...)` (publiczne), prostokąt
   w ekranie = `world * scale + offset` z `CameraTransform`;
-- adapter `MatchTutorialAdapter` implementujący `MatchTutorialPort`;
+- adapter `MatchTutorialAdapter` implementujący `MatchTutorialPort`; mapuje
+  typowane eventy ownerów do `TutorialSignal` i przekazuje
+  `targetInstanceId`, jeśli event wskazuje konkretną encję;
+- dostępność przyszłych mechanik trafia do `availableMechanicIds` z
+  kanonicznego ownera; nie dodawaj równoległego tutorialowego katalogu
+  dostępności ani kodu per nowy typ mechaniki;
 - blokada paneli: panel aktywny, gdy mechanika jest dostępna w
   `MatchScenario` **i** nie jest zablokowana przez tutorial; źródło prawdy o
   dostępności pozostaje `MatchScenario`;
@@ -169,6 +191,11 @@ Pakiet `com.urkaaaz.application.tutorial`:
 - opcjonalna, domyślna metoda `TutorialTargetSource` w `ScreenContent`, aby
   istniejące ekrany się nie zmieniały; rejestracja celów w `onResume`,
   wyrejestrowanie w `onPause`;
+- `TutorialTargetRegistry` rozwiązuje `(targetId, targetInstanceId?)` na
+  podstawie bieżącego immutable render state i transformacji kamery. Dla
+  targetu dynamicznego brak/usunięcie/niewidoczność wskazanej instancji nigdy
+  nie może wskazać innej encji tego samego typu; czekaj na target albo zwróć
+  jawne `Rejected(TARGET_NOT_VISIBLE)`;
 - `MainActivity` tylko tworzy `TutorialHost` (lifecycle); żadnych pól
   tutoriala w `MainActivity`;
 - reguły prezentacji: cel w kadrze (`FocusTarget`, w razie braku
@@ -194,6 +221,9 @@ Pakiet `com.urkaaaz.application.tutorial`:
 - `studio/web/src/tabs/tutorials/`: lista, edycja kroków (cel z listy
   `targets`, teksty `pl`/`en`/`es`, ukończenie, reguły), podgląd tekstu i lista
   problemów walidacji; wzoruj się na zakładkach Balance/Progress;
+- wybór targetów, eventów i mechanik tylko z list zarejestrowanych przez
+  aplikację. `targetInstanceId` jest runtime-only i nie trafia do edytora ani
+  JSON; dodanie nowej mechaniki nie wymaga specjalnej gałęzi UI Studio;
 - walidacja TS zgodna z Kotlin; test kontraktowy na tych samych przykładach;
 - Studio nie edytuje postępu gracza.
 
@@ -209,7 +239,12 @@ Dodaj testy z „Planu testów” w `tutorial-system.md`:
 - `android-app`: `TutorialHintPlacer`, geometria Spotlightu (także po
   transformacji kamery), `TutorialTargetRegistry`, pokrycie każdego
   `targetId` z katalogu przez swój ekran, rozróżnienie powodu pauzy, reset
-  `tutorial.*`, brak pól tutoriala w `MainActivity`;
+  `tutorial.*`, brak pól tutoriala w `MainActivity`, dokładne rozwiązywanie
+  dynamicznego `targetInstanceId` bez fallbacku do innej encji;
+- rozszerzalność: dodanie identyfikatora mechaniki i typowanego eventu przez
+  jego ownera, definicji JSON i zarejestrowanego target providera pozwala
+  uruchomić nowy tutorial bez zmiany `TutorialEngine`; testuj także brak
+  targetu i usuniętą instancję;
 - Studio: `npm test && npm run lint` w `studio/`;
 - architektura: brak importów Android w `game-application`, brak zależności
   modułów gameplayowych od tutoriala, brak pola `tutorial` w `game-campaign`.
@@ -240,9 +275,13 @@ Nie deklaruj ukończenia, jeśli którakolwiek z tych rzeczy nie działa:
 - Dashboard RESET czyści postęp tutoriala;
 - `TutorialParameters` jest usunięty;
 - Studio waliduje i zapisuje katalog z `expectedHash`.
+- mechanika może otrzymać tutorial przez istniejący kontrakt dostępności/event
+  i dane JSON; target dynamiczny wskazuje dokładnie instancję, której dotyczył
+  sygnał, bez cichego wskazania innego obiektu.
 
-Jeśli etapy 3–5 zostały wstrzymane przez bramkę lokalizacji, napisz to wprost
-i nie deklaruj ukończenia całego systemu.
+Jeśli dowolny etap zostanie wstrzymany przez rzeczywisty blocker, opisz go
+konkretnie wraz z dowodami, wpływem na zakres i etapami, które udało się
+zrealizować; nie deklaruj ukończenia całego systemu.
 
 ### Pełna walidacja
 

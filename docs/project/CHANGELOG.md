@@ -15,6 +15,8 @@
 
 ### Changed
 
+- Added swept collision between opposing projectiles; both are removed on
+  contact without impact damage, terrain deformation or area effects.
 - Imported the approved 1717 × 916 Broken Valley campaign map while
   preserving its normalized level anchors.
 - Replaced the CampaignScreen chapter-thumbnail strip and decorative frame

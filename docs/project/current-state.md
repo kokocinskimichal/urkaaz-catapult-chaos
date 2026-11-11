@@ -53,6 +53,9 @@ kampanię, AI oraz działający match screen. Gałąź robocza: `develop`.
   simulation → MatchSnapshot`.
 - Deterministyczna symulacja pocisków, terenu, kolizji, obrażeń, eventów,
   restartu i replay regression.
+- Pociski przeciwnych drużyn zderzają się podczas lotu, używając sumy
+  amunicyjnych promieni kolizji. Kontakt usuwa oba pociski bez impactu,
+  obrażeń ani deformacji terenu; pociski sojusznicze nie kolidują.
 - SpellSystem ma działające runtime effects dla `FORTRESS_SHIELD`, HASTE i
   `RUNIC_BASTION`; Bastion jest jedną na drużynę, ma 360 HP, blokuje jednostki
   i pociski oraz odtwarza animacje creation, idle i destruction.

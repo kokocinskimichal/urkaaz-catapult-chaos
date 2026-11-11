@@ -888,6 +888,11 @@ bottom-anchored `UnitHitboxProfile` rectangle expanded by its collision radius;
 the earliest contact supplies `ProjectileHitEntity` coordinates. Direct-impact
 damage is applied to that unit ID even when the contact point lies outside the
 unit-anchor splash radius.
+Opposing projectiles are advanced in synchronized deterministic substeps and
+swept against each other using the sum of their ammunition collision radii.
+Their first contact emits `ProjectileResolved(PROJECTILE_COLLISION)` for both
+and removes both without triggering impact effects; same-team projectiles pass
+through each other.
 The overlay also draws the rendered canvas bounds of terrain trees, rocks,
 props and relics. These are asset bounds, not gameplay collision shapes:
 transparent padding inside a bitmap can make the visible pixels appear offset

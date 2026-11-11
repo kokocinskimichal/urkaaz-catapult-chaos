@@ -273,6 +273,13 @@ Possible behaviors include:
 impact/damage area radii. Current projectile hit radii, including the default
 fortress collision margin, are half their previous values.
 
+Projectiles from opposing teams also sweep against each other in world-space,
+using the sum of their ammunition `hitRadius` values. On contact, both
+projectiles are removed and each emits `ProjectileResolved(PROJECTILE_COLLISION)`.
+This is an interception only: it does not resolve an ammunition impact, damage
+an entity, deform terrain or create an area effect. Projectiles from the same
+team do not collide.
+
 For unit targets, the simulation sweeps the projectile path between substeps
 against the bottom-anchored `UnitHitboxProfile` rectangle expanded by
 `collision.hitRadius`. The earliest intersected unit wins, and the entity-hit

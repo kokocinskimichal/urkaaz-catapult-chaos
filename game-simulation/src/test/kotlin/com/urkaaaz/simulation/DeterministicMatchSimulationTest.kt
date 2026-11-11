@@ -12,6 +12,7 @@ import com.urkaaaz.contracts.MatchId
 import com.urkaaaz.contracts.MatchPhase
 import com.urkaaaz.contracts.MatchSnapshot
 import com.urkaaaz.contracts.MatchStatus
+import com.urkaaaz.contracts.ProjectileResolution
 import com.urkaaaz.contracts.RunicBastionAnimationTiming
 import com.urkaaaz.contracts.RunicBastionGeometry
 import com.urkaaaz.contracts.SapperBombFlightTiming
@@ -108,6 +109,111 @@ class DeterministicMatchSimulationTest {
         assertEquals(MatchStatus.RUNNING, snapshot.status)
         assertEquals(MatchPhase.PLAYER_TURN, snapshot.phase)
         assertEquals(Team.BLUE, snapshot.activeTeam)
+    }
+
+    @Test
+    fun opposingProjectilesCollideAndBothDisappearWithoutImpactDamage() {
+        val noGravityConfig = config.copy(
+            bounds = WorldBounds(width = 1_000f, height = 600f),
+            gravityAccelerationY = 0f,
+            windAccelerationX = 0f,
+        )
+        val simulation = DeterministicMatchSimulation(
+            matchId = MatchId("opposing-projectile-collision"),
+            config = noGravityConfig,
+            blueCatapult = Catapult(
+                id = EntityId("blue-catapult"),
+                team = Team.BLUE,
+                position = WorldPosition(100f, 100f),
+                anchorPosition = WorldPosition(100f, 100f),
+                aim = Aim(directionDegrees = 0f, power = 100f),
+            ),
+            redCatapult = Catapult(
+                id = EntityId("red-catapult"),
+                team = Team.RED,
+                position = WorldPosition(900f, 100f),
+                anchorPosition = WorldPosition(900f, 100f),
+                aim = Aim(directionDegrees = 0f, power = 100f),
+            ),
+            blueFortress = Fortress(
+                id = EntityId("blue-fortress"),
+                team = Team.BLUE,
+                center = WorldPosition(100f, -500f),
+                maxHealth = fortressMaximumHealth,
+            ),
+            redFortress = Fortress(
+                id = EntityId("red-fortress"),
+                team = Team.RED,
+                center = WorldPosition(900f, -500f),
+                maxHealth = fortressMaximumHealth,
+            ),
+        )
+        simulation.start()
+        val blueFire = simulation.fire(EntityId("blue-catapult"))
+        val blueProjectileId = (blueFire.single() as MatchEvent.ProjectileFired).projectileId
+        val redFire = simulation.fire(EntityId("red-catapult"))
+        val redProjectileId = (redFire.single() as MatchEvent.ProjectileFired).projectileId
+
+        val events = simulation.advance(1_000L)
+
+        val collisions = events.filterIsInstance<MatchEvent.ProjectileResolved>()
+            .filter { it.reason == ProjectileResolution.PROJECTILE_COLLISION }
+        assertEquals(setOf(blueProjectileId, redProjectileId), collisions.map { it.projectileId }.toSet())
+        assertTrue(simulation.snapshot().projectiles.isEmpty())
+        assertTrue(events.none { it is MatchEvent.ProjectileHitEntity })
+        assertTrue(events.none { it is MatchEvent.ProjectileHitTerrain })
+    }
+
+    @Test
+    fun sameTeamFireRainProjectilesDoNotCollideWithEachOther() {
+        val simulation = DeterministicMatchSimulation(
+            matchId = MatchId("same-team-projectiles"),
+            config = config.copy(
+                bounds = WorldBounds(width = 1_000f, height = 1_000f),
+                gravityAccelerationY = 1_000f,
+                windAccelerationX = 0f,
+            ),
+            blueCatapult = Catapult(
+                id = EntityId("blue-catapult"),
+                team = Team.BLUE,
+                position = WorldPosition(100f, 500f),
+                anchorPosition = WorldPosition(100f, 500f),
+                aim = Aim(directionDegrees = 45f, power = 50f),
+            ),
+            redCatapult = Catapult(
+                id = EntityId("red-catapult"),
+                team = Team.RED,
+                position = WorldPosition(900f, 100f),
+                anchorPosition = WorldPosition(900f, 100f),
+                aim = Aim(directionDegrees = 0f, power = 1f),
+            ),
+            blueFortress = Fortress(
+                id = EntityId("blue-fortress"),
+                team = Team.BLUE,
+                center = WorldPosition(100f, -500f),
+                maxHealth = fortressMaximumHealth,
+            ),
+            redFortress = Fortress(
+                id = EntityId("red-fortress"),
+                team = Team.RED,
+                center = WorldPosition(900f, -500f),
+                maxHealth = fortressMaximumHealth,
+            ),
+        )
+        simulation.start()
+        simulation.fire(EntityId("blue-catapult"), AmmunitionType.FIRE_RAIN)
+        simulation.fire(EntityId("red-catapult"), AmmunitionType.ROCK)
+
+        val events = simulation.advance(300L)
+        val snapshot = simulation.snapshot()
+
+        assertTrue(events.any { it is MatchEvent.ProjectileSplit })
+        assertEquals(7, snapshot.projectiles.count { it.firedBy == Team.BLUE })
+        assertEquals(1, snapshot.projectiles.count { it.firedBy == Team.RED })
+        assertTrue(events.none {
+            it is MatchEvent.ProjectileResolved &&
+                it.reason == ProjectileResolution.PROJECTILE_COLLISION
+        })
     }
 
     @Test

@@ -55,8 +55,15 @@ import com.urkaaaz.domain.UnitActionState
 import com.urkaaaz.domain.UnitStatus
 import com.urkaaaz.domain.FriendlyFirePolicy
 import kotlin.math.min
+import kotlin.math.abs
 import kotlin.math.sqrt
 import kotlin.random.Random
+
+private data class ProjectileCollisionCandidate(
+    val fraction: Float,
+    val firstId: EntityId,
+    val secondId: EntityId,
+)
 
 private data class RunicBastionDestructionBlocker(
     val bastion: RunicBastion,
@@ -656,27 +663,7 @@ class DeterministicMatchSimulation(
         finishIfFortressDestroyed()
         val projectileDeltaSeconds = deltaSeconds *
             config.balance.runtime.combat.gameplaySpeedMultiplier
-        val resolved = mutableListOf<Projectile>()
-        projectiles.forEach { projectile ->
-            val apexTime = timeToApex(projectile, projectileDeltaSeconds)
-            if (apexTime == null) {
-                fragmentAtApex(projectile).forEach { fragment ->
-                    advanceProjectile(fragment, projectileDeltaSeconds)?.let(resolved::add)
-                }
-            } else {
-                val atApex = advanceProjectile(projectile, apexTime)
-                if (atApex != null) {
-                    val splitProjectile = atApex.copy(
-                        velocity = atApex.velocity.copy(y = 0f),
-                    )
-                    val remainingSeconds = projectileDeltaSeconds - apexTime
-                    fragmentAtApex(splitProjectile).forEach { fragment ->
-                        advanceProjectile(fragment, remainingSeconds)?.let(resolved::add)
-                    }
-                }
-            }
-        }
-        projectiles = resolved
+        projectiles = advanceProjectiles(projectileDeltaSeconds)
         advanceLingeringEffects(deltaSeconds)
         logCombatState("tick")
         if (projectiles.isEmpty() && status == MatchStatus.RUNNING) {
@@ -718,6 +705,237 @@ class DeterministicMatchSimulation(
         return descendingSeconds
     }
 
+    private fun advanceProjectiles(deltaSeconds: Float): List<Projectile> =
+        if (projectiles.any { it.firedBy == Team.BLUE } &&
+            projectiles.any { it.firedBy == Team.RED }
+        ) {
+            advanceProjectilesWithOpposingCollisions(deltaSeconds)
+        } else {
+            advanceProjectilesIndependently(deltaSeconds)
+        }
+
+    private fun advanceProjectilesIndependently(deltaSeconds: Float): List<Projectile> {
+        val resolved = mutableListOf<Projectile>()
+        projectiles.forEach { projectile ->
+            val apexTime = timeToApex(projectile, deltaSeconds)
+            if (apexTime == null) {
+                fragmentAtApex(projectile).forEach { fragment ->
+                    advanceProjectile(fragment, deltaSeconds)?.let(resolved::add)
+                }
+            } else {
+                val atApex = advanceProjectile(projectile, apexTime)
+                if (atApex != null) {
+                    val splitProjectile = atApex.copy(
+                        velocity = atApex.velocity.copy(y = 0f),
+                    )
+                    val remainingSeconds = deltaSeconds - apexTime
+                    fragmentAtApex(splitProjectile).forEach { fragment ->
+                        advanceProjectile(fragment, remainingSeconds)?.let(resolved::add)
+                    }
+                }
+            }
+        }
+        return resolved
+    }
+
+    private fun advanceProjectilesWithOpposingCollisions(
+        deltaSeconds: Float,
+    ): List<Projectile> {
+        var active = buildList {
+            projectiles.forEach { addAll(fragmentAtApex(it)) }
+        }
+        val nonStoppingTargetIds = active.associate { it.id to mutableSetOf<EntityId>() }
+            .toMutableMap()
+        var remainingSeconds = deltaSeconds.coerceAtLeast(0f)
+        var processZeroTimeStep = deltaSeconds == 0f
+
+        while (remainingSeconds > 0f || processZeroTimeStep) {
+            val maximumStep = if (processZeroTimeStep) {
+                0f
+            } else {
+                min(remainingSeconds, TERRAIN_COLLISION_SAMPLE_SECONDS)
+            }
+            val apexTimes = active.mapNotNull { projectile ->
+                timeToApex(projectile, maximumStep)?.let { projectile.id to it }
+            }
+            val earliestApexTime = apexTimes.minOfOrNull { it.second }
+            val stepSeconds = earliestApexTime
+                ?.let { min(it, maximumStep) }
+                ?.takeIf { it > 0f }
+                ?: maximumStep
+            val splitAtStepEnd = apexTimes
+                .filter { (_, apexTime) ->
+                    abs(apexTime - stepSeconds) <= APEX_TIME_EPSILON_SECONDS
+                }
+                .mapTo(mutableSetOf()) { it.first }
+            var segmentRemainingSeconds = stepSeconds
+            var processZeroTimeSegment = processZeroTimeStep
+            while (segmentRemainingSeconds > 0f || processZeroTimeSegment) {
+                if (active.isEmpty()) break
+                val collision = earliestProjectileCollision(
+                    active,
+                    segmentRemainingSeconds,
+                )
+                if (collision == null) {
+                    active = advanceProjectileSet(
+                        active,
+                        segmentRemainingSeconds,
+                        nonStoppingTargetIds,
+                    )
+                    segmentRemainingSeconds = 0f
+                    processZeroTimeSegment = false
+                    break
+                }
+
+                val collisionTravelSeconds =
+                    segmentRemainingSeconds * collision.fraction
+                if (collisionTravelSeconds > 0f) {
+                    active = advanceProjectileSet(
+                        active,
+                        collisionTravelSeconds,
+                        nonStoppingTargetIds,
+                    )
+                    segmentRemainingSeconds =
+                        (segmentRemainingSeconds - collisionTravelSeconds).coerceAtLeast(0f)
+                }
+                val activeIds = active.mapTo(mutableSetOf(), Projectile::id)
+                if (collision.firstId in activeIds && collision.secondId in activeIds) {
+                    active = active.filterNot {
+                        it.id == collision.firstId || it.id == collision.secondId
+                    }
+                    nonStoppingTargetIds.remove(collision.firstId)
+                    nonStoppingTargetIds.remove(collision.secondId)
+                    emitProjectileResolved(
+                        collision.firstId,
+                        ProjectileResolution.PROJECTILE_COLLISION,
+                    )
+                    emitProjectileResolved(
+                        collision.secondId,
+                        ProjectileResolution.PROJECTILE_COLLISION,
+                    )
+                }
+            }
+
+            if (splitAtStepEnd.isNotEmpty()) {
+                val splitProjectiles = mutableListOf<Projectile>()
+                active.forEach { projectile ->
+                    if (projectile.id !in splitAtStepEnd) {
+                        splitProjectiles += projectile
+                    } else {
+                        nonStoppingTargetIds.remove(projectile.id)
+                        val parentAtApex = projectile.copy(
+                            velocity = projectile.velocity.copy(y = 0f),
+                        )
+                        val fragments = fragmentAtApex(parentAtApex)
+                        splitProjectiles += fragments
+                        fragments.forEach { fragment ->
+                            nonStoppingTargetIds[fragment.id] = mutableSetOf()
+                        }
+                    }
+                }
+                active = splitProjectiles
+            }
+
+            if (processZeroTimeStep) {
+                processZeroTimeStep = false
+            } else {
+                remainingSeconds = (remainingSeconds - stepSeconds).coerceAtLeast(0f)
+            }
+        }
+        return active
+    }
+
+    private fun advanceProjectileSet(
+        projectiles: List<Projectile>,
+        deltaSeconds: Float,
+        nonStoppingTargetIds: MutableMap<EntityId, MutableSet<EntityId>>,
+    ): List<Projectile> = buildList {
+        projectiles.forEach { projectile ->
+            val next = advanceProjectileSubstep(
+                projectile = projectile,
+                deltaSeconds = deltaSeconds,
+                nonStoppingTargetIds = nonStoppingTargetIds.getOrPut(projectile.id) {
+                    mutableSetOf()
+                },
+            )
+            if (next == null) {
+                nonStoppingTargetIds.remove(projectile.id)
+            } else {
+                add(next)
+            }
+        }
+    }
+
+    private fun earliestProjectileCollision(
+        projectiles: List<Projectile>,
+        deltaSeconds: Float,
+    ): ProjectileCollisionCandidate? {
+        val advancedById = projectiles.associate { projectile ->
+            projectile.id to advanceProjectilePhysics(projectile, deltaSeconds)
+        }
+        val candidates = mutableListOf<ProjectileCollisionCandidate>()
+        for (firstIndex in projectiles.indices) {
+            val first = projectiles[firstIndex]
+            val advancedFirst = advancedById.getValue(first.id)
+            val firstRadius = config.balance.ammunition.definition(first.ammunition)
+                .collision.hitRadius
+            for (secondIndex in firstIndex + 1 until projectiles.size) {
+                val second = projectiles[secondIndex]
+                if (first.firedBy == second.firedBy) continue
+                val advancedSecond = advancedById.getValue(second.id)
+                val secondRadius = config.balance.ammunition.definition(second.ammunition)
+                    .collision.hitRadius
+                val fraction = sweptProjectileCollisionFraction(
+                    firstStart = first.position,
+                    firstEnd = advancedFirst.position,
+                    firstRadius = firstRadius,
+                    secondStart = second.position,
+                    secondEnd = advancedSecond.position,
+                    secondRadius = secondRadius,
+                ) ?: continue
+                val orderedIds = listOf(first.id, second.id).sortedBy(EntityId::value)
+                candidates += ProjectileCollisionCandidate(
+                    fraction = fraction,
+                    firstId = orderedIds[0],
+                    secondId = orderedIds[1],
+                )
+            }
+        }
+
+        return candidates.minWithOrNull(
+            compareBy<ProjectileCollisionCandidate>(
+                ProjectileCollisionCandidate::fraction,
+                { it.firstId.value },
+                { it.secondId.value },
+            ),
+        )
+    }
+
+    private fun sweptProjectileCollisionFraction(
+        firstStart: WorldPosition,
+        firstEnd: WorldPosition,
+        firstRadius: Float,
+        secondStart: WorldPosition,
+        secondEnd: WorldPosition,
+        secondRadius: Float,
+    ): Float? {
+        val startX = firstStart.x - secondStart.x
+        val startY = firstStart.y - secondStart.y
+        val deltaX = (firstEnd.x - firstStart.x) - (secondEnd.x - secondStart.x)
+        val deltaY = (firstEnd.y - firstStart.y) - (secondEnd.y - secondStart.y)
+        val radius = firstRadius + secondRadius
+        val c = startX * startX + startY * startY - radius * radius
+        if (c <= 0f) return 0f
+
+        val a = deltaX * deltaX + deltaY * deltaY
+        if (a <= 0f) return null
+        val b = 2f * (startX * deltaX + startY * deltaY)
+        val discriminant = b * b - 4f * a * c
+        if (discriminant < 0f) return null
+        val fraction = (-b - sqrt(discriminant)) / (2f * a)
+        return fraction.takeIf { it in 0f..1f }
+    }
+
     private fun advanceProjectile(
         projectile: Projectile,
         deltaSeconds: Float,
@@ -740,8 +958,8 @@ class DeterministicMatchSimulation(
         projectile: Projectile,
         deltaSeconds: Float,
         nonStoppingTargetIds: MutableSet<EntityId>,
+        advanced: Projectile = advanceProjectilePhysics(projectile, deltaSeconds),
     ): Projectile? {
-        val advanced = advanceProjectilePhysics(projectile, deltaSeconds)
         val terrainImpact = terrainImpactPosition(
             previous = projectile,
             deltaSeconds = deltaSeconds,
@@ -3816,6 +4034,7 @@ class DeterministicMatchSimulation(
         // Keep default foundations wide enough for the scaled fortress footprint.
         private val FORTRESS_FLAT_HALF_WIDTH = WorldScale.FORTRESS_HALF_WIDTH
         private const val APEX_TIME_SEARCH_ITERATIONS = 16
+        private const val APEX_TIME_EPSILON_SECONDS = 0.00001f
         private const val TERRAIN_COLLISION_SEARCH_ITERATIONS = 12
         private const val TERRAIN_COLLISION_SAMPLE_SECONDS = 1f / 60f
 

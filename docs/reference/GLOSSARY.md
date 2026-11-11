@@ -59,8 +59,8 @@ kontrakty są wyraźnie oddzielone.
 | **CS** | **Combat System** | Cele, grupy ataku, harmonogram ataków, obrażenia, śmierć i eventy walki jednostek. | Działa dla obecnego zakresu jednostek. |
 | **TS** | **Terrain System** | Profil terenu, deformacje, kratery, próbki wysokości i materializacja terenu w symulacji. | Działa. |
 | **LDS** | **Level Definition System** | Niemutowalne definicje poziomów, authoring, walidacja, placementy, fundamenty i rejestr kampanii. | Działa. |
-| **PS** | **Projectile System** | Ruch pocisków, balistyka, wiatr, trajektoria i cykl życia pocisku. | Działa jako część symulacji i AS. |
-| **CoS** | **Collision System** | Wykrywanie i klasyfikacja kolizji pocisków, jednostek, fortec i terenu. | Działa jako część symulacji i AS/CS. |
+| **PS** | **Projectile System** | Ruch pocisków, balistyka, wiatr, trajektoria i cykl życia pocisku. | Działa jako część symulacji i AS; pociski przeciwnych drużyn mogą się wzajemnie przechwytywać. |
+| **CoS** | **Collision System** | Wykrywanie i klasyfikacja kolizji pocisków, jednostek, fortec, innych pocisków i terenu. | Działa jako część symulacji i AS/CS. |
 | **DS** | **Damage System** | Rozstrzyganie obrażeń jednostek, fortec, terenu i efektów obszarowych. | Działa jako część symulacji i CS/AS. |
 | **WS** | **Wind System** | Początkowy wiatr, opóźnienie, przejścia i deterministyczne zmiany siły oraz kierunku. | Działa. |
 | **US** | **Unit System** | Rekrutacja, supply, garnizon, fale, ruch, konfiguracje i interakcje jednostek. | Działa dla obecnych jednostek. |
@@ -132,6 +132,7 @@ kontrakty są wyraźnie oddzielone.
 | **AmmunitionDefinition** | Jawna definicja jednego typu amunicji obejmująca identyfikator, reload, inventory, lot, kolizję, obrażenia, deformację terenu i zachowanie impactu. |
 | **AmmunitionCollisionLayer** | Warstwa celu pocisku: `TERRAIN`, `UNIT`, `FORTRESS`, `BOSS` albo `OUT_OF_BOUNDS`. Warstwa jest częścią kontraktu symulacji, a nie heurystyką renderera. |
 | **Subprojectile** | Pełnoprawny pocisk utworzony przez pocisk macierzysty. Ma własne ID, pozycję, prędkość, snapshot i eventy oraz nie może tworzyć kolejnych subprojectiles. |
+| **Projectile Interception** | Przechwycenie pocisku przez pocisk przeciwnej drużyny: sweep używa sumy promieni kolizji, po kontakcie oba pociski znikają bez impactu ani obrażeń. Sojusznicze pociski nie kolidują. |
 | **Lingering Area** | Utrzymujący się w świecie efekt obszarowy z własnym ID, czasem trwania, tickami, statusem i opcjonalnym dryfem przez wiatr. |
 | **Unit Status Effect** | Deterministyczny efekt na jednostce, np. `BURNING`, `POISONED`, `SLOWED`, `STUNNED` albo `HASTED`, z czasem trwania, siłą, capem, odpornością i immunitetem. |
 | **World-Space Projectile Rendering** | Zasada, według której pociski, lot, impacty, eksplozje i lingering areas są rysowane w przestrzeni świata i skalują się dokładnie razem z zoomem kamery. |
