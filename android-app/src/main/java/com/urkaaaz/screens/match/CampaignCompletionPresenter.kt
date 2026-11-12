@@ -24,6 +24,7 @@ import kotlinx.coroutines.launch
 data class CampaignCompletionPresentation(
     val recorded: Boolean,
     val reward: LevelRewardResult?,
+    val appliedMilestoneIds: Set<String> = emptySet(),
 )
 
 class CampaignCompletionPresenter(
@@ -100,7 +101,11 @@ class CampaignCompletionPresenter(
         }
         return when (result) {
             is CampaignCompletionResult.Completed ->
-                CampaignCompletionPresentation(true, result.reward ?: reward)
+                CampaignCompletionPresentation(
+                    recorded = true,
+                    reward = result.reward ?: reward,
+                    appliedMilestoneIds = result.newlyAppliedMilestoneIds,
+                )
             is CampaignCompletionResult.NoProgress ->
                 CampaignCompletionPresentation(false, null)
             else -> CampaignCompletionPresentation(false, null)

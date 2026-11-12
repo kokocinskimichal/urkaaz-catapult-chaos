@@ -128,7 +128,6 @@ data class AiConfiguration(
 ) {
     init {
         require(allowedUnits.isNotEmpty()) { "AI must have at least one allowed unit" }
-        require(allowedAmmunition.isNotEmpty()) { "AI must have allowed ammunition" }
     }
 }
 
@@ -179,7 +178,6 @@ class AiAgent(
             AmmunitionType.entries.firstOrNull { it.name == id }
                 ?: error("unknown AI ammunition identifier: $id")
         }.toSet()
-        require(allowedAmmunition.isNotEmpty()) { "AI must have allowed ammunition" }
         configuration = configuration.copy(allowedAmmunition = allowedAmmunition)
     }
 

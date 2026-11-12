@@ -3,6 +3,7 @@ package com.urkaaaz.screens.campaign
 import android.content.Context
 import android.content.res.ColorStateList
 import android.graphics.Color
+import android.graphics.RectF
 import android.graphics.Typeface
 import android.graphics.drawable.ColorDrawable
 import android.graphics.drawable.GradientDrawable
@@ -25,7 +26,10 @@ import com.urkaaaz.campaign.CampaignChapterRegistry
 import com.urkaaaz.campaign.CampaignMapLayoutFailure
 import com.urkaaaz.campaign.CampaignMapLayoutRead
 import com.urkaaaz.campaign.CampaignMapLayoutRepository
-import com.urkaaaz.navigation.ScreenContent
+import com.urkaaaz.application.tutorial.TutorialScreen
+import com.urkaaaz.tutorial.TutorialTargetRegistration
+import com.urkaaaz.tutorial.TutorialScreenContent
+import com.urkaaaz.tutorial.visibleBoundsIn
 import com.urkaaaz.ui.ScreenChromeMetrics
 import com.urkaaaz.ui.UiTypography
 import com.urkaaaz.screens.life.LifeCountdownFormatter
@@ -43,7 +47,7 @@ class CampaignScreen(
     campaignLevelStart: CampaignLevelStartUseCase,
     private val onBack: () -> Unit,
     private val onLevelSelected: (Int) -> Unit,
-) : ScreenContent {
+) : TutorialScreenContent {
     private val viewModel = CampaignViewModel(campaignLevelStart)
     private val pageContent = CampaignMapGestureContainer(context) { direction ->
         if (viewModel.navigateChapter(direction)) render(viewModel.state)
@@ -185,8 +189,39 @@ class CampaignScreen(
         visibility = View.GONE
     }
     private var screenScope: CoroutineScope? = null
+    private var chapterMapView: CampaignMapView? = null
 
     override val view: View = createView()
+    override val tutorialScreen: TutorialScreen = TutorialScreen.CAMPAIGN
+    override val tutorialTargetsReady: Boolean
+        get() = view.isLaidOut && chapterMapView?.isLaidOut == true
+    override val registeredTutorialTargetIds: Set<String> =
+        TutorialTargetRegistration.idsFor(tutorialScreen)
+
+    override fun tutorialTargetBounds(targetId: String, targetInstanceId: String?): RectF? {
+        if (targetInstanceId != null) return null
+        val target = when (targetId) {
+            "campaign.map" -> pageContent
+            "campaign.level_marker" -> {
+                val selectedLevel = viewModel.state.selectedLevel
+                    ?: viewModel.state.mapProgression?.pages
+                        ?.firstOrNull { it.chapter.id == viewModel.state.selectedChapterId }
+                        ?.markers
+                        ?.firstOrNull { it.status == CampaignLevelMarkerStatus.AVAILABLE }
+                        ?.level
+                    ?: return null
+                chapterMapView?.tutorialMarkerView(selectedLevel)
+            }
+            "campaign.start" -> startLevelButton
+            "campaign.chapter_navigation" -> when {
+                nextChapterButton.visibility == View.VISIBLE -> nextChapterButton
+                previousChapterButton.visibility == View.VISIBLE -> previousChapterButton
+                else -> chapterHeaderPanel
+            }
+            else -> null
+        } ?: return null
+        return target.visibleBoundsIn(view)
+    }
 
     init {
         render(viewModel.state)
@@ -400,6 +435,7 @@ class CampaignScreen(
     }
 
     private fun renderChapterMap(page: CampaignChapterPageState, selectedLevel: Int?) {
+        chapterMapView = null
         when (val layout = CampaignMapLayoutRepository.bundled.load(page.chapter.id)) {
             is CampaignMapLayoutRead.Available ->
                 renderMapPresentation(
@@ -439,14 +475,16 @@ class CampaignScreen(
     ) {
         when (presentationRead) {
             is CampaignMapPresentationRead.Available -> {
+                val mapView = CampaignMapView(
+                    context = context,
+                    presentation = presentationRead.presentation,
+                    markers = page.markers,
+                    selectedLevel = selectedLevel,
+                    onMarkerSelected = ::selectMapLevel,
+                )
+                chapterMapView = mapView
                 pageContent.addView(
-                    CampaignMapView(
-                        context = context,
-                        presentation = presentationRead.presentation,
-                        markers = page.markers,
-                        selectedLevel = selectedLevel,
-                        onMarkerSelected = ::selectMapLevel,
-                    ),
+                    mapView,
                     FrameLayout.LayoutParams(-1, -1),
                 )
             }

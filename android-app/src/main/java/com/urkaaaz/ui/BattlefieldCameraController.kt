@@ -1,5 +1,6 @@
 package com.urkaaaz.ui
 
+import android.graphics.RectF
 import com.urkaaaz.contracts.InitialCameraAnchor
 import com.urkaaaz.contracts.WorldDimensions
 import com.urkaaaz.contracts.WorldScale
@@ -192,6 +193,45 @@ class BattlefieldCameraController(
         postImpactHoldSeconds = 0f
         cameraReturnActive = false
         clampOffset(viewportWidth, viewportHeight)
+    }
+
+    fun focusOnWorldRect(
+        worldRect: RectF,
+        viewportWidth: Float,
+        viewportHeight: Float,
+    ): Boolean {
+        require(viewportWidth > 0f && viewportHeight > 0f) {
+            "viewport dimensions must be positive"
+        }
+        require(
+            worldRect.left.isFinite() && worldRect.top.isFinite() &&
+                worldRect.right.isFinite() && worldRect.bottom.isFinite() &&
+                worldRect.right > worldRect.left &&
+                worldRect.bottom > worldRect.top
+        ) {
+            "world target rectangle must be finite and non-empty"
+        }
+        val targetScale = minOf(
+            worldWidth / (worldRect.right - worldRect.left),
+            worldHeight / (worldRect.bottom - worldRect.top),
+        ).coerceIn(MIN_MAP_SCALE, MAX_MAP_SCALE)
+        val scale = maxOf(transform.scale, targetScale)
+        val centerX = (worldRect.left + worldRect.right) / 2f /
+            worldWidth * viewportWidth
+        val centerY = (worldRect.top + worldRect.bottom) / 2f /
+            worldHeight * viewportHeight
+        transform = CameraTransform(
+            scale = scale,
+            offsetX = viewportWidth / 2f - centerX * scale,
+            offsetY = viewportHeight / 2f - centerY * scale,
+        )
+        preFollowScale = null
+        manualPanActive = true
+        wasFollowingProjectile = false
+        postImpactHoldSeconds = 0f
+        cameraReturnActive = false
+        clampOffset(viewportWidth, viewportHeight)
+        return true
     }
 
     fun beginPan(x: Float, y: Float): Boolean {

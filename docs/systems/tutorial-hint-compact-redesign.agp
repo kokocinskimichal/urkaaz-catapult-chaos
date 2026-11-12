@@ -1,0 +1,129 @@
+# Urkaaaz — compact Tutorial Hint redesign
+
+## Purpose
+
+Create one high-fidelity visual concept for a smaller, more polished
+`Tutorial Hint` card shown over the Urkaaaz match screen. This is a visual
+redesign study only. Preserve tutorial behavior, target geometry, localization,
+and game content; do not implement or invent new mechanics.
+
+## Reference inputs
+
+- Attach a screenshot of the current campaign match with a Tutorial Hint
+  visible. Treat it as the source of truth for the screen composition, game
+  art, tutorial target, and spotlight.
+- Use the Shop, Dashboard, and Loadout screenshots only as references for the
+  shared Urkaaaz visual language: painterly fantasy scenery, dark translucent
+  panels, carved timber and iron, restrained warm-gold trim, and pale
+  readable text.
+- Redesign only the Tutorial Hint card and its controls. Keep the match
+  background, HUD, target, and spotlight visually unchanged.
+- Do not use any reference screenshot as a flattened background. Recreate
+  the screen concept with visually separable game scenery, HUD, spotlight,
+  hint panel, text, and controls.
+
+## Output
+
+- Generate exactly one PNG: `tutorial_hint_compact_concept_01.png`.
+- Save it under `assets_src/tutorial/screen-concepts/`.
+- Canvas: exactly 1920 × 1080 pixels, landscape 16:9.
+- Show the complete match screen edge-to-edge, without a phone frame,
+  presentation board, annotations, watermark, signature, or alternate
+  concepts.
+- This is a visual concept for review, not a production asset or replacement
+  screen background. Keep the hint panel, text, and buttons visually
+  separable for native Android recreation.
+
+## Hint content
+
+Use the following existing Polish tutorial copy exactly; do not rewrite,
+paraphrase, truncate, or add instructional text:
+
+- Title: `SAMOUCZEK`
+- Message: `Zniszcz fortecę przeciwnika, aby wygrać. Zmniejsz jej zdrowie do zera, jednocześnie broniąc własnej.`
+- Progress: `KROK 1 / 8`
+- Secondary action: `POMIŃ`
+- Primary action: `DALEJ`
+
+Render all Polish characters correctly. Keep title, message, progress, and
+actions as crisp live-looking interface text, not pseudo-text or decorative
+lettering.
+
+## Compact layout direction
+
+- Make the card visibly smaller and shorter than in the reference screenshot:
+  aim for roughly 270–280 dp maximum width and a compact height around
+  190–240 dp for this example. Preserve comfortable safe margins.
+- Keep the Hint beside the highlighted fortress, on the side with available
+  space, with a visibly clear gap of at least 24 dp. Never overlap the target,
+  crowd it, cover its spotlight opening, or obscure critical HUD controls.
+- Center the card within that available dimmed region instead of aligning its
+  edge directly beside the target. Balance the remaining space between the
+  card, target, and screen edge.
+- Consolidate the title and step progress into one compact header row:
+  small gold `SAMOUCZEK` label on the left and discreet `KROK 1 / 8`
+  progress on the right.
+- Use a concise message area with balanced line breaks and clear line
+  spacing. Keep the sample text intact and readable; reduce wasted padding
+  before reducing text size. Supporting text should remain comfortably
+  legible at normal mobile viewing scale.
+- Place actions in one compact footer. Make `DALEJ` the clear but restrained
+  gold primary button and `POMIŃ` a quieter dark or outlined secondary
+  control. Keep both controls visually distinct and large enough for
+  comfortable touch use; do not render oversized pale slabs.
+- Use a compact dark charcoal/iron card with a thin bronze or warm-gold edge,
+  a subtle inner bevel, and a soft shadow. Add only restrained corner details
+  or small runic accents; keep the central text area uncluttered.
+- Reuse the existing Urkaaaz UI frame and button art. Use the thin,
+  rounded `match_hud_universal_frame` for the card,
+  `ui_button_dark_xs_short` for `POMIŃ` and
+  `loadout_start_match_button_xs_short` for `DALEJ`; do not invent new button
+  artwork.
+- Match the game's Cinzel SemiBold-style heading and button typography, with
+  clean high-contrast body text. Use the established warm-gold, ivory, and
+  charcoal palette.
+- Make the result feel elegant, friendly, and game-native rather than like a
+  generic Android dialog, a parchment popup, or an ornate quest scroll.
+
+## Responsive and state requirements
+
+- The card is a reusable Tutorial Hint component, not a one-off level popup.
+  Keep the design viable for different localized message lengths and for
+  steps with no target.
+- The optional wind-strength legend must be able to fit as a small,
+  secondary horizontal row without forcing the panel back to its current
+  oversized height. Use only the three existing Low/Medium/High wind icons
+  when the reference provides them; do not invent a fourth category or new
+  gameplay icon.
+- The Hint must continue to read as a separate layer from the dimmed match
+  screen and soft-edged spotlight. Do not change the spotlight gradient or
+  the exact highlighted target.
+- Do not invent progress counts, rewards, mechanics, tutorial text, or
+  additional controls.
+
+## Negative requirements
+
+- No full-screen tutorial dialog or giant panel.
+- No oversized title, excessive padding, oversized buttons, or bright flat
+  white button slabs.
+- No new gameplay instructions, altered localization, extra tutorial steps,
+  new mechanics, or invented status indicators.
+- No arrows or pointers that touch or cover the spotlight target.
+- No change to the match HUD, battlefield, fortress, camera, target bounds,
+  spotlight opening, or spotlight gradient.
+- No new characters, scenery, maps, reward icons, ad controls, or unrelated
+  navigation.
+- No flattened production background, device frame, watermark, signature,
+  illegible pseudo-text, or cropped controls.
+
+## Review checklist
+
+- Confirm the hint is clearly smaller and shorter than the reference.
+- Confirm every sample string is exact, readable, and correctly accented.
+- Confirm the target and its spotlight remain unobstructed.
+- Confirm `DALEJ` is the primary action and `POMIŃ` remains available as a
+  quieter secondary action.
+- Confirm the card remains legible and visually coherent with the existing
+  Urkaaaz HUD at landscape mobile scale.
+- Confirm all visible screen elements remain separable for native UI
+  recreation.

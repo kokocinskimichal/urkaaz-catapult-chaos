@@ -16,24 +16,24 @@
       "bossPositions": [5, 10]
     },
     {
-      "id": "ashen_march",
+      "id": "ironwood",
       "firstLevel": 21,
       "lastLevel": 30,
+      "biome": "copperwood",
+      "bossPositions": [5, 10]
+    },
+    {
+      "id": "ashen_march",
+      "firstLevel": 31,
+      "lastLevel": 40,
       "biome": "ashen_march",
       "bossPositions": [5, 10]
     },
     {
       "id": "whispering_marsh",
-      "firstLevel": 31,
-      "lastLevel": 40,
-      "biome": "sunken_marshes",
-      "bossPositions": [5, 10]
-    },
-    {
-      "id": "ironwood",
       "firstLevel": 41,
       "lastLevel": 50,
-      "biome": "copperwood",
+      "biome": "sunken_marshes",
       "bossPositions": [5, 10]
     },
     {

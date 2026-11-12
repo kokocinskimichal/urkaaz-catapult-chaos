@@ -6,6 +6,7 @@ import com.urkaaaz.contracts.BossSnapshot
 import com.urkaaaz.contracts.BossArchetype
 import com.urkaaaz.contracts.BossPhase
 import com.urkaaaz.contracts.CatapultPresentationContract
+import com.urkaaaz.contracts.FortressSnapshot
 import com.urkaaaz.contracts.InitialCameraAnchor
 import com.urkaaaz.contracts.RunicBastionGeometry
 import com.urkaaaz.contracts.Team
@@ -39,6 +40,7 @@ data class RenderState(
     val redFortressX: Float = WorldDimensions.WIDTH -
         CatapultPresentationContract.FORTRESS_CENTER_MARGIN,
     val redFortressFoundationY: Float = redCatapultY,
+    val fortressTeamsByEntityId: Map<String, Team> = emptyMap(),
     val playerAngleDegrees: Float,
     val playerPower: Float,
     val blueFortressHealth: Int,
@@ -90,6 +92,7 @@ data class RenderState(
     val fortressShieldHits: List<FortressShieldHitRenderState> = emptyList(),
     val boss: BossRenderState? = null,
     val bossAttack: BossAttackRenderState? = null,
+    val tutorialLockedMechanicIds: Set<String> = emptySet(),
 )
 
 /** One-shot presentation trigger emitted when the boss starts a unit attack. */
@@ -117,13 +120,15 @@ data class BossRenderState(
 
 data class RunicBastionRenderState(
     val entityId: String,
-    val teamLabel: String,
+    val team: Team,
     val centerX: Float,
     val centerY: Float,
     val foundationY: Float,
     val health: Int,
     val maxHealth: Int,
-)
+) {
+    val teamLabel: String get() = team.name
+}
 
 data class FortressShieldHitRenderState(
     val eventId: String,
@@ -192,7 +197,7 @@ data class CombatFeedbackRenderState(
 
 data class UnitRenderState(
     val entityId: String,
-    val teamLabel: String,
+    val team: Team,
     val unitType: String,
     val x: Float,
     val y: Float,
@@ -209,7 +214,9 @@ data class UnitRenderState(
     val sapperHasBomb: Boolean,
     val hasted: Boolean = false,
     val demolisherThrowFrameIndex: Int? = null,
-)
+) {
+    val teamLabel: String get() = team.name
+}
 
 object RenderStateMapper {
     fun map(snapshot: MatchSnapshot, events: List<MatchEvent> = emptyList()): RenderState {
@@ -254,7 +261,7 @@ object RenderStateMapper {
         runicBastions = snapshot.runicBastions.map {
             RunicBastionRenderState(
                 entityId = it.entityId.value,
-                teamLabel = it.team.name,
+                team = it.team,
                 centerX = it.centerX,
                 centerY = RunicBastionGeometry.centerY(it.foundationY),
                 foundationY = it.foundationY,
@@ -275,48 +282,51 @@ object RenderStateMapper {
                 collisionRadius = it.collisionRadius,
             )
         },
-        blueCatapultX = snapshot.catapults.firstOrNull { it.team.name == "BLUE" }?.x
+        blueCatapultX = snapshot.catapults.firstOrNull { it.team == Team.BLUE }?.x
             ?: CatapultPresentationContract.catapultCenterX(
                 Team.BLUE,
                 snapshot.terrain.worldWidth,
             ),
-        blueCatapultY = snapshot.catapults.firstOrNull { it.team.name == "BLUE" }?.y ?: 3648f,
-        blueCatapultAnchorX = snapshot.catapults.firstOrNull { it.team.name == "BLUE" }?.anchorX
+        blueCatapultY = snapshot.catapults.firstOrNull { it.team == Team.BLUE }?.y ?: 3648f,
+        blueCatapultAnchorX = snapshot.catapults.firstOrNull { it.team == Team.BLUE }?.anchorX
             ?: CatapultPresentationContract.projectileAnchorX(
                 Team.BLUE,
                 snapshot.terrain.worldWidth,
             ),
-        blueCatapultAnchorY = snapshot.catapults.firstOrNull { it.team.name == "BLUE" }?.anchorY
+        blueCatapultAnchorY = snapshot.catapults.firstOrNull { it.team == Team.BLUE }?.anchorY
             ?: CatapultPresentationContract.anchorY(3648f, WorldDimensions.HEIGHT),
-        redCatapultX = snapshot.catapults.firstOrNull { it.team.name == "RED" }?.x
+        redCatapultX = snapshot.catapults.firstOrNull { it.team == Team.RED }?.x
             ?: CatapultPresentationContract.catapultCenterX(
                 Team.RED,
                 snapshot.terrain.worldWidth,
             ),
-        redCatapultY = snapshot.catapults.firstOrNull { it.team.name == "RED" }?.y ?: 3648f,
-        redCatapultAnchorX = snapshot.catapults.firstOrNull { it.team.name == "RED" }?.anchorX
+        redCatapultY = snapshot.catapults.firstOrNull { it.team == Team.RED }?.y ?: 3648f,
+        redCatapultAnchorX = snapshot.catapults.firstOrNull { it.team == Team.RED }?.anchorX
             ?: CatapultPresentationContract.projectileAnchorX(
                 Team.RED,
                 snapshot.terrain.worldWidth,
             ),
-        redCatapultAnchorY = snapshot.catapults.firstOrNull { it.team.name == "RED" }?.anchorY
+        redCatapultAnchorY = snapshot.catapults.firstOrNull { it.team == Team.RED }?.anchorY
             ?: CatapultPresentationContract.anchorY(3648f, WorldDimensions.HEIGHT),
         blueFortressX = blueFortressX,
         blueFortressFoundationY = blueFortressFoundationY,
         redFortressX = redFortressX,
         redFortressFoundationY = redFortressFoundationY,
-        playerAngleDegrees = snapshot.catapults.firstOrNull { it.entityId.value == "blue-catapult" }
+        fortressTeamsByEntityId = snapshot.fortresses.associate {
+            it.entityId.value to it.team
+        },
+        playerAngleDegrees = snapshot.catapults.firstOrNull { it.team == Team.BLUE }
             ?.directionDegrees ?: 0f,
-        playerPower = snapshot.catapults.firstOrNull { it.entityId.value == "blue-catapult" }
+        playerPower = snapshot.catapults.firstOrNull { it.team == Team.BLUE }
             ?.power ?: 0f,
-        blueFortressHealth = snapshot.fortresses.firstOrNull { it.team.name == "BLUE" }?.health ?: 0,
-        blueFortressMaxHealth = snapshot.fortresses.firstOrNull { it.team.name == "BLUE" }?.maxHealth ?: 0,
+        blueFortressHealth = blueFortressSnapshot?.health ?: 0,
+        blueFortressMaxHealth = blueFortressSnapshot?.maxHealth ?: 0,
         blueFortressShieldHealth = blueFortressSnapshot?.shieldHealth,
         blueFortressShieldMaxHealth = blueFortressSnapshot?.shieldMaxHealth,
         blueRunicBastionHealth = blueRunicBastion?.health,
         blueRunicBastionMaxHealth = blueRunicBastion?.maxHealth,
-        redFortressHealth = snapshot.fortresses.firstOrNull { it.team.name == "RED" }?.health ?: 0,
-        redFortressMaxHealth = snapshot.fortresses.firstOrNull { it.team.name == "RED" }?.maxHealth ?: 0,
+        redFortressHealth = redFortressSnapshot?.health ?: 0,
+        redFortressMaxHealth = redFortressSnapshot?.maxHealth ?: 0,
         redFortressShieldHealth = redFortressSnapshot?.shieldHealth,
         redFortressShieldMaxHealth = redFortressSnapshot?.shieldMaxHealth,
         windStrength = snapshot.wind.strength,
@@ -422,7 +432,7 @@ object RenderStateMapper {
         units = snapshot.units.map {
             UnitRenderState(
                 entityId = it.entityId.value,
-                teamLabel = it.team.name,
+                team = it.team,
                 unitType = it.unitType,
                 x = it.x,
                 y = it.y,
@@ -449,11 +459,14 @@ object RenderStateMapper {
                     val bastion = snapshot.runicBastions.firstOrNull {
                         it.entityId == event.targetId
                     }
+                    val fortressX = snapshot.fortresses
+                        .firstOrNull { it.entityId == event.targetId }
+                        ?.let { fortressX(it, snapshot) }
                     CombatFeedbackRenderState(
                         eventId = event.eventId.value,
                         kind = CombatFeedbackRenderState.Kind.DAMAGE,
-                        x = target?.x ?: bastion?.centerX
-                            ?: fortressX(event.targetId.value, blueFortressX, redFortressX),
+                        x = target?.x ?: bastion?.centerX ?: fortressX
+                            ?: return@mapNotNull null,
                         y = target?.y ?: bastion?.let {
                             RunicBastionGeometry.centerY(it.foundationY)
                         } ?: 470f,
@@ -480,12 +493,17 @@ object RenderStateMapper {
                     val bastion = snapshot.runicBastions.firstOrNull {
                         it.entityId == event.targetId
                     }
+                    val targetFortressX = snapshot.fortresses
+                        .firstOrNull { it.entityId == event.targetId }
+                        ?.let { fortressX(it, snapshot) }
+                    val x = target?.x ?: bastion?.centerX
+                        ?: event.x.takeIf { it != 0f }
+                        ?: targetFortressX
+                        ?: return@mapNotNull null
                     CombatFeedbackRenderState(
                         eventId = event.eventId.value,
                         kind = CombatFeedbackRenderState.Kind.DAMAGE,
-                        x = target?.x ?: bastion?.centerX
-                            ?: event.x.takeIf { it != 0f }
-                            ?: fortressX(event.targetId.value, blueFortressX, redFortressX),
+                        x = x,
                         y = target?.y ?: bastion?.let {
                                 RunicBastionGeometry.centerY(it.foundationY)
                             }
@@ -600,8 +618,19 @@ object RenderStateMapper {
         redDamage = redDamage,
     )
 
-    private fun fortressX(id: String, blueX: Float, redX: Float): Float =
-        if (id.startsWith("blue")) blueX else redX
+    private fun fortressX(
+        fortress: FortressSnapshot,
+        snapshot: MatchSnapshot,
+    ): Float {
+        val mapFortress = snapshot.mapDefinition?.fortresses?.firstOrNull {
+            it.owner == fortress.team
+        }
+        return fortress.x ?: mapFortress?.x ?: when (fortress.team) {
+            Team.BLUE -> CatapultPresentationContract.FORTRESS_CENTER_MARGIN
+            Team.RED -> snapshot.terrain.worldWidth -
+                CatapultPresentationContract.FORTRESS_CENTER_MARGIN
+        }
+    }
 
     private const val FIRE_RAIN_AMMUNITION = "FIRE_RAIN"
     private const val PLAGUE_CAULDRON_AMMUNITION = "PLAGUE_CAULDRON"

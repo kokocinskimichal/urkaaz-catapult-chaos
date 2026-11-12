@@ -31,6 +31,107 @@ import java.io.ByteArrayInputStream
 
 class MatchSessionTest {
     @Test
+    fun playerTeamUsesScenarioAssignmentsEvenWhenPlayerIdsSuggestTheOppositeTeam() {
+        val bluePlayerId = PlayerId("red-named-blue-player")
+        val redPlayerId = PlayerId("blue-named-red-player")
+        val scenario = MatchScenario(
+            scenarioId = "typed-player-teams",
+            battlefield = BattlefieldConfig(1_000, 600),
+            players = listOf(
+                PlayerConfig(bluePlayerId, Team.BLUE),
+                PlayerConfig(redPlayerId, Team.RED),
+            ),
+            availableUnits = listOf("DEFENDER"),
+            availableAmmunition = listOf("ROCK", "SIEGE_BOMB"),
+        )
+        val session = MatchSession(scenario = scenario)
+        val matchId = MatchId("typed-player-teams")
+        session.dispatch(
+            MatchCommand.Start(CommandId("typed-player-teams-start"), matchId, bluePlayerId),
+        )
+
+        val selected = session.dispatch(
+            MatchCommand.SelectAmmo(
+                CommandId("typed-player-teams-ammo"),
+                matchId,
+                bluePlayerId,
+                "SIEGE_BOMB",
+            ),
+        )
+        val deployed = session.dispatch(
+            MatchCommand.DeployUnit(
+                CommandId("typed-player-teams-deploy"),
+                matchId,
+                redPlayerId,
+                "DEFENDER",
+            ),
+        )
+
+        assertEquals(
+            2f,
+            selected.reloadRemainingSecondsByAmmunition[Team.BLUE]?.get("SIEGE_BOMB"),
+        )
+        assertEquals(0f, selected.reloadRemainingSecondsByAmmunition[Team.RED]?.get("SIEGE_BOMB"))
+        assertEquals(Team.RED, deployed.units.single().team)
+    }
+
+    @Test
+    fun unknownPlayerIsRejectedInsteadOfInferringTeamFromItsId() {
+        val playerId = PlayerId("known-blue-player")
+        val scenario = MatchScenario(
+            scenarioId = "unknown-player",
+            battlefield = BattlefieldConfig(1_000, 600),
+            players = listOf(PlayerConfig(playerId, Team.BLUE)),
+            availableUnits = listOf("DEFENDER"),
+        )
+        val session = MatchSession(scenario = scenario)
+        val matchId = MatchId("unknown-player")
+        session.dispatch(MatchCommand.Start(CommandId("unknown-player-start"), matchId, playerId))
+
+        val rejection = assertFailsWith<MatchCommandRejectedException> {
+            session.dispatch(
+                MatchCommand.DeployUnit(
+                    CommandId("unknown-player-deploy"),
+                    matchId,
+                    PlayerId("ai-unknown"),
+                    "DEFENDER",
+                ),
+            )
+        }
+
+        assertEquals(MatchError.PLAYER_NOT_IN_MATCH, rejection.error)
+    }
+
+    @Test
+    fun replayPreservesExplicitTeamsForLocalMatchesWithoutScenario() {
+        val redPlayerId = PlayerId("nonstandard-red-player")
+        val session = MatchSession(
+            playerTeams = mapOf(redPlayerId to Team.RED),
+            randomSeedProvider = { 41L },
+        )
+        val matchId = MatchId("explicit-player-teams")
+        val bluePlayerId = PlayerId("nonstandard-blue-player")
+        session.dispatch(
+            MatchCommand.Start(CommandId("explicit-teams-start"), matchId, bluePlayerId),
+        )
+        session.dispatch(
+            MatchCommand.DeployUnit(
+                CommandId("explicit-teams-deploy-red"),
+                matchId,
+                redPlayerId,
+                "DEFENDER",
+            ),
+        )
+
+        val replay = requireNotNull(session.replay())
+        val replayResult = MatchReplayPlayer.play(replay)
+
+        assertEquals(mapOf(redPlayerId to Team.RED), replay.configuration.playerTeams)
+        assertEquals(Team.RED, session.snapshot().units.single().team)
+        assertEquals(session.snapshot(), replayResult.snapshot)
+    }
+
+    @Test
     fun eventObserverReceivesStartAndRestartBatchesIndependentlyOfEventConsumption() {
         val batches = mutableListOf<List<MatchEvent>>()
         val session = MatchSession(
@@ -606,6 +707,7 @@ class MatchSessionTest {
     fun advancingIntoMatchFinishReturnsTheFinishedSnapshotAndEvent() {
         val session = MatchSession(
             blueFortressMaxHealth = 1,
+            playerTeams = mapOf(PlayerId("local-ai") to Team.RED),
             randomSeedProvider = { 17L },
         )
         val matchId = MatchId("finished-during-advance")

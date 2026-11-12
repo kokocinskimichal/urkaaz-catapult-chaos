@@ -3,6 +3,7 @@ import { AnimationsTab } from "../tabs/animations/AnimationsTab";
 import { BalanceTab } from "../tabs/balance/BalanceTab";
 import { CampaignTab } from "../tabs/campaign/CampaignTab";
 import { ProgressTab } from "../tabs/progress/ProgressTab";
+import { TutorialsTab } from "../tabs/tutorials/TutorialsTab";
 import { MapsTab } from "../tabs/maps/MapsTab";
 
 export interface StudioTab {
@@ -16,6 +17,7 @@ export const TABS: readonly StudioTab[] = [
   { id: "campaign", label: "Campaign", component: CampaignTab },
   { id: "balance", label: "Balance", component: BalanceTab },
   { id: "progress", label: "Progress", component: ProgressTab },
+  { id: "tutorials", label: "Tutorials", component: TutorialsTab },
   { id: "animations", label: "Animations", component: AnimationsTab },
 ];
 

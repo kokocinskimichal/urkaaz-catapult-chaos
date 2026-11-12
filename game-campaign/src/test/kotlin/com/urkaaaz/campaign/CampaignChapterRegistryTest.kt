@@ -16,9 +16,9 @@ class CampaignChapterRegistryTest {
             listOf(
                 "green_frontier",
                 "broken_valley",
+                "ironwood",
                 "ashen_march",
                 "whispering_marsh",
-                "ironwood",
                 "northern_march",
                 "runic_wastes",
                 "red_peaks",
@@ -31,9 +31,9 @@ class CampaignChapterRegistryTest {
             listOf(
                 TerrainBiome.GREEN_FRONTIER,
                 TerrainBiome.FROSTBOUND,
+                TerrainBiome.COPPERWOOD,
                 TerrainBiome.ASHEN_MARCH,
                 TerrainBiome.SUNKEN_MARSHES,
-                TerrainBiome.COPPERWOOD,
                 TerrainBiome.FROSTBOUND,
                 TerrainBiome.ASHEN_MARCH,
                 TerrainBiome.FROSTBOUND,

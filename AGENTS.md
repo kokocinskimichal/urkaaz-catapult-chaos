@@ -18,6 +18,7 @@ do bieżącego zadania według [indeksu dokumentów kontekstu](docs/agent-contex
 - [Mapa projektu i przepływów](docs/architecture/project-map.md)
 - [Struktura projektu](docs/architecture/project-structure.md)
 - [Architektura Urkaaaz Studio (propozycja)](docs/architecture/studio-architecture.md)
+- [Prompt poprawek po audycie architektury](docs/architecture/architecture-audit-implementation-prompt.md)
 - [Plan formularza balansu Studio](docs/architecture/studio-balance-form-implementation-plan.md)
 - [Prompt formularza balansu Studio](docs/architecture/studio-balance-form-implementation-prompt.md)
 
@@ -100,7 +101,7 @@ do bieżącego zadania według [indeksu dokumentów kontekstu](docs/agent-contex
 - [System loadoutu](docs/systems/loadout-system.md)
 - [Prompt loadoutu](docs/systems/loadout-system-implementation-prompt.md)
 - [System reliktów](docs/systems/relic-system.md)
-- [System tutoriala (projekt, niezaimplementowany)](docs/systems/tutorial-system.md)
+- [System tutoriala](docs/systems/tutorial-system.md)
 - [Prompt systemu tutoriala](docs/systems/tutorial-system-implementation-prompt.md)
 - [LocalizationSystem PL/EN/ES](docs/systems/localization-system.md)
 - [Prompt implementacji LocalizationSystem](docs/systems/localization-system-implementation-prompt.md)
@@ -124,6 +125,7 @@ do bieżącego zadania według [indeksu dokumentów kontekstu](docs/agent-contex
 - [Architektura Dashboardu](docs/systems/dashboard-screen.md) ·
   [prompt implementacyjny](docs/systems/dashboard-screen-implementation-prompt.md)
 - [AGP koncepcji ekranu Ad Reward](docs/systems/ad-reward-screen-mockup.agp)
+- [AGP kompaktowego Tutorial Hintu](docs/systems/tutorial-hint-compact-redesign.agp)
 - [AGP niskiej ramki Dashboardu, Shopu i przyszłych ekranów](docs/systems/dashboard-low-profile-header-frame.agp)
 - [Tło splash screenu](docs/systems/splash-screen-background.agp)
 - [AGP landing page Urkaaaz](docs/systems/urkaaaz-website-landing-page.agp)

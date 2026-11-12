@@ -1,4 +1,4 @@
-package com.urkaaaz.ui
+package com.urkaaaz.logging
 
 import android.util.Log
 import com.urkaaaz.simulation.AmmunitionLogRecord

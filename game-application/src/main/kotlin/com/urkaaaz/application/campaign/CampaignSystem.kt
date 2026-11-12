@@ -32,6 +32,7 @@ sealed interface CampaignCompletionResult {
     data class Completed(
         val progress: CampaignProgress,
         val reward: LevelRewardResult? = null,
+        val newlyAppliedMilestoneIds: Set<String> = emptySet(),
     ) : CampaignCompletionResult
     data class NoProgress(
         val progress: CampaignProgress,
@@ -127,6 +128,8 @@ class CampaignSystem(
                             CampaignCompletionResult.Completed(
                                 outcome.state.campaign,
                                 outcome.reward,
+                                rewards.milestones.milestonesForCompletedLevel(level)
+                                    .mapTo(mutableSetOf()) { it.id },
                             )
                         is RewardSettlementOutcome.AlreadySettled ->
                             CampaignCompletionResult.Completed(
@@ -161,6 +164,7 @@ class CampaignSystem(
         }
 
         var rejection: CampaignSelectionRejection? = null
+        var newlyAppliedMilestoneIds = emptySet<String>()
         val update = repository.update { current ->
             if (
                 !current.isValid()
@@ -178,6 +182,7 @@ class CampaignSystem(
                     .map { it.id }
                     .filterNot { it in current.appliedMilestoneIds }
                     .toSet()
+                newlyAppliedMilestoneIds = newlyAppliedMilestones
                 current.copy(
                     highestUnlockedLevel = maxOf(
                         current.highestUnlockedLevel.coerceAtMost(
@@ -207,7 +212,10 @@ class CampaignSystem(
                         CampaignSelectionRejection.LEVEL_ALREADY_COMPLETED,
                     )
                 } else {
-                    CampaignCompletionResult.Completed(update.progress)
+                    CampaignCompletionResult.Completed(
+                        progress = update.progress,
+                        newlyAppliedMilestoneIds = newlyAppliedMilestoneIds,
+                    )
                 }
             }
         }

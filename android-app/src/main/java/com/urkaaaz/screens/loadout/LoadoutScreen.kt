@@ -2,6 +2,7 @@ package com.urkaaaz.screens.loadout
 
 import android.content.Context
 import android.graphics.Color
+import android.graphics.RectF
 import android.graphics.ColorMatrix
 import android.graphics.ColorMatrixColorFilter
 import android.graphics.Typeface
@@ -40,7 +41,10 @@ import com.urkaaaz.application.loadout.LoadoutUseCases
 import com.urkaaaz.application.loadout.MatchLoadout
 import com.urkaaaz.contracts.PlayerLoadoutConfig
 import com.urkaaaz.contracts.PlayerInventoryConfig
-import com.urkaaaz.navigation.ScreenContent
+import com.urkaaaz.application.tutorial.TutorialScreen
+import com.urkaaaz.tutorial.TutorialTargetRegistration
+import com.urkaaaz.tutorial.TutorialScreenContent
+import com.urkaaaz.tutorial.visibleBoundsIn
 import com.urkaaaz.ui.UiTypography
 import com.urkaaaz.ui.ScreenChromeMetrics
 import kotlinx.coroutines.CoroutineScope
@@ -60,7 +64,7 @@ class LoadoutScreen(
     private val initialDetailItem: LoadoutItemReference? = null,
     demoMode: Boolean = false,
     testMode: Boolean = false,
-) : ScreenContent {
+) : TutorialScreenContent {
     private val viewModel = LoadoutViewModel(
         campaignLevel,
         loadoutUseCases,
@@ -105,6 +109,29 @@ class LoadoutScreen(
     )
 
     override val view: View = createView(context)
+    override val tutorialScreen: TutorialScreen = TutorialScreen.LOADOUT
+    override val tutorialTargetsReady: Boolean
+        get() = hasLoaded && view.isLaidOut
+    override val registeredTutorialTargetIds: Set<String> =
+        TutorialTargetRegistration.idsFor(tutorialScreen)
+
+    override fun tutorialTargetBounds(targetId: String, targetInstanceId: String?): RectF? {
+        if (targetInstanceId != null) return null
+        val target = when (targetId) {
+            "loadout.units" -> unitScroll
+            "loadout.ammunition" -> ammunitionScroll
+            "loadout.spells" -> spellScroll
+            "loadout.start" -> startButton
+            else -> null
+        } ?: return null
+        return target.visibleBoundsIn(view)
+    }
+
+    override fun startBattleFromTutorial(): Boolean {
+        if (!::startButton.isInitialized || !startButton.isEnabled) return false
+        startButton.performClick()
+        return true
+    }
 
     override fun onResume() {
         if (screenScope != null) return

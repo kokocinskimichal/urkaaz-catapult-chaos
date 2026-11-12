@@ -1,5 +1,6 @@
 package com.urkaaaz.ui
 
+import android.graphics.RectF
 import com.urkaaaz.contracts.InitialCameraAnchor
 import com.urkaaaz.contracts.MatchPhase
 import com.urkaaaz.contracts.MatchSnapshot
@@ -10,7 +11,10 @@ import com.urkaaaz.contracts.WorldScale
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
+import org.junit.runner.RunWith
+import org.robolectric.RobolectricTestRunner
 
+@RunWith(RobolectricTestRunner::class)
 class BattlefieldCameraControllerTest {
     @Test
     fun initialFramingWaitsForAUsableViewport() {
@@ -27,6 +31,30 @@ class BattlefieldCameraControllerTest {
         camera.update(state, 1_000f, 600f)
 
         assertEquals(1f, camera.transform.scale)
+    }
+
+    @Test
+    fun focusOnWorldRectKeepsTheEntireTargetInsideTheViewport() {
+        val camera = BattlefieldCameraController()
+        val viewportWidth = 1_000f
+        val viewportHeight = 600f
+        val target = RectF(6_000f, 1_000f, 6_200f, 1_200f)
+
+        assertTrue(camera.focusOnWorldRect(target, viewportWidth, viewportHeight))
+
+        val transform = camera.transform
+        val screenLeft = target.left / WorldDimensions.WIDTH * viewportWidth *
+            transform.scale + transform.offsetX
+        val screenTop = target.top / WorldDimensions.HEIGHT * viewportHeight *
+            transform.scale + transform.offsetY
+        val screenRight = target.right / WorldDimensions.WIDTH * viewportWidth *
+            transform.scale + transform.offsetX
+        val screenBottom = target.bottom / WorldDimensions.HEIGHT * viewportHeight *
+            transform.scale + transform.offsetY
+        assertTrue(screenLeft >= 0f)
+        assertTrue(screenTop >= 0f)
+        assertTrue(screenRight <= viewportWidth)
+        assertTrue(screenBottom <= viewportHeight)
     }
 
     @Test

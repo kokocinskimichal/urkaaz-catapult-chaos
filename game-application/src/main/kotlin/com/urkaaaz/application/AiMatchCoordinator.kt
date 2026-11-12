@@ -150,6 +150,8 @@ class AiMatchCoordinator(
         unitAutomationEnabled = enabled
     }
 
+    fun unitAutomationEnabled(): Boolean = unitAutomationEnabled
+
     fun setAllowedUnitIds(ids: Set<String>) {
         require(ids.isNotEmpty()) { "AI must have at least one allowed unit" }
         require(ids.all { it in UnitIds.all }) { "AI unit IDs must be known" }
@@ -164,7 +166,6 @@ class AiMatchCoordinator(
             ?: UnitIds.all
 
     fun setAllowedAmmunitionIds(ids: Set<String>) {
-        require(ids.isNotEmpty()) { "AI must have allowed ammunition" }
         val ammunition = ids.map(::ammunitionById)
         allowedAmmunitionIdsOverride = ammunition.map(AmmunitionType::name).toSet()
         agent?.setAllowedAmmunitionIds(ids)

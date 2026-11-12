@@ -1,5 +1,37 @@
 # Changelog
 
+## 2026-11-12
+
+### Added
+
+- Implemented TutorialSystem v1 across `game-application`, Android and Studio:
+  validated shared tutorial catalog, deterministic triggers/steps, terminal
+  progress persistence, target-aware Hint/Spotlight, campaign milestone
+  signals, Dashboard repeat controls and a typed Studio editor. The bundled
+  content is limited to `match.basics`; other tutorial content awaits approval.
+
+### Changed
+
+- Reassigned campaign identities across Chapters 3–5 while preserving their
+  level ranges and boss encounters: Chapter 3 is Ironwood/Copperwood, Chapter 4
+  is Ashen March/Ashen March, and Chapter 5 is Whispering Marsh/Sunken Marshes.
+- Kept the supplied 1672 × 941 Copperwood map on Chapter 3 and restored the
+  original Ashen March map on Chapter 4, with ten global-level anchors for
+  each chapter. Chapter 4 uses levels 31–40, including its existing boss
+  sites at 35 and 40.
+- Restyled the Tutorial Hint as a compact 280 dp card using the shared
+  universal HUD frame and existing dark/gold button assets. Automatic
+  placement centers it in the wider available side region with a 24 dp gap,
+  using above/below placement only when neither side fits.
+- Queued the one-shot debug progress preset to start at campaign level 1 with
+  10,000 gold, for tutorial verification after the next debug launch.
+
+### Fixed
+
+- Tutorial steps now observe accepted ammunition selection, unit deployment
+  and wave-send actions. Studio filters step targets by tutorial screen, and
+  server validation rejects trigger/scope/target screen mismatches.
+
 ## 2026-11-11
 
 ### Added

@@ -113,6 +113,21 @@ class AiMatchCoordinatorTest {
     }
 
     @Test
+    fun emptyTutorialAmmunitionRestrictionDisablesArtilleryDecisions() {
+        val coordinator = AiMatchCoordinator(scenario)
+        coordinator.setAllowedAmmunitionIds(emptySet())
+        coordinator.start(randomSeed = 21L, balance = GameBalanceFixtures.balance)
+
+        val commands = coordinator.decide(snapshot, elapsedMilliseconds = 33)
+
+        assertTrue(commands.none {
+            it is MatchCommand.SelectAmmo ||
+                it is MatchCommand.Aim ||
+                it is MatchCommand.Fire
+        })
+    }
+
+    @Test
     fun coordinatorPassesScenarioSpellAvailabilityToRedAi() {
         val spellScenario = scenario.copy(availableSpells = listOf("FORTRESS_SHIELD"))
         val coordinator = AiMatchCoordinator(spellScenario).apply {

@@ -1572,7 +1572,6 @@ MatchScenario
 ├── playerLoadout
 ├── playerInventory (stock BLUE dla tej generacji)
 ├── startingResources
-├── enabledTutorialRules
 └── victoryCondition
 ```
 
@@ -1587,17 +1586,37 @@ ekranów ani persystencji Androida.
 
 ## 28. Tutorial
 
-Tutorial powinien obserwować snapshoty i eventy:
+`TutorialSystem` jest zaimplementowany v1. Jego engine i immutable contracts
+należą do `game-application.application.tutorial`; zasoby JSON są
+`game-application/src/main/resources/tutorial/tutorial-catalog.json`.
+Androidowy `TutorialHost` jest adapterem ekranów, overlayu, DataStore i meczu.
+`Studio` edytuje ten sam katalog przez wersjonowane, hash-guarded API.
+
+Przepływ danych:
 
 ```text
-TutorialController
-├── observe(MatchSnapshot)
-├── observe(MatchEvent)
-├── showInstruction()
-└── dispatch zwykłych MatchCommand
+ScreenContent / MatchScreenController
+  → TutorialSignal
+  → TutorialEngine
+  → TutorialUiState + TutorialEffect
+  → TutorialOverlay / MatchTutorialPort
 ```
 
-Tutorial nie powinien wywoływać bezpośrednio metod silnika typu:
+`TutorialEngine` jest jedynym właścicielem aktywnego tutoriala, kroku,
+liczników i kolejki. Triggery obejmują wejście na ekran, start meczu, typowany
+event ownera i zastosowany milestone kampanii. `TutorialCatalog` zawiera
+allowlisty authoringowe mechanic/event/milestone IDs oraz dokładne target IDs;
+allowlisty nie są źródłem dostępności gameplayu. Dostępność mechanik w danym
+meczu nadal pochodzi z `MatchScenario` i jego kanonicznych ownerów.
+
+`targetId` wskazuje stabilny typ/znaczenie UI lub obiektu. Opcjonalny
+`targetInstanceId` jest efemerycznym identyfikatorem jednej encji z eventu.
+Target provider rozwiązuje dokładnie tę instancję z aktualnego immutable
+render state i transformacji kamery; brak targetu nie może wskazać innej
+encji tego samego typu. Engine nie zależy od Androida i nie przechowuje
+referencji do `Match`.
+
+Tutorial nie wywołuje bezpośrednio metod silnika typu:
 
 ```text
 engine.setWindEnabled(...)
@@ -1605,8 +1624,15 @@ engine.fire(...)
 engine.activateSpell(...)
 ```
 
-Specjalne zachowanie poziomu tutorialowego powinno być opisane przez
-`MatchScenario` lub `TutorialRuleSet`.
+Akcje pozostają zwykłymi `MatchUiAction`/`MatchCommand` i przechodzą przez
+dotychczasową walidację. Zaakceptowane akcje gracza są obserwowane dopiero po
+akceptacji komendy. `TutorialHost` blokuje panele wprowadzanych mechanik,
+wstrzymuje lokalne ticki bez dopisywania tutorialowej pauzy do replayu i
+oddzielnie zawiesza AI przez `LocalMatchGateway.suspendAi()/resumeAi()`.
+Postęp zapisuje wyłącznie terminalne `COMPLETED`/`SKIPPED` statuses w
+wersjonowanych kluczach `tutorial.*`; Dashboard RESET czyści je przez
+istniejący reset całego profilu. Demo/Test nie odczytuje ani nie zapisuje
+postępu tutoriala.
 
 ---
 
@@ -1631,9 +1657,11 @@ kanoniczny LifeState i pełny timer przy wartości poniżej limitu; ustawienie
 `5/5` czyści timery/granty/receipts. Hash zastosowanego presetu zapobiega
 ponownemu nadpisaniu danych przy kolejnym starcie; release build ignoruje
 preset. Życia i timer należą do LifeSystem, a ustawienia języka pozostają w
-osobnym DataStore; tutorial progress nadal pozostaje przyszłą pracą.
-Milestone'y kampanii nie zapisują tutorial flags; przyszły TutorialSystem
-będzie ich właścicielem.
+osobnym DataStore. Tutorial progress ma własne klucze `tutorial.*` we
+współdzielonym Preferences DataStore; nie trafia do profilu ani
+`CampaignProgress`. Milestone'y kampanii nie zapisują tutorial flags;
+TutorialSystem konsumuje `CampaignMilestoneApplied` dopiero po trwałym
+zastosowaniu nagrody.
 
 Ustawienie języka jest osobną odpowiedzialnością od profilu gracza:
 `game-application` udostępnia platformowo niezależny port `LanguageSettings`,

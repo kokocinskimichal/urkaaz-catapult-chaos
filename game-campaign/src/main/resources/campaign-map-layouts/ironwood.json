@@ -1,0 +1,59 @@
+{
+  "schemaVersion": 1,
+  "chapterId": "ironwood",
+  "backgroundAssetKey": "campaign_chapter_03_ironwood_map",
+  "imageWidthPx": 1672,
+  "imageHeightPx": 941,
+  "anchors": [
+    {
+      "level": 21,
+      "x": 0.1274,
+      "y": 0.8310
+    },
+    {
+      "level": 22,
+      "x": 0.3487,
+      "y": 0.7396
+    },
+    {
+      "level": 23,
+      "x": 0.6196,
+      "y": 0.7205
+    },
+    {
+      "level": 24,
+      "x": 0.7955,
+      "y": 0.5707
+    },
+    {
+      "level": 25,
+      "x": 0.6681,
+      "y": 0.5760
+    },
+    {
+      "level": 26,
+      "x": 0.3828,
+      "y": 0.5760
+    },
+    {
+      "level": 27,
+      "x": 0.1304,
+      "y": 0.4825
+    },
+    {
+      "level": 28,
+      "x": 0.2751,
+      "y": 0.3815
+    },
+    {
+      "level": 29,
+      "x": 0.6700,
+      "y": 0.3804
+    },
+    {
+      "level": 30,
+      "x": 0.8702,
+      "y": 0.3783
+    }
+  ]
+}

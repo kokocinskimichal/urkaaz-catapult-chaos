@@ -218,6 +218,48 @@ class RenderStateMapperTest {
     }
 
     @Test
+    fun mapperResolvesFortressFeedbackByEntityAndTypedTeam() {
+        val state = RenderStateMapper.map(
+            snapshot = MatchSnapshot(
+                fortresses = listOf(
+                    FortressSnapshot(
+                        entityId = EntityId("red-named-blue-fortress"),
+                        team = Team.BLUE,
+                        health = 500,
+                        maxHealth = 500,
+                        x = 1_200f,
+                    ),
+                    FortressSnapshot(
+                        entityId = EntityId("blue-named-red-fortress"),
+                        team = Team.RED,
+                        health = 500,
+                        maxHealth = 500,
+                        x = 6_400f,
+                    ),
+                ),
+            ),
+            events = listOf(
+                MatchEvent.AttackHit(
+                    eventId = EventId("attack-hit"),
+                    matchId = MatchId("typed-fortress-target"),
+                    simulationTimeMilliseconds = 1L,
+                    attackerId = EntityId("attacker"),
+                    targetId = EntityId("blue-named-red-fortress"),
+                    attackType = "MELEE",
+                    attackCycleId = 1L,
+                    baseDamage = 10,
+                    rolledDamage = 10,
+                    synergyCount = 1,
+                    synergyMultiplier = 1f,
+                    finalDamage = 10,
+                ),
+            ),
+        )
+
+        assertEquals(6_400f, state.combatFeedback.single().x)
+    }
+
+    @Test
     fun mapperPreservesProjectileIdentityForIndependentTrails() {
         val state = RenderStateMapper.map(
             MatchSnapshot(

@@ -5,11 +5,14 @@
 **Implemented.** The campaign has a canonical ten-chapter registry, typed
 fortress/boss landmarks, persisted progression, and a full-screen map
 carousel. It displays completed chapters, the current chapter, and at most
-one next-chapter preview. Chapters 1–3 use their authored map backgrounds;
-Chapters 4–10 temporarily reuse the Green Frontier artwork and anchors as an
+one next-chapter preview. Chapters 1–4 use their authored map backgrounds;
+Chapters 5–10 temporarily reuse the Green Frontier artwork and anchors as an
 Android presentation fallback. The strict layout repository and Studio still
-report missing authored artwork for Chapters 4–10. Campaign metadata and
-authored map anchors remain shared JSON resources in `game-campaign`.
+report missing authored artwork for Chapters 5–10. Campaign metadata and
+authored map anchors remain shared JSON resources in `game-campaign`. Chapter
+3 is Ironwood/Copperwood, Chapter 4 is Ashen March/Ashen March, and Chapter 5
+is Whispering Marsh/Sunken Marshes. Their level ranges and boss encounters are
+unchanged.
 
 The first version contains ten chapters with ten levels each. The design must
 allow more chapters to be added later without changing the screen navigation
@@ -77,8 +80,8 @@ The campaign screen must make it easy to understand:
   The page indicator uses the chapter's global number out of ten, not its
   index among currently visible pages.
 - The map uses the shared `CampaignMapViewport` center-crop transform for
-  both the image and normalized marker anchors. Chapters 1–3 resolve their
-  authored backgrounds. A missing map for Chapters 4–10 reuses the Green
+  both the image and normalized marker anchors. Chapters 1–4 resolve their
+  authored backgrounds. A missing map for Chapters 5–10 reuses the Green
   Frontier background and local anchor positions, remapping anchor level IDs
   to the selected chapter's global level range. Marker kinds and states still
   come from the canonical chapter and progress projections.
@@ -405,17 +408,23 @@ as normalized anchors for global levels 11–20 in
 the larger boss sites correspond to local levels 5 and 10. The source and
 runtime images must remain byte-identical.
 
-### Chapter 3 approved map and anchors
+### Chapter 3 and 4 approved maps and anchors
 
-The supplied Ashen March background is stored at
-`assets_src/campaign/chapter-maps/campaign_chapter_03_ashen_march_map.png`
+The supplied Copperwood map for Chapter 3 is stored at
+`assets_src/campaign/chapter-maps/campaign_chapter_03_ironwood_map.png`
 and imported unchanged into
-`android-app/src/main/res/drawable-nodpi/campaign_chapter_03_ashen_march_map.png`.
+`android-app/src/main/res/drawable-nodpi/campaign_chapter_03_ironwood_map.png`.
 Its source dimensions are 1672 × 941 pixels. Its ten site positions are stored
 as normalized anchors for global levels 21–30 in
-`game-campaign/src/main/resources/campaign-map-layouts/ashen_march.json`;
-the larger boss sites correspond to local levels 5 and 10. The source and
-runtime images must remain byte-identical.
+`game-campaign/src/main/resources/campaign-map-layouts/ironwood.json`; boss
+sites remain 25 and 30.
+
+The original Ashen March map is now Chapter 4's artwork at
+`assets_src/campaign/chapter-maps/campaign_chapter_04_ashen_march_map.png`
+and `android-app/src/main/res/drawable-nodpi/campaign_chapter_04_ashen_march_map.png`.
+It retains its original normalized site positions, remapped to global levels
+31–40 in `game-campaign/src/main/resources/campaign-map-layouts/ashen_march.json`;
+boss sites remain 35 and 40. Both source/runtime pairs must remain byte-identical.
 
 Transparent 256 × 256 navigation arrow artwork is available at
 `assets_src/campaign/ui/campaign_map_nav_arrow_left.png` and
@@ -485,7 +494,7 @@ state is required. The screen does not mutate `CampaignProgress` or
 - A chapter with no following chapter has no next-preview page.
 - If all campaign levels are complete, all completed chapters remain
   navigable and the last chapter is the initial selection.
-- Missing chapter map artwork for Chapters 4–10 uses the explicit
+- Missing chapter map artwork for Chapters 5–10 uses the explicit
   presentation-only Green Frontier fallback. Invalid layout data and storage
   failures remain errors rather than falling back.
 - Anchor placement and marker touch targets are checked for every approved
@@ -516,7 +525,7 @@ state is required. The screen does not mutate `CampaignProgress` or
    current chapter, chapter completion state, and ten level-marker states.
 4. **Implemented for available artwork.** The shared campaign layout repository
    provides ten global level anchors; Android maps background asset keys to
-   drawables and renders fortress/boss markers for Chapters 1–3. Chapters 4–10
+   drawables and renders fortress/boss markers for Chapters 1–4. Chapters 5–10
    currently use the Green Frontier map and anchors as an Android-only
    presentation fallback.
 5. **Implemented.** `CampaignScreen` renders the completed/current/next-preview
@@ -640,7 +649,7 @@ simulation are expected to remain unchanged.
   level.
 - Arrows and horizontal swipes navigate only between the visible chapter
   pages; the page indicator shows the chapter's global position out of ten.
-- Chapters 4–10 use the Green Frontier background and normalized anchors only
+- Chapters 5–10 use the Green Frontier background and normalized anchors only
   as a presentation fallback. The selected chapter retains its own global
   marker levels, boss positions, title, and progression state.
 - The current page marks exactly the unlocked, incomplete level as selectable;
@@ -652,7 +661,7 @@ simulation are expected to remain unchanged.
 - Opening/resuming the campaign selects the current chapter; changing pages
   does not add entries to `AppNavigator`'s Back stack or persist a chapter.
 - CampaignScreen has no decorative perimeter frame, chapter thumbnail strip,
-  or list fallback for chapters 4–10.
+  or list fallback for chapters 5–10.
 - Every level in the selected chapter has exactly one finite, normalized
   anchor in bounds and mapped to its global campaign level ID. Overlapping
   rendered marker bounds produce a Studio warning but do not block saving.

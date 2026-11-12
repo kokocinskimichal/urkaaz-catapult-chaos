@@ -41,7 +41,7 @@ class UnitDeathAnimationClockTest {
 
     private fun unit(entityId: String, teamLabel: String = "BLUE") = UnitRenderState(
         entityId = entityId,
-        teamLabel = teamLabel,
+        team = com.urkaaaz.contracts.Team.valueOf(teamLabel),
         unitType = "DEFENDER",
         x = 0f,
         y = 0f,
@@ -128,7 +128,7 @@ class UnitDeathAnimationRetentionTest {
 
     private fun defender(entityId: String, teamLabel: String) = UnitRenderState(
         entityId = entityId,
-        teamLabel = teamLabel,
+        team = com.urkaaaz.contracts.Team.valueOf(teamLabel),
         unitType = "DEFENDER",
         x = 0f,
         y = 0f,
@@ -148,7 +148,7 @@ class UnitDeathAnimationRetentionTest {
     private fun unit(entityId: String, teamLabel: String, unitType: String) =
         UnitRenderState(
             entityId = entityId,
-            teamLabel = teamLabel,
+            team = com.urkaaaz.contracts.Team.valueOf(teamLabel),
             unitType = unitType,
             x = 0f,
             y = 0f,

@@ -83,7 +83,7 @@ class SapperBombFlightClockTest {
         val sapper = sapper(targetId = "red-bastion")
         val bastion = RunicBastionRenderState(
             entityId = "red-bastion",
-            teamLabel = "RED",
+            team = Team.RED,
             centerX = 6_300f,
             centerY = 3_300f,
             foundationY = 3_408f,
@@ -180,6 +180,29 @@ class SapperBombFlightClockTest {
         assertEquals(0, launch.frameIndex)
     }
 
+    @Test
+    fun resolvesFortressTeamFromSnapshotMappingForArbitraryEntityIds() {
+        val clock = SapperBombFlightClock()
+        val sapper = sapper(targetId = "enemy-keep")
+        val beforeRelease = renderState(units = listOf(sapper)).copy(
+            fortressTeamsByEntityId = mapOf("enemy-keep" to Team.RED),
+        )
+        clock.update(beforeRelease, nowMilliseconds = 1_000L, impactFrameCount = 32)
+
+        val release = beforeRelease.copy(
+            units = listOf(sapper.copy(sapperHasBomb = false)),
+        )
+        clock.update(release, nowMilliseconds = 1_100L, impactFrameCount = 32)
+        val halfway = clock.update(
+            release,
+            nowMilliseconds = 1_350L,
+            impactFrameCount = 32,
+        ).flights.single()
+        val targetX = release.redFortressX + FortressHitboxProfile.rectangles.first().left
+
+        assertEquals((sapper.x + 12f + targetX) / 2f, halfway.x, 0.01f)
+    }
+
     private fun renderState(
         units: List<UnitRenderState>,
         runicBastions: List<RunicBastionRenderState> = emptyList(),
@@ -237,12 +260,16 @@ class SapperBombFlightClockTest {
         windDirection = 0f,
         combatFeedback = emptyList(),
         matchId = "test-match",
+        fortressTeamsByEntityId = mapOf(
+            "blue-fortress" to Team.BLUE,
+            "red-fortress" to Team.RED,
+        ),
         isPaused = isPaused,
     )
 
     private fun sapper(targetId: String = "red-fortress") = UnitRenderState(
         entityId = "blue-sapper",
-        teamLabel = "BLUE",
+        team = Team.BLUE,
         unitType = "SAPPER",
         x = 6_000f,
         y = 3_600f,

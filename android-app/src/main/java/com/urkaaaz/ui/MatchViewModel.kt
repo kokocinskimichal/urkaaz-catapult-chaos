@@ -5,6 +5,7 @@ import com.urkaaaz.campaign.DemoLevelDefinition
 import com.urkaaaz.campaign.DemoLevelDefinitions
 import com.urkaaaz.campaign.MapDefinitionRepository
 import com.urkaaaz.application.LocalMatchGateway
+import com.urkaaaz.application.LocalMatchGatewayConfiguration
 import com.urkaaaz.application.MatchReplay
 import com.urkaaaz.application.campaign.BundledCampaignBalance
 import com.urkaaaz.application.reward.LevelRewardResult
@@ -17,6 +18,8 @@ import com.urkaaaz.application.shop.MatchStockSettlementRejection
 import com.urkaaaz.application.shop.MatchStockSettlementResult
 import com.urkaaaz.application.shop.MatchStockSettlementUseCase
 import com.urkaaaz.application.shop.MatchStockUsageTracker
+import com.urkaaaz.application.tutorial.TutorialPlayerActionKind
+import com.urkaaaz.application.tutorial.TutorialScenarioFacts
 import com.urkaaaz.android.R
 import com.urkaaaz.contracts.CommandId
 import com.urkaaaz.contracts.CommandResult
@@ -32,10 +35,7 @@ import com.urkaaaz.contracts.PlayerLoadoutConfig
 import com.urkaaaz.contracts.MatchScenario
 import com.urkaaaz.contracts.Team
 import com.urkaaaz.contracts.TerrainBiome
-import com.urkaaaz.simulation.CombatLogSink
-import com.urkaaaz.simulation.NoOpCombatLogSink
-import com.urkaaaz.simulation.AmmunitionLogSink
-import com.urkaaaz.simulation.NoOpAmmunitionLogSink
+import java.util.Locale
 
 /**
  * Presentation coordinator for one Android match screen.
@@ -52,8 +52,6 @@ class MatchViewModel(
     private val stockSettlementUseCase: MatchStockSettlementUseCase? = null,
     private val loadoutCatalog: LoadoutCatalog = LoadoutCatalog.bundled(),
     mapRepository: MapDefinitionRepository = MapDefinitionRepository.bundled,
-    private val combatLogSink: CombatLogSink = NoOpCombatLogSink,
-    private val ammunitionLogSink: AmmunitionLogSink = NoOpAmmunitionLogSink,
     private val matchId: MatchId = MatchId("local-match"),
     private val playerId: PlayerId = playerLoadout?.playerId ?: PlayerId("local-player"),
     private val onMatchFinished: (Int, MatchEvent.MatchFinished) -> Unit = { _, _ -> },
@@ -67,26 +65,53 @@ class MatchViewModel(
         if (demoMode || testMode) null else RewardTracker(campaignLevel),
     private val stockUsageTracker: MatchStockUsageTracker? =
         if (demoMode || testMode) null else playerInventory?.let(::MatchStockUsageTracker),
-    private val gateway: LocalMatchGateway = LocalMatchGateway(
-        loadSelectedDefinition(campaignLevel, demoMode, mapRepository).biome.name,
-        loadSelectedDefinition(campaignLevel, demoMode, mapRepository).initialWind,
-        mapDefinition = loadSelectedDefinition(campaignLevel, demoMode, mapRepository).mapDefinition,
-        scenario = loadSelectedScenario(
-            campaignLevel,
-            demoMode,
-            mapRepository,
-            playerLoadout,
-            playerId,
-            loadoutCatalog,
-            playerInventory,
-        ),
-        blueFortressMaxHealth =
-            loadoutCatalog.demoBlueFortressMaximumHealth.takeIf { demoMode },
-        combatLogSink = combatLogSink,
-        ammunitionLogSink = ammunitionLogSink,
-        eventObserver = CompositeMatchEventObserver(
-            listOfNotNull(rewardTracker, stockUsageTracker)
-                .ifEmpty { listOf(MatchEventObserver { }) },
+    private val gatewayFactory: (LocalMatchGatewayConfiguration) -> LocalMatchGateway = { configuration ->
+        LocalMatchGateway(
+            terrainBiome = configuration.terrainBiome,
+            initialWind = configuration.initialWind,
+            mapDefinition = configuration.mapDefinition,
+            scenario = configuration.scenario,
+            blueFortressMaxHealth = configuration.blueFortressMaxHealth,
+            playerTeams = configuration.playerTeams,
+            eventObserver = configuration.eventObserver,
+        )
+    },
+    private val gateway: LocalMatchGateway = gatewayFactory(
+        LocalMatchGatewayConfiguration(
+            terrainBiome = loadSelectedDefinition(
+                campaignLevel,
+                demoMode,
+                mapRepository,
+            ).biome.name,
+            initialWind = loadSelectedDefinition(
+                campaignLevel,
+                demoMode,
+                mapRepository,
+            ).initialWind,
+            mapDefinition = loadSelectedDefinition(
+                campaignLevel,
+                demoMode,
+                mapRepository,
+            ).mapDefinition,
+            scenario = loadSelectedScenario(
+                campaignLevel,
+                demoMode,
+                mapRepository,
+                playerLoadout,
+                playerId,
+                loadoutCatalog,
+                playerInventory,
+            ),
+            blueFortressMaxHealth =
+                loadoutCatalog.demoBlueFortressMaximumHealth.takeIf { demoMode },
+            playerTeams = mapOf(
+                playerId to Team.BLUE,
+                PlayerId("local-ai") to Team.RED,
+            ),
+            eventObserver = CompositeMatchEventObserver(
+                listOfNotNull(rewardTracker, stockUsageTracker)
+                    .ifEmpty { listOf(MatchEventObserver { }) },
+            ),
         ),
     ),
 ) {
@@ -133,9 +158,13 @@ class MatchViewModel(
 
     private var commandSequence = 0
     private var matchGeneration = 0L
-    private var paused = false
+    private val pauseReasons = mutableSetOf<MatchPauseReason>()
+    private val aiPauseReasons = mutableSetOf<MatchPauseReason>()
+    private var tutorialLockedMechanicIds = emptySet<String>()
     private var selectedAmmunition = "ROCK"
     private val forwardedCampaignCompletions = mutableSetOf<Triple<Long, MatchId, EventId>>()
+    private val pendingTutorialEvents = mutableListOf<MatchEvent>()
+    private val pendingTutorialPlayerActions = mutableListOf<TutorialPlayerActionKind>()
     private var spellFeedbackLabel: Int? = null
     var renderState: RenderState = withProjectileBalance(RenderStateMapper.map(MatchSnapshot()))
         private set
@@ -143,6 +172,87 @@ class MatchViewModel(
     fun setAiAllowedUnitIds(unitIds: Set<String>) {
         gateway.setAiAllowedUnitIds(unitIds)
     }
+
+    fun setAiAllowedAmmunitionIds(ammunitionIds: Set<String>) {
+        gateway.setAiAllowedAmmunitionIds(ammunitionIds)
+    }
+
+    fun aiUnitAutomationEnabled(): Boolean = gateway.aiUnitAutomationEnabled()
+
+    fun setTutorialSimulationPaused(paused: Boolean) {
+        val changed = if (paused) {
+            pauseReasons.add(MatchPauseReason.TUTORIAL)
+        } else {
+            pauseReasons.remove(MatchPauseReason.TUTORIAL)
+        }
+        if (changed) renderState = withPausePresentation(renderState)
+    }
+
+    fun setTutorialAiSuspended(suspended: Boolean) {
+        val changed = if (suspended) {
+            aiPauseReasons.add(MatchPauseReason.TUTORIAL)
+        } else {
+            aiPauseReasons.remove(MatchPauseReason.TUTORIAL)
+        }
+        if (!changed) return
+        if (suspended) {
+            gateway.suspendAi()
+        } else if (aiPauseReasons.isEmpty()) {
+            gateway.resumeAi()
+        }
+    }
+
+    fun setTutorialLockedMechanics(mechanicIds: Set<String>) {
+        tutorialLockedMechanicIds = mechanicIds.toSet()
+        renderState = renderState.copy(tutorialLockedMechanicIds = tutorialLockedMechanicIds)
+    }
+
+    fun tutorialScenarioFacts(): TutorialScenarioFacts {
+        val scenario = campaignScenario
+        val availableUnits = scenario?.let { current ->
+            current.playerLoadout?.unitTypes
+                ?.filter { it in current.availableUnits }
+                ?: current.availableUnits
+        }.orEmpty().toSet()
+        val availableAmmunition = scenario?.let { current ->
+            current.playerLoadout?.ammunitionSlots
+                ?.filterNotNull()
+                ?.filter { it in current.availableAmmunition }
+                ?: current.availableAmmunition
+        }.orEmpty().toSet()
+        val availableSpells = scenario?.let { current ->
+            current.playerLoadout?.spellTypes
+                ?.filter { it in current.availableSpells }
+                ?: current.availableSpells
+        }.orEmpty().toSet()
+        return TutorialScenarioFacts(
+            campaignLevel = campaignLevel.takeUnless { demoMode || testMode },
+            availableMechanicIds = buildSet {
+                availableUnits.forEach { add("unit.${it.lowercase(Locale.ROOT)}") }
+                if (availableUnits.isNotEmpty()) add("unit.send_wave")
+                availableAmmunition
+                    .forEach { add("ammunition.${it.lowercase(Locale.ROOT)}") }
+                availableSpells.forEach { add("spell.${it.lowercase(Locale.ROOT)}") }
+                scenario?.bossEncounter?.let {
+                    add("boss.${it.profileId.lowercase(Locale.ROOT)}")
+                }
+            },
+            availableUnits = availableUnits,
+            availableAmmunition = availableAmmunition,
+            availableSpells = availableSpells,
+            bossPresent = scenario?.bossEncounter != null,
+        )
+    }
+
+    fun tutorialMatchGeneration(): Long = matchGeneration
+
+    fun tutorialMatchId(): String? = gateway.snapshot().matchId?.value
+
+    fun consumeTutorialEvents(): List<MatchEvent> =
+        pendingTutorialEvents.toList().also { pendingTutorialEvents.clear() }
+
+    fun consumeTutorialPlayerActions(): List<TutorialPlayerActionKind> =
+        pendingTutorialPlayerActions.toList().also { pendingTutorialPlayerActions.clear() }
 
     fun aiAllowedUnitIds(): Set<String> =
         gateway.aiAllowedUnitIds()
@@ -197,13 +307,17 @@ class MatchViewModel(
                 return mapRenderState(currentSnapshot, gateway.consumeEvents())
                     .also { renderState = it }
             }
+            if (pauseReasons.isNotEmpty()) return withPausePresentation(renderState)
         }
         if (action == MatchUiAction.FireRock && !selectedAmmunitionIsAvailable()) {
             return renderState
         }
+        var acceptedTutorialPlayerAction: TutorialPlayerActionKind? = null
+        var acceptedCommandEvents = emptyList<MatchEvent>()
         var snapshot = when (action) {
             MatchUiAction.StartMatch -> {
-                paused = false
+                pauseReasons.clear()
+                aiPauseReasons.clear()
                 matchGeneration += 1L
                 spellFeedbackLabel = null
                 gateway.dispatch(
@@ -214,14 +328,20 @@ class MatchViewModel(
                     ),
                 )
             }
-            MatchUiAction.FireRock -> gateway.dispatch(
-                MatchCommand.Fire(
+            MatchUiAction.FireRock -> {
+                val result = gateway.dispatchResult(
+                    MatchCommand.Fire(
                     commandId = CommandId("ui-${++commandSequence}"),
                     matchId = matchId,
                     playerId = playerId,
                     catapultId = com.urkaaaz.contracts.EntityId("blue-catapult"),
-                ),
-            )
+                    ),
+                )
+                if (result is CommandResult.Accepted) {
+                    acceptedTutorialPlayerAction = TutorialPlayerActionKind.FIRE
+                }
+                gateway.snapshot()
+            }
             MatchUiAction.AdvanceSimulation -> gateway.dispatch(
                 MatchCommand.AdvanceSimulation(
                     commandId = CommandId("ui-${++commandSequence}"),
@@ -231,13 +351,17 @@ class MatchViewModel(
                 ),
             )
             MatchUiAction.TogglePause -> {
-                paused = !paused
-                if (paused) gateway.pause() else gateway.resume()
-                return renderState.copy(
-                    statusLabel = if (paused) "PAUSED" else "RUNNING",
-                    isPaused = paused,
-                )
-                    .also { renderState = it }
+                if (MatchPauseReason.USER in pauseReasons) {
+                    pauseReasons.remove(MatchPauseReason.USER)
+                    aiPauseReasons.remove(MatchPauseReason.USER)
+                    gateway.resumeSimulation()
+                    if (aiPauseReasons.isEmpty()) gateway.resumeAi()
+                } else {
+                    pauseReasons.add(MatchPauseReason.USER)
+                    aiPauseReasons.add(MatchPauseReason.USER)
+                    gateway.pause()
+                }
+                return withPausePresentation(renderState)
             }
             MatchUiAction.Retreat -> gateway.dispatch(
                 MatchCommand.Surrender(
@@ -257,7 +381,7 @@ class MatchViewModel(
                 ),
             )
             is MatchUiAction.SelectAmmo -> {
-                val selected = gateway.dispatch(
+                val result = gateway.dispatchResult(
                     MatchCommand.SelectAmmo(
                         commandId = CommandId("ui-${++commandSequence}"),
                         matchId = matchId,
@@ -265,14 +389,18 @@ class MatchViewModel(
                         ammunitionType = action.ammunitionType,
                     ),
                 )
-                selectedAmmunition = action.ammunitionType
-                selected
+                if (result is CommandResult.Accepted) {
+                    selectedAmmunition = action.ammunitionType
+                    acceptedTutorialPlayerAction = TutorialPlayerActionKind.SELECT_AMMUNITION
+                    acceptedCommandEvents = result.events
+                }
+                gateway.snapshot()
             }
             is MatchUiAction.DeployUnit -> {
                 if (!gateway.canDeployUnit(com.urkaaaz.contracts.Team.BLUE, action.unitType)) {
                     return renderState
                 }
-                gateway.dispatch(
+                val result = gateway.dispatchResult(
                     MatchCommand.DeployUnit(
                         commandId = CommandId("ui-${++commandSequence}"),
                         matchId = matchId,
@@ -280,17 +408,29 @@ class MatchViewModel(
                         unitType = action.unitType,
                     ),
                 )
+                if (result is CommandResult.Accepted) {
+                    acceptedTutorialPlayerAction = TutorialPlayerActionKind.DEPLOY_UNIT
+                    acceptedCommandEvents = result.events
+                }
+                gateway.snapshot()
             }
-            MatchUiAction.SendWave -> gateway.dispatch(
-                MatchCommand.SendWave(
-                    commandId = CommandId("ui-${++commandSequence}"),
-                    matchId = matchId,
-                    playerId = playerId,
-                ),
-            )
+            MatchUiAction.SendWave -> {
+                val result = gateway.dispatchResult(
+                    MatchCommand.SendWave(
+                        commandId = CommandId("ui-${++commandSequence}"),
+                        matchId = matchId,
+                        playerId = playerId,
+                    ),
+                )
+                if (result is CommandResult.Accepted) {
+                    acceptedTutorialPlayerAction = TutorialPlayerActionKind.SEND_WAVE
+                    acceptedCommandEvents = result.events
+                }
+                gateway.snapshot()
+            }
             is MatchUiAction.CastSpell -> return dispatchSpell(action.spellType)
         }
-        var presentationEvents = gateway.consumeEvents()
+        var presentationEvents = acceptedCommandEvents + gateway.consumeEvents()
         if (action == MatchUiAction.AdvanceSimulation &&
             snapshot.status == com.urkaaaz.contracts.MatchStatus.RUNNING
         ) {
@@ -299,7 +439,10 @@ class MatchViewModel(
                 presentationEvents += gateway.consumeEvents()
             }
         }
-        return mapRenderState(snapshot, presentationEvents).also { renderState = it }
+        val mapped = mapRenderState(snapshot, presentationEvents)
+        acceptedTutorialPlayerAction?.let(pendingTutorialPlayerActions::add)
+        renderState = mapped
+        return mapped
     }
 
     private fun mapRenderState(
@@ -307,6 +450,9 @@ class MatchViewModel(
         events: List<MatchEvent> = emptyList(),
     ): RenderState {
         forwardCampaignCompletionEvents(events)
+        if (events.isNotEmpty()) {
+            pendingTutorialEvents += events
+        }
         val mapped = RenderStateMapper.map(snapshot, events)
         val rewardFeedback = rewardTracker?.consumeNotifications().orEmpty().map { notification ->
             CombatFeedbackRenderState(
@@ -317,12 +463,23 @@ class MatchViewModel(
                 goldAmount = notification.gold,
             )
         }
-        return withProjectileBalance(mapped.copy(
+        return withPausePresentation(withProjectileBalance(mapped.copy(
             matchGeneration = matchGeneration,
             selectedAmmunitionType = selectedAmmunition,
             spellFeedbackLabel = spellFeedbackLabel,
             combatFeedback = mapped.combatFeedback + rewardFeedback,
-        ))
+        )))
+    }
+
+    private fun withPausePresentation(state: RenderState): RenderState {
+        val paused = pauseReasons.isNotEmpty() &&
+            state.statusLabel != com.urkaaaz.contracts.MatchStatus.FINISHED.name
+        return state.copy(
+            statusLabel = if (paused) "PAUSED" else {
+                if (state.statusLabel == "PAUSED") "RUNNING" else state.statusLabel
+            },
+            isPaused = paused,
+        )
     }
 
     private fun withProjectileBalance(state: RenderState): RenderState {
@@ -344,6 +501,7 @@ class MatchViewModel(
             projectileWindResponse = ammunition.windResponse,
             projectileGravityResponse = ammunition.gravityResponse,
             projectileDrag = ammunition.drag,
+            tutorialLockedMechanicIds = tutorialLockedMechanicIds,
         )
     }
 
@@ -360,6 +518,7 @@ class MatchViewModel(
         val events = when (result) {
             is CommandResult.Accepted -> {
                 spellFeedbackLabel = R.string.match_spell_feedback_cast
+                pendingTutorialPlayerActions += TutorialPlayerActionKind.CAST_SPELL
                 result.events
             }
             is CommandResult.Rejected -> {
@@ -410,7 +569,8 @@ class MatchViewModel(
         val settlement = settleStockUsage()
         if (settlement != null && !settlement.isSuccessful()) return settlement
 
-        paused = false
+        pauseReasons.clear()
+        aiPauseReasons.clear()
         matchGeneration += 1L
         selectedAmmunition = "ROCK"
         spellFeedbackLabel = null
@@ -455,6 +615,11 @@ class MatchViewModel(
     private fun selectedAmmunitionIsAvailable(): Boolean =
         renderState.playerAmmunition[selectedAmmunition]?.let { it > 0 } ?: true
 
+}
+
+private enum class MatchPauseReason {
+    USER,
+    TUTORIAL,
 }
 
 private fun loadSelectedDefinition(

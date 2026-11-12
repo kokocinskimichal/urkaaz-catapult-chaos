@@ -12,6 +12,7 @@ import android.widget.LinearLayout
 import android.widget.TextView
 import com.urkaaaz.android.R
 import com.urkaaaz.application.loadout.LoadoutCatalog
+import java.util.Locale
 
 class UnitPanelView(
     context: Context,
@@ -107,8 +108,11 @@ class UnitPanelView(
     fun render(state: RenderState) {
         supplyGauge.setSupply(state.playerSupply)
         buttons.forEach { (option, button) ->
+            val locked = "unit.${option.type.lowercase(Locale.ROOT)}" in
+                state.tutorialLockedMechanicIds
             val enabled = state.statusLabel == "RUNNING" &&
                 state.outcomeLabel == null &&
+                !locked &&
                 state.playerSupply >= option.supplyCost
             button.isEnabled = enabled
             button.alpha = if (enabled) 1f else 0.38f
@@ -125,10 +129,19 @@ class UnitPanelView(
         }
         val canSendWave = state.statusLabel == "RUNNING" &&
             state.outcomeLabel == null &&
+            "unit.send_wave" !in state.tutorialLockedMechanicIds &&
             state.units.any { it.teamLabel == "BLUE" }
         sendWaveButton.isEnabled = canSendWave
         sendWaveButton.alpha = if (canSendWave) 1f else 0.38f
     }
+
+    fun tutorialTargetView(targetId: String): View? =
+        when (targetId) {
+            "match.units" -> buttons.values.firstOrNull()
+            "match.supply" -> supplyGauge
+            "match.send_wave" -> sendWaveButton
+            else -> null
+        }
 
     private fun unitSlot(option: UnitOption, button: ImageButton): View =
         LinearLayout(context).apply {

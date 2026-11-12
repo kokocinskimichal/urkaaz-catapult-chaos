@@ -55,15 +55,8 @@ import com.urkaaaz.domain.UnitActionState
 import com.urkaaaz.domain.UnitStatus
 import com.urkaaaz.domain.FriendlyFirePolicy
 import kotlin.math.min
-import kotlin.math.abs
 import kotlin.math.sqrt
 import kotlin.random.Random
-
-private data class ProjectileCollisionCandidate(
-    val fraction: Float,
-    val firstId: EntityId,
-    val secondId: EntityId,
-)
 
 private data class RunicBastionDestructionBlocker(
     val bastion: RunicBastion,
@@ -189,6 +182,26 @@ class DeterministicMatchSimulation(
             }
         }
     private val pendingEvents = mutableListOf<MatchEvent>()
+    private val opposingProjectileCollisionSystem = OpposingProjectileCollisionSystem(
+        maxStepSeconds = TERRAIN_COLLISION_SAMPLE_SECONDS,
+        apexTimeEpsilonSeconds = APEX_TIME_EPSILON_SECONDS,
+        operations = ProjectileCollisionOperations(
+            timeToApex = ::timeToApex,
+            fragmentAtApex = ::fragmentAtApex,
+            advanceProjectileSet = ::advanceProjectileSet,
+            advanceProjectilePhysics = ::advanceProjectilePhysics,
+            collisionRadius = { projectile ->
+                config.balance.ammunition.definition(projectile.ammunition)
+                    .collision.hitRadius
+            },
+            onCollision = { projectileId ->
+                emitProjectileResolved(
+                    projectileId,
+                    ProjectileResolution.PROJECTILE_COLLISION,
+                )
+            },
+        ),
+    )
     private var lingeringEffects = emptyList<LingeringEffect>()
     private val combatRandom = Random(config.combatRandomSeed)
     private val combatLuckByUnit = mutableMapOf<EntityId, Float>()
@@ -709,7 +722,7 @@ class DeterministicMatchSimulation(
         if (projectiles.any { it.firedBy == Team.BLUE } &&
             projectiles.any { it.firedBy == Team.RED }
         ) {
-            advanceProjectilesWithOpposingCollisions(deltaSeconds)
+            opposingProjectileCollisionSystem.advance(projectiles, deltaSeconds)
         } else {
             advanceProjectilesIndependently(deltaSeconds)
         }
@@ -738,113 +751,6 @@ class DeterministicMatchSimulation(
         return resolved
     }
 
-    private fun advanceProjectilesWithOpposingCollisions(
-        deltaSeconds: Float,
-    ): List<Projectile> {
-        var active = buildList {
-            projectiles.forEach { addAll(fragmentAtApex(it)) }
-        }
-        val nonStoppingTargetIds = active.associate { it.id to mutableSetOf<EntityId>() }
-            .toMutableMap()
-        var remainingSeconds = deltaSeconds.coerceAtLeast(0f)
-        var processZeroTimeStep = deltaSeconds == 0f
-
-        while (remainingSeconds > 0f || processZeroTimeStep) {
-            val maximumStep = if (processZeroTimeStep) {
-                0f
-            } else {
-                min(remainingSeconds, TERRAIN_COLLISION_SAMPLE_SECONDS)
-            }
-            val apexTimes = active.mapNotNull { projectile ->
-                timeToApex(projectile, maximumStep)?.let { projectile.id to it }
-            }
-            val earliestApexTime = apexTimes.minOfOrNull { it.second }
-            val stepSeconds = earliestApexTime
-                ?.let { min(it, maximumStep) }
-                ?.takeIf { it > 0f }
-                ?: maximumStep
-            val splitAtStepEnd = apexTimes
-                .filter { (_, apexTime) ->
-                    abs(apexTime - stepSeconds) <= APEX_TIME_EPSILON_SECONDS
-                }
-                .mapTo(mutableSetOf()) { it.first }
-            var segmentRemainingSeconds = stepSeconds
-            var processZeroTimeSegment = processZeroTimeStep
-            while (segmentRemainingSeconds > 0f || processZeroTimeSegment) {
-                if (active.isEmpty()) break
-                val collision = earliestProjectileCollision(
-                    active,
-                    segmentRemainingSeconds,
-                )
-                if (collision == null) {
-                    active = advanceProjectileSet(
-                        active,
-                        segmentRemainingSeconds,
-                        nonStoppingTargetIds,
-                    )
-                    segmentRemainingSeconds = 0f
-                    processZeroTimeSegment = false
-                    break
-                }
-
-                val collisionTravelSeconds =
-                    segmentRemainingSeconds * collision.fraction
-                if (collisionTravelSeconds > 0f) {
-                    active = advanceProjectileSet(
-                        active,
-                        collisionTravelSeconds,
-                        nonStoppingTargetIds,
-                    )
-                    segmentRemainingSeconds =
-                        (segmentRemainingSeconds - collisionTravelSeconds).coerceAtLeast(0f)
-                }
-                val activeIds = active.mapTo(mutableSetOf(), Projectile::id)
-                if (collision.firstId in activeIds && collision.secondId in activeIds) {
-                    active = active.filterNot {
-                        it.id == collision.firstId || it.id == collision.secondId
-                    }
-                    nonStoppingTargetIds.remove(collision.firstId)
-                    nonStoppingTargetIds.remove(collision.secondId)
-                    emitProjectileResolved(
-                        collision.firstId,
-                        ProjectileResolution.PROJECTILE_COLLISION,
-                    )
-                    emitProjectileResolved(
-                        collision.secondId,
-                        ProjectileResolution.PROJECTILE_COLLISION,
-                    )
-                }
-            }
-
-            if (splitAtStepEnd.isNotEmpty()) {
-                val splitProjectiles = mutableListOf<Projectile>()
-                active.forEach { projectile ->
-                    if (projectile.id !in splitAtStepEnd) {
-                        splitProjectiles += projectile
-                    } else {
-                        nonStoppingTargetIds.remove(projectile.id)
-                        val parentAtApex = projectile.copy(
-                            velocity = projectile.velocity.copy(y = 0f),
-                        )
-                        val fragments = fragmentAtApex(parentAtApex)
-                        splitProjectiles += fragments
-                        fragments.forEach { fragment ->
-                            nonStoppingTargetIds[fragment.id] = mutableSetOf()
-                        }
-                    }
-                }
-                active = splitProjectiles
-            }
-
-            if (processZeroTimeStep) {
-                processZeroTimeStep = false
-            } else {
-                remainingSeconds = (remainingSeconds - stepSeconds).coerceAtLeast(0f)
-            }
-        }
-        return active
-    }
-
     private fun advanceProjectileSet(
         projectiles: List<Projectile>,
         deltaSeconds: Float,
@@ -864,76 +770,6 @@ class DeterministicMatchSimulation(
                 add(next)
             }
         }
-    }
-
-    private fun earliestProjectileCollision(
-        projectiles: List<Projectile>,
-        deltaSeconds: Float,
-    ): ProjectileCollisionCandidate? {
-        val advancedById = projectiles.associate { projectile ->
-            projectile.id to advanceProjectilePhysics(projectile, deltaSeconds)
-        }
-        val candidates = mutableListOf<ProjectileCollisionCandidate>()
-        for (firstIndex in projectiles.indices) {
-            val first = projectiles[firstIndex]
-            val advancedFirst = advancedById.getValue(first.id)
-            val firstRadius = config.balance.ammunition.definition(first.ammunition)
-                .collision.hitRadius
-            for (secondIndex in firstIndex + 1 until projectiles.size) {
-                val second = projectiles[secondIndex]
-                if (first.firedBy == second.firedBy) continue
-                val advancedSecond = advancedById.getValue(second.id)
-                val secondRadius = config.balance.ammunition.definition(second.ammunition)
-                    .collision.hitRadius
-                val fraction = sweptProjectileCollisionFraction(
-                    firstStart = first.position,
-                    firstEnd = advancedFirst.position,
-                    firstRadius = firstRadius,
-                    secondStart = second.position,
-                    secondEnd = advancedSecond.position,
-                    secondRadius = secondRadius,
-                ) ?: continue
-                val orderedIds = listOf(first.id, second.id).sortedBy(EntityId::value)
-                candidates += ProjectileCollisionCandidate(
-                    fraction = fraction,
-                    firstId = orderedIds[0],
-                    secondId = orderedIds[1],
-                )
-            }
-        }
-
-        return candidates.minWithOrNull(
-            compareBy<ProjectileCollisionCandidate>(
-                ProjectileCollisionCandidate::fraction,
-                { it.firstId.value },
-                { it.secondId.value },
-            ),
-        )
-    }
-
-    private fun sweptProjectileCollisionFraction(
-        firstStart: WorldPosition,
-        firstEnd: WorldPosition,
-        firstRadius: Float,
-        secondStart: WorldPosition,
-        secondEnd: WorldPosition,
-        secondRadius: Float,
-    ): Float? {
-        val startX = firstStart.x - secondStart.x
-        val startY = firstStart.y - secondStart.y
-        val deltaX = (firstEnd.x - firstStart.x) - (secondEnd.x - secondStart.x)
-        val deltaY = (firstEnd.y - firstStart.y) - (secondEnd.y - secondStart.y)
-        val radius = firstRadius + secondRadius
-        val c = startX * startX + startY * startY - radius * radius
-        if (c <= 0f) return 0f
-
-        val a = deltaX * deltaX + deltaY * deltaY
-        if (a <= 0f) return null
-        val b = 2f * (startX * deltaX + startY * deltaY)
-        val discriminant = b * b - 4f * a * c
-        if (discriminant < 0f) return null
-        val fraction = (-b - sqrt(discriminant)) / (2f * a)
-        return fraction.takeIf { it in 0f..1f }
     }
 
     private fun advanceProjectile(

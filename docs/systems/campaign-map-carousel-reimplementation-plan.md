@@ -34,7 +34,7 @@ recorded in the implementation prompt and campaign presentation documentation.
   poziomu autoryzowanego przez `CampaignSystem`.
 - Użyć nowo zaimportowanych
   `campaign_map_nav_arrow_left.png` i `campaign_map_nav_arrow_right.png`.
-- Rozdziały 1–3 zachowują własne mapy. Dla rozdziałów 4–10 ekran tymczasowo
+- Rozdziały 1–4 zachowują własne mapy. Dla rozdziałów 5–10 ekran tymczasowo
   używa tła Green Frontier, aż zostaną przygotowane ich mapy.
 - Styl HUD-u pozostaje lekki: małe, ciemne, półprzezroczyste powierzchnie,
   jasny tekst i oszczędne brązowe akcenty. Bez pergaminowej ramy, chorągwi,
@@ -51,7 +51,7 @@ recorded in the implementation prompt and campaign presentation documentation.
 - Kliknięcie dostępnego markera wybiera poziom, a `START LEVEL` nadal wywołuje
   `CampaignSystem.selectLevel` przed otwarciem Loadoutu.
 - Błędy odczytu progresji i layoutu pozostają jawne. Brak planowanej mapy
-  rozdziałów 4–10 jest obsługiwanym fallbackiem prezentacji; nieprawidłowy
+  rozdziałów 5–10 jest obsługiwanym fallbackiem prezentacji; nieprawidłowy
   layout lub błąd odczytu nie może być maskowany fallbackiem.
 - `CampaignMapLayoutRepository` pozostaje ścisłym repozytorium istniejących
   layoutów. Fallback Green Frontier jest wyłącznie warstwą Android UI; nie
@@ -86,7 +86,7 @@ Typ i status każdego markera nadal pochodzą z `CampaignChapterDefinition` i
 lokalne pozycje bossów 5 i 10 pozostają bossami dla każdego rozdziału.
 
 Fallback stosować wyłącznie do jawnego wyniku `MapArtworkMissing` dla
-rozdziałów 4–10. `INVALID_CHAPTER`, `INVALID_DATA` i
+rozdziałów 5–10. `INVALID_CHAPTER`, `INVALID_DATA` i
 `STORAGE_UNAVAILABLE` nadal prowadzą do istniejącego stanu błędu. Nie wpisywać
 fallbackowych layoutów do zasobów kampanii ani do Studio.
 
@@ -156,7 +156,7 @@ starego Chapter Strip:
 
 Zaktualizować `CampaignMapPresentationCatalogTest`: usunąć testy miniatur,
 pergaminu i ramek kart; dodać testy rozwiązywania pełnoekranowych map i
-fallbacku rozdziałów 4–10.
+fallbacku rozdziałów 5–10.
 
 Po sprawdzeniu wszystkich lokalizacji usunąć nieużywane stringi z EN/PL/ES:
 
@@ -233,8 +233,8 @@ decyzja obejmie czyszczenie archiwalnych źródeł.
   się, że podgląd nadal ma wyłącznie zablokowane poziomy.
 - `CampaignViewModelTest`: nawigacja do poprzedniej/następnej dostępnej strony,
   granice karuzeli, wybór markerów i zachowanie selekcji poziomu.
-- `CampaignMapPresentationCatalogTest`: właściwe tła rozdziałów 1–3,
-  fallback tła i kotwic Green Frontier dla rozdziałów 4–10, remapowanie
+- `CampaignMapPresentationCatalogTest`: właściwe tła rozdziałów 1–4,
+  fallback tła i kotwic Green Frontier dla rozdziałów 5–10, remapowanie
   lokalnych kotwic na globalne numery poziomów oraz jawne błędy dla
   nieprawidłowego layoutu.
 - `CampaignMapViewportTest`: markery pozostają wyrównane z kotwicami po
@@ -252,7 +252,7 @@ decyzja obejmie czyszczenie archiwalnych źródeł.
 - `START LEVEL` otwiera Loadout tylko dla autoryzowanego, dostępnego poziomu;
   zablokowany podgląd nie może rozpocząć meczu.
 - Błąd progresji lub layoutu pozostaje jawny; tylko `MapArtworkMissing` dla
-  rozdziałów 4–10 używa mapy Green Frontier.
+  rozdziałów 5–10 używa mapy Green Frontier.
 - Test Mode nadal pokazuje własny ekran i ramkę.
 - Studio Campaign preview/API nadal odczytuje ramkę i assety map.
 
@@ -273,7 +273,7 @@ aby nie pozostawić odwołań do starych assetów.
    ramki i bez paska miniatur.
 2. Rozdziały przewija się gestem lub strzałkami, w granicach stron
    dozwolonych przez istniejącą progresję.
-3. Rozdziały 4–10 używają mapy Green Frontier wyłącznie jako tymczasowego
+3. Rozdziały 5–10 używają mapy Green Frontier wyłącznie jako tymczasowego
    tła prezentacyjnego; ich tytuły, numeracja i statusy progresji pozostają
    właściwe dla danego rozdziału.
 4. Kotwice markerów są zgodne z użytym obrazem; typ boss/forteca pochodzi

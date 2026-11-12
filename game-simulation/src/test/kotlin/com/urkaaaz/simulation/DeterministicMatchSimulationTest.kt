@@ -84,6 +84,48 @@ class DeterministicMatchSimulationTest {
             ),
         )
 
+    private fun opposingProjectileSimulation(
+        matchId: String,
+        blueX: Float = 100f,
+        redX: Float = 900f,
+    ): DeterministicMatchSimulation {
+        val noGravityConfig = config.copy(
+            bounds = WorldBounds(width = 1_000f, height = 600f),
+            gravityAccelerationY = 0f,
+            windAccelerationX = 0f,
+        )
+        return DeterministicMatchSimulation(
+            matchId = MatchId(matchId),
+            config = noGravityConfig,
+            blueCatapult = Catapult(
+                id = EntityId("blue-catapult"),
+                team = Team.BLUE,
+                position = WorldPosition(blueX, 100f),
+                anchorPosition = WorldPosition(blueX, 100f),
+                aim = Aim(directionDegrees = 0f, power = 100f),
+            ),
+            redCatapult = Catapult(
+                id = EntityId("red-catapult"),
+                team = Team.RED,
+                position = WorldPosition(redX, 100f),
+                anchorPosition = WorldPosition(redX, 100f),
+                aim = Aim(directionDegrees = 0f, power = 100f),
+            ),
+            blueFortress = Fortress(
+                id = EntityId("blue-fortress"),
+                team = Team.BLUE,
+                center = WorldPosition(blueX, -500f),
+                maxHealth = fortressMaximumHealth,
+            ),
+            redFortress = Fortress(
+                id = EntityId("red-fortress"),
+                team = Team.RED,
+                center = WorldPosition(redX, -500f),
+                maxHealth = fortressMaximumHealth,
+            ),
+        )
+    }
+
     private fun balanceWithGameplaySpeed(multiplier: Float) =
         GameBalanceFixtures.balance.copy(
             runtime = GameBalanceFixtures.balance.runtime.copy(
@@ -113,41 +155,7 @@ class DeterministicMatchSimulationTest {
 
     @Test
     fun opposingProjectilesCollideAndBothDisappearWithoutImpactDamage() {
-        val noGravityConfig = config.copy(
-            bounds = WorldBounds(width = 1_000f, height = 600f),
-            gravityAccelerationY = 0f,
-            windAccelerationX = 0f,
-        )
-        val simulation = DeterministicMatchSimulation(
-            matchId = MatchId("opposing-projectile-collision"),
-            config = noGravityConfig,
-            blueCatapult = Catapult(
-                id = EntityId("blue-catapult"),
-                team = Team.BLUE,
-                position = WorldPosition(100f, 100f),
-                anchorPosition = WorldPosition(100f, 100f),
-                aim = Aim(directionDegrees = 0f, power = 100f),
-            ),
-            redCatapult = Catapult(
-                id = EntityId("red-catapult"),
-                team = Team.RED,
-                position = WorldPosition(900f, 100f),
-                anchorPosition = WorldPosition(900f, 100f),
-                aim = Aim(directionDegrees = 0f, power = 100f),
-            ),
-            blueFortress = Fortress(
-                id = EntityId("blue-fortress"),
-                team = Team.BLUE,
-                center = WorldPosition(100f, -500f),
-                maxHealth = fortressMaximumHealth,
-            ),
-            redFortress = Fortress(
-                id = EntityId("red-fortress"),
-                team = Team.RED,
-                center = WorldPosition(900f, -500f),
-                maxHealth = fortressMaximumHealth,
-            ),
-        )
+        val simulation = opposingProjectileSimulation("opposing-projectile-collision")
         simulation.start()
         val blueFire = simulation.fire(EntityId("blue-catapult"))
         val blueProjectileId = (blueFire.single() as MatchEvent.ProjectileFired).projectileId
@@ -162,6 +170,41 @@ class DeterministicMatchSimulationTest {
         assertTrue(simulation.snapshot().projectiles.isEmpty())
         assertTrue(events.none { it is MatchEvent.ProjectileHitEntity })
         assertTrue(events.none { it is MatchEvent.ProjectileHitTerrain })
+    }
+
+    @Test
+    fun opposingProjectileCollisionsAreDeterministicAcrossRuns() {
+        fun runCollisionTrace(): Pair<List<MatchEvent>, MatchSnapshot> {
+            val simulation = opposingProjectileSimulation("opposing-projectile-determinism")
+            simulation.start()
+            simulation.fire(EntityId("blue-catapult"))
+            simulation.fire(EntityId("red-catapult"))
+            val events = simulation.advance(1_000L)
+            return events to simulation.snapshot()
+        }
+
+        assertEquals(runCollisionTrace(), runCollisionTrace())
+    }
+
+    @Test
+    fun projectilesOverlappingAtTheStartResolveOnAZeroTimeStep() {
+        val simulation = opposingProjectileSimulation(
+            matchId = "opposing-projectile-zero-step",
+            blueX = 500f,
+            redX = 500f,
+        )
+        simulation.start()
+        simulation.fire(EntityId("blue-catapult"))
+        simulation.fire(EntityId("red-catapult"))
+
+        val events = simulation.advance(0L)
+
+        assertEquals(
+            2,
+            events.filterIsInstance<MatchEvent.ProjectileResolved>()
+                .count { it.reason == ProjectileResolution.PROJECTILE_COLLISION },
+        )
+        assertTrue(simulation.snapshot().projectiles.isEmpty())
     }
 
     @Test

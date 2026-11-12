@@ -8,6 +8,8 @@ import com.urkaaaz.contracts.MatchId
 import com.urkaaaz.contracts.MatchScenario
 import com.urkaaaz.contracts.MatchSnapshot
 import com.urkaaaz.contracts.WindSnapshot
+import com.urkaaaz.contracts.PlayerId
+import com.urkaaaz.contracts.Team
 import com.urkaaaz.simulation.SimulationConfig
 
 data class MatchReplay(
@@ -59,6 +61,7 @@ data class MatchReplayConfiguration(
     val balanceRevision: String? = null,
     val balanceContentHash: String? = null,
     val bossEncounterMatchDurationMilliseconds: Long,
+    val playerTeams: Map<PlayerId, Team> = emptyMap(),
 )
 
 data class MatchReplayResult(
@@ -76,6 +79,7 @@ object MatchReplayPlayer {
             initialWind = replay.configuration.initialWind,
             mapDefinition = replay.configuration.mapDefinition,
             scenario = replay.configuration.scenario,
+            playerTeams = replay.configuration.playerTeams,
             blueFortressMaxHealth = replay.configuration.blueFortressMaxHealth,
             redFortressMaxHealth = replay.configuration.redFortressMaxHealth,
             randomSeedProvider = { replay.randomSeed },

@@ -31,7 +31,7 @@ class CampaignMapPresentationCatalogTest {
         assertTrue(greenFrontier is CampaignMapLayoutRead.Available)
         val sourceLayout = (greenFrontier as CampaignMapLayoutRead.Available).layout
 
-        CampaignChapterRegistry.default().chapters.drop(3).forEach { chapter ->
+        CampaignChapterRegistry.default().chapters.drop(4).forEach { chapter ->
             val presentationRead = CampaignMapPresentationCatalog.forFallbackChapter(
                 chapter,
                 sourceLayout,
@@ -70,7 +70,23 @@ class CampaignMapPresentationCatalogTest {
     }
 
     @Test
-    fun ashenMarchLayoutUsesItsImportedCampaignMapDrawable() {
+    fun ironwoodLayoutUsesItsImportedCampaignMapDrawable() {
+        val layoutRead = CampaignMapLayoutRepository.bundled.load("ironwood")
+        assertTrue(layoutRead is CampaignMapLayoutRead.Available)
+
+        val presentationRead = CampaignMapPresentationCatalog.forLayout(
+            (layoutRead as CampaignMapLayoutRead.Available).layout,
+        )
+        assertTrue(presentationRead is CampaignMapPresentationRead.Available)
+        assertEquals(
+            R.drawable.campaign_chapter_03_ironwood_map,
+            (presentationRead as CampaignMapPresentationRead.Available)
+                .presentation.backgroundDrawable,
+        )
+    }
+
+    @Test
+    fun ashenMarchLayoutUsesItsImportedChapterFourCampaignMapDrawable() {
         val layoutRead = CampaignMapLayoutRepository.bundled.load("ashen_march")
         assertTrue(layoutRead is CampaignMapLayoutRead.Available)
 
@@ -79,7 +95,7 @@ class CampaignMapPresentationCatalogTest {
         )
         assertTrue(presentationRead is CampaignMapPresentationRead.Available)
         assertEquals(
-            R.drawable.campaign_chapter_03_ashen_march_map,
+            R.drawable.campaign_chapter_04_ashen_march_map,
             (presentationRead as CampaignMapPresentationRead.Available)
                 .presentation.backgroundDrawable,
         )

@@ -126,6 +126,14 @@ class MatchHudView(context: Context) : LinearLayout(context) {
     var onRetreatClicked: (() -> Unit)? = null
     var onPauseClicked: (() -> Unit)? = null
 
+    fun tutorialTargetView(targetId: String): View? =
+        when (targetId) {
+            "match.timer" -> timerText
+            "match.wind" -> windIndicator
+            "match.health" -> redHealth
+            else -> null
+        }
+
     fun render(state: RenderState) {
         timerText.text = formatMatchTime(state.matchTimeRemainingMilliseconds)
         val visible = state.statusLabel == "RUNNING" || state.statusLabel == "PAUSED"

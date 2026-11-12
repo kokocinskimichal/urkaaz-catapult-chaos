@@ -5,7 +5,7 @@
 **Implemented and validated.** This plan records the approved scope for
 durable, replay-safe campaign progress and milestone spell rewards. It does
 not replace `CampaignLevelDefinition`, `CampaignLevelRegistry`, the player
-profile, or the separate future `TutorialSystem`.
+profile, or the separately implemented TutorialSystem.
 
 ## Problem
 
@@ -32,7 +32,7 @@ placeholder UI.
 | Reward projection | Campaign rewards remain in CampaignProgress. The loadout read model unions campaign spell grants with profile unlocks; it does not create a second persisted spell-unlock record. |
 | New loadouts | A milestone may request its spell be preferred in the default loadout from its availability level. This preference applies only when no saved loadout exists for that level. Existing saved loadouts are preserved. |
 | Availability | Milestone definitions specify the completion level and the first campaign level where the spell is available. Haste is available from 6 and Heal from 8. Level scenario availability remains distinct from the player's actual unlock entitlement. |
-| Tutorials | Excluded completely from this implementation: no tutorial metadata in milestones, flags, tutorial UI, or tutorial progress. The future cross-game TutorialSystem may consume campaign milestone/completion signals. |
+| Tutorials | Campaign milestones store no tutorial flags or UI. Implemented TutorialSystem consumes newly applied milestone IDs through `CampaignMilestoneApplied` and owns all tutorial progress. |
 | Result presentation | Persist completion from the canonical match-finished event. Do not implement a new result screen or replace the existing match result presentation in this scope. |
 | Persistence | Local AndroidX Preferences DataStore adapter, sharing the existing DataStore backend while retaining a separate, versioned campaign namespace. No cloud sync or legacy-install migration. |
 

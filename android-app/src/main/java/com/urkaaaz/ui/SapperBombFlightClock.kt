@@ -2,6 +2,7 @@ package com.urkaaaz.ui
 
 import com.urkaaaz.contracts.FortressHitboxProfile
 import com.urkaaaz.contracts.SapperBombFlightTiming
+import com.urkaaaz.contracts.Team
 import com.urkaaaz.contracts.WorldScale
 import kotlin.math.PI
 import kotlin.math.atan2
@@ -156,7 +157,7 @@ class SapperBombFlightClock {
         val targetId = sapper.targetId ?: return null
         val bastion = state.runicBastions.firstOrNull { it.entityId == targetId }
         if (bastion != null) {
-            return if (bastion.teamLabel != sapper.teamLabel) {
+            return if (bastion.team != sapper.team) {
                 bastion.centerX to bastion.centerY
             } else {
                 null
@@ -167,23 +168,20 @@ class SapperBombFlightClock {
             return boss.x to (boss.groundY - boss.collisionHeight / 2f)
         }
 
-        val direction = when (sapper.teamLabel) {
-            "BLUE" -> 1f
-            "RED" -> -1f
-            else -> return null
-        }
-        val targetTeam = when {
-            targetId.startsWith("blue") -> "BLUE"
-            targetId.startsWith("red") -> "RED"
-            else -> return null
-        }
-        if (targetTeam == sapper.teamLabel) return null
+        val targetTeam = state.fortressTeamsByEntityId[targetId] ?: return null
+        if (targetTeam == sapper.team) return null
 
-        val targetX = if (targetTeam == "BLUE") state.blueFortressX else state.redFortressX
-        val foundationY = if (targetTeam == "BLUE") {
-            state.blueFortressFoundationY
-        } else {
-            state.redFortressFoundationY
+        val direction = when (sapper.team) {
+            Team.BLUE -> 1f
+            Team.RED -> -1f
+        }
+        val targetX = when (targetTeam) {
+            Team.BLUE -> state.blueFortressX
+            Team.RED -> state.redFortressX
+        }
+        val foundationY = when (targetTeam) {
+            Team.BLUE -> state.blueFortressFoundationY
+            Team.RED -> state.redFortressFoundationY
         }
         val hitbox = FortressHitboxProfile.rectangles.firstOrNull() ?: return null
         val frontFaceOffset = if (direction > 0f) hitbox.left else hitbox.right
@@ -195,7 +193,7 @@ class SapperBombFlightClock {
         when {
             sapper.facingDirection > 0f -> 1f
             sapper.facingDirection < 0f -> -1f
-            sapper.teamLabel == "BLUE" -> 1f
+            sapper.team == Team.BLUE -> 1f
             else -> -1f
         }
 

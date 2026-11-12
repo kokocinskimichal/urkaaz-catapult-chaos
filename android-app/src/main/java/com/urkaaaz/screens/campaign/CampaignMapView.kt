@@ -66,6 +66,8 @@ class CampaignMapView(
         }
     }
 
+    fun tutorialMarkerView(level: Int): View? = markerViews[level]
+
     override fun onSizeChanged(width: Int, height: Int, oldWidth: Int, oldHeight: Int) {
         super.onSizeChanged(width, height, oldWidth, oldHeight)
         if (width <= 0 || height <= 0) return

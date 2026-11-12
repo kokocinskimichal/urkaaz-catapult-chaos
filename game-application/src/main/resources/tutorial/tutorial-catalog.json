@@ -1,0 +1,203 @@
+{
+  "schemaVersion": 1,
+  "revision": "tutorial-1",
+  "registeredMechanicIds": [
+    "unit.defender",
+    "unit.sapper",
+    "unit.demolisher",
+    "unit.raging_boar",
+    "unit.slingmaster",
+    "unit.send_wave",
+    "ammunition.rock",
+    "ammunition.siege_bomb",
+    "ammunition.powder_barrel",
+    "ammunition.fire_rain",
+    "ammunition.plague_cauldron",
+    "spell.ice_trap",
+    "spell.runic_bastion",
+    "spell.haste",
+    "spell.heal",
+    "spell.fortress_shield",
+    "spell.catapult_lock",
+    "spell.slowing_field",
+    "spell.vampiric_banner",
+    "spell.stone_skin",
+    "spell.siege_frenzy",
+    "spell.berserker",
+    "boss.boss.central-ancient-war-oak.level-05",
+    "boss.boss.mobile-boulderbloom.level-10",
+    "boss.boss.central-frozen-troll.level-15",
+    "boss.boss.mobile-old-yeti-sovereign.level-20",
+    "boss.boss.central-copperwood-siege-lord.level-25",
+    "boss.boss.mobile-copperwood-final-boss.level-30",
+    "boss.boss.central-burntwood-warden.level-35",
+    "boss.boss.mobile-scorchbound-king.level-40",
+    "boss.boss.central-ancient-war-oak.level-45",
+    "boss.boss.mobile-thorncrown.level-50"
+  ],
+  "registeredEventKinds": [
+    "boss.spawned",
+    "unit.deployed",
+    "spell.cast",
+    "projectile.fired",
+    "match.finished"
+  ],
+  "registeredMilestoneIds": [
+    "campaign_spell_haste",
+    "campaign_spell_heal"
+  ],
+  "targets": [
+    { "targetId": "dashboard.campaign", "screen": "DASHBOARD", "kind": "VIEW" },
+    { "targetId": "dashboard.shop", "screen": "DASHBOARD", "kind": "VIEW" },
+    { "targetId": "dashboard.language", "screen": "DASHBOARD", "kind": "VIEW" },
+    { "targetId": "dashboard.reset", "screen": "DASHBOARD", "kind": "VIEW" },
+    { "targetId": "dashboard.tutorials", "screen": "DASHBOARD", "kind": "VIEW" },
+    { "targetId": "campaign.map", "screen": "CAMPAIGN", "kind": "VIEW" },
+    { "targetId": "campaign.level_marker", "screen": "CAMPAIGN", "kind": "VIEW" },
+    { "targetId": "campaign.start", "screen": "CAMPAIGN", "kind": "VIEW" },
+    { "targetId": "campaign.chapter_navigation", "screen": "CAMPAIGN", "kind": "VIEW" },
+    { "targetId": "loadout.units", "screen": "LOADOUT", "kind": "VIEW" },
+    { "targetId": "loadout.ammunition", "screen": "LOADOUT", "kind": "VIEW" },
+    { "targetId": "loadout.spells", "screen": "LOADOUT", "kind": "VIEW" },
+    { "targetId": "loadout.start", "screen": "LOADOUT", "kind": "VIEW" },
+    { "targetId": "match.enemy_fortress", "screen": "MATCH", "kind": "BATTLEFIELD" },
+    { "targetId": "match.player_catapult", "screen": "MATCH", "kind": "BATTLEFIELD" },
+    { "targetId": "match.aim_guide", "screen": "MATCH", "kind": "BATTLEFIELD" },
+    { "targetId": "match.wind", "screen": "MATCH", "kind": "VIEW" },
+    { "targetId": "match.ammunition", "screen": "MATCH", "kind": "VIEW" },
+    { "targetId": "match.health", "screen": "MATCH", "kind": "VIEW" },
+    { "targetId": "match.timer", "screen": "MATCH", "kind": "VIEW" },
+    { "targetId": "match.units", "screen": "MATCH", "kind": "VIEW" },
+    { "targetId": "match.supply", "screen": "MATCH", "kind": "VIEW" },
+    { "targetId": "match.send_wave", "screen": "MATCH", "kind": "VIEW" },
+    { "targetId": "match.mana", "screen": "MATCH", "kind": "VIEW" },
+    { "targetId": "match.spells", "screen": "MATCH", "kind": "VIEW" },
+    { "targetId": "match.boss", "screen": "MATCH", "kind": "VIEW" }
+  ],
+  "tutorials": [
+    {
+      "tutorialId": "match.basics",
+      "scope": "MATCH",
+      "enabled": true,
+      "trigger": {
+        "type": "MATCH_STARTED",
+        "campaignLevelRange": { "first": 1, "last": 1 },
+        "requiresMechanicId": null
+      },
+      "requires": [],
+      "priority": 100,
+      "introduces": [],
+      "rules": {
+        "pauseSimulationOnHint": true,
+        "suspendAiWhileActive": true,
+        "restrictAiToIntroducedMechanics": false
+      },
+      "steps": [
+        {
+          "stepId": "objective",
+          "targetId": "match.enemy_fortress",
+          "text": {
+            "pl": "Zniszcz fortecę przeciwnika, aby wygrać. Zmniejsz jej zdrowie do zera, jednocześnie broniąc własnej.",
+            "en": "Destroy the enemy fortress to win. Reduce its health to zero while defending your own.",
+            "es": "Destruye la fortaleza enemiga para ganar. Reduce su salud a cero mientras proteges la tuya."
+          },
+          "placementPreference": "AUTO",
+          "completion": { "type": "NEXT" },
+          "unlocksTargets": [],
+          "supplementalContent": null
+        },
+        {
+          "stepId": "catapult",
+          "targetId": "match.player_catapult",
+          "text": {
+            "pl": "To twoja katapulta. Wystrzeliwuje pociski na pole bitwy. Za chwilę samodzielnie ustawisz cel i siłę strzału.",
+            "en": "This is your catapult. It launches projectiles across the battlefield. Next, you will aim and set the shot power yourself.",
+            "es": "Esta es tu catapulta. Lanza proyectiles por el campo de batalla. Después apuntarás y ajustarás la potencia del disparo."
+          },
+          "placementPreference": "AUTO",
+          "completion": { "type": "NEXT" },
+          "unlocksTargets": [],
+          "supplementalContent": null
+        },
+        {
+          "stepId": "wind",
+          "targetId": "match.wind",
+          "text": {
+            "pl": "Strzałka pokazuje kierunek wiatru, a ikona jego siłę. Wiatr może płynnie zmieniać kierunek i siłę, więc uwzględnij go przy celowaniu.",
+            "en": "The arrow shows wind direction and the icon shows its strength. Wind can change direction and strength smoothly, so account for it when aiming.",
+            "es": "La flecha indica la dirección del viento y el icono muestra su intensidad. El viento puede cambiar gradualmente, así que tenlo en cuenta al apuntar."
+          },
+          "placementPreference": "AUTO",
+          "completion": { "type": "NEXT" },
+          "unlocksTargets": [],
+          "supplementalContent": "WIND_STRENGTH_LEGEND"
+        },
+        {
+          "stepId": "aim",
+          "targetId": "match.aim_guide",
+          "text": {
+            "pl": "Dotknij pola celowania przy katapulcie i przeciągnij, aby ustawić kąt oraz siłę. Krótsze i dłuższe przeciągnięcie daje inną moc.",
+            "en": "Touch the aiming area by the catapult and drag to set angle and power. A shorter or longer pull changes the power.",
+            "es": "Toca la zona de apuntado junto a la catapulta y arrastra para ajustar el ángulo y la potencia. La longitud del arrastre cambia la potencia."
+          },
+          "placementPreference": "AUTO",
+          "completion": { "type": "NEXT" },
+          "unlocksTargets": [],
+          "supplementalContent": null
+        },
+        {
+          "stepId": "fire-practice",
+          "targetId": "match.aim_guide",
+          "text": {
+            "pl": "Oddaj trzy strzały, aby poćwiczyć. Liczy się każdy zaakceptowany wystrzał, nawet jeśli pocisk nie trafi. Przeciwnik nie podejmuje decyzji podczas ćwiczenia.",
+            "en": "Fire three shots to practice. Every accepted launch counts, even if it misses. The opponent will not make decisions during this exercise.",
+            "es": "Dispara tres veces para practicar. Cuenta cada lanzamiento aceptado, aunque falle. El oponente no tomará decisiones durante este ejercicio."
+          },
+          "placementPreference": "AUTO",
+          "completion": { "type": "PLAYER_ACTION", "kind": "FIRE", "count": 3 },
+          "unlocksTargets": [],
+          "supplementalContent": null
+        },
+        {
+          "stepId": "ammunition",
+          "targetId": "match.ammunition",
+          "text": {
+            "pl": "Wybierz amunicję z panelu. Kamień i Bomba oblężnicza mają różne działanie i czas przeładowania.",
+            "en": "Choose ammunition from this panel. Rock and Siege Bomb have different effects and reload times.",
+            "es": "Elige la munición en este panel. La Piedra y la Bomba de asedio tienen efectos y tiempos de recarga distintos."
+          },
+          "placementPreference": "AUTO",
+          "completion": { "type": "NEXT" },
+          "unlocksTargets": [],
+          "supplementalContent": null
+        },
+        {
+          "stepId": "health",
+          "targetId": "match.health",
+          "text": {
+            "pl": "Te paski pokazują zdrowie fortec. Zniszcz fortecę przeciwnika i chroń własną.",
+            "en": "These bars show fortress health. Destroy the enemy fortress and protect your own.",
+            "es": "Estas barras muestran la salud de las fortalezas. Destruye la enemiga y protege la tuya."
+          },
+          "placementPreference": "AUTO",
+          "completion": { "type": "NEXT" },
+          "unlocksTargets": [],
+          "supplementalContent": null
+        },
+        {
+          "stepId": "timer",
+          "targetId": "match.timer",
+          "text": {
+            "pl": "To licznik czasu bitwy. Zakończ walkę, zanim odliczanie dojdzie do zera.",
+            "en": "This is the battle timer. Finish the fight before it reaches zero.",
+            "es": "Este es el temporizador de la batalla. Termina el combate antes de que llegue a cero."
+          },
+          "placementPreference": "AUTO",
+          "completion": { "type": "NEXT" },
+          "unlocksTargets": [],
+          "supplementalContent": null
+        }
+      ]
+    }
+  ]
+}

@@ -223,8 +223,18 @@ committed reward breakdown and total; hit-based bonuses also use transient
 world-space feedback during the match.
 Haste is awarded for level 5 and Heal for level 7; their availability starts
 at levels 6 and 8. Campaign rewards are projected into Loadout progression,
-and preferred spells affect only newly generated defaults. Tutorials remain
-deferred to the future game-wide TutorialSystem. The SpellSystem has implemented
+and preferred spells affect only newly generated defaults. TutorialSystem v1
+is implemented in `game-application.application.tutorial`, with the Android
+`TutorialHost`, versioned DataStore progress and Studio Tutorials editor. The
+bundled catalog contains only localized `match.basics`; other screen/mechanic
+tutorial content awaits user approval. `TutorialHintView` uses the shared
+`match_hud_universal_frame` and existing dark/gold button assets at a maximum
+width of 280 dp. `TutorialHintPlacer` centers AUTO hints in the wider available
+side region with a 24 dp target gap, falling back above/below only when neither
+side can fit the hint. Accepted ammunition selection, unit deployment, wave
+send, fire and spell actions reach tutorial completion counters. Studio filters
+step targets by the trigger/scope screen, and the server rejects incompatible
+target screens. The SpellSystem has implemented
 runtime effects for `FORTRESS_SHIELD`, HASTE and `RUNIC_BASTION`; AI uses these
 three effects situationally, while the other eight spell effects remain
 unimplemented. HASTE costs 50
@@ -354,10 +364,15 @@ Chapter 2 now uses the supplied `campaign_chapter_02_broken_valley_map` image
 (1717x916), with ten site anchors for global levels 11–20 in
 `campaign-map-layouts/broken_valley.json`; the source and Android drawable
 copies are byte-identical.
-Chapter 3 uses the supplied `campaign_chapter_03_ashen_march_map` image
-(1672x941), with ten site anchors for global levels 21–30 in
-`campaign-map-layouts/ashen_march.json`; the source and Android drawable
-copies are byte-identical.
+Chapter 3 is Ironwood/Copperwood and uses the supplied
+`campaign_chapter_03_ironwood_map` image (1672x941), with ten site anchors for
+global levels 21–30 in `campaign-map-layouts/ironwood.json`; boss sites remain
+levels 25 and 30. Chapter 4 is Ashen March/Ashen March and reuses the original
+`campaign_chapter_04_ashen_march_map` image (1672x941), with its original
+normalized positions remapped to global levels 31–40 in
+`campaign-map-layouts/ashen_march.json`; boss sites remain levels 35 and 40.
+Chapter 5 is Whispering Marsh/Sunken Marshes and has no authored map yet.
+Source and Android drawable copies for Chapters 3 and 4 are byte-identical.
 Transparent 256x256 left/right navigation arrows are stored in
 `assets_src/campaign/ui/campaign_map_nav_arrow_{left,right}.png` and mirrored
 byte-for-byte in Android `drawable-nodpi`; CampaignScreen uses them with
@@ -381,7 +396,7 @@ The Studio Campaign tab edits the same chapter and layout JSON through
 `/api/campaign/*`; it never modifies `MapDefinition` or Android resource IDs.
 It supports all ten marker positions (fortresses and bosses), drag and numeric
 normalized X/Y input, and per-chapter Save/Discard/Cancel handling. Only
-Chapters 1–3 currently have map art; missing-art chapters show a message and
+Chapters 1–4 currently have map art; missing-art chapters show a message and
 disable editing. A saved layout is used by the game after the next build or
 application restart. X/Y validation is independent per axis, and the server
 holds a filesystem lock across the expected-hash check and atomic replacement
@@ -1028,6 +1043,16 @@ must go through commands and domain/application boundaries.
 | `studio/server/src/services/campaignMapCatalog.ts` | Safe chapter/layout and campaign asset API |
 | `game-application/.../progression/PlayerProgressResetRepository.kt` | Application port for resetting local player progress |
 | `android-app/.../persistence/DataStorePlayerProgressResetRepository.kt` | Atomic reset adapter for the shared local Preferences DataStore |
+| `game-application/.../tutorial/TutorialEngine.kt` | Deterministic tutorial state machine and signal processing |
+| `game-application/.../tutorial/TutorialRegistries.kt` | Mechanic/event/milestone authoring IDs derived from their canonical owners |
+| `game-application/src/main/resources/tutorial/tutorial-catalog.json` | Versioned tutorial content, target IDs and registered IDs; v1 content is `match.basics` |
+| `android-app/.../persistence/DataStoreTutorialProgressRepository.kt` | Terminal tutorial status persistence and schema validation |
+| `android-app/.../tutorial/TutorialHost.kt` | Lifecycle host, screen signals, overlay effects and campaign replay |
+| `android-app/.../tutorial/TutorialTargetRegistry.kt` | Screen-owned target providers and exact dynamic-instance resolution |
+| `android-app/.../tutorial/TutorialHintView.kt` | Compact Hint card using shared HUD frame and existing button assets |
+| `android-app/.../tutorial/TutorialHintPlacer.kt` | Centered placement in the widest fitting dimmed side region |
+| `studio/server/src/services/tutorialCatalog.ts` | Studio tutorial validation and expected-hash atomic writes |
+| `studio/web/src/tabs/tutorials/TutorialsTab.tsx` | Typed Tutorial content editor |
 | `game-application/.../progression/PlayerProgressionUseCases.kt` | Local profile initialization and snapshot validation |
 | `android-app/.../persistence/DataStorePlayerProgressionRepository.kt` | Versioned profile storage |
 | `android-app/.../persistence/DataStoreLoadoutRepository.kt` | Versioned campaign-level and demo loadout storage |
@@ -1229,7 +1254,9 @@ must go through commands and domain/application boundaries.
   base lives. The screen supports interactive
   selection, normalized-loadout status, item details and guarded commit.
   Campaign progression and Haste/Heal milestone persistence are implemented;
-  tutorials remain deferred to TutorialSystem. ShopSystem passes an immutable
+  TutorialSystem v1 handles the approved `match.basics` catalog, terminal
+  DataStore progress, Android target/overlay integration, and Studio editing;
+  other tutorial content remains unapproved. ShopSystem passes an immutable
   player inventory snapshot into each campaign match and settles successful
   BLUE ammunition uses back to the profile.
 - RewardSystem is implemented for campaign-level gold rewards: a BLUE win

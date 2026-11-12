@@ -93,7 +93,7 @@ class SapperReturnAnimationClockTest {
 
     private fun sapper(entityId: String, teamLabel: String = "BLUE") = UnitRenderState(
         entityId = entityId,
-        teamLabel = teamLabel,
+        team = com.urkaaaz.contracts.Team.valueOf(teamLabel),
         unitType = "SAPPER",
         x = 0f,
         y = 0f,

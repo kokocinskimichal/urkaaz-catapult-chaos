@@ -43,6 +43,7 @@ import com.urkaaaz.persistence.DataStorePlayerProgressionRepository
 import com.urkaaaz.persistence.DataStoreLifeStateRepository
 import com.urkaaaz.persistence.SystemWallClock
 import com.urkaaaz.persistence.DataStorePlayerProgressResetRepository
+import com.urkaaaz.persistence.DataStoreTutorialProgressRepository
 import com.urkaaaz.persistence.DataStoreDeveloperProgressPresetAdapter
 import com.urkaaaz.persistence.DataStoreLanguageSettings
 import com.urkaaaz.persistence.DataStoreRewardSettlementAdapter
@@ -65,6 +66,8 @@ import com.urkaaaz.screens.result.ResultScreen
 import com.urkaaaz.screens.shop.ShopScreen
 import com.urkaaaz.screens.splash.SplashScreen
 import com.urkaaaz.screens.testmode.TestLevelPickerScreen
+import com.urkaaaz.application.tutorial.TutorialCatalogRepository
+import com.urkaaaz.tutorial.TutorialHost
 import com.urkaaaz.android.R
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -77,6 +80,7 @@ private const val TEST_MODE_STOCK_PER_ITEM = 99
 
 class MainActivity : ComponentActivity() {
     private lateinit var screenHost: ScreenHost
+    private lateinit var tutorialHost: TutorialHost
     private lateinit var navigator: AppNavigator
     private var activityResumed = false
     private var startupLanguage = AppLanguage.DEFAULT
@@ -220,15 +224,26 @@ class MainActivity : ComponentActivity() {
                 WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
         }
         screenHost = ScreenHost(this)
+        tutorialHost = TutorialHost(
+            context = this,
+            screenHost = screenHost,
+            catalogRepository = TutorialCatalogRepository.bundled(),
+            progressRepository = DataStoreTutorialProgressRepository(preferencesDataStore),
+            languageSettings = languageSettings,
+        )
         navigator = AppNavigator(::showScreen)
         onBackPressedDispatcher.addCallback(this, object : OnBackPressedCallback(true) {
             override fun handleOnBackPressed() {
-                if (!screenHost.handleBackPressed() && !navigator.back()) {
+                if (
+                    !tutorialHost.handleBackPressed() &&
+                    !screenHost.handleBackPressed() &&
+                    !navigator.back()
+                ) {
                     finish()
                 }
             }
         })
-        setContentView(screenHost)
+        setContentView(tutorialHost)
         if ((applicationInfo.flags and android.content.pm.ApplicationInfo.FLAG_DEBUGGABLE) != 0) {
             startupScope.launch {
                 when (val result = developerProgressPreset.applyBundled()) {
@@ -258,18 +273,20 @@ class MainActivity : ComponentActivity() {
     override fun onResume() {
         super.onResume()
         activityResumed = true
-        screenHost.resumeActiveScreen()
+        tutorialHost.resumeActiveScreen()
     }
 
     override fun onPause() {
         activityResumed = false
-        screenHost.pauseActiveScreen()
+        tutorialHost.pauseActiveScreen()
         super.onPause()
     }
 
     override fun onDestroy() {
         startupScope.cancel()
-        if (::screenHost.isInitialized) {
+        if (::tutorialHost.isInitialized) {
+            tutorialHost.destroy()
+        } else if (::screenHost.isInitialized) {
             screenHost.pauseActiveScreen()
         }
         campaignCompletionPresenter.onDestroy()
@@ -290,11 +307,19 @@ class MainActivity : ComponentActivity() {
                 onDemoMode = {
                     navigator.navigate(AppScreen.TestLevelPicker)
                 },
-                onResetProgress = { playerProgressResetRepository.reset() },
+                onResetProgress = {
+                    playerProgressResetRepository.reset().also { result ->
+                        if (result is com.urkaaaz.application.progression.PlayerProgressResetResult.Reset) {
+                            tutorialHost.onPlayerProgressReset()
+                        }
+                    }
+                },
                 loadProgress = { dashboardProgressSummaryUseCase.load() },
                 initialLanguage = startupLanguage,
                 setLanguage = setLanguage,
                 onLanguageSaved = { recreate() },
+                loadTutorials = { tutorialHost.dashboardItems() },
+                repeatTutorial = tutorialHost::requestRepeat,
             )
             AppScreen.Campaign -> CampaignScreen(
                 context = this,
@@ -430,18 +455,40 @@ class MainActivity : ComponentActivity() {
                         level,
                         event,
                         reward,
-                        onCompletion,
-                    )
+                    ) { completion ->
+                        if (completion.recorded && !screen.testMode && screen.levelId != "DEMO_LEVEL") {
+                            tutorialHost.onCampaignMilestonesApplied(
+                                completion.appliedMilestoneIds,
+                            )
+                        }
+                        onCompletion(completion)
+                    }
                 },
                 onNextLevelClicked = { nextLevel ->
                     navigator.replace(AppScreen.Loadout(nextLevel))
                 },
+                tutorialSignalSink = tutorialHost,
             )
             is AppScreen.Result -> ResultScreen(this)
         }
-        screenHost.show(content)
+        tutorialHost.show(content)
+        if (screen is AppScreen.Loadout && !screen.demoMode && !screen.testMode) {
+            startupScope.launch {
+                when (val read = campaignSystem.progress()) {
+                    is com.urkaaaz.application.campaign.CampaignProgressRead.Available ->
+                        tutorialHost.onCampaignMilestonesApplied(
+                            read.progress.appliedMilestoneIds,
+                        )
+                    is com.urkaaaz.application.campaign.CampaignProgressRead.Failure ->
+                        Log.e(
+                            "MainActivity",
+                            "Tutorial milestone context unavailable: ${read.reason}",
+                        )
+                }
+            }
+        }
         if (activityResumed) {
-            content.onResume()
+            tutorialHost.resumeActiveScreen()
         }
     }
 

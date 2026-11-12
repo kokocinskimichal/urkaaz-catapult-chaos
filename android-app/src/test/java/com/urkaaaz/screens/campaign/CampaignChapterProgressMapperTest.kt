@@ -87,7 +87,7 @@ class CampaignChapterProgressMapperTest {
         )
 
         assertEquals(
-            listOf("green_frontier", "broken_valley", "ashen_march"),
+            listOf("green_frontier", "broken_valley", "ironwood"),
             state.pages.map { it.chapter.id },
         )
         assertEquals("broken_valley", state.selectedChapterId)

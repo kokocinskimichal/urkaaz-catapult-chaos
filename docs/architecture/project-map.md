@@ -15,9 +15,9 @@ Android jest nazywana **match screen**, a wybrana definicja kampanii —
 | Moduł | Odpowiedzialność | Główne elementy |
 |---|---|---|
 | `game-contracts` | stabilne, niemutowalne kontrakty komunikacji | komendy, snapshoty, eventy, scenariusze, identyfikatory |
-| `game-domain` | reguły i stan domeny gry | `Match`, fortece, jednostki, amunicja, obrażenia, konfiguracje |
+| `game-domain` | typowane modele i reguły domenowe | fortece, jednostki, amunicja, czary, obrażenia i konfiguracja balansu |
 | `game-simulation` | deterministyczne wykonywanie meczu | ticki, pociski, kolizje, teren, wiatr, jednostki, eventy |
-| `game-application` | cykl życia meczu, lokalny gateway, loadout, Shop, reward tracking, LifeSystem i przypadki użycia kampanii | `MatchSession`, `LocalMatchGateway`, `application.loadout`, `application.shop`, `application.progression`, `application.campaign`, `application.reward` |
+| `game-application` | cykl życia meczu, TutorialSystem, lokalny gateway, loadout, Shop, reward tracking, LifeSystem i przypadki użycia kampanii | `MatchSession`, `LocalMatchGateway`, `application.tutorial`, `application.loadout`, `application.shop`, `application.progression`, `application.campaign`, `application.reward` |
 | `game-campaign` | definicje poziomów, nagród, milestone'ów i konfiguracja kampanii | `CampaignLevelDefinition`, `CampaignRewardRegistry`, `CampaignMilestoneRegistry`, biom, wiatr, scenariusz |
 | `game-ai` | decyzje AI na podstawie snapshotu | `AiAgent`, rekrutacja, dobór kontr, wysyłanie fal |
 | `android-app` | lifecycle, nawigacja, input i renderowanie | `MainActivity`, ekrany, ViewModel, HUD, battlefield |
@@ -25,22 +25,30 @@ Android jest nazywana **match screen**, a wybrana definicja kampanii —
 ## Kierunek zależności
 
 ```text
-android-app
-  ├── game-application
-  │     ├── game-simulation
-  │     │     ├── game-domain
-  │     │     └── game-contracts
-  │     ├── game-contracts
-  │     └── game-campaign
-  ├── game-campaign
-  └── game-contracts
-
-game-ai ──> game-contracts
-game-ai nie zna Androida
+android-app -> game-assets, game-application, game-campaign, game-contracts, game-simulation
+game-application -> game-ai, game-campaign, game-contracts, game-domain, game-simulation
+game-campaign -> game-assets, game-contracts, game-domain
+game-ai -> game-contracts, game-domain
+game-simulation -> game-contracts, game-domain
+game-domain -> game-contracts
+game-assets -> game-contracts
+game-contracts -> (none)
 ```
 
-Moduły domeny, symulacji, aplikacji, kontraktów, kampanii i AI nie mogą
-importować Androida. `android-app` jest jedynym właścicielem kodu platformy.
+`android-app` zależy bezpośrednio od `game-simulation` wyłącznie dla adapterów
+logowania implementujących host-independent porty symulacji. `MatchViewModel`
+nie importuje tych portów; tworzy je `MatchScreenController` jako composition
+root. `game-ai` używa typowanych definicji balansu i wspólnej fizyki z domeny,
+a `game-campaign` korzysta z domenowych definicji czarów oraz katalogu assetów.
+
+Moduły domeny, symulacji, aplikacji, kontraktów, kampanii, AI i assetów nie mogą
+importować Androida ani UI. Kierunek zależności produkcyjnych jest sprawdzany
+przez `ArchitectureBoundaryTest` w `game-contracts`.
+
+Runtime state meczu należy obecnie do `DeterministicMatchSimulation`, a
+`MatchSession` w `game-application` zarządza jego lifecycle. Dawne minimalne
+szkielety `game-domain/Match.kt` i `game-simulation/MatchSimulation.kt` zostały
+usunięte; nie istnieje równoległa ścieżka obsługi meczu.
 
 ## Przepływ wejścia i stanu
 
@@ -172,14 +180,29 @@ profilu, kampanię i receipts w `android-app`. `CampaignRewardRegistry` w
 dostępny od 6) i Heal (ukończenie 7, dostępny od 8).
 `CampaignAwareLoadoutProgressionPort` łączy kampanijne odblokowania z profilem
 wyłącznie w read modelu. Domyślne wybory milestone'ów stosują się do nowego
-loadoutu, nie nadpisują istniejącego. Tutoriale należą do przyszłego
-TutorialSystem. `ShopUseCases` korzysta z cen w `GameBalanceConfig` i atomowego
+loadoutu, nie nadpisują istniejącego. Zastosowane milestone IDs są
+przekazywane jako sygnały do TutorialSystemu, który nie zapisuje ich w
+CampaignProgress. `ShopUseCases` korzysta z cen w `GameBalanceConfig` i atomowego
 portu profilu. `DataStorePlayerProgressionRepository` oraz
 `DataStoreRewardSettlementAdapter` współdzielą profile codec, a transakcje
 stocku używają tego samego DataStore. LifeSystem w `application.progression`
 zarządza życiami między meczami przez osobny read model i port atomowej mutacji
 profilu; `CampaignLevelStartUseCase` świeżo rewaliduje start, a non-win flow
 rozlicza receipt bez zmiany `CampaignProgress`.
+
+### TutorialSystem
+
+`TutorialEngine` w `game-application.application.tutorial` konsumuje sygnały
+ekranów, MatchEventy przez `TutorialMatchEventMapper`, fakty scenariusza i
+nowo zastosowane milestone IDs. Runtime/content source to
+`game-application/src/main/resources/tutorial/tutorial-catalog.json`;
+Dashboard RESET czyści statusy terminalne `tutorial.*` we wspólnym Preferences
+DataStore. Androidowy `TutorialHost` opakowuje `ScreenHost`, renderuje Hint i
+Spotlight, a screen-owned target providers rozwiązuje na podstawie render
+state/kamery. Dynamiczne targety przenoszą konkretny `targetInstanceId`.
+Urkaaaz Studio ma oddzielną zakładkę Tutorials do typed editing, walidacji i
+hash-guarded save. W v1 zatwierdzona treść obejmuje tylko `match.basics`;
+pozostałe screen i mechanic tutorials czekają na akceptację.
 
 ## Kluczowe pliki
 
@@ -195,6 +218,11 @@ rozlicza receipt bez zmiany `CampaignProgress`.
 | `android-app/src/main/java/com/urkaaaz/ui/RenderStateMapper.kt` | snapshot → render state |
 | `game-application/src/main/kotlin/com/urkaaaz/application/MatchSession.kt` | sesja meczu |
 | `game-application/src/main/kotlin/com/urkaaaz/application/LocalMatchGateway.kt` | lokalny gateway |
+| `game-application/src/main/kotlin/com/urkaaaz/application/tutorial/TutorialEngine.kt` | deterministyczny runtime TutorialSystemu |
+| `game-application/src/main/resources/tutorial/tutorial-catalog.json` | treść i target IDs tutoriali |
+| `android-app/src/main/java/com/urkaaaz/tutorial/TutorialHost.kt` | host tutoriala, overlay i adapter sygnałów |
+| `android-app/src/main/java/com/urkaaaz/persistence/DataStoreTutorialProgressRepository.kt` | wersjonowany postęp tutoriala |
+| `studio/web/src/tabs/tutorials/TutorialsTab.tsx` | edytor katalogu tutoriali |
 | `game-application/src/main/kotlin/com/urkaaaz/application/loadout/` | loadout, walidacja, jawne porty progresji/zapisu i read-only projekcja katalogów dla Android UI |
 | `game-application/src/main/kotlin/com/urkaaaz/application/progression/PlayerProgressionUseCases.kt` | inicjalizacja i walidacja snapshotu profilu |
 | `game-application/src/main/kotlin/com/urkaaaz/application/progression/LifeSystem.kt` | życie, regeneracja, granty i read model |

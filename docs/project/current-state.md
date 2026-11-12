@@ -22,13 +22,15 @@ kampanię, AI oraz działający match screen. Gałąź robocza: `develop`.
   fortress/boss landmarks. Campaign screen pokazuje po jednej pełnoekranowej
   mapie rozdziału; między ukończonymi, bieżącym i najwyżej jednym następnym
   podglądem można przechodzić strzałkami lub gestem poziomym. HUD pokazuje
-  tytuł, postęp i globalny numer rozdziału. Rozdziały 1–3 używają własnych map,
-  a 4–10 tymczasowo mapy Green Frontier i jej kotwic jako fallbacku wyłącznie
+  tytuł, postęp i globalny numer rozdziału. Rozdziały 1–4 używają własnych map,
+  a 5–10 tymczasowo mapy Green Frontier i jej kotwic jako fallbacku wyłącznie
   prezentacyjnego. Markery poziomów, ich statusy i autoryzacja Start Level
-  nadal pochodzą z istniejącej progresji i `CampaignSystem`.
+  nadal pochodzą z istniejącej progresji i `CampaignSystem`. Rozdziały 3–5
+  mają kolejno biomy Copperwood, Ashen March i Sunken Marshes; ich zakresy
+  poziomów i spotkania bossów pozostały bez zmian.
 - Studio ma zakładkę Campaign do edycji pozycji X/Y wszystkich 10 markerów
   danego rozdziału. Wspólny JSON rozdziałów i osobny layout JSON są czytane
-  przez Studio i grę; Chapters 4–10 są tylko do odczytu do czasu dodania map.
+  przez Studio i grę; Chapters 5–10 są tylko do odczytu do czasu dodania map.
 - Campaign i Loadout współdzielą `ScreenChromeMetrics` dla insetu ekranu
   (`4 dp`) oraz wymiarów i odstępu Back buttona; treść Loadout ma osobny
   wewnętrzny padding.
@@ -53,6 +55,18 @@ kampanię, AI oraz działający match screen. Gałąź robocza: `develop`.
   simulation → MatchSnapshot`.
 - Deterministyczna symulacja pocisków, terenu, kolizji, obrażeń, eventów,
   restartu i replay regression.
+- TutorialSystem v1 ma deterministyczny engine i JSON `match.basics`, trwałe
+  terminal statuses w `tutorial.*`, Android Hint/Spotlight z target registry,
+  pauzę ticków bez zmiany replayu, AI suspension, Dashboardową listę/powtórkę
+  oraz Studio Tutorials editor. Dynamiczne targety przenoszą konkretny
+  `targetInstanceId`; teksty `match.basics` PL/EN/ES są do akceptacji. Pozostałe
+  tutorial content definitions pozostają poza v1 do czasu akceptacji. Hint ma
+  maksymalnie 280 dp szerokości, korzysta z `match_hud_universal_frame` i
+  istniejących assetów przycisków; `AUTO` centruje go w szerszym bocznym
+  obszarze z odstępem 24 dp, a nad/pod targetem umieszcza go tylko jako fallback.
+  Zaakceptowane `SELECT_AMMUNITION`, `DEPLOY_UNIT` i `SEND_WAVE` są obserwowane
+  jako akcje gracza; Studio filtruje step targets według ekranu, a serwer
+  waliduje ich zgodność z triggerem i scope.
 - Pociski przeciwnych drużyn zderzają się podczas lotu, używając sumy
   amunicyjnych promieni kolizji. Kontakt usuwa oba pociski bez impactu,
   obrażeń ani deformacji terenu; pociski sojusznicze nie kolidują.
@@ -97,6 +111,8 @@ kampanię, AI oraz działający match screen. Gałąź robocza: `develop`.
   złotem. Preset stosuje wyłącznie jawnie zaznaczone pola, jednorazowo w
   debug buildzie po rebuildzie i restarcie. Jawnie ustawione życia synchronizują
   timer i granty LifeSystemu; niezaznaczone wartości profilu pozostają bez zmian.
+  Bundled preset jest obecnie jednorazowo ustawiony na poziom 1 i 10 000 złota
+  do weryfikacji tutoriala.
 - LifeSystem rozpoczyna nowy profil z 5/5 żyć; każdy kampanijny wynik poza
   `BLUE_WIN` zużywa jedno życie, a jedno życie regeneruje się co 15 minut
   lokalnego czasu ściennego, także offline. Zegar chroni przed cofnięciem czasu;
@@ -169,9 +185,12 @@ kampanię, AI oraz działający match screen. Gałąź robocza: `develop`.
 Kolejne większe funkcjonalności będą projektowane jako niezależne podsystemy,
 z własną odpowiedzialnością, kontraktami, stanem, eventami, testami i
 integracją z pozostałymi warstwami. Rozszerzenia AI, takie jak strategie
-zaklęć, dołączają przez registry; `SpellSystem`, `TutorialSystem` i pełna
-`CampaignSystem` pozostają kolejnymi obszarami. Decyzje AI należą do `game-ai`,
-a lifecycle agenta do `game-application`; nazwa podsystemu nie oznacza
+zaklęć, dołączają przez registry; `TutorialSystem` v1 jest zaimplementowany
+przez `game-application`, `android-app` i Studio. Katalog zawiera wyłącznie
+`match.basics`; pozostałe teksty/kroki czekają na osobną akceptację.
+`SpellSystem` i pełna `CampaignSystem` pozostają obszarami dalszego rozwoju.
+Decyzje AI należą do `game-ai`, a lifecycle agenta do `game-application`;
+nazwa podsystemu nie oznacza
 automatycznie nowego modułu Gradle. Podsystemy mają korzystać z komend,
 snapshotów i eventów zamiast mutować bezpośrednio stan innych podsystemów.
 
@@ -179,7 +198,7 @@ snapshotów i eventów zamiast mutować bezpośrednio stan innych podsystemów.
 
 - `LoadoutScreen` asynchronicznie odczytuje, waliduje i zapisuje loadout.
   `ResultScreen` pozostaje placeholderem.
-- Chapters 1–3 mają zatwierdzone mapy; mapy Chapter 4–10 nie są jeszcze
+- Chapters 1–4 mają zatwierdzone mapy; mapy Chapter 5–10 nie są jeszcze
   dostępne. CampaignScreen pokazuje dla nich tymczasowo Green Frontier, ale
   Studio nadal oznacza brak autorskich layoutów jako brak mapy.
 - Ad Reward, eventowy grant życia, backend i synchronizacja cloud nie są
@@ -194,8 +213,9 @@ snapshotów i eventów zamiast mutować bezpośrednio stan innych podsystemów.
   wykorzystany stock po wszystkich wynikach meczu oraz przed jawnym stopem lub
   restartem; przymusowe zamknięcie procesu przed zapisem pozostaje ograniczeniem.
 - SpellSystem nie obejmuje jeszcze pozostałych ośmiu efektów katalogu ani
-  castowania zaklęć przez AI; brakuje też tutoriala i wszystkich legacy
-  widgetów HUD.
+  castowania zaklęć przez AI. TutorialSystem v1 działa dla `match.basics`;
+  screen tutorials i tutoriale pozostałych mechanik nie są jeszcze częścią
+  zaakceptowanej treści. Legacy widgety HUD pozostają poza zakresem.
 - Brak pełnej zgodności legacy dla wszystkich mechanik, garrisonu i fal,
   choć podstawowe jednostki i fale są już zaimplementowane.
 - Brak pełnego legacy renderingu, części wizualizacji fortec/katapult,
@@ -211,8 +231,8 @@ snapshotów i eventów zamiast mutować bezpośrednio stan innych podsystemów.
 2. Docelowa technologia nawigacji: obecny `AppNavigator` versus Android
    Navigation/Compose.
 3. Zakres i właściciel przyszłego backendu/network play.
-4. Pełna migracja tutoriala, pozostałych zaklęć i wyników; dodatkowe animacje
-   bossów oraz zawartość bossów poziomów 55–100 są odłożone.
+4. Treści TutorialSystemu poza `match.basics`, pozostałe zaklęcia i wyniki;
+   dodatkowe animacje bossów oraz zawartość bossów poziomów 55–100 są odłożone.
 5. Zakres zgodności wizualnej i regresyjnej ze starą aplikacją poza obecnym
    deterministycznym wycinkiem M11.
 6. Finalna polityka assetów/audio dla elementów, których status lub źródło

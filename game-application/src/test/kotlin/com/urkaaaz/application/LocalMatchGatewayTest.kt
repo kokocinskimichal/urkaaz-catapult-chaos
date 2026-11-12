@@ -101,4 +101,61 @@ class LocalMatchGatewayTest {
                 .any { it.value.playerId == redPlayer },
         )
     }
+
+    @Test
+    fun suspendingAiDoesNotConsumeItsSeededDecisionInterval() {
+        val scenario = MatchScenario(
+            scenarioId = "gateway-ai-pause",
+            battlefield = BattlefieldConfig(width = 1_000, height = 600),
+            players = listOf(
+                PlayerConfig(PlayerId("blue-player"), Team.BLUE),
+                PlayerConfig(PlayerId("red-ai"), Team.RED),
+            ),
+            availableUnits = listOf("DEFENDER"),
+            availableAmmunition = listOf("ROCK"),
+            aiProfile = AiProfileSelection(AiProfileId.CADET),
+        )
+        val gateway = LocalMatchGateway(scenario = scenario)
+        gateway.dispatch(
+            MatchCommand.Start(
+                CommandId("start-pause"),
+                MatchId("match-pause"),
+                PlayerId("blue-player"),
+            ),
+        )
+        val snapshot = gateway.snapshot()
+
+        assertTrue(gateway.aiCommands(snapshot, elapsedMilliseconds = 33).isNotEmpty())
+        gateway.suspendAi()
+        assertTrue(gateway.aiCommands(snapshot, elapsedMilliseconds = 10_000).isEmpty())
+        gateway.resumeAi()
+
+        assertTrue(gateway.aiCommands(snapshot, elapsedMilliseconds = 1_099).isEmpty())
+        assertTrue(gateway.aiCommands(snapshot, elapsedMilliseconds = 1).isNotEmpty())
+    }
+
+    @Test
+    fun restartedMatchResetsAiPauseForTheNextTutorialStartSignal() {
+        val scenario = MatchScenario(
+            scenarioId = "gateway-ai-restart",
+            battlefield = BattlefieldConfig(width = 1_000, height = 600),
+            players = listOf(
+                PlayerConfig(PlayerId("blue-player"), Team.BLUE),
+                PlayerConfig(PlayerId("red-ai"), Team.RED),
+            ),
+            availableUnits = listOf("DEFENDER"),
+            availableAmmunition = listOf("ROCK"),
+            aiProfile = AiProfileSelection(AiProfileId.CADET),
+        )
+        val gateway = LocalMatchGateway(scenario = scenario)
+        val matchId = MatchId("match-ai-restart")
+        val playerId = PlayerId("blue-player")
+        gateway.dispatch(MatchCommand.Start(CommandId("start-restart"), matchId, playerId))
+        gateway.suspendAi()
+        assertTrue(gateway.aiCommands(gateway.snapshot(), 10_000).isEmpty())
+
+        val restarted = gateway.restart(matchId, playerId)
+
+        assertTrue(gateway.aiCommands(restarted, elapsedMilliseconds = 33).isNotEmpty())
+    }
 }

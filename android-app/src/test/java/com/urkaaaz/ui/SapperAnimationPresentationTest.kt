@@ -68,7 +68,7 @@ class SapperAnimationPresentationTest {
 
     private fun sapper() = UnitRenderState(
         entityId = "sapper",
-        teamLabel = "BLUE",
+        team = com.urkaaaz.contracts.Team.BLUE,
         unitType = "SAPPER",
         x = 0f,
         y = 0f,

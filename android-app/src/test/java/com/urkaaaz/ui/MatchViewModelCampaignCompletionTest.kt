@@ -8,6 +8,7 @@ import com.urkaaaz.contracts.MatchId
 import com.urkaaaz.contracts.MatchOutcome
 import com.urkaaaz.contracts.MatchStatus
 import com.urkaaaz.contracts.PlayerId
+import com.urkaaaz.contracts.Team
 import com.urkaaaz.application.LocalMatchGateway
 import com.urkaaaz.application.MatchSession
 import org.junit.Assert.assertEquals
@@ -90,8 +91,10 @@ class MatchViewModelCampaignCompletionTest {
     @Test
     fun terminalTickRecoveryForwardsQueuedCampaignCompletionEvent() {
         val forwarded = mutableListOf<MatchEvent.MatchFinished>()
+        val redPlayerId = PlayerId("local-ai")
         val gateway = LocalMatchGateway(
             session = MatchSession(
+                playerTeams = mapOf(redPlayerId to Team.RED),
                 blueFortressMaxHealth = 1,
                 randomSeedProvider = { 17L },
             ),
@@ -101,7 +104,6 @@ class MatchViewModelCampaignCompletionTest {
             onMatchFinished = { _, event -> forwarded += event },
         )
         val matchId = MatchId("local-match")
-        val redPlayerId = PlayerId("local-ai")
         viewModel.dispatch(MatchUiAction.StartMatch)
         gateway.dispatch(
             MatchCommand.DeployUnit(

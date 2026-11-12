@@ -10,7 +10,9 @@ import android.view.View
 import android.view.MotionEvent
 import android.view.ScaleGestureDetector
 import com.urkaaaz.contracts.CatapultPresentationContract
+import com.urkaaaz.contracts.FortressHitboxProfile
 import com.urkaaaz.contracts.Team
+import com.urkaaaz.contracts.UnitHitboxProfile
 import com.urkaaaz.contracts.WorldDimensions
 import com.urkaaaz.contracts.WorldScale
 import java.util.Locale
@@ -33,6 +35,12 @@ class BattlefieldView(context: Context) : View(context) {
         set(value) {
             field = value
             debugCursorPosition = null
+            invalidate()
+        }
+
+    var tutorialAimGuideVisible: Boolean = false
+        set(value) {
+            field = value
             invalidate()
         }
 
@@ -230,6 +238,7 @@ class BattlefieldView(context: Context) : View(context) {
             fortressShieldHitElapsedRenderFrames = 0
             lastFortressShieldHitEventId = null
         }
+
         updateSapperBombPresentation(presentationState, nowMilliseconds)
         sapperReturnAnimationClock.advance(
             units = newState.units,
@@ -298,6 +307,42 @@ class BattlefieldView(context: Context) : View(context) {
             }
         }
         invalidate()
+    }
+
+    fun tutorialTargetBounds(
+        targetId: String,
+        targetInstanceId: String?,
+    ): RectF? {
+        val worldBounds = if (targetInstanceId != null) {
+            dynamicTutorialWorldBounds(targetId, targetInstanceId)
+        } else {
+            staticTutorialWorldBounds(targetId)
+        } ?: return null
+        val viewBounds = RectF(
+            worldToViewX(worldBounds.left),
+            worldToViewY(worldBounds.top),
+            worldToViewX(worldBounds.right),
+            worldToViewY(worldBounds.bottom),
+        )
+        val cameraTransform = camera.transform
+        viewBounds.set(
+            viewBounds.left * cameraTransform.scale + cameraTransform.offsetX,
+            viewBounds.top * cameraTransform.scale + cameraTransform.offsetY,
+            viewBounds.right * cameraTransform.scale + cameraTransform.offsetX,
+            viewBounds.bottom * cameraTransform.scale + cameraTransform.offsetY,
+        )
+        return viewBounds
+    }
+
+    fun focusTutorialTarget(targetId: String, targetInstanceId: String?): Boolean {
+        if (width <= 0 || height <= 0) return false
+        val worldBounds = if (targetInstanceId != null) {
+            dynamicTutorialWorldBounds(targetId, targetInstanceId)
+        } else {
+            staticTutorialWorldBounds(targetId)
+        } ?: return false
+        return camera.focusOnWorldRect(worldBounds, width.toFloat(), height.toFloat())
+            .also { invalidate() }
     }
 
     internal fun preloadUnitFallbacks(
@@ -429,7 +474,7 @@ class BattlefieldView(context: Context) : View(context) {
             fireRainPresentation = fireRainPresentationFrame,
             plagueCauldronPresentation = plagueCauldronPresentationFrame,
             sapperBombPresentation = sapperBombPresentationFrame,
-            isAiming = aimController.isDragging,
+            isAiming = aimController.isDragging || tutorialAimGuideVisible,
             viewportWidth = width.toFloat(),
             viewportHeight = height.toFloat(),
             debugHitboxesVisible = debugHitboxesVisible,
@@ -668,7 +713,8 @@ class BattlefieldView(context: Context) : View(context) {
     private fun drawAimGesture(canvas: Canvas, groundTop: Float) {
         val (originX, originY) = playerAimOriginView()
         val screenSpaceScale = camera.transform.scale
-        val aim = aimController.state.aim ?: return
+        val aim = aimController.state.aim
+        if (aim == null && !tutorialAimGuideVisible) return
         val visualRadius = visualPullRadius(originX, originY)
         val limitPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
             color = Color.argb(110, 255, 255, 255)
@@ -681,6 +727,7 @@ class BattlefieldView(context: Context) : View(context) {
             visualRadius,
             limitPaint,
         )
+        if (aim == null) return
         val dx = aimController.state.x - originX
         val dy = aimController.state.y - originY
         val distance = hypot(dx, dy)
@@ -1012,6 +1059,99 @@ class BattlefieldView(context: Context) : View(context) {
 
     private fun playerAimOriginView(): Pair<Float, Float> =
         worldToViewX(state.blueCatapultAnchorX) to worldToViewY(state.blueCatapultAnchorY)
+
+    private fun staticTutorialWorldBounds(targetId: String): RectF? =
+        when (targetId) {
+            "match.enemy_fortress" -> fortressTargetBounds(
+                centerX = state.redFortressX,
+                foundationY = state.redFortressFoundationY,
+            )
+            "match.player_catapult" -> {
+                val bitmap = assets.blueCatapult ?: return null
+                val spriteWidth = WorldScale.CATAPULT_RENDER_WIDTH
+                val spriteHeight = spriteWidth * bitmap.height / bitmap.width.coerceAtLeast(1)
+                RectF(
+                    state.blueCatapultX - spriteWidth / 2f,
+                    state.blueCatapultY - spriteHeight,
+                    state.blueCatapultX + spriteWidth / 2f,
+                    state.blueCatapultY,
+                )
+            }
+            "match.aim_guide" -> {
+                val (originX, originY) = playerAimOriginView()
+                val radius = visualPullRadius(originX, originY)
+                val cameraTransform = camera.transform
+                val screenOriginX = originX * cameraTransform.scale + cameraTransform.offsetX
+                val screenOriginY = originY * cameraTransform.scale + cameraTransform.offsetY
+                val screenRadius = radius * cameraTransform.scale
+                RectF(
+                    screenToWorldX(screenOriginX - screenRadius),
+                    screenToWorldY(screenOriginY - screenRadius),
+                    screenToWorldX(screenOriginX + screenRadius),
+                    screenToWorldY(screenOriginY + screenRadius),
+                )
+            }
+            else -> null
+        }
+
+    private fun dynamicTutorialWorldBounds(
+        targetId: String,
+        targetInstanceId: String,
+    ): RectF? =
+        when (targetId) {
+            "battlefield.boss" -> state.boss
+                ?.takeIf { it.entityId == targetInstanceId }
+                ?.let { boss ->
+                    RectF(
+                        boss.x - boss.collisionWidth / 2f,
+                        boss.groundY - boss.collisionHeight,
+                        boss.x + boss.collisionWidth / 2f,
+                        boss.groundY,
+                    )
+                }
+            "battlefield.unit" -> state.units
+                .firstOrNull { it.entityId == targetInstanceId }
+                ?.let { unit ->
+                    val dimensions = UnitHitboxProfile.forUnitType(unit.unitType)
+                    RectF(
+                        unit.x - dimensions.width / 2f,
+                        unit.y - dimensions.height,
+                        unit.x + dimensions.width / 2f,
+                        unit.y,
+                    )
+                }
+            "battlefield.projectile" -> state.projectiles
+                .firstOrNull { it.projectileId == targetInstanceId }
+                ?.let { projectile ->
+                    val radius = projectile.collisionRadius
+                    RectF(
+                        projectile.x - radius,
+                        projectile.y - radius,
+                        projectile.x + radius,
+                        projectile.y + radius,
+                    )
+                }
+            else -> null
+        }
+
+    private fun fortressTargetBounds(centerX: Float, foundationY: Float): RectF? {
+        val hitbox = FortressHitboxProfile.rectangles.singleOrNull() ?: return null
+        val centerY = foundationY - WorldScale.FORTRESS_HEIGHT / 2f
+        return RectF(
+            centerX + hitbox.left,
+            centerY + hitbox.top,
+            centerX + hitbox.right,
+            centerY + hitbox.bottom,
+        )
+    }
+
+    private fun screenToWorldX(screenX: Float): Float =
+        (screenX - camera.transform.offsetX) / camera.transform.scale /
+            width.toFloat() * WorldDimensions.WIDTH
+
+    private fun screenToWorldY(screenY: Float): Float =
+        (screenY - camera.transform.offsetY) / camera.transform.scale /
+            height.toFloat() * WorldDimensions.HEIGHT
 
     private fun drawTiledTexture(
         canvas: Canvas,

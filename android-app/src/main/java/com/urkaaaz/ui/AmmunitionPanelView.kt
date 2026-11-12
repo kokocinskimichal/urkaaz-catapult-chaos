@@ -12,6 +12,7 @@ import android.widget.LinearLayout
 import android.widget.TextView
 import com.urkaaaz.android.R
 import com.urkaaaz.application.loadout.LoadoutCatalog
+import java.util.Locale
 import com.urkaaaz.screens.loadout.LoadoutAssetCatalog
 import com.urkaaaz.screens.loadout.LoadoutAssetLookup
 import com.urkaaaz.screens.loadout.LoadoutItemReference
@@ -68,9 +69,11 @@ class AmmunitionPanelView(
                 reloadDurationSeconds = slot.reloadDurationSeconds,
             )
             val selected = slot.type == state.selectedAmmunitionType
+            val locked = "ammunition.${slot.type.lowercase(Locale.ROOT)}" in
+                state.tutorialLockedMechanicIds
             slot.button.isEnabled =
-                available && !reloading && state.statusLabel == "RUNNING"
-            slot.button.alpha = if (available) 1f else 0.38f
+                available && !reloading && !locked && state.statusLabel == "RUNNING"
+            slot.button.alpha = if (available && !locked) 1f else 0.38f
             if (selected != slot.selected) {
                 if (selected) {
                     slot.button.background = HudPanelStyle.background(

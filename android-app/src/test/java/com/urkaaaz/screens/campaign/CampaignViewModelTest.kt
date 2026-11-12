@@ -42,7 +42,7 @@ class CampaignViewModelTest {
         assertEquals("broken_valley", viewModel.state.selectedChapterId)
         assertEquals(null, viewModel.state.selectedLevel)
         assertFalse(viewModel.selectMapLevel(11))
-        assertFalse(viewModel.selectChapter("ashen_march"))
+        assertFalse(viewModel.selectChapter("ironwood"))
         assertTrue(viewModel.selectChapter("green_frontier"))
         assertEquals(1, viewModel.state.selectedLevel)
         assertFalse(viewModel.selectMapLevel(2))
@@ -82,10 +82,10 @@ class CampaignViewModelTest {
         assertEquals("broken_valley", viewModel.state.selectedChapterId)
         assertEquals(11, viewModel.state.selectedLevel)
         assertTrue(viewModel.navigateChapter(CampaignChapterNavigationDirection.NEXT))
-        assertEquals("ashen_march", viewModel.state.selectedChapterId)
+        assertEquals("ironwood", viewModel.state.selectedChapterId)
         assertNull(viewModel.state.selectedLevel)
         assertFalse(viewModel.navigateChapter(CampaignChapterNavigationDirection.NEXT))
-        assertEquals("ashen_march", viewModel.state.selectedChapterId)
+        assertEquals("ironwood", viewModel.state.selectedChapterId)
     }
 
     @Test

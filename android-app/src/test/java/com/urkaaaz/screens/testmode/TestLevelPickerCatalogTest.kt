@@ -19,7 +19,7 @@ class TestLevelPickerCatalogTest {
             },
         )
         assertEquals("green_frontier", chapters.first().id)
-        assertEquals("ashen_march", chapters[2].id)
+        assertEquals("ironwood", chapters[2].id)
         assertEquals(listOf(51, 52, 53, 54), chapters.last().levels.map(TestLevelOption::level))
     }
 }

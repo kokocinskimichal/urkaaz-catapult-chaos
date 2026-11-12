@@ -3,9 +3,9 @@
 ## General Rules / Ogólne zasady
 
 1. **Tutorial Target musi być widoczny.** Każdy element opisywany przez Tutorial Hint musi
-   znajdować się w aktualnym kadrze, a Tutorial Spotlight musi obejmować dokładnie ten element.
-   Nie wolno opisywać obiektu znajdującego się poza ekranem ani podświetlać dużego, przypadkowego
-   obszaru zawierającego inne elementy.
+   znajdować się w aktualnym kadrze. Wewnętrzny obszar Tutorial Spotlight odpowiada dokładnie temu
+   elementowi; jego krawędź może miękko przechodzić gradientem w przyciemnienie, ale nie może
+   podświetlać dużego, przypadkowego obszaru ani innego elementu.
 2. **Tutorial Hint i Tutorial Spotlight są osobnymi elementami.** Hint przekazuje instrukcję,
    a Spotlight wskazuje element, którego instrukcja dotyczy. Ich położenie powinno być dynamiczne
    i nie może zasłaniać Tutorial Target.
@@ -29,9 +29,10 @@
 9. **Demo jest izolowane.** Przycisk `TEST` uruchamia obecnie Demo na poziomie 21 z pełną
    zawartością testową; demo nie może
    zmieniać kampanii, własności czarów, waluty ani postępu gracza.
-10. **Tutorial Highlight odpowiada grafice.** Ramka wskazująca element musi mieć dokładnie rozmiar
-    i położenie jego widocznej grafiki, bez sztucznego marginesu, przesunięcia ani przybliżonego
-    hitboxa. Dotyczy to wszystkich wskazywanych elementów interfejsu i pola bitwy.
+10. **Tutorial Highlight odpowiada grafice.** Wewnętrzny obszar wskazujący element musi mieć
+    dokładny rozmiar i położenie jego widocznej grafiki, bez sztucznego marginesu, przesunięcia ani
+    przybliżonego hitboxa. Dopuszczalny jest wąski gradient krawędzi Spotlightu, który nie zmienia
+    geometrii celu. Dotyczy to elementów interfejsu i pola bitwy.
 11. **Fortress–Catapult Presentation Contract jest zamrożony i sprzężony.**
     Obecny układ bazowy to forteca `672 × 504` jednostek świata z przesunięciem `+35` w osi Y;
     katapulta ma szerokość `182.4`, pozycję `110` jednostek na zewnątrz od środka fortecy oraz
@@ -67,8 +68,8 @@ kontrakty są wyraźnie oddzielone.
 | **AIS** | **AI System** | Profile kampanii i registry wymiennych strategii katapulty/amunicji, rekrutacji i fal; decyzje bazują na snapshotach i wspólnych komendach. | Działa dla CADET/VETERAN/ELITE; postęp ELITE jest ograniczony, zaklęcia AI nie są obsługiwane. Właściciel decyzji: `game-ai`; lifecycle: `game-application`. |
 | **CaS** | **Campaign System** | Poziomy, chaptery, odblokowania, cele, modyfikatory i postęp kampanii. | Częściowy; lokalna progresja oraz milestone'y i nagrody poziomowe działają. Właściciel definicji: `game-campaign`; use case'y: `game-application`. |
 | **SS** | **Spell System** | Definicje czarów, mana, aktywacja, efekty, cooldowny, dostępność i integracja z walką. | Częściowy: `CastSpell`, mana, snapshoty oraz Fortress Shield, HASTE i Runic Bastion działają; AI używa ich sytuacyjnie, a osiem pozostałych efektów nie jest zaimplementowanych. |
-| **TutS** | **Tutorial System** | Kroki tutoriala, hinty, spotlighty, cele, odblokowywanie paneli i ograniczenia AI. | Zaprojektowany w `docs/systems/tutorial-system.md`; niezaimplementowany. |
-| **PSys** | **Persistence System** | Trwały zapis profilu, waluty, loadoutu, żyć i postępu kampanii. | Profil schema 2, LifeState, reset, nagrody i zakupy/stock Shop używają wspólnego Preferences DataStore; tutorial progress pozostaje poza implementacją. |
+| **TutS** | **Tutorial System** | Kroki tutoriala, hinty, spotlighty, cele, odblokowywanie paneli i ograniczenia AI. | Wdrożony v1 w `game-application.application.tutorial`, `android-app` i Studio; katalog zaakceptowanej treści zawiera tylko `match.basics`. |
+| **PSys** | **Persistence System** | Trwały zapis profilu, waluty, loadoutu, żyć i postępu kampanii. | Profil schema 2, LifeState, reset, nagrody, zakupy/stock Shop i terminal tutorial progress używają wspólnego Preferences DataStore z osobnymi namespace'ami. |
 | **PPS** | **Player Progression System** | Trwały profil lokalny, saldo i stock odczytywane przy walidacji loadoutu. | Profil, nagrody złota, atomowe mutacje profilu i debugowy preset działają. Zakupy i settlement stocku realizuje ShopSystem; LifeSystem jest osobnym właścicielem reguł żyć we wspólnym profilu. |
 | **LifeS** | **LifeSystem** | Trwałe życia kampanii, regeneracja offline, kampanijna bramka startu i skończone/czasowe granty. | Zaimplementowany lokalnie w `game-application.application.progression`; nie zawiera integracji reklam ani event feedu. |
 | **LoS** | **Loadout System** | Konfiguracja jednostek, amunicji i czarów przed poziomem. | Walidacja, normalizacja, interaktywna selekcja, zapis DataStore i bezpieczny start działają; kampanijne odblokowania Haste/Heal są zintegrowane dla poziomów 6/8. Loadout nie wykonuje zakupów ani stock settlementu. |
@@ -91,15 +92,31 @@ kontrakty są wyraźnie oddzielone.
 
 ## Tutorial
 
-| Term | Meaning |
+| Pojęcie | Znaczenie |
 | --- | --- |
-| **Tutorial Hint** | Jasne okienko zawierające tekst instrukcji oraz przycisk `NEXT` lub `START BATTLE`. |
+| **Tutorial System (TutS)** | Podsystem, który dobiera instrukcje do kontekstu gry, prowadzi gracza przez ich kroki i zapisuje wynik. Reguły i katalog należą do `game-application`, prezentacja do Androida, a edycja treści do Studio. |
+| **Tutorial Catalog** | Walidowany katalog JSON zawierający definicje tutoriali, cele prezentacji oraz listy zarejestrowanych identyfikatorów mechanik, zdarzeń i milestone’ów. |
+| **Tutorial Definition** | Definicja pojedynczego tutoriala: stabilny identyfikator, zakres, wyzwalacz, wymagania, zasady, wprowadzane mechaniki i lista kroków. |
+| **Tutorial Scope** | Zakres tutoriala: `SCREEN` dotyczy ekranu, a `MATCH` — sesji meczu. Zakres określa kontekst działania, nie konkretny numer poziomu. |
+| **Tutorial Trigger** | Warunek uruchomienia tutoriala: wejście na ekran, rozpoczęcie meczu, zaobserwowanie zdarzenia meczu albo zastosowanie milestone’u kampanii. |
+| **Tutorial Requirement (`requires`)** | Zależność od innego tutoriala. Wymagany tutorial musi mieć zapisany status terminalny — `COMPLETED` albo `SKIPPED` — zanim zależny tutorial będzie dostępny. |
+| **Tutorial Step** | Jeden kolejny etap instrukcji: zawiera lokalizowany tekst, opcjonalny cel prezentacji i warunek ukończenia; może też wskazywać dodatkową treść. |
+| **Step Completion** | Warunek przejścia dalej: naciśnięcie `NEXT`, wykonanie określonej liczby zaakceptowanych akcji gracza albo zaobserwowanie określonej liczby zdarzeń meczu. |
+| **Tutorial Hint** | Karta z tekstem instrukcji i kontrolkami, takimi jak `NEXT`, `START BATTLE` lub `SKIP`. Jej pozycja jest dobierana względem ekranu i celu, by nie zasłaniać wskazywanego elementu. |
+| **Tutorial Spotlight** | Przyciemniona warstwa prezentacji z wyciętym obszarem wokół wskazywanego celu i miękkim gradientem na granicy wycięcia. Sam spotlight nie zawiera instrukcji — tę przekazuje Hint. |
+| **Tutorial Target** | Konkretny element interfejsu albo pola bitwy, do którego odnosi się krok. Definicja ma stabilny `targetId`, ekran i rodzaj: `VIEW` lub `BATTLEFIELD`. |
+| **Target ID (`targetId`)** | Stabilny identyfikator znaczenia celu, np. `match.enemy_fortress`. Jest używany przez katalog i łączy krok z dostawcą położenia elementu na danym ekranie. |
+| **Target Instance ID (`targetInstanceId`)** | Identyfikator konkretnej, dynamicznej instancji celu w runtime, np. określonego latającego obiektu. Nie jest częścią definicji tutoriala w JSON; resolver nie zastępuje brakującej instancji inną. |
+| **Tutorial Signal** | Informacja wejściowa dla silnika tutoriala, niosąca zdarzenie i kontekst, np. wejście na ekran, start meczu, akcję gracza albo milestone kampanii. |
+| **Tutorial Context** | Dane potrzebne do oceny sygnału: m.in. tryb Demo, język, identyfikator meczu i jego generacja. Pozwalają nie mieszać sygnałów z różnych sesji. |
+| **Tutorial Rule Set** | Zasady aktywnego tutoriala: czy Hint pauzuje symulację, czy AI jest wstrzymane i czy decyzje AI są ograniczone do wprowadzonych mechanik. |
+| **Target Lock** | Czasowa blokada wskazanych celów lub kontrolek, używana do ograniczenia interakcji do mechanik, które zostały już wyjaśnione. |
+| **Tutorial Status** | Zapisany status terminalny tutoriala: `COMPLETED` (ukończony) lub `SKIPPED` (pominięty). Status odblokowuje wymagające go tutoriale i jest uwzględniany przy powtórce z Dashboardu. |
+| **Tutorial Mechanic ID** | Kanoniczny identyfikator mechaniki, której dotyczy wyzwalacz lub którą tutorial wprowadza. Jego właścicielem pozostaje system gry; katalog tutoriala jedynie odwołuje się do zarejestrowanego ID. |
 | **Fortress Hitbox Preview (FHP)** | Półprzezroczysty podgląd uproszczonego kształtu trafienia fortecy. Po ustaleniu kotwic maga i katapulty FHP, grafika, mag i katapulta mają wspólną transformację: pozycję, skalę, przesunięcie i kotwicę. Wszystkie korekty pozycji maga są globalne dla wszystkich biomów, chapterów i poziomów. |
 | **Fortress Presentation Template** | Kontrakt poziomu testowego Demo i źródło prawdy dla wszystkich biomów, chapterów i poziomów. Środki fortec w świecie szerokości 7200 to `x=600` i `x=6600`; geometria fortecy to `672 × 504` jednostek świata z przesunięciem Y `+35`. Katapulta ma szerokość `182.4`, leży `110` jednostek na zewnątrz (środki `x=490` i `x=6710`) i `200` jednostek wyżej od prezentowanego fundamentu. FHP i grafika fortecy dzielą transformację, a katapulta pozostaje pod fortecą w kolejności renderowania. Launch/aim anchor ma stałe położenie względem fortecy, niezależne od sprite'u katapulty. Grafika może być właściwa dla chapteru, ale nie może zmieniać tej geometrii template'u. |
 | **Fortress Gameplay Anchor Pixels** | Niezmienne punkty na canvasie fortecy `1024 × 768 px`, wyliczone z kanonicznego układu Demo. Punkt środkowy platformy katapulty to `(284, 592)` dla lewej i `(745, 592)` dla prawej fortecy. Punkt dolnej kotwicy maga to `(473, 225)` dla lewej i `(585, 225)` dla prawej fortecy. Każdy AGP fortecy musi wymagać tych współrzędnych dokładnie, bez tolerancji projektowej; przezroczysty margines i widoczne granice grafiki nie zmieniają układu całego canvasa. |
 | **Demo** | Izolowany poziom `0`, uruchamiany przyciskiem `TEST` na ekranie głównym. Korzysta z biomu Copperwood i pełnego testowego loadoutu; służy do wspólnego ustawiania oraz weryfikacji fortec, FHP, maga i katapult bez wpływu na postęp kampanii. |
-| **Tutorial Spotlight** | Przyciemniona warstwa rozgrywki z ramką wokół opisywanego elementu. |
-| **Tutorial Target** | Dokładny element opisywany przez Tutorial Hint i obejmowany przez Tutorial Spotlight. |
 
 ## Battlefield and HUD
 

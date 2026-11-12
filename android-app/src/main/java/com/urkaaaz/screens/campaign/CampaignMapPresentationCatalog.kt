@@ -35,7 +35,8 @@ object CampaignMapPresentationCatalog {
         val backgroundDrawable = when (layout.backgroundAssetKey) {
             GREEN_FRONTIER_MAP_ASSET_KEY -> R.drawable.campaign_chapter_01_green_frontier_map
             BROKEN_VALLEY_MAP_ASSET_KEY -> R.drawable.campaign_chapter_02_broken_valley_map
-            ASHEN_MARCH_MAP_ASSET_KEY -> R.drawable.campaign_chapter_03_ashen_march_map
+            IRONWOOD_MAP_ASSET_KEY -> R.drawable.campaign_chapter_03_ironwood_map
+            ASHEN_MARCH_MAP_ASSET_KEY -> R.drawable.campaign_chapter_04_ashen_march_map
             else -> return CampaignMapPresentationRead.Failure(
                 "Unsupported campaign map asset: ${layout.backgroundAssetKey}",
             )
@@ -97,12 +98,14 @@ object CampaignMapPresentationCatalog {
         )
     }
 
-    private const val FIRST_FALLBACK_CHAPTER_INDEX = 3
+    private const val FIRST_FALLBACK_CHAPTER_INDEX = 4
     private const val GREEN_FRONTIER_CHAPTER_ID = "green_frontier"
     private const val GREEN_FRONTIER_MAP_ASSET_KEY =
         "campaign_chapter_01_green_frontier_map"
     private const val BROKEN_VALLEY_MAP_ASSET_KEY =
         "campaign_chapter_02_broken_valley_map"
+    private const val IRONWOOD_MAP_ASSET_KEY =
+        "campaign_chapter_03_ironwood_map"
     private const val ASHEN_MARCH_MAP_ASSET_KEY =
-        "campaign_chapter_03_ashen_march_map"
+        "campaign_chapter_04_ashen_march_map"
 }

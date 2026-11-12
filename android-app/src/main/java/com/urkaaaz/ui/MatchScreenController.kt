@@ -5,6 +5,7 @@ import android.app.AlertDialog
 import android.app.Dialog
 import android.content.res.ColorStateList
 import android.graphics.Color
+import android.graphics.RectF
 import android.graphics.Typeface
 import android.os.Handler
 import android.os.Looper
@@ -37,9 +38,19 @@ import com.urkaaaz.application.reward.RewardTracker
 import com.urkaaaz.campaign.CampaignRewardRegistry
 import com.urkaaaz.screens.match.CampaignCompletionPresentation
 import com.urkaaaz.application.loadout.LoadoutCatalog
+import com.urkaaaz.application.LocalMatchGateway
 import com.urkaaaz.application.campaign.BundledCampaignBalance
+import com.urkaaaz.logging.AndroidAmmunitionLogSink
+import com.urkaaaz.logging.AndroidCombatLogSink
 import com.urkaaaz.application.shop.MatchStockSettlementResult
 import com.urkaaaz.application.shop.MatchStockSettlementUseCase
+import com.urkaaaz.application.tutorial.TutorialEffect
+import com.urkaaaz.application.tutorial.TutorialPlayerActionKind
+import com.urkaaaz.application.tutorial.TutorialUiState
+import com.urkaaaz.tutorial.MatchTutorialAdapter
+import com.urkaaaz.tutorial.TutorialSignalSink
+import com.urkaaaz.tutorial.boundsInRoot
+import com.urkaaaz.tutorial.visibleBoundsIn
 
 class MatchScreenController(
     private val activity: Activity,
@@ -61,6 +72,7 @@ class MatchScreenController(
         (CampaignCompletionPresentation) -> Unit,
     ) -> Unit = { _, _, _, onCompletion -> onCompletion(CampaignCompletionPresentation(false, null)) },
     private val onNextLevelClicked: (Int) -> Unit = {},
+    private val tutorialSignalSink: TutorialSignalSink? = null,
 ) {
     private val viewModel = MatchViewModel(
         campaignLevel = campaignLevel,
@@ -72,8 +84,19 @@ class MatchScreenController(
         demoMode = demoMode,
         testMode = testMode,
         mapRepository = MapDefinitionRepository { path -> activity.assets.open(path) },
-        combatLogSink = AndroidCombatLogSink(),
-        ammunitionLogSink = AndroidAmmunitionLogSink(),
+        gatewayFactory = { configuration ->
+            LocalMatchGateway(
+                terrainBiome = configuration.terrainBiome,
+                initialWind = configuration.initialWind,
+                mapDefinition = configuration.mapDefinition,
+                scenario = configuration.scenario,
+                blueFortressMaxHealth = configuration.blueFortressMaxHealth,
+                playerTeams = configuration.playerTeams,
+                combatLogSink = AndroidCombatLogSink(),
+                ammunitionLogSink = AndroidAmmunitionLogSink(),
+                eventObserver = configuration.eventObserver,
+            )
+        },
         onMatchFinishedWithRewards = { level, event, reward ->
             lastMatchFinishedEvent = event
             lastMatchReward = reward
@@ -90,6 +113,9 @@ class MatchScreenController(
             RewardTracker(campaignLevel, rewardRegistry)
         },
     )
+    private val tutorialAdapter = MatchTutorialAdapter(viewModel) {
+        render(viewModel.renderState)
+    }
     private val gameHandler = Handler(Looper.getMainLooper())
     private var screenScope: CoroutineScope? = null
     private var stockSettlementJob: Job? = null
@@ -126,6 +152,7 @@ class MatchScreenController(
     private var lastMatchFinishedEvent: MatchEvent.MatchFinished? = null
     private var lastMatchReward: LevelRewardResult? = null
     private var lastRenderedState: RenderState? = null
+    private lateinit var rootView: FrameLayout
 
     private var aimAngle = loadoutCatalog.initialAimDirectionDegrees
     private var aimPower = loadoutCatalog.initialAimPower
@@ -307,7 +334,7 @@ class MatchScreenController(
             setPadding(6, 6, 6, 6)
             addView(battlefieldView, LinearLayout.LayoutParams(-1, 0, 1f))
         }
-        return FrameLayout(activity).apply {
+        rootView = FrameLayout(activity).apply {
             setBackgroundColor(Color.TRANSPARENT)
             clipChildren = false
             addView(content, FrameLayout.LayoutParams(-1, -1))
@@ -380,7 +407,59 @@ class MatchScreenController(
             addView(stockSettlementOverlay, FrameLayout.LayoutParams(-1, -1))
             addView(unitFallbackLoadingOverlay, FrameLayout.LayoutParams(-1, -1))
         }
+        return rootView
     }
+
+    fun tutorialTargetBounds(
+        targetId: String,
+        targetInstanceId: String?,
+    ): RectF? {
+        if (!::rootView.isInitialized || !::battlefieldView.isInitialized) return null
+        val battlefieldTarget = battlefieldView.tutorialTargetBounds(targetId, targetInstanceId)
+        if (battlefieldTarget != null) {
+            return battlefieldView.boundsInRoot(battlefieldTarget, rootView)
+        }
+        if (targetInstanceId != null) return null
+        val targetView = when (targetId) {
+            "match.timer", "match.wind", "match.health" ->
+                hudView.tutorialTargetView(targetId)
+            "match.ammunition" -> ammunitionPanel
+            "match.units", "match.supply", "match.send_wave" ->
+                unitPanel.tutorialTargetView(targetId)
+            "match.mana", "match.spells" ->
+                spellPanel.tutorialTargetView(targetId)
+            "match.boss" -> bossHudView
+            else -> null
+        } ?: return null
+        return targetView.visibleBoundsIn(rootView)
+    }
+
+    fun focusTutorialTarget(
+        targetId: String,
+        targetInstanceId: String?,
+    ): Boolean {
+        if (!::battlefieldView.isInitialized) return false
+        return battlefieldView.focusTutorialTarget(targetId, targetInstanceId)
+    }
+
+    fun setTutorialUiState(state: TutorialUiState?) {
+        if (!::battlefieldView.isInitialized) return
+        battlefieldView.tutorialAimGuideVisible =
+            state?.targetId == "match.aim_guide"
+    }
+
+    fun dispatchTutorialEffect(effect: TutorialEffect): Boolean =
+        tutorialAdapter.apply(effect)
+
+    fun tutorialMatchId(): String? = viewModel.tutorialMatchId()
+
+    fun tutorialMatchGeneration(): Long = viewModel.tutorialMatchGeneration()
+
+    fun tutorialTargetsReady(): Boolean =
+        ::rootView.isInitialized &&
+            rootView.isLaidOut &&
+            ::battlefieldView.isInitialized &&
+            battlefieldView.isLaidOut
 
     fun onResume() {
         if (screenScope == null) {
@@ -649,6 +728,27 @@ class MatchScreenController(
         if (popupState != null) {
             resultPopupView.render(popupState)
             resultPopupView.bringToFront()
+        }
+        flushTutorialSignals()
+    }
+
+    private fun flushTutorialSignals() {
+        val events = viewModel.consumeTutorialEvents()
+        if (events.isNotEmpty()) {
+            tutorialSignalSink?.onMatchEvents(
+                events = events,
+                scenarioFacts = viewModel.tutorialScenarioFacts(),
+                isDemo = demoMode || testMode,
+                matchGeneration = viewModel.tutorialMatchGeneration(),
+            )
+        }
+        viewModel.consumeTutorialPlayerActions().forEach { kind ->
+            tutorialSignalSink?.onAcceptedPlayerAction(
+                kind = kind,
+                isDemo = demoMode || testMode,
+                matchId = viewModel.tutorialMatchId(),
+                matchGeneration = viewModel.tutorialMatchGeneration(),
+            )
         }
     }
 

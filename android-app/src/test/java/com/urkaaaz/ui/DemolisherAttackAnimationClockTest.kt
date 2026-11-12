@@ -59,7 +59,7 @@ class DemolisherAttackAnimationClockTest {
         attackProgress: Float,
     ) = UnitRenderState(
         entityId = entityId,
-        teamLabel = "BLUE",
+        team = com.urkaaaz.contracts.Team.BLUE,
         unitType = "DEMOLISHER",
         x = 0f,
         y = 0f,

@@ -32,9 +32,9 @@ dla bieżących zachowań.
   karuzelę.
 - Wskaźnik pokazuje numer rozdziału w całej kampanii, np. `2 / 10`, a nie
   indeks bieżącej listy widocznych stron.
-- Rozdziały 1–3 używają własnych map. Dla rozdziałów 4–10 ekran tymczasowo
+- Rozdziały 1–4 używają własnych map. Dla rozdziałów 5–10 ekran tymczasowo
   używa tła i kotwic Green Frontier do czasu przygotowania dedykowanych map.
-- Fallback dla rozdziałów 4–10 jest wyłącznie warstwą Android presentation.
+- Fallback dla rozdziałów 5–10 jest wyłącznie warstwą Android presentation.
   Nie twórz fałszywych layoutów kampanii, `MapDefinition` ani map
   gameplayowych i nie zmieniaj Studio.
 - Zachowaj kompaktowy HUD: Back, `CAMPAIGN`, numer/nazwę rozdziału, postęp,
@@ -73,9 +73,9 @@ Nie przywracaj, nie nadpisuj i nie usuwaj zmian spoza zadania.
 
 ### 1. Rozwiązywanie map i tymczasowy fallback
 
-- Zachowaj aktualne mapowanie rozdziałów 1–3:
-  Green Frontier, Broken Valley i Ashen March.
-- Dla rozdziałów 4–10 obsłuż wyłącznie
+- Zachowaj aktualne mapowanie rozdziałów 1–4:
+  Green Frontier, Broken Valley, Ironwood i Ashen March.
+- Dla rozdziałów 5–10 obsłuż wyłącznie
   `CampaignMapLayoutRead.MapArtworkMissing` jako warunek użycia fallbacku
   Green Frontier.
 - Utwórz prezentację z background drawable Green Frontier, jego wymiarami
@@ -150,7 +150,7 @@ Po przeniesieniu potrzebnych zachowań usuń elementy Chapter Strip z
   `UNSELECTED_CHAPTER_THUMBNAIL_ALPHA`;
 - importy `HorizontalScrollView` i komponenty używane wyłącznie przez
   miniatury;
-- `renderChapterLevelList()`: znany brak mapy rozdziałów 4–10 obsługuje
+- `renderChapterLevelList()`: znany brak mapy rozdziałów 5–10 obsługuje
   fallback prezentacyjny, a błędne dane pozostają jawnym błędem.
 
 Z `CampaignMapPresentationCatalog` usuń metody przeznaczone tylko dla
@@ -204,7 +204,7 @@ Dodaj lub zaktualizuj testy:
 
 - `CampaignViewModelTest`: poprzednia/następna strona, granice karuzeli,
   wybór bieżącej strony i brak zmiany poziomu przy zablokowanych markerach;
-- `CampaignMapPresentationCatalogTest`: mapy 1–3, fallback dla 4–10,
+- `CampaignMapPresentationCatalogTest`: mapy 1–4, fallback dla 5–10,
   globalne numery kotwic, jawne błędy dla nieprawidłowych layoutów;
 - `CampaignChapterProgressMapperTest`: nie zmieniaj polityki stron ani
   stanów ukończone/bieżące/następny podgląd;
@@ -245,14 +245,14 @@ zachować wszystkie zastane zmiany. Nie commituj ani nie pushuj.
    i bez miniaturek rozdziałów.
 2. Strzałki i swipe przechodzą tylko między stronami aktualnie dozwolonymi
    przez istniejącą progresję; indeks na HUD-zie pozostaje globalny `N / 10`.
-3. Rozdziały 4–10 renderują tło/kotwice Green Frontier z własnymi tytułami,
+3. Rozdziały 5–10 renderują tło/kotwice Green Frontier z własnymi tytułami,
    numerami, markerami i progresją.
 4. Statusy oraz wybór leveli pozostają zgodne z persisted
    `CampaignProgress`; locked/completed nie dają się uruchomić.
 5. Start Level nadal przechodzi przez `CampaignSystem.selectLevel` i dopiero
    po sukcesie otwiera Loadout.
 6. Nieprawidłowe layouty i awarie odczytu pozostają jawne; fallback dotyczy
-   tylko braku mapy w rozdziałach 4–10.
+   tylko braku mapy w rozdziałach 5–10.
 7. Usunięty jest martwy kod i runtime Chapter Strip assets; zasoby
    współdzielone przez Test Mode i Studio są zachowane.
 8. Testy, debug build i `git diff --check` przechodzą.

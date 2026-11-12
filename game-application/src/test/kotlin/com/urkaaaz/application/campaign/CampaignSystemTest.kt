@@ -83,6 +83,7 @@ class CampaignSystemTest {
         assertEquals(6, result.progress.highestUnlockedLevel)
         assertEquals(setOf(5), result.progress.completedLevels)
         assertEquals(setOf("campaign_spell_haste"), result.progress.appliedMilestoneIds)
+        assertEquals(setOf("campaign_spell_haste"), result.newlyAppliedMilestoneIds)
         assertIs<CampaignLevelSelection.Selected>(system.selectLevel(6))
 
         val rewards = assertIs<CampaignLoadoutRewardsRead.Available>(
@@ -111,6 +112,7 @@ class CampaignSystemTest {
             setOf("campaign_spell_heal"),
             result.progress.appliedMilestoneIds,
         )
+        assertEquals(setOf("campaign_spell_heal"), result.newlyAppliedMilestoneIds)
         assertEquals(
             CampaignLoadoutRewards(
                 unlockedSpellTypes = setOf("HEAL"),

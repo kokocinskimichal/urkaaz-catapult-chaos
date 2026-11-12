@@ -19,12 +19,6 @@ import com.urkaaaz.domain.SpellType
 import com.urkaaaz.domain.UnitIds
 import com.urkaaaz.domain.CampaignBalance
 
-/** Tutorial instructions are data and do not contain Android views or resource IDs. */
-data class TutorialParameters(
-    val enabled: Boolean,
-    val stepKeys: List<String> = emptyList(),
-)
-
 data class EnemyConfiguration(
     val aiProfile: AiProfileSelection = AiProfileSelection(),
 )
@@ -42,7 +36,6 @@ data class CampaignLevelDefinition(
     val availableAmmunition: Set<AmmunitionType>,
     val availableSpells: Set<SpellType>,
     val initialWind: WindSnapshot = WindSnapshot(),
-    val tutorial: TutorialParameters = TutorialParameters(enabled = false),
     val mapDefinition: MapDefinition,
 ) {
     init {
@@ -155,14 +148,6 @@ data class CampaignLevelDefinition(
                 initialWind = WindSnapshot(
                     direction = if (safeLevel % 2 == 0) -1f else 1f,
                     strength = campaignBalance.initialWindStrength(safeLevel),
-                ),
-                tutorial = TutorialParameters(
-                    enabled = safeLevel == 1,
-                    stepKeys = if (safeLevel == 1) {
-                        listOf("aim", "fire", "advance")
-                    } else {
-                        emptyList()
-                    },
                 ),
                 mapDefinition = mapDefinition,
             )

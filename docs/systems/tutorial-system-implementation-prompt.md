@@ -161,7 +161,7 @@ Pakiet `com.urkaaaz.application.tutorial`:
   zmiany adaptera resetu;
 - Demo nie czyta ani nie zapisuje.
 
-### Etap 3 — mostek meczowy (wymaga bramki lokalizacji)
+### Etap 3 — mostek meczowy (korzysta z istniejącego LanguageSettings)
 
 - `LocalMatchGateway.suspendAi()`/`resumeAi()` nad
   `AiMatchCoordinator.pause()/resume()`; testy, że wstrzymane AI nie wydaje
@@ -188,9 +188,9 @@ Pakiet `com.urkaaaz.application.tutorial`:
 - pakiet `com.urkaaaz.tutorial`: `TutorialHost`, `TutorialOverlayView`,
   `TutorialSpotlightView`, `TutorialHintView`, `TutorialTargetRegistry`,
   `TutorialHintPlacer` (czysta funkcja);
-- opcjonalna, domyślna metoda `TutorialTargetSource` w `ScreenContent`, aby
-  istniejące ekrany się nie zmieniały; rejestracja celów w `onResume`,
-  wyrejestrowanie w `onPause`;
+- opcjonalny screen-owned `TutorialScreenContent` target source; `TutorialHost`
+  rejestruje go przy zmianie aktywnego screen content i usuwa provider przy
+  przełączeniu ekranu, bez dodawania tutorialowych pól do `MainActivity`;
 - `TutorialTargetRegistry` rozwiązuje `(targetId, targetInstanceId?)` na
   podstawie bieżącego immutable render state i transformacji kamery. Dla
   targetu dynamicznego brak/usunięcie/niewidoczność wskazanej instancji nigdy

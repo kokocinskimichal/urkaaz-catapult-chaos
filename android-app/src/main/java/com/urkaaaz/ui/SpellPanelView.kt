@@ -12,6 +12,7 @@ import android.widget.LinearLayout
 import android.widget.TextView
 import com.urkaaaz.android.R
 import com.urkaaaz.application.loadout.LoadoutCatalog
+import java.util.Locale
 import com.urkaaaz.screens.loadout.LoadoutAssetCatalog
 import com.urkaaaz.screens.loadout.LoadoutAssetLookup
 import com.urkaaaz.screens.loadout.LoadoutItemReference
@@ -73,9 +74,12 @@ class SpellPanelView(
         slots.forEach { slot ->
             val active = slot.type in state.activeSpellTypes
             val enoughMana = state.playerMana >= slot.manaCost
+            val locked = "spell.${slot.type.lowercase(Locale.ROOT)}" in
+                state.tutorialLockedMechanicIds
             val ready = slot.implemented &&
                 (!active || slot.recastableWhileActive) &&
                 enoughMana &&
+                !locked &&
                 state.statusLabel == "RUNNING"
             val visuallyActive = SpellIconAvailabilityPresentation.isVisuallyActive(
                 spellType = slot.type,
@@ -96,6 +100,7 @@ class SpellPanelView(
                         remainingSeconds,
                     )
                 active -> context.getString(R.string.match_hud_active)
+                locked -> context.getString(R.string.match_hud_unavailable)
                 !slot.implemented -> context.getString(R.string.match_hud_planned)
                 state.statusLabel != "RUNNING" -> context.getString(R.string.match_hud_unavailable)
                 !enoughMana -> context.getString(R.string.match_hud_low_mana)
@@ -156,6 +161,13 @@ class SpellPanelView(
                 if (coveredFraction > 0f) View.VISIBLE else View.GONE
         }
     }
+
+    fun tutorialTargetView(targetId: String): View? =
+        when (targetId) {
+            "match.mana" -> manaOrb
+            "match.spells" -> slots.firstOrNull()?.button
+            else -> null
+        }
 
     private fun createSlot(type: String): SpellSlot? {
         val spell = loadoutCatalog.findSpell(type) ?: return null

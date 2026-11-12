@@ -29,7 +29,6 @@ class CampaignLevelDefinitionTest {
         )
         assertEquals(setOf(SpellType.FORTRESS_SHIELD), level.availableSpells)
         assertFalse(SpellType.ICE_TRAP in level.availableSpells)
-        assertTrue(level.tutorial.enabled)
         assertEquals(AiProfileId.CADET, level.enemy.aiProfile.profileId)
     }
 
@@ -74,7 +73,6 @@ class CampaignLevelDefinitionTest {
         assertEquals(0, level.enemy.aiProfile.progressionPercent)
         assertEquals(1f, level.initialWind.direction)
         assertEquals(0.55f, level.initialWind.strength)
-        assertFalse(level.tutorial.enabled)
     }
 
     @Test
@@ -85,7 +83,6 @@ class CampaignLevelDefinitionTest {
         assertEquals(AiProfileId.CADET, level.enemy.aiProfile.profileId)
         assertEquals(-1f, level.initialWind.direction)
         assertEquals(0.7f, level.initialWind.strength, 0.0001f)
-        assertFalse(level.tutorial.enabled)
     }
 
     @Test
@@ -137,7 +134,9 @@ class CampaignLevelDefinitionTest {
             )
         }
         assertEquals("green_frontier", CampaignLevelDefinition.forLevel(10).mapDefinition.biome)
-        assertEquals("ashen_march", CampaignLevelDefinition.forLevel(21).mapDefinition.biome)
+        assertEquals("copperwood", CampaignLevelDefinition.forLevel(21).mapDefinition.biome)
+        assertEquals("ashen_march", CampaignLevelDefinition.forLevel(31).mapDefinition.biome)
+        assertEquals("sunken_marshes", CampaignLevelDefinition.forLevel(41).mapDefinition.biome)
     }
 
     @Test
@@ -145,7 +144,7 @@ class CampaignLevelDefinitionTest {
         val level = CampaignLevelDefinition.forLevel(41)
 
         assertEquals("demo-map", level.mapDefinition.mapId)
-        assertEquals("copperwood", level.mapDefinition.biome)
+        assertEquals("sunken_marshes", level.mapDefinition.biome)
         assertTrue(UnitIds.SLINGMASTER in level.availableUnits)
         assertTrue(AmmunitionType.PLAGUE_CAULDRON in level.availableAmmunition)
         assertTrue(SpellType.RUNIC_BASTION in level.availableSpells)

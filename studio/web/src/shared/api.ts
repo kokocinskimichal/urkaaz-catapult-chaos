@@ -22,6 +22,11 @@ import type {
   MapSaveRequest,
   MapValidationResponse,
 } from "@studio/contracts/maps";
+import type {
+  TutorialDocumentResponse,
+  TutorialSaveRequest,
+  TutorialValidationResponse,
+} from "@studio/contracts/tutorials";
 
 export class ApiError extends Error {
   readonly status: number;
@@ -73,6 +78,20 @@ export const saveProgress = (request: ProgressSaveRequest, fetcher?: Fetcher) =>
   });
 export const validateProgress = (content: string, fetcher?: Fetcher) =>
   requestJson<ProgressValidationResponse>("/api/progress/validate", fetcher, {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({ content }),
+  });
+export const fetchTutorialCatalog = (fetcher?: Fetcher) =>
+  requestJson<TutorialDocumentResponse>("/api/tutorials", fetcher);
+export const saveTutorialCatalog = (request: TutorialSaveRequest, fetcher?: Fetcher) =>
+  requestJson<TutorialDocumentResponse>("/api/tutorials", fetcher, {
+    method: "PUT",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify(request),
+  });
+export const validateTutorialCatalog = (content: string, fetcher?: Fetcher) =>
+  requestJson<TutorialValidationResponse>("/api/tutorials/validate", fetcher, {
     method: "POST",
     headers: { "content-type": "application/json" },
     body: JSON.stringify({ content }),

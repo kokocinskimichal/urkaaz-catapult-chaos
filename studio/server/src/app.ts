@@ -2,6 +2,7 @@ import { createServer, type IncomingMessage, type Server, type ServerResponse } 
 import { handleAnimationRoute } from "./api/animations.ts";
 import { handleBalanceRoute } from "./api/balance.ts";
 import { handleProgressRoute } from "./api/progress.ts";
+import { handleTutorialRoute } from "./api/tutorials.ts";
 import { handleCampaignRoute } from "./api/campaign.ts";
 import { handleMapRoute, handleTerrainAssetRoute } from "./api/maps.ts";
 import type { HealthResponse } from "./contracts/api.ts";
@@ -58,6 +59,7 @@ async function handle(
   if (await handleAnimationRoute(request, response, url.pathname, repoRoot)) return;
   if (await handleBalanceRoute(request, response, url.pathname, repoRoot)) return;
   if (await handleProgressRoute(request, response, url.pathname, repoRoot)) return;
+  if (await handleTutorialRoute(request, response, url.pathname, repoRoot)) return;
   if (await handleCampaignRoute(request, response, url.pathname, repoRoot)) return;
   if (await handleMapRoute(request, response, url.pathname, repoRoot)) return;
   if (await handleTerrainAssetRoute(request, response, url.pathname, repoRoot)) return;

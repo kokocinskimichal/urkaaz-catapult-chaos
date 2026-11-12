@@ -6,8 +6,10 @@
 Campaign selection is authorized by persisted progress, and only a canonical
 `MatchEvent.MatchFinished` with `MatchOutcome.BLUE_WIN` records a completion.
 Haste is awarded for level 5 and available from level 6; Heal is awarded for
-level 7 and available from level 8. TutorialSystem, a dedicated result-screen
-flow, cloud sync, and legacy-install migration are not implemented.
+level 7 and available from level 8. TutorialSystem v1 is implemented
+independently and consumes newly applied milestone IDs; its bundled content is
+currently limited to `match.basics`. A dedicated result-screen flow, cloud
+sync, and legacy-install migration are not implemented.
 The injected `RewardSettlementUseCase` additionally evaluates the match reward
 result and atomically saves gold, completion, unlocks, milestone IDs and an
 idempotent receipt. Current level rewards are documented in
@@ -29,7 +31,7 @@ instructions are in
 | Campaign selector rendering and user input | `CampaignScreen` / `CampaignViewModel` |
 | Match runtime and canonical finish event | existing match application/simulation |
 | Player profile and committed per-level selection | PlayerProgressionSystem / LoadoutSystem |
-| Tutorial content and tutorial state | future, game-wide TutorialSystem |
+| Tutorial content and tutorial state | `game-application.application.tutorial`; adapters in `android-app` and Studio |
 
 `game-application` depends on `game-campaign` and match contracts. Core modules
 do not import Android. Campaign progress is never copied into simulation
@@ -171,10 +173,12 @@ usable on a level where it is unavailable.
 ## Tutorials and other non-goals
 
 Campaign milestones contain no tutorial configuration and CampaignProgress
-stores no tutorial flags. The existing level-one tutorial parameters remain
-untouched. A future TutorialSystem will own tutorial observation, state,
-presentation, and progression across the game; it may consume campaign events
-or milestone IDs through an explicit contract.
+stores no tutorial flags. `TutorialParameters` was removed from
+`CampaignLevelDefinition`; `CampaignCompletionResult.Completed` exposes newly
+applied milestone IDs for the TutorialHost signal adapter. On a later
+Loadout entry, the app may re-emit persisted `appliedMilestoneIds` so a
+milestone tutorial remains triggerable after process restart. Tutorial state,
+content, presentation, and progress remain owned by TutorialSystem.
 
 CampaignSystem does not own player gold, purchases, ammunition/spell stock
 consumption, shop behavior, spell casting/effects, account sync, or legacy

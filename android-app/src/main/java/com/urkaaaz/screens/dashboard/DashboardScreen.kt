@@ -3,6 +3,7 @@ package com.urkaaaz.screens.dashboard
 import android.app.AlertDialog
 import android.content.Context
 import android.graphics.Color
+import android.graphics.RectF
 import android.graphics.drawable.ColorDrawable
 import android.graphics.drawable.GradientDrawable
 import android.util.Log
@@ -24,7 +25,13 @@ import com.urkaaaz.application.language.SetLanguage
 import com.urkaaaz.application.progression.DashboardProgressRead
 import com.urkaaaz.application.progression.LifeSnapshot
 import com.urkaaaz.application.progression.PlayerProgressResetResult
-import com.urkaaaz.navigation.ScreenContent
+import com.urkaaaz.application.tutorial.TutorialScreen
+import com.urkaaaz.application.tutorial.TutorialProgressFailure
+import com.urkaaaz.application.tutorial.TutorialProgressWrite
+import com.urkaaaz.tutorial.TutorialDashboardItem
+import com.urkaaaz.tutorial.TutorialTargetRegistration
+import com.urkaaaz.tutorial.TutorialScreenContent
+import com.urkaaaz.tutorial.visibleBoundsIn
 import com.urkaaaz.ui.ScreenChromeMetrics
 import com.urkaaaz.ui.UiTypography
 import com.urkaaaz.screens.life.LifeCountdownFormatter
@@ -48,7 +55,11 @@ class DashboardScreen(
     initialLanguage: AppLanguage,
     setLanguage: SetLanguage,
     private val onLanguageSaved: () -> Unit,
-) : ScreenContent {
+    private val loadTutorials: () -> List<TutorialDashboardItem> = { emptyList() },
+    private val repeatTutorial: suspend (String) -> TutorialProgressWrite = {
+        TutorialProgressWrite.Failure(TutorialProgressFailure.STORAGE_UNAVAILABLE)
+    },
+) : TutorialScreenContent {
     private val viewModel = DashboardViewModel(initialLanguage, setLanguage)
     private var screenScope: CoroutineScope? = null
     private var isResetInProgress = false
@@ -70,6 +81,22 @@ class DashboardScreen(
         minWidth = 0
         background = context.getDrawable(R.drawable.ui_button_dark_s)
         setOnClickListener { loadProgressSummary() }
+    }
+    override val tutorialScreen: TutorialScreen = TutorialScreen.DASHBOARD
+    override val registeredTutorialTargetIds: Set<String> =
+        TutorialTargetRegistration.idsFor(tutorialScreen)
+
+    override fun tutorialTargetBounds(targetId: String, targetInstanceId: String?): RectF? {
+        if (targetInstanceId != null) return null
+        val target = when (targetId) {
+            "dashboard.campaign" -> campaignButtonView
+            "dashboard.shop" -> shopActionButton
+            "dashboard.language" -> languageButton
+            "dashboard.reset" -> resetProgressButton
+            "dashboard.tutorials" -> tutorialsButton
+            else -> null
+        } ?: return null
+        return target.visibleBoundsIn(view)
     }
     private val progressStatusPanel = LinearLayout(context).apply {
         orientation = LinearLayout.HORIZONTAL
@@ -95,6 +122,12 @@ class DashboardScreen(
         background = context.getDrawable(R.drawable.ui_button_dark_m)
         setOnClickListener { showResetConfirmation() }
     }
+    private val tutorialsButton = darkActionButton(
+        labelResource = R.string.dashboard_tutorials,
+        iconResource = null,
+        descriptionResource = R.string.dashboard_tutorials_accessibility,
+        action = ::showTutorials,
+    )
     private val livesIcon = image(R.drawable.icon_lives_heart, 20, 20)
     private val goldIcon = image(R.drawable.icon_orcoins, 20, 20)
     private val regenerationIcon = image(R.drawable.ic_dashboard_life_regeneration, 20, 20)
@@ -102,6 +135,19 @@ class DashboardScreen(
     private val profilePanel = profilePanel()
     private var languagePopup: PopupWindow? = null
     private val languageButton = languageButton()
+    private val campaignButtonView = campaignButton()
+    private val shopActionButton = darkActionButton(
+        labelResource = R.string.dashboard_shop_action,
+        iconResource = R.drawable.icon_orcoins,
+        descriptionResource = R.string.dashboard_shop_accessibility,
+        action = onShop,
+    )
+    private val adRewardButton = darkActionButton(
+        labelResource = R.string.dashboard_ad_reward_action,
+        iconResource = R.drawable.ic_dashboard_ad_reward,
+        descriptionResource = R.string.dashboard_ad_reward_accessibility,
+        action = null,
+    )
     private val leftEventSlot = eventSlot()
     private val rightEventSlot = eventSlot()
     private val campaignArea = campaignArea()
@@ -128,6 +174,12 @@ class DashboardScreen(
             gravity = Gravity.BOTTOM or Gravity.END
             marginEnd = dp(12)
             bottomMargin = dp(70)
+        })
+
+        addView(tutorialsButton, FrameLayout.LayoutParams(dp(148), dp(48)).apply {
+            gravity = Gravity.BOTTOM or Gravity.START
+            marginStart = dp(12)
+            bottomMargin = dp(14)
         })
 
         addView(resetProgressButton, FrameLayout.LayoutParams(dp(126), dp(48)).apply {
@@ -186,6 +238,92 @@ class DashboardScreen(
         languagePopup = null
         return true
     }
+
+    private fun showTutorials() {
+        val items = loadTutorials().filter { it.enabled }
+        if (items.isEmpty()) {
+            Toast.makeText(context, R.string.dashboard_tutorials_unavailable, Toast.LENGTH_LONG).show()
+            return
+        }
+        lateinit var dialog: AlertDialog
+        val dialogContent = LinearLayout(context).apply {
+            orientation = LinearLayout.VERTICAL
+            setPadding(dp(18), dp(8), dp(18), dp(8))
+            items.forEach { item ->
+                addView(LinearLayout(context).apply {
+                    orientation = LinearLayout.VERTICAL
+                    setPadding(0, dp(8), 0, dp(8))
+                    addView(label(tutorialTitle(item), 16f), LinearLayout.LayoutParams(-1, -2))
+                    val statusResource = when (item.status) {
+                        null -> R.string.dashboard_tutorial_not_started
+                        com.urkaaaz.application.tutorial.TutorialStatus.COMPLETED ->
+                            R.string.dashboard_tutorial_completed
+                        com.urkaaaz.application.tutorial.TutorialStatus.SKIPPED ->
+                            R.string.dashboard_tutorial_skipped
+                    }
+                    addView(
+                        label(context.getString(statusResource), 12f),
+                        LinearLayout.LayoutParams(-1, -2),
+                    )
+                    if (item.isMatchTutorial) {
+                        addView(
+                            label(context.getString(R.string.dashboard_tutorial_next_match), 12f),
+                            LinearLayout.LayoutParams(-1, -2),
+                        )
+                    }
+                    val repeatButton = Button(context)
+                    repeatButton.apply {
+                        text = context.getString(R.string.dashboard_tutorial_repeat)
+                        UiTypography.applyButtonTypeface(this)
+                        isEnabled = true
+                        setOnClickListener {
+                            val scope = screenScope ?: return@setOnClickListener
+                            repeatButton.isEnabled = false
+                            scope.launch {
+                                when (val result = repeatTutorial(item.tutorialId)) {
+                                    TutorialProgressWrite.Saved -> {
+                                        Toast.makeText(
+                                            context,
+                                            if (item.isMatchTutorial) {
+                                                R.string.dashboard_tutorial_queued
+                                            } else {
+                                                R.string.dashboard_tutorial_restarted
+                                            },
+                                            Toast.LENGTH_LONG,
+                                        ).show()
+                                        dialog.dismiss()
+                                    }
+                                    is TutorialProgressWrite.Failure -> {
+                                        repeatButton.isEnabled = true
+                                        Toast.makeText(
+                                            context,
+                                            R.string.dashboard_tutorial_repeat_failed,
+                                            Toast.LENGTH_LONG,
+                                        ).show()
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    addView(repeatButton, LinearLayout.LayoutParams(-1, dp(44)).apply {
+                        topMargin = dp(6)
+                    })
+                }, LinearLayout.LayoutParams(-1, -2))
+            }
+        }
+        dialog = AlertDialog.Builder(context)
+            .setTitle(R.string.dashboard_tutorials)
+            .setView(dialogContent)
+            .setNegativeButton(android.R.string.cancel, null)
+            .create()
+        dialog.show()
+    }
+
+    private fun tutorialTitle(item: TutorialDashboardItem): String =
+        when (item.tutorialId) {
+            "match.basics" -> context.getString(R.string.dashboard_tutorial_match_basics)
+            else -> item.tutorialId.replace('.', ' ').replaceFirstChar(Char::uppercase)
+        }
 
     private fun topHeader(): View = LinearLayout(context).apply {
         orientation = LinearLayout.HORIZONTAL
@@ -436,7 +574,7 @@ class DashboardScreen(
         })
         val buttonWidth = campaignButtonWidth()
         val buttonHeight = (buttonWidth * 0.21f).toInt()
-        addView(campaignButton(), FrameLayout.LayoutParams(buttonWidth, buttonHeight, Gravity.CENTER))
+        addView(campaignButtonView, FrameLayout.LayoutParams(buttonWidth, buttonHeight, Gravity.CENTER))
     }
 
     private fun campaignButtonWidth(): Int =
@@ -455,22 +593,9 @@ class DashboardScreen(
     private fun bottomActions(): View = LinearLayout(context).apply {
         orientation = LinearLayout.HORIZONTAL
         gravity = Gravity.CENTER
+        addView(shopActionButton, LinearLayout.LayoutParams(0, dp(52), 1f))
         addView(
-            darkActionButton(
-                labelResource = R.string.dashboard_shop_action,
-                iconResource = R.drawable.icon_orcoins,
-                descriptionResource = R.string.dashboard_shop_accessibility,
-                action = onShop,
-            ),
-            LinearLayout.LayoutParams(0, dp(52), 1f),
-        )
-        addView(
-            darkActionButton(
-                labelResource = R.string.dashboard_ad_reward_action,
-                iconResource = R.drawable.ic_dashboard_ad_reward,
-                descriptionResource = R.string.dashboard_ad_reward_accessibility,
-                action = null,
-            ),
+            adRewardButton,
             LinearLayout.LayoutParams(0, dp(52), 1f).apply {
                 marginStart = dp(12)
             },

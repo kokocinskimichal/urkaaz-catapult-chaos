@@ -6,12 +6,24 @@ import com.urkaaaz.contracts.MatchEvent
 import com.urkaaaz.contracts.MatchSnapshot
 import com.urkaaaz.contracts.MapDefinition
 import com.urkaaaz.contracts.MatchScenario
+import com.urkaaaz.contracts.PlayerId
+import com.urkaaaz.contracts.Team
 import com.urkaaaz.contracts.WindSnapshot
 import com.urkaaaz.application.reward.MatchEventObserver
 import com.urkaaaz.simulation.CombatLogSink
 import com.urkaaaz.simulation.NoOpCombatLogSink
 import com.urkaaaz.simulation.AmmunitionLogSink
 import com.urkaaaz.simulation.NoOpAmmunitionLogSink
+
+data class LocalMatchGatewayConfiguration(
+    val terrainBiome: String,
+    val initialWind: WindSnapshot,
+    val mapDefinition: MapDefinition?,
+    val scenario: MatchScenario?,
+    val blueFortressMaxHealth: Int?,
+    val playerTeams: Map<PlayerId, Team>,
+    val eventObserver: MatchEventObserver,
+)
 
 /** Local in-memory application boundary for the Android host. */
 class LocalMatchGateway(
@@ -24,56 +36,76 @@ class LocalMatchGateway(
     combatLogSink: CombatLogSink = NoOpCombatLogSink,
     ammunitionLogSink: AmmunitionLogSink = NoOpAmmunitionLogSink,
     eventObserver: MatchEventObserver = MatchEventObserver { },
-    private val session: MatchSession = MatchSession(
+    session: MatchSession? = null,
+    private val aiCoordinator: AiMatchCoordinator = AiMatchCoordinator(scenario),
+    playerTeams: Map<PlayerId, Team> = emptyMap(),
+) {
+    private val activeSession = session ?: MatchSession(
         terrainBiome = terrainBiome,
         initialWind = initialWind,
         mapDefinition = mapDefinition,
         scenario = scenario,
+        playerTeams = playerTeams,
         blueFortressMaxHealth = blueFortressMaxHealth,
         redFortressMaxHealth = redFortressMaxHealth,
         combatLogSink = combatLogSink,
         ammunitionLogSink = ammunitionLogSink,
         eventObserver = eventObserver,
-    ),
-    private val aiCoordinator: AiMatchCoordinator = AiMatchCoordinator(scenario),
-) {
+    )
+
     fun dispatch(command: MatchCommand): MatchSnapshot {
-        val snapshot = session.dispatch(command)
+        val snapshot = activeSession.dispatch(command)
         startAiIfNeeded(command)
         return snapshot
     }
 
     fun dispatchResult(command: MatchCommand): CommandResult {
-        val result = session.dispatchResult(command)
+        val result = activeSession.dispatchResult(command)
         startAiIfNeeded(command)
         return result
     }
 
     private fun startAiIfNeeded(command: MatchCommand) {
         if (command is MatchCommand.Start) {
-            val seed = session.replay()?.randomSeed
+            val seed = activeSession.replay()?.randomSeed
                 ?: error("started match is missing its recorded random seed")
-            aiCoordinator.start(seed, session.balanceConfig())
+            aiCoordinator.start(seed, activeSession.balanceConfig())
         }
     }
 
-    fun snapshot(): MatchSnapshot = session.snapshot()
+    fun snapshot(): MatchSnapshot = activeSession.snapshot()
 
-    fun rewardResult() = session.rewardResult()
+    fun rewardResult() = activeSession.rewardResult()
 
     fun pause() {
-        session.pause()
+        activeSession.pause()
         aiCoordinator.pause()
     }
 
     fun resume() {
-        session.resume()
+        activeSession.resume()
+        aiCoordinator.resume()
+    }
+
+    fun pauseSimulation() {
+        activeSession.pause()
+    }
+
+    fun resumeSimulation() {
+        activeSession.resume()
+    }
+
+    fun suspendAi() {
+        aiCoordinator.pause()
+    }
+
+    fun resumeAi() {
         aiCoordinator.resume()
     }
 
     fun stop(): MatchSnapshot {
         aiCoordinator.stop()
-        return session.stop()
+        return activeSession.stop()
     }
 
     fun restart(
@@ -81,16 +113,16 @@ class LocalMatchGateway(
         playerId: com.urkaaaz.contracts.PlayerId,
         scenarioOverride: MatchScenario? = null,
     ): MatchSnapshot {
-        val snapshot = session.restart(matchId, playerId, scenarioOverride)
-        val seed = session.replay()?.randomSeed
+        val snapshot = activeSession.restart(matchId, playerId, scenarioOverride)
+        val seed = activeSession.replay()?.randomSeed
             ?: error("restarted match is missing its recorded random seed")
-        aiCoordinator.start(seed, session.balanceConfig())
+        aiCoordinator.start(seed, activeSession.balanceConfig())
         return snapshot
     }
 
-    fun consumeEvents(): List<MatchEvent> = session.consumeEvents()
+    fun consumeEvents(): List<MatchEvent> = activeSession.consumeEvents()
 
-    fun replay(): MatchReplay? = session.replay()
+    fun replay(): MatchReplay? = activeSession.replay()
 
     fun aiCommands(
         snapshot: MatchSnapshot,
@@ -102,10 +134,15 @@ class LocalMatchGateway(
 
     fun setAiAllowedUnitIds(ids: Set<String>) = aiCoordinator.setAllowedUnitIds(ids)
 
+    fun setAiAllowedAmmunitionIds(ids: Set<String>) =
+        aiCoordinator.setAllowedAmmunitionIds(ids)
+
     fun aiAllowedUnitIds(): Set<String> = aiCoordinator.allowedUnitIds()
 
     fun aiAllowedAmmunitionIds(): Set<String> = aiCoordinator.allowedAmmunitionIds()
 
+    fun aiUnitAutomationEnabled(): Boolean = aiCoordinator.unitAutomationEnabled()
+
     fun canDeployUnit(team: com.urkaaaz.contracts.Team, unitType: String): Boolean =
-        session.canDeployUnit(team, unitType)
+        activeSession.canDeployUnit(team, unitType)
 }

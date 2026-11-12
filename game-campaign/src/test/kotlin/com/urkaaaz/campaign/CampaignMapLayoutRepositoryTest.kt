@@ -31,15 +31,33 @@ class CampaignMapLayoutRepositoryTest {
     }
 
     @Test
-    fun bundledChapterThreeLayoutContainsEveryGlobalLevelAnchor() {
+    fun bundledIronwoodLayoutContainsEveryGlobalLevelAnchor() {
+        val result = CampaignMapLayoutRepository.bundled.load("ironwood")
+
+        assertTrue(result is CampaignMapLayoutRead.Available)
+        val layout = (result as CampaignMapLayoutRead.Available).layout
+        assertEquals("campaign_chapter_03_ironwood_map", layout.backgroundAssetKey)
+        assertEquals(1_672, layout.imageWidthPx)
+        assertEquals(941, layout.imageHeightPx)
+        assertEquals((21..30).toList(), layout.anchors.map { it.level })
+        assertEquals(0.1274f, layout.anchors.first().x)
+        assertEquals(0.8310f, layout.anchors.first().y)
+        assertEquals(0.6681f, layout.anchors[4].x)
+        assertEquals(0.5760f, layout.anchors[4].y)
+    }
+
+    @Test
+    fun bundledAshenMarchLayoutContainsEveryChapterFourAnchor() {
         val result = CampaignMapLayoutRepository.bundled.load("ashen_march")
 
         assertTrue(result is CampaignMapLayoutRead.Available)
         val layout = (result as CampaignMapLayoutRead.Available).layout
-        assertEquals("campaign_chapter_03_ashen_march_map", layout.backgroundAssetKey)
+        assertEquals("campaign_chapter_04_ashen_march_map", layout.backgroundAssetKey)
         assertEquals(1_672, layout.imageWidthPx)
         assertEquals(941, layout.imageHeightPx)
-        assertEquals((21..30).toList(), layout.anchors.map { it.level })
+        assertEquals((31..40).toList(), layout.anchors.map { it.level })
+        assertEquals(0.48666947f, layout.anchors[4].x, 0.000001f)
+        assertEquals(0.4763106f, layout.anchors[4].y, 0.000001f)
     }
 
     @Test

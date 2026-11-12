@@ -7,6 +7,7 @@ import com.urkaaaz.contracts.MatchSnapshot
 import com.urkaaaz.contracts.MatchStatus
 import com.urkaaaz.contracts.MatchScenario
 import com.urkaaaz.contracts.MapDefinition
+import com.urkaaaz.contracts.PlayerId
 import com.urkaaaz.domain.AmmunitionType
 import com.urkaaaz.domain.WorldBounds
 import com.urkaaaz.domain.UnitFactory
@@ -43,7 +44,9 @@ class MatchSession(
     private val expectedBalanceRevision: String? = null,
     private val expectedBalanceContentHash: String? = null,
     private val bossEncounterMatchDurationMilliseconds: Long? = null,
+    playerTeams: Map<PlayerId, Team> = emptyMap(),
 ) {
+    private val configuredPlayerTeams = playerTeams.toMap()
     private var simulation: DeterministicMatchSimulation? = null
     private var loadedBalance: com.urkaaaz.application.balance.LoadedGameBalance? = null
     private val selectedAmmunition = mutableMapOf(
@@ -54,6 +57,7 @@ class MatchSession(
     private var latestSnapshot = MatchSnapshot()
     private var latestEvents = emptyList<com.urkaaaz.contracts.MatchEvent>()
     private var replaySeed: Long? = null
+    private var startingPlayerId: PlayerId? = null
     private val replaySteps = mutableListOf<MatchReplayStep>()
 
     private var replayConfiguration: MatchReplayConfiguration? = null
@@ -100,18 +104,29 @@ class MatchSession(
                 runningSimulation.snapshot()
             }
             is MatchCommand.Aim -> {
-                requireRunning().aim(command.catapultId, command.directionDegrees, command.power)
-                latestEvents = requireRunning().drainEvents()
-                requireRunning().snapshot()
+                val runningSimulation = requireRunning()
+                requireCatapultTeam(command.playerId, command.catapultId, runningSimulation)
+                runningSimulation.aim(
+                    command.catapultId,
+                    command.directionDegrees,
+                    command.power,
+                )
+                latestEvents = runningSimulation.drainEvents()
+                runningSimulation.snapshot()
             }
             is MatchCommand.Fire -> {
-                val team = if (command.catapultId.value.startsWith("red")) Team.RED else Team.BLUE
-                latestEvents = requireRunning().fire(
+                val runningSimulation = requireRunning()
+                val team = requireCatapultTeam(
+                    command.playerId,
+                    command.catapultId,
+                    runningSimulation,
+                )
+                latestEvents = runningSimulation.fire(
                     command.catapultId,
                     selectedAmmunition.getValue(team),
                     command.playerId,
                 )
-                requireRunning().snapshot()
+                runningSimulation.snapshot()
             }
             is MatchCommand.AdvanceSimulation -> {
                 val runningSimulation = requireRunning()
@@ -303,6 +318,16 @@ class MatchSession(
     }
 
     private fun start(command: MatchCommand.Start): MatchSnapshot {
+        val matchScenario = scenario
+        if (matchScenario == null) {
+            // Without a scenario roster, the Start command explicitly names BLUE.
+            startingPlayerId = command.playerId.takeUnless(configuredPlayerTeams::containsKey)
+        } else {
+            if (matchScenario.players.none { it.playerId == command.playerId }) {
+                throw MatchCommandRejectedException(MatchError.PLAYER_NOT_IN_MATCH)
+            }
+            startingPlayerId = null
+        }
         selectedAmmunition[Team.BLUE] = AmmunitionType.ROCK
         selectedAmmunition[Team.RED] = AmmunitionType.ROCK
         val randomSeed = command.randomSeed ?: randomSeedProvider()
@@ -334,6 +359,7 @@ class MatchSession(
             initialWind = initialWind,
             mapDefinition = mapDefinition ?: scenario?.mapDefinition,
             scenario = scenario,
+            playerTeams = configuredPlayerTeams,
             blueFortressMaxHealth = resolvedBlueFortressHealth,
             redFortressMaxHealth = resolvedRedFortressHealth,
             bossEncounterMatchDurationMilliseconds = resolvedBossDuration,
@@ -385,9 +411,31 @@ class MatchSession(
             check(it.snapshot().status == MatchStatus.RUNNING) { "match is not running" }
         }
 
-    private fun teamForPlayer(playerId: com.urkaaaz.contracts.PlayerId): Team =
-        scenario?.players?.firstOrNull { it.playerId == playerId }?.team
-            ?: if (playerId.value.contains("ai", ignoreCase = true)) Team.RED else Team.BLUE
+    private fun requireCatapultTeam(
+        playerId: PlayerId,
+        catapultId: com.urkaaaz.contracts.EntityId,
+        runningSimulation: DeterministicMatchSimulation,
+    ): Team {
+        val catapult = runningSimulation.snapshot().catapults.firstOrNull {
+            it.entityId == catapultId
+        } ?: throw MatchCommandRejectedException(MatchError.UNKNOWN_ENTITY)
+        val playerTeam = teamForPlayer(playerId)
+        if (playerTeam != catapult.team) {
+            throw MatchCommandRejectedException(MatchError.COMMAND_NOT_ALLOWED)
+        }
+        return catapult.team
+    }
+
+    private fun teamForPlayer(playerId: PlayerId): Team {
+        val matchScenario = scenario
+        if (matchScenario != null) {
+            return matchScenario.players.firstOrNull { it.playerId == playerId }?.team
+                ?: throw MatchCommandRejectedException(MatchError.PLAYER_NOT_IN_MATCH)
+        }
+        if (playerId == startingPlayerId) return Team.BLUE
+        return configuredPlayerTeams[playerId]
+            ?: throw MatchCommandRejectedException(MatchError.PLAYER_NOT_IN_MATCH)
+    }
 
     private fun enforceUnitSelection(
         playerId: com.urkaaaz.contracts.PlayerId,
