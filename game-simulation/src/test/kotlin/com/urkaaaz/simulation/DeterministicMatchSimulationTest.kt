@@ -251,7 +251,7 @@ class DeterministicMatchSimulationTest {
         val snapshot = simulation.snapshot()
 
         assertTrue(events.any { it is MatchEvent.ProjectileSplit })
-        assertEquals(7, snapshot.projectiles.count { it.firedBy == Team.BLUE })
+        assertEquals(9, snapshot.projectiles.count { it.firedBy == Team.BLUE })
         assertEquals(1, snapshot.projectiles.count { it.firedBy == Team.RED })
         assertTrue(events.none {
             it is MatchEvent.ProjectileResolved &&
@@ -1317,7 +1317,7 @@ class DeterministicMatchSimulationTest {
     }
 
     @Test
-    fun fireRainSplitsIntoSevenIndependentProjectilesAtItsApex() {
+    fun fireRainSplitsIntoEightFragmentsAtItsApex() {
         val simulation = DeterministicMatchSimulation(
             MatchId("fire-rain-split-match"),
             SimulationConfig(
@@ -1338,9 +1338,9 @@ class DeterministicMatchSimulationTest {
         val projectiles = simulation.snapshot().projectiles
         val split = events.filterIsInstance<MatchEvent.ProjectileSplit>().single()
 
-        assertEquals(7, projectiles.size)
+        assertEquals(9, projectiles.size)
         assertEquals(firedProjectile.entityId, split.projectileId)
-        assertEquals(6, split.fragmentProjectileIds.size)
+        assertEquals(8, split.fragmentProjectileIds.size)
         assertEquals(
             split.fragmentProjectileIds.toSet(),
             projectiles.map { it.entityId }.filter { it != firedProjectile.entityId }.toSet(),
@@ -1349,7 +1349,7 @@ class DeterministicMatchSimulationTest {
 
         val referenceSpeed = abs(firedProjectile.velocityX).coerceAtLeast(120f)
         val fragments = projectiles.filter { it.entityId != firedProjectile.entityId }
-        val expectedHorizontalVelocities = listOf(-3, -2, -1, 1, 2, 3)
+        val expectedHorizontalVelocities = listOf(-4, -3, -2, -1, 1, 2, 3, 4)
             .map { firedProjectile.velocityX + it * referenceSpeed * 0.09f }
             .sorted()
         assertEquals(expectedHorizontalVelocities, fragments.map { it.velocityX }.sorted())
@@ -1428,7 +1428,7 @@ class DeterministicMatchSimulationTest {
 
         val normalSplit = fireRainSplit(1f)
         val fasterSplit = fireRainSplit(1.2f)
-        assertEquals(6, normalSplit.fragmentProjectileIds.size)
+        assertEquals(8, normalSplit.fragmentProjectileIds.size)
         assertEquals(normalSplit.fragmentProjectileIds.size, fasterSplit.fragmentProjectileIds.size)
         assertTrue(fasterSplit.simulationTimeMilliseconds < normalSplit.simulationTimeMilliseconds)
         assertTrue(
@@ -2340,16 +2340,17 @@ class DeterministicMatchSimulationTest {
 
         val first = damageTrace(31L)
         assertTrue(first.size >= 2, "expected lingering ammunition damage, got $first")
-        val repeatedHits = first.groupBy { it.sourceProjectileId to it.targetId }
+        val stableLingeringDamage = first.groupBy { it.sourceProjectileId to it.targetId }
             .values
-            .firstOrNull { hits ->
-                hits.size >= 2 && hits.map { it.amount }.distinct().size == 1
+            .any { hits ->
+                val lingeringTicks = hits.drop(1)
+                lingeringTicks.size >= 2 &&
+                    lingeringTicks.map { it.amount }.distinct().size == 1
             }
-            ?: error(
-                "no target received a stable repeated roll: " +
-                    first.groupBy { it.sourceProjectileId to it.targetId }
-                        .mapValues { (_, hits) -> hits.map { it.amount } },
-            )
+        assertTrue(
+            stableLingeringDamage,
+            "expected one seeded damage roll for repeated lingering ticks: $first",
+        )
         assertNotEquals(first.map { it.amount }, damageTrace(32L).map { it.amount })
     }
 }

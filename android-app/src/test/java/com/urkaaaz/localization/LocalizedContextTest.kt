@@ -41,6 +41,22 @@ class LocalizedContextTest {
         assertEquals("Previous chapter", english.getString(R.string.campaign_previous_chapter))
         assertEquals("Poprzedni rozdział", polish.getString(R.string.campaign_previous_chapter))
         assertEquals("Capítulo anterior", spanish.getString(R.string.campaign_previous_chapter))
+        assertEquals(
+            "No units are available at this level. You can still start the match.",
+            english.getString(R.string.loadout_no_units_available),
+        )
+        assertEquals(
+            "Na tym poziomie nie ma jednostek. Nadal możesz rozpocząć mecz.",
+            polish.getString(R.string.loadout_no_units_available),
+        )
+        assertEquals(
+            "No hay unidades disponibles en este nivel. Aún puedes iniciar la partida.",
+            spanish.getString(R.string.loadout_no_units_available),
+        )
+        val chapterTwoTitle = CampaignChapterTitleResources.forChapter("broken_valley")
+        assertEquals("Frostbound Vale", english.getString(chapterTwoTitle))
+        assertEquals("Mroźna Dolina", polish.getString(chapterTwoTitle))
+        assertEquals("Valle Escarchado", spanish.getString(chapterTwoTitle))
         assertEquals("1.5 s", english.getString(R.string.match_hud_reload_seconds, 1.5f))
         assertEquals("1,5 s", polish.getString(R.string.match_hud_reload_seconds, 1.5f))
         assertEquals("1,5 s", spanish.getString(R.string.match_hud_reload_seconds, 1.5f))

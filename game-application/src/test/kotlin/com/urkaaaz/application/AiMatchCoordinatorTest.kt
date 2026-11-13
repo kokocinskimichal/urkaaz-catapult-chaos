@@ -113,6 +113,18 @@ class AiMatchCoordinatorTest {
     }
 
     @Test
+    fun emptyScenarioUnitAvailabilityLeavesAiCatapultDecisionsEnabled() {
+        val coordinator = AiMatchCoordinator(scenario.copy(availableUnits = emptyList()))
+        coordinator.start(randomSeed = 17L, balance = GameBalanceFixtures.balance)
+
+        val commands = coordinator.decide(snapshot, elapsedMilliseconds = 33)
+
+        assertEquals(emptySet(), coordinator.allowedUnitIds())
+        assertTrue(commands.any { it is MatchCommand.Aim })
+        assertTrue(commands.none { it is MatchCommand.DeployUnit })
+    }
+
+    @Test
     fun emptyTutorialAmmunitionRestrictionDisablesArtilleryDecisions() {
         val coordinator = AiMatchCoordinator(scenario)
         coordinator.setAllowedAmmunitionIds(emptySet())

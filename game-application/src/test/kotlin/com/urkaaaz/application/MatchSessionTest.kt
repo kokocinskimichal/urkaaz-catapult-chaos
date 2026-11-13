@@ -1136,6 +1136,45 @@ class MatchSessionTest {
     }
 
     @Test
+    fun emptyCampaignUnitAvailabilityBlocksDeploymentForBothTeams() {
+        val playerId = PlayerId("unitless-player")
+        val enemyId = PlayerId("unitless-enemy")
+        val matchId = MatchId("unitless-campaign")
+        val session = MatchSession(
+            scenario = MatchScenario(
+                scenarioId = "unitless-campaign",
+                battlefield = BattlefieldConfig(100, 100),
+                players = listOf(
+                    PlayerConfig(playerId, Team.BLUE),
+                    PlayerConfig(enemyId, Team.RED),
+                ),
+                availableUnits = emptyList(),
+                availableAmmunition = listOf("ROCK"),
+                availableSpells = listOf("FORTRESS_SHIELD"),
+            ),
+        )
+        session.dispatch(MatchCommand.Start(CommandId("unitless-start"), matchId, playerId))
+
+        listOf(playerId, enemyId).forEachIndexed { index, actor ->
+            val team = if (index == 0) Team.BLUE else Team.RED
+            assertTrue(!session.canDeployUnit(team, "DEFENDER"))
+            assertEquals(
+                LoadoutError.UNIT_UNAVAILABLE,
+                assertFailsWith<LoadoutCommandRejectedException> {
+                    session.dispatch(
+                        MatchCommand.DeployUnit(
+                            CommandId("unitless-deploy-$index"),
+                            matchId,
+                            actor,
+                            "DEFENDER",
+                        ),
+                    )
+                }.error,
+            )
+        }
+    }
+
+    @Test
     fun campaignAvailabilityRestrictsEnemyAmmunitionAndInventory() {
         val playerId = PlayerId("player")
         val enemyId = PlayerId("local-ai")

@@ -30,7 +30,7 @@ deklaruj ukończenia kroków, których rzeczywiście nie wykonano.
   dotychczasowe zasady. Czas `LingeringArea` pozostaje obecnie równy 3 s;
   ewentualny późniejszy dobór czasu należy do testów balansu.
 - Po `ProjectileSplit` pocisk główny nadal istnieje i kontynuuje symulację,
-  ale ma być ukryty wizualnie. Widoczne zostaje sześć mniejszych fragmentów.
+  ale ma być ukryty wizualnie. Widocznych zostaje osiem mniejszych fragmentów.
 - Zatwierdzony art direction: styl pasujący do istniejących sprite'ów
   Urkaaaz; użytkownik pozwolił dołączać `fire_rain_icon.png` jako referencję
   wizualną do promptów AnimGen.
@@ -179,7 +179,7 @@ W `BattlefieldView` dodaj lub rozszerz minimalny stan prezentacyjny,
 kluczowany stabilnymi ID:
 
 - śledź efekt rozpadu po ID eventu;
-- oznacz sześć potomnych projectile ID jako fragmenty, dopóki występują w
+- oznacz osiem potomnych projectile ID jako fragmenty, dopóki występują w
   snapshotach;
 - śledź fazę i lokalny postęp animacji ognia według `effectId`;
 - czyść wpisy po zniknięciu odpowiadającego pocisku/efektu;
@@ -195,14 +195,14 @@ duplikowania animacji.
 ### Etap 6 — rendering
 
 Rozszerz istniejący `BattlefieldRenderer`, zachowując warstwy i kamerę
-projektu. Rysuj pojemnik do chwili rozpadu, potem błysk i sześć fragmentów w
+projektu. Rysuj pojemnik do chwili rozpadu, potem błysk i osiem fragmentów w
 ich aktualnych pozycjach; pocisk główny po evencie jest niewidoczny.
 Każde `EffectSnapshot` FIRE_RAIN powinno mieć niezależny zapłon i pętlę
 zgodną z jego pozostałym czasem, z fade w ostatnich 500 ms. Prezentacja nie
 wydłuża czasu gameplayowego. Użyj zatwierdzonej kolejności warstw; nie
 dodawaj kontrolek HUD.
 
-Zweryfikuj ręcznie podgląd pan/zoom/resize i widoczność sześciu torów
+Zweryfikuj ręcznie podgląd pan/zoom/resize i widoczność ośmiu torów
 fragmentów po zniknięciu głównego pocisku z prezentacji.
 
 ### Etap 7 — testy, dokumentacja i finalna walidacja

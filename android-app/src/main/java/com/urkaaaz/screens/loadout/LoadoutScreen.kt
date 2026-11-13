@@ -91,6 +91,7 @@ class LoadoutScreen(
     private lateinit var ammunitionCarousel: HorizontalScrollView
     private lateinit var spellCarousel: HorizontalScrollView
     private lateinit var unitOptions: LinearLayout
+    private lateinit var unitAvailabilityHint: TextView
     private lateinit var ammunitionOptions: LinearLayout
     private lateinit var spellOptions: LinearLayout
     private lateinit var goldView: TextView
@@ -217,6 +218,19 @@ class LoadoutScreen(
                         }
                         unitCarousel = createCarousel(context, unitOptions)
                         content.addView(unitCarousel, matchWrap())
+                        unitAvailabilityHint = TextView(context).apply {
+                            text = context.getString(R.string.loadout_no_units_available)
+                            textSize = 11f
+                            setTextColor(Color.rgb(220, 207, 184))
+                            gravity = Gravity.CENTER_VERTICAL
+                            maxLines = 3
+                            setPadding(dp(context, 8), dp(context, 6), dp(context, 8), dp(context, 6))
+                            visibility = View.GONE
+                        }
+                        content.addView(
+                            unitAvailabilityHint,
+                            LinearLayout.LayoutParams(-1, -2),
+                        )
                     }, columnParams(context))
                     addView(createColumn(
                         context,
@@ -514,6 +528,11 @@ class LoadoutScreen(
         val spellCarouselX = spellCarousel.scrollX
         val state = viewModel.state
         unitOptions.removeAllViews()
+        unitAvailabilityHint.visibility = if (!state.isLoading && state.availableUnits.isEmpty()) {
+            View.VISIBLE
+        } else {
+            View.GONE
+        }
         availableOptionsFirst(loadoutCatalog.units) { unit ->
             viewModel.optionStatus(LoadoutItemReference.Unit(unit.id))
         }.forEach { unit ->

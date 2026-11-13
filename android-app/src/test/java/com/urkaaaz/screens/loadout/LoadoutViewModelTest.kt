@@ -70,6 +70,24 @@ class LoadoutViewModelTest {
     }
 
     @Test
+    fun campaignLevelWithoutUnitsCanStartWithAnEmptyUnitSelection() = runBlocking {
+        val repository = FakeRepository()
+        val viewModel = LoadoutViewModel(
+            campaignLevel = 1,
+            useCases = LoadoutUseCases(FakeProgression(), repository),
+        )
+
+        viewModel.load()
+
+        assertTrue(viewModel.state.availableUnits.isEmpty())
+        assertTrue(viewModel.state.draft?.unitTypes?.isEmpty() == true)
+        assertTrue(viewModel.state.canStart)
+        val committed = requireNotNull(viewModel.commit())
+        assertTrue(committed.playerLoadout.unitTypes.isEmpty())
+        assertTrue(repository.saved)
+    }
+
+    @Test
     fun demoLoadoutOffersTheFullCatalogAndUsesDemoLabel() = runBlocking {
         val viewModel = LoadoutViewModel(
             campaignLevel = 1,
@@ -118,7 +136,10 @@ class LoadoutViewModelTest {
 
         assertTrue(viewModel.state.testMode)
         assertFalse(viewModel.state.demoMode)
-        assertEquals(scenario.availableUnits.toSet(), viewModel.state.availableUnits.toSet())
+        assertEquals(
+            scenario.availableUnits.orEmpty().toSet(),
+            viewModel.state.availableUnits.toSet(),
+        )
         assertEquals(
             scenario.availableAmmunition.toSet(),
             viewModel.state.availableAmmunition.toSet(),

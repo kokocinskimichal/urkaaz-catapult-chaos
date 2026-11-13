@@ -116,7 +116,7 @@ class GameBalanceRepositoryTest {
         )
         assertEquals(
             mapOf(
-                UnitIds.DEFENDER to 1,
+                UnitIds.DEFENDER to 2,
                 UnitIds.SAPPER to 5,
                 UnitIds.DEMOLISHER to 8,
                 UnitIds.RAGING_BOAR to 11,
@@ -151,7 +151,8 @@ class GameBalanceRepositoryTest {
             availability.spells.associate { it.spellType to it.availableFromLevel },
         )
         assertEquals(null, availability.availableFromLevel(SpellType.BERSERKER))
-        assertEquals(setOf(UnitIds.DEFENDER), availability.availableUnitsAt(1))
+        assertEquals(emptySet(), availability.availableUnitsAt(1))
+        assertEquals(setOf(UnitIds.DEFENDER), availability.availableUnitsAt(2))
         assertEquals(
             setOf(SpellType.FORTRESS_SHIELD),
             availability.availableSpellsAt(1),

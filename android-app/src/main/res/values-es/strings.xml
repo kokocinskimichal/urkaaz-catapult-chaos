@@ -21,7 +21,7 @@
         <item quantity="other">Se completaron %1$d de %2$d niveles del capítulo</item>
     </plurals>
     <string name="chapter_title_green_frontier">La Frontera Verde</string>
-    <string name="chapter_title_broken_valley">El Valle Quebrado</string>
+    <string name="chapter_title_broken_valley">Valle Escarchado</string>
     <string name="chapter_title_ashen_march">La Marcha Cenicienta</string>
     <string name="chapter_title_whispering_marsh">La Marisma Susurrante</string>
     <string name="chapter_title_ironwood">El Bosque de Hierro</string>
@@ -239,6 +239,7 @@
     <string name="loadout_back">VOLVER</string>
     <string name="loadout_gold">ORO • %1$d</string>
     <string name="loadout_units">UNIDADES</string>
+    <string name="loadout_no_units_available">No hay unidades disponibles en este nivel. Aún puedes iniciar la partida.</string>
     <string name="loadout_ammunition">MUNICIÓN</string>
     <string name="loadout_spells">HECHIZOS</string>
     <string name="loadout_summary_title">RESUMEN</string>

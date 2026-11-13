@@ -226,7 +226,7 @@ Current proposed mapping:
 | Chapter | Title | Biome | Status |
 |---:|---|---|---|
 | 1 | The Green Frontier | `GREEN_FRONTIER` | First-pass assignment |
-| 2 | The Broken Valley | `FROSTBOUND` | Retains the existing level 11–20 theme |
+| 2 | Frostbound Vale | `FROSTBOUND` | Retains the existing level 11–20 theme |
 | 3 | The Ashen March | `ASHEN_MARCH` | First-pass assignment |
 | 4 | The Whispering Marsh | `SUNKEN_MARSHES` | First-pass assignment |
 | 5 | The Ironwood | `COPPERWOOD` | First-pass assignment |
@@ -398,7 +398,7 @@ is baked into the background image.
 
 ### Chapter 2 approved map and anchors
 
-The supplied Broken Valley background is stored at
+The supplied Chapter 2 background is stored at
 `assets_src/campaign/chapter-maps/campaign_chapter_02_broken_valley_map.png`
 and imported unchanged into
 `android-app/src/main/res/drawable-nodpi/campaign_chapter_02_broken_valley_map.png`.

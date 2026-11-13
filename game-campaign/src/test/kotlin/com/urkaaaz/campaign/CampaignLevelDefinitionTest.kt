@@ -22,8 +22,7 @@ class CampaignLevelDefinitionTest {
         val level = CampaignLevelDefinition.forLevel(1)
 
         assertEquals("green_frontier", level.mapDefinition.biome)
-        assertTrue(UnitIds.DEFENDER in level.availableUnits)
-        assertFalse(UnitIds.SAPPER in level.availableUnits)
+        assertTrue(level.availableUnits.isEmpty())
         assertFalse(AmmunitionType.POWDER_BARREL in level.availableAmmunition)
         assertEquals(
             setOf(AmmunitionType.ROCK, AmmunitionType.SIEGE_BOMB),
@@ -242,7 +241,7 @@ class CampaignLevelDefinitionTest {
         assertEquals("campaign-6", scenario.scenarioId)
         assertEquals(2, scenario.players.size)
         assertEquals("blue-player", scenario.players.first().playerId.value)
-        assertTrue("DEFENDER" in scenario.availableUnits)
+        assertTrue("DEFENDER" in scenario.availableUnits.orEmpty())
         assertTrue(scenario.initialUnits.isEmpty())
         assertTrue("SIEGE_BOMB" in scenario.availableAmmunition)
         assertTrue(scenario.initialResources.ammunition.isEmpty())

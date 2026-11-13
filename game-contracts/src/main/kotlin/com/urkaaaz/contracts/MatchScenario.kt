@@ -2,6 +2,8 @@ package com.urkaaaz.contracts
 
 /**
  * Campaign-level unit, ammunition and spell availability is shared by both teams.
+ * A null [availableUnits] means no unit restriction; an empty list explicitly
+ * means that neither team may deploy units.
  * [playerLoadout] further narrows the BLUE player's available selections.
  * [aiProfile] selects the opponent's decision profile without changing match resources.
  */
@@ -10,7 +12,7 @@ data class MatchScenario(
     val battlefield: BattlefieldConfig,
     val players: List<PlayerConfig>,
     val initialResources: ResourceSnapshot = ResourceSnapshot(),
-    val availableUnits: List<String> = emptyList(),
+    val availableUnits: List<String>? = null,
     val availableAmmunition: List<String> = emptyList(),
     val availableSpells: List<String> = emptyList(),
     val playerLoadout: PlayerLoadoutConfig? = null,
@@ -26,11 +28,13 @@ data class MatchScenario(
     init {
         require(scenarioId.isNotBlank()) { "scenarioId must not be blank" }
         require(players.isNotEmpty()) { "scenario must contain at least one player" }
-        require(availableUnits.all(String::isNotBlank)) {
-            "available unit identifiers must not be blank"
-        }
-        require(availableUnits.distinct().size == availableUnits.size) {
-            "available unit identifiers must be unique"
+        availableUnits?.let { units ->
+            require(units.all(String::isNotBlank)) {
+                "available unit identifiers must not be blank"
+            }
+            require(units.distinct().size == units.size) {
+                "available unit identifiers must be unique"
+            }
         }
         require(availableSpells.all(String::isNotBlank)) {
             "available spell identifiers must not be blank"
@@ -42,7 +46,7 @@ data class MatchScenario(
             require(players.any { it.playerId == loadout.playerId && it.team == Team.BLUE }) {
                 "loadout player must be a blue player in the scenario"
             }
-            require(availableUnits.containsAll(loadout.unitTypes)) {
+            require(availableUnits == null || availableUnits.containsAll(loadout.unitTypes)) {
                 "loadout contains units unavailable in the scenario"
             }
             require(availableAmmunition.containsAll(loadout.ammunitionSlots.filterNotNull())) {
@@ -77,7 +81,10 @@ data class FortressHealthOverrides(
     }
 }
 
-/** Immutable selection for one player, separate from scenario availability. */
+/**
+ * Immutable per-match selection separate from scenario availability.
+ * [unitTypes] may be empty when the scenario permits no units.
+ */
 data class PlayerLoadoutConfig(
     val playerId: PlayerId,
     val unitTypes: List<String>,
@@ -85,7 +92,6 @@ data class PlayerLoadoutConfig(
     val spellTypes: List<String>,
 ) {
     init {
-        require(unitTypes.isNotEmpty()) { "loadout must contain at least one unit" }
         require(unitTypes.size <= MAX_UNITS) { "loadout may contain at most $MAX_UNITS units" }
         require(unitTypes.all(String::isNotBlank)) { "unit identifiers must not be blank" }
         require(unitTypes.distinct().size == unitTypes.size) {

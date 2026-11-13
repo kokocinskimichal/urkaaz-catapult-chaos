@@ -39,7 +39,7 @@ or generate production code or runtime assets.
 ## Preserve the screen content
 
 - Show Chapter 1, **The Green Frontier**, as the current chapter, with Chapter
-  2, **The Broken Valley**, as the next-chapter preview.
+  2, **Frostbound Vale**, as the next-chapter preview.
 - Match the reference progress state: level 1 is completed, level 2 is
   available, and levels 3–10 are locked. Show 1 / 10 completed. Do not invent
   more completed levels or unlocked chapters.

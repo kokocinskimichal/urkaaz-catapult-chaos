@@ -4,7 +4,7 @@ import com.urkaaaz.domain.AmmunitionType
 import com.urkaaaz.domain.GameBalanceConfig
 import com.urkaaaz.domain.SpellType
 
-/** One canonical, immutable player selection. Empty unit/spell lists are valid drafts only. */
+/** One canonical immutable selection, validated against the current level by LoadoutUseCases. */
 data class MatchLoadout(
     val unitTypes: List<String>,
     val ammunitionSlots: List<String?>,

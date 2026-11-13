@@ -136,9 +136,12 @@ class MatchViewModel(
     } ?: listOf("ROCK", "SIEGE_BOMB", "POWDER_BARREL")
 
     val selectableUnitTypes: List<String> = campaignScenario?.let { scenario ->
-        val committedTypes = scenario.playerLoadout?.unitTypes ?: scenario.availableUnits
+        val availableTypes = scenario.availableUnits
+        val committedTypes = scenario.playerLoadout?.unitTypes
+            ?: availableTypes
+            ?: loadoutCatalog.units.map { it.id }
         committedTypes
-            .filter { it in scenario.availableUnits }
+            .filter { availableTypes == null || it in availableTypes }
             .take(PlayerLoadoutConfig.MAX_UNITS)
     } ?: loadoutCatalog.units
         .take(PlayerLoadoutConfig.MAX_UNITS)
@@ -210,9 +213,11 @@ class MatchViewModel(
     fun tutorialScenarioFacts(): TutorialScenarioFacts {
         val scenario = campaignScenario
         val availableUnits = scenario?.let { current ->
+            val levelAvailableUnits = current.availableUnits
+                ?: loadoutCatalog.units.map { it.id }
             current.playerLoadout?.unitTypes
-                ?.filter { it in current.availableUnits }
-                ?: current.availableUnits
+                ?.filter { it in levelAvailableUnits }
+                ?: levelAvailableUnits
         }.orEmpty().toSet()
         val availableAmmunition = scenario?.let { current ->
             current.playerLoadout?.ammunitionSlots

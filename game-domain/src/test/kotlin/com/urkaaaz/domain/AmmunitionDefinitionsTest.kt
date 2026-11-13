@@ -37,7 +37,7 @@ class AmmunitionDefinitionsTest {
         )
 
         assertEquals(8f, fireRain.flight.initialSpeedMultiplier)
-        assertEquals(3, profile.fragmentsPerSide)
+        assertEquals(4, profile.fragmentsPerSide)
         assertEquals(120f, profile.minimumReferenceSpeed)
         assertEquals(0.09f, profile.horizontalSpreadPerStep)
         assertEquals(0.10f, profile.initialDownwardSpeed)
@@ -73,8 +73,12 @@ class AmmunitionDefinitionsTest {
             UnitStatus.BURNING,
             fireBehavior.status,
         )
-        assertEquals(4, fireBehavior.damagePerTick)
-        assertEquals(4, fireBehavior.fortressDamagePerTick)
+        assertEquals(20, fireRain.damage.unitDamage)
+        assertEquals(10, fireRain.damage.fortressDamage)
+        assertEquals(70f, fireRain.damage.unitRadius)
+        assertEquals(70f, fireRain.damage.fortressRadius)
+        assertEquals(30, fireBehavior.damagePerTick)
+        assertEquals(10, fireBehavior.fortressDamagePerTick)
         assertEquals(9f, fireBehavior.durationSeconds)
         assertEquals(0.5f, fireBehavior.tickIntervalSeconds)
         assertEquals(FriendlyFirePolicy.ALL_UNITS, fireBehavior.unitFriendlyFire)

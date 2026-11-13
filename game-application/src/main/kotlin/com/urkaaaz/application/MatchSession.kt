@@ -297,9 +297,7 @@ class MatchSession(
     fun canDeployUnit(team: Team, unitType: String): Boolean {
         val matchScenario = scenario
         if (matchScenario != null) {
-            if (matchScenario.availableUnits.isNotEmpty() &&
-                unitType !in matchScenario.availableUnits
-            ) return false
+            if (matchScenario.availableUnits?.contains(unitType) == false) return false
             if (team == Team.BLUE) {
                 val loadout = matchScenario.playerLoadout
                 if (loadout != null && unitType !in loadout.unitTypes) return false
@@ -445,9 +443,7 @@ class MatchSession(
         unitType: String,
     ) {
         val matchScenario = scenario ?: return
-        if (matchScenario.availableUnits.isNotEmpty() &&
-            unitType !in matchScenario.availableUnits
-        ) {
+        if (matchScenario.availableUnits?.contains(unitType) == false) {
             throw LoadoutCommandRejectedException(LoadoutError.UNIT_UNAVAILABLE)
         }
         if (teamForPlayer(playerId) != Team.BLUE) return

@@ -111,7 +111,7 @@ class LoadoutViewModel(
         val scenario = definition.toMatchScenario()
         LoadoutAvailability(
             level = definition.level,
-            unitTypes = scenario.availableUnits.toSet(),
+            unitTypes = scenario.availableUnits.orEmpty().toSet(),
             ammunitionTypes = scenario.availableAmmunition.toSet(),
             spellTypes = scenario.availableSpells.toSet(),
         )

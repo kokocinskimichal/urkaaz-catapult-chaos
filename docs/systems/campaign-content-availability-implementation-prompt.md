@@ -4,8 +4,9 @@
 
 ## Status
 
-**Wdrożono** w schema 8 / `game-balance-21`. Ten prompt zachowuje wymagania,
-kontrakty i kryteria akceptacji użyte przy implementacji.
+**Wdrożono** w schema 8. Funkcję wprowadzono w `game-balance-21`; bieżąca
+konfiguracja to `game-balance-25`. Ten prompt zachowuje kontrakty i kryteria
+akceptacji użyte przy implementacji oraz aktualne wartości domyślne.
 
 ## Zadanie
 
@@ -26,7 +27,7 @@ oraz walidacji meczu.
 
   | Rodzaj | ID | Poziom |
   |---|---|---:|
-  | Unit | `DEFENDER` | 1 |
+  | Unit | `DEFENDER` | 2 |
   | Unit | `SAPPER` | 5 |
   | Unit | `DEMOLISHER` | 8 |
   | Unit | `RAGING_BOAR` | 11 |
@@ -97,7 +98,7 @@ kształt:
 {
   "contentAvailability": {
     "units": [
-      { "unitId": "DEFENDER", "availableFromLevel": 1 },
+      { "unitId": "DEFENDER", "availableFromLevel": 2 },
       { "unitId": "SAPPER", "availableFromLevel": 5 }
     ],
     "ammunition": [
@@ -138,10 +139,13 @@ wartości.
    `availableSpells`. Usuń z tej funkcji wszystkie ręczne progi `>= N` oraz
    niezależne dodawanie milestone spell availability.
 3. `CampaignLevelDefinition.toMatchScenario` nadal przekazuje standardowe
-   zbiory dostępności; nie wprowadzaj drugiego kontraktu.
-4. `MatchSession` i AI nadal stosują te zbiory przez obecną walidację i
-   `AiMatchCoordinator`. Nie duplikuj progów w Android, AI, Loadout ani
-   symulacji.
+   zbiory dostępności; nie wprowadzaj drugiego kontraktu. Dla
+   `MatchScenario.availableUnits` `null` oznacza brak ograniczenia, a jawna
+   pusta lista oznacza, że żadna drużyna nie może wystawiać jednostek.
+   Kampania przekazuje listę jawnie także wtedy, gdy jest pusta.
+4. `MatchSession` i AI stosują te zbiory przez obecną walidację i
+   `AiMatchCoordinator`; pustej listy nie traktuj jako braku ograniczenia.
+   Nie duplikuj progów w Android, AI, Loadout ani symulacji.
 5. Haste/Heal entitlement pozostaje własnością CampaignSystem i
    `CampaignProgress.appliedMilestoneIds`. `CampaignMilestoneDefinition`
    zachowuje completion level i reward ID, ale jego `availableFromLevel`

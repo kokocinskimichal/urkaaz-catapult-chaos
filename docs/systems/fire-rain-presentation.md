@@ -3,7 +3,7 @@
 ## 1. Cel i zakres
 
 Fire Rain Presentation opisuje kompletną, nową prezentację amunicji
-`FIRE_RAIN`: lot pojemnika, jego rozpad przy wierzchołku toru, lot sześciu
+`FIRE_RAIN`: lot pojemnika, jego rozpad przy wierzchołku toru, lot ośmiu
 fragmentów oraz osobne efekty trafienia z płomieniem wygasającym razem z
 obszarem ognia.
 
@@ -16,9 +16,9 @@ zachowaniu ticków co 500 ms. Prezentacja odwzorowuje czas symulacji i wygasza
 płomień w ostatnich 500 ms, nie przedłużając efektu.
 
 Symulacja nadal odpowiada za rozpad przy wierzchołku: pocisk główny
-kontynuuje lot i tworzy sześć niezależnych pocisków. Na wyraźną decyzję
+kontynuuje lot i tworzy osiem niezależnych pocisków. Na wyraźną decyzję
 użytkownika warstwa prezentacji ukrywa wizualnie pocisk główny po evencie
-`ProjectileSplit`; nie usuwa go z symulacji. Widoczne pozostaje sześć
+`ProjectileSplit`; nie usuwa go z symulacji. Widocznych pozostaje osiem
 mniejszych fragmentów. Po trafieniu pociski nadal używają istniejącego
 zachowania `LingeringArea`.
 
@@ -33,7 +33,7 @@ przy pan/zoom.
 - neutralny, współdzielony zestaw assetów dla obu drużyn;
 - lot głównego pojemnika;
 - krótki błysk i efekt rozpadu;
-- wspólna animacja lotu używana przez sześć mniejszych fragmentów;
+- wspólna animacja lotu używana przez osiem mniejszych fragmentów;
 - animacja trafienia, pętla płomieni i ich wygasanie;
 - mapowanie istniejących snapshotów i eventów na prezentację world-space;
 - lifecycle wyłącznie prezentacyjnego stanu animacji;
@@ -93,7 +93,7 @@ renderer nie otrzymuje mutowalnych obiektów domenowych.
 System korzysta z już istniejących danych:
 
 - `ProjectileSnapshot` — pozycja, typ amunicji, identyfikator i drużyna;
-- `ProjectileSplit` — identyfikator pocisku głównego, ID sześciu fragmentów
+- `ProjectileSplit` — identyfikator pocisku głównego, ID ośmiu fragmentów
   oraz world-space pozycja rozpadu;
 - `EffectSnapshot` — pozycja, promień, pozostały czas, `effectId` i
   `sourceProjectileId`;
@@ -129,9 +129,9 @@ Assety nie zależą od koloru drużyny ani od modyfikatorów UI.
 | Lot pojemnika | aktywny pocisk `FIRE_RAIN` przed `ProjectileSplit` | nowa pętla lotu; po evencie pocisk główny jest ukrywany wyłącznie wizualnie |
 | Rozpad | `ProjectileSplit` | krótka jednorazowa animacja w world-space pozycji eventu |
 | Lot fragmentu | ID fragmentu z `ProjectileSplit` obecne w snapshotach pocisków | jedna wspólna animacja ciemnego, kamiennego odłamka z pomarańczowym żarem, odtwarzana niezależnie dla każdego fragmentu |
-| Trafienie i ogień | nowy `EffectSnapshot` | osobny zapłon, pętla ciągłego płomienia (klatki 2–12) bez klatek dogasania, a ostatnie 500 ms wygaszają pole zgodnie z `remainingMilliseconds` |
+| Trafienie i ogień | nowy `EffectSnapshot` | osobny zapłon, pętla ciągłego płomienia (klatki 2–17), a ostatnie 500 ms odtwarzają wygaszenie (klatki 18–23) zgodnie z `remainingMilliseconds` |
 
-Jeden zestaw klatek fragmentu jest współdzielony przez sześć fragmentów;
+Jeden zestaw klatek fragmentu jest współdzielony przez osiem fragmentów;
 pozycje i niezależne tory ruchu pochodzą z symulacji, nie z animacji. Styl
 ma pasować do istniejących sprite'ów Urkaaaz. Ikona FIRE_RAIN może być
 dołączona jako referencja obrazu, jeśli wybrany model AnimGen obsługuje taki
@@ -180,10 +180,16 @@ sekwencyjnymi PNG RGBA 512×512; minimalny przezroczysty margines wynosi
 138 pikseli, a ostatnia klatka jest całkowicie przezroczysta. Użytkownik
 zaakceptował podgląd; klatki są zaimportowane jako
 `anim_ammunition_fire_rain_field_000.png`–`23.png`, a oryginalny ZIP i MP4 są zachowane w
-`assets_src/ammunition/fire-rain/fire-field/`. Wszystkie sekwencje są
-podłączone do renderera; ścisła walidacja katalogu wymaga dokładnej liczby
-klatek 512×512 z alpha i nie stosuje fallbacku do ROCK ani starych klatek
-FIRE_RAIN.
+`assets_src/ammunition/fire-rain/fire-field/`. Późniejsze odświeżenie field
+użyło wyłącznie `field_000` jako wejścia; klatki impact nie były referencjami,
+aby nie mieszać kompozycji. Użytkownik zaakceptował tę wersję z podziałem
+odtwarzania: klatki 000–001 to zapłon, 002–017 są zapętlone podczas palenia,
+a 018–023 wygaszają efekt. Przejście do klatki 018 rozpoczyna fade. Nowe ZIP i
+MP4 są zachowane jako
+`animgen-field-loop-24-frames.zip` i
+`animgen-field-loop-video-preview.mp4`. Wszystkie sekwencje są podłączone do
+renderera; ścisła walidacja katalogu wymaga dokładnej liczby klatek 512×512
+z alpha i nie stosuje fallbacku do ROCK ani starych klatek FIRE_RAIN.
 
 Oryginalne, zatwierdzone źródła przyszłych animacji powinny zostać zachowane
 poza zasobami runtime, proponowana lokalizacja:
@@ -226,7 +232,7 @@ world-space render przez wspólną transformację kamery
 obrażeń.
 
 Widok przechwytuje ID pocisku głównego i listę fragmentów z `ProjectileSplit`.
-ID pocisku głównego pozostaje ukryte wizualnie po rozpadzie; sześć ID
+ID pocisku głównego pozostaje ukryte wizualnie po rozpadzie; osiem ID
 fragmentów zachowuje prezentacyjną rolę tak długo, jak odpowiadające im ID
 istnieją w snapshotach. Dzięki temu animacje fragmentów pozostają właściwe
 także po skonsumowaniu jednorazowego eventu. Retencja nie przechowuje pozycji
@@ -342,7 +348,7 @@ retencji ID, restartu meczu i pauzy. Kryteria zachowania:
 - niekompletne assety kończą się jawnym błędem zamiast fallbackiem do ROCK;
 - mapper przekazuje wszystkie eventy rozpadu i wszystkie aktywne pola ognia,
   także gdy wiele z nich powstanie w jednym ticku;
-- sześć ID z `ProjectileSplit` otrzymuje klatki fragmentów, a pocisk główny
+- osiem ID z `ProjectileSplit` otrzymuje klatki fragmentów, a pocisk główny
   pozostaje w symulacji, lecz jest ukryty w prezentacji;
 - po zniknięciu pocisku/efektu retencja jest usuwana, a restart nowego meczu
   czyści poprzedni stan;
@@ -358,7 +364,7 @@ retencji ID, restartu meczu i pauzy. Kryteria zachowania:
   symulacji ani domeny.
 
 Kryterium wizualne do ręcznej oceny: gracz widzi pojemnik w locie, czytelny
-rozpad, sześć niezależnych torów fragmentów bez widocznego pocisku głównego
+rozpad, osiem niezależnych torów fragmentów bez widocznego pocisku głównego
 po rozpadzie, osobny zapłon każdego utworzonego pola oraz płomienie
 wygasające w ostatnich 500 ms czasu wskazanego przez snapshot.
 
@@ -447,7 +453,7 @@ wymagają ukończenia etapu 3.
 ### Kryteria ukończenia implementacji
 
 - Pojemnik leci, rozpada się w punkcie eventu; po rozpadzie pocisk główny
-  pozostaje w symulacji, ale jest ukryty wizualnie, a widocznych jest sześć
+  pozostaje w symulacji, ale jest ukryty wizualnie, a widocznych jest osiem
   mniejszych fragmentów z symulacyjnymi pozycjami.
 - Każdy utworzony efekt FIRE_RAIN ma własny zapłon, pętlę i wygaszenie
   sterowane obecnym `EffectSnapshot`; równoczesne trafienia nie nadpisują się.

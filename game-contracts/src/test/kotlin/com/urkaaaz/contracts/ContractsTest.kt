@@ -107,6 +107,34 @@ class ContractsTest {
     }
 
     @Test
+    fun emptyUnitAvailabilityAllowsAnEmptyPlayerLoadoutAndDiffersFromNoRestriction() {
+        val noUnitLoadout = PlayerLoadoutConfig(
+            playerId = playerId,
+            unitTypes = emptyList(),
+            ammunitionSlots = listOf("ROCK", null, null),
+            spellTypes = listOf("FORTRESS_SHIELD"),
+        )
+        val noUnitScenario = MatchScenario(
+            scenarioId = "no-units",
+            battlefield = BattlefieldConfig(width = 100, height = 100),
+            players = listOf(PlayerConfig(playerId, Team.BLUE)),
+            availableUnits = emptyList(),
+            availableAmmunition = listOf("ROCK"),
+            availableSpells = listOf("FORTRESS_SHIELD"),
+            playerLoadout = noUnitLoadout,
+        )
+        val unrestrictedScenario = MatchScenario(
+            scenarioId = "unrestricted-units",
+            battlefield = BattlefieldConfig(width = 100, height = 100),
+            players = listOf(PlayerConfig(playerId, Team.BLUE)),
+        )
+
+        assertEquals(emptyList(), noUnitScenario.availableUnits)
+        assertEquals(emptyList(), noUnitScenario.playerLoadout?.unitTypes)
+        assertEquals(null, unrestrictedScenario.availableUnits)
+    }
+
+    @Test
     fun playerInventoryIsImmutableScenarioInputAssociatedWithCommittedPlayer() {
         val loadout = PlayerLoadoutConfig(
             playerId = playerId,

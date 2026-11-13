@@ -18,14 +18,15 @@ class FireRainPresentationClockTest {
     fun splitEventStartsOnceAndRetainsProjectileRolesUntilTheyLeaveSnapshot() {
         val clock = FireRainPresentationClock()
         val event = splitEvent()
+        val fragmentIds = (0..7).map { "fragment-$it" }
         val splitState = state(
-            projectileIds = listOf("container", "fragment-0", "fragment-1"),
+            projectileIds = listOf("container") + fragmentIds,
             events = listOf(event),
         )
 
         val firstFrame = clock.update(splitState, 0L)
         assertEquals(setOf("container"), firstFrame.hiddenProjectileIds)
-        assertEquals(setOf("fragment-0", "fragment-1"), firstFrame.fragmentProjectileIds)
+        assertEquals(fragmentIds.toSet(), firstFrame.fragmentProjectileIds)
         assertEquals(0, firstFrame.splitFlashes.single().frameIndex)
 
         val repeatedFrame = clock.update(splitState, 100L)
@@ -55,7 +56,7 @@ class FireRainPresentationClockTest {
         val second = fireEffect("fire-2", remainingMilliseconds = 500L)
 
         val initial = clock.update(state(effects = listOf(first, second)), 0L)
-        assertEquals(listOf(0, 19), initial.fireFields.map { it.frameIndex })
+        assertEquals(listOf(0, 18), initial.fireFields.map { it.frameIndex })
 
         val later = clock.update(
             state(
@@ -70,7 +71,7 @@ class FireRainPresentationClockTest {
     }
 
     @Test
-    fun fireFieldLoopsOnlyContinuousBurningFramesBeforeFading() {
+    fun fireFieldLoopsContinuousBurnFramesThenTransitionsToFade() {
         val clock = FireRainPresentationClock()
         val effect = fireEffect("fire-1", remainingMilliseconds = 9_000L)
 
@@ -80,13 +81,25 @@ class FireRainPresentationClockTest {
             state(effects = listOf(effect)),
             250L,
         ).fireFields.single().frameIndex)
-        assertEquals(12, clock.update(
+        assertEquals(17, clock.update(
             state(effects = listOf(effect.copy(remainingMilliseconds = 7_750L))),
-            1_250L,
+            1_750L,
         ).fireFields.single().frameIndex)
         assertEquals(2, clock.update(
-            state(effects = listOf(effect.copy(remainingMilliseconds = 7_650L))),
-            1_350L,
+            state(effects = listOf(effect.copy(remainingMilliseconds = 7_150L))),
+            1_850L,
+        ).fireFields.single().frameIndex)
+        assertEquals(18, clock.update(
+            state(effects = listOf(effect.copy(remainingMilliseconds = 500L))),
+            8_500L,
+        ).fireFields.single().frameIndex)
+        assertEquals(19, clock.update(
+            state(effects = listOf(effect.copy(remainingMilliseconds = 400L))),
+            8_600L,
+        ).fireFields.single().frameIndex)
+        assertEquals(23, clock.update(
+            state(effects = listOf(effect.copy(remainingMilliseconds = 0L))),
+            9_000L,
         ).fireFields.single().frameIndex)
     }
 
@@ -208,7 +221,7 @@ class FireRainPresentationClockTest {
             matchId = MatchId("match"),
             simulationTimeMilliseconds = 1_000L,
             projectileId = EntityId("container"),
-            fragmentProjectileIds = (0..5).map { EntityId("fragment-$it") },
+            fragmentProjectileIds = (0..7).map { EntityId("fragment-$it") },
             ammunitionType = "FIRE_RAIN",
             x = 400f,
             y = 500f,

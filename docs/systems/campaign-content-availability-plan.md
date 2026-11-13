@@ -12,7 +12,8 @@ Loadout i użyty w meczu. Plan uwzględnia decyzje użytkownika:
   dostępności jest edytowany razem z konfiguracją milestone;
 - progi kampanii nie zmieniają widoczności ani zasad zakupów w Shop.
 
-**Status: wdrożono** w `game-balance.json` schema 8 / `game-balance-21`.
+**Status: wdrożono** w `game-balance.json` schema 8. Funkcję wprowadzono w
+rewizji `game-balance-21`; bieżąca konfiguracja to `game-balance-25`.
 Konfiguracja steruje scenariuszową dostępnością i dostępnością Haste/Heal w
 milestone registry, bez zmiany poziomów nagród 5/7, posiadania przedmiotów,
 Shop ani efektów gameplayowych.
@@ -23,7 +24,7 @@ Wartości domyślne zachowują poprzednie progi `CampaignLevelDefinition`:
 
 | Rodzaj | ID | Obecnie od poziomu |
 |---|---|---:|
-| Jednostka | `DEFENDER` | 1 |
+| Jednostka | `DEFENDER` | 2 |
 | Jednostka | `SAPPER` | 5 |
 | Jednostka | `DEMOLISHER` | 8 |
 | Jednostka | `RAGING_BOAR` | 11 |
@@ -42,9 +43,12 @@ Wartości domyślne zachowują poprzednie progi `CampaignLevelDefinition`:
 Pozostałe czary mają `availableFromLevel: null`. Teraz progi są zapisane
 w `runtime.campaign.contentAvailability`; `CampaignMilestoneRegistry`
 zachowuje stałe poziomy nagród i pobiera dostępność Haste/Heal z tej samej
-konfiguracji. `MatchScenario.availableUnits`,
-`availableAmmunition` i `availableSpells` przekazują wynik do Loadoutu,
-MatchSession i AI; aplikacja meczu egzekwuje te zbiory.
+konfiguracji. `MatchScenario.availableUnits`, `availableAmmunition` i `availableSpells`
+przekazują wynik do Loadoutu, MatchSession i AI; aplikacja meczu egzekwuje te
+zbiory. W `MatchScenario.availableUnits` wartość `null` oznacza brak
+ograniczenia, a jawna pusta lista zabrania wystawiania jednostek obu drużynom.
+Definicje kampanii zawsze przekazują listę z progów, również pustą dla poziomu
+1.
 
 Studio Balance edytuje trzy kompletne kategorie progów w Runtime → Campaign,
 z możliwością ustawienia `Never` i resetu pojedynczego wpisu do baseline.
@@ -60,7 +64,7 @@ Rozszerzyć `CampaignBalance` w `RuntimeBalance.kt` o typowaną sekcję, np.
 {
   "contentAvailability": {
     "units": [
-      { "unitId": "DEFENDER", "availableFromLevel": 1 },
+      { "unitId": "DEFENDER", "availableFromLevel": 2 },
       { "unitId": "SAPPER", "availableFromLevel": 5 }
     ],
     "ammunition": [

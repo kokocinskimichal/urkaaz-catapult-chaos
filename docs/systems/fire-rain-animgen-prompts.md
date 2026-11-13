@@ -81,7 +81,7 @@ Animate one isolated Fire Rain fragment: a small, irregular, faceted dark
 stone shard with a few restrained glowing orange fissures and a faint ember
 core. Give it a subtle, slow tumbling loop and mild ember flicker while its
 center and scale remain fixed. The sprite must contain exactly one shard;
-simulation supplies six independent fragment positions and trajectories.
+simulation supplies eight independent fragment positions and trajectories.
 Do not show the canister, a cluster of rocks, a flame trail, or a background.
 ```
 
@@ -121,6 +121,18 @@ user-approved and imported as `anim_ammunition_fire_rain_field_000.png`–`23.pn
 ZIP and MP4 are preserved under `assets_src/ammunition/fire-rain/fire-field/`.
 These are runtime resources and are loaded by `BattlefieldAssetCatalog` for
 the integrated Android battlefield renderer.
+
+The user later requested a field refresh because the flames did not match the
+impact effect's visual style. Impact frames were tried as references, but the
+result combined the impact and field compositions and was rejected. The
+accepted refresh used only `anim_ammunition_fire_rain_field_000.png` as its
+first frame, with the impact palette and material described in text. The
+24-frame 512×512 RGBA result has transparent margins and a fully transparent
+final frame. Its ZIP and MP4 are preserved as
+`animgen-field-loop-24-frames.zip` and
+`animgen-field-loop-video-preview.mp4` in the same source directory; its PNGs
+replace the runtime field sequence. Existing playback uses frames 000–001 for
+ignition, 002–017 as the loop, and 018–023 for fade-out.
 
 ```text
 Create one small, ground-hugging Fire Rain flame patch over a restrained bed

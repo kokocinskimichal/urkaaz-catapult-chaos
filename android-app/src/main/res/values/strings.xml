@@ -19,7 +19,7 @@
         <item quantity="other">%1$d of %2$d chapter levels completed</item>
     </plurals>
     <string name="chapter_title_green_frontier">The Green Frontier</string>
-    <string name="chapter_title_broken_valley">The Broken Valley</string>
+    <string name="chapter_title_broken_valley">Frostbound Vale</string>
     <string name="chapter_title_ashen_march">The Ashen March</string>
     <string name="chapter_title_whispering_marsh">The Whispering Marsh</string>
     <string name="chapter_title_ironwood">The Ironwood</string>
@@ -237,6 +237,7 @@
     <string name="loadout_back">BACK</string>
     <string name="loadout_gold">GOLD • %1$d</string>
     <string name="loadout_units">UNITS</string>
+    <string name="loadout_no_units_available">No units are available at this level. You can still start the match.</string>
     <string name="loadout_ammunition">AMMUNITION</string>
     <string name="loadout_spells">SPELLS</string>
     <string name="loadout_summary_title">LOADOUT SUMMARY</string>

@@ -37,7 +37,7 @@ the existing shallow parchment backplate.
   fully opaque alpha channel.
 - Arrange exactly three equal 512 x 288 pixel cells side by side:
   1. Chapter 1 thumbnail, using the Green Frontier map.
-  2. Chapter 2 thumbnail, using the Broken Valley map.
+  2. Chapter 2 thumbnail, using the Frostbound Vale map.
   3. Chapter 3 thumbnail, using the Ashen March map.
 - Each cell is a 16:9 landscape thumbnail. Fill the cell edge to edge with
   artwork; do not leave transparent padding or add a gutter between cells.
@@ -65,7 +65,7 @@ the existing shallow parchment backplate.
 - **Chapter 1 — The Green Frontier:** show the lush green frontier from
   the supplied Chapter 1 map, using its characteristic vegetation, hills,
   waterways, and warm natural palette.
-- **Chapter 2 — The Broken Valley:** match the fractured valley in the
+- **Chapter 2 — Frostbound Vale:** match the fractured valley in the
   supplied Chapter 2 map, using its cold palette and broken terrain.
 - **Chapter 3 — The Ashen March:** match the ashen basin, scorched ridges, and
   restrained ember glow in the supplied Chapter 3 map.

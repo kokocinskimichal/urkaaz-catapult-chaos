@@ -359,6 +359,36 @@ class LoadoutUseCasesTest {
     }
 
     @Test
+    fun emptyUnitAvailabilityAllowsACommittedUnitlessLoadout() {
+        val noUnitAvailability = availability.copy(
+            level = 1,
+            unitTypes = emptySet(),
+            ammunitionTypes = setOf("ROCK"),
+            spellTypes = setOf("FORTRESS_SHIELD"),
+        )
+        val progressionSnapshot = snapshot(unlocked = setOf("FORTRESS_SHIELD"))
+        val draft = MatchLoadout.defaults(
+            noUnitAvailability,
+            progressionSnapshot,
+            GameBalanceFixtures.balance,
+        )
+        val repository = FakeRepository(null)
+        val useCases = useCases(
+            progression = FakeProgression(progressionSnapshot),
+            repository = repository,
+        )
+
+        assertEquals(emptyList(), draft.unitTypes)
+        val result = assertIs<LoadoutCommitResult.Committed>(
+            runBlocking {
+                useCases.commit(draft, noUnitAvailability, PlayerId("player"))
+            },
+        )
+        assertEquals(emptyList(), result.playerLoadout.unitTypes)
+        assertEquals(draft, repository.saved)
+    }
+
+    @Test
     fun emptyDefaultSpellSelectionIsReportedAndCannotBeCommitted() {
         val repository = FakeRepository(
             StoredLoadoutSelection(

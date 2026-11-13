@@ -69,7 +69,7 @@ recorded in the implementation prompt and campaign presentation documentation.
 Zachować bez zmian mapowanie istniejących layoutów:
 
 - `green_frontier` → Green Frontier;
-- `broken_valley` → Broken Valley;
+- `broken_valley` → Frostbound Vale;
 - `ashen_march` → Ashen March.
 
 Gdy `CampaignMapLayoutRepository` zwróci `MapArtworkMissing` dla rozdziałów

@@ -74,7 +74,7 @@ Nie przywracaj, nie nadpisuj i nie usuwaj zmian spoza zadania.
 ### 1. Rozwiązywanie map i tymczasowy fallback
 
 - Zachowaj aktualne mapowanie rozdziałów 1–4:
-  Green Frontier, Broken Valley, Ironwood i Ashen March.
+  Green Frontier, Frostbound Vale, Ironwood i Ashen March.
 - Dla rozdziałów 5–10 obsłuż wyłącznie
   `CampaignMapLayoutRead.MapArtworkMissing` jako warunek użycia fallbacku
   Green Frontier.

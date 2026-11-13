@@ -21,16 +21,29 @@
 
 - Advanced `game-balance.json` to schema 8 and revision `game-balance-21`;
   campaign scenario availability is now balance-driven.
+- Advanced `game-balance.json` to revision `game-balance-25`: Fire Rain now
+  splits into eight fragments (four per side), deals 20/10 direct impact
+  damage and 30/10 per field tick within 70-unit damage radii, and Defender
+  is available from campaign level 2. Level 1 intentionally starts without
+  units for either team and remains playable from an empty unit loadout.
+- Replaced the Fire Rain field animation. Frames 000–001 ignite, 002–017 loop
+  while burning, and 018–023 fade; the AnimGen source ZIP and preview are
+  preserved alongside the earlier source.
 - Brightened the active Frostbound soil tile to a seamless snow-covered
   surface; the alternate variant remains available but is not selected by the
-  renderer. Demo now uses the Sunken Marshes dawn background.
+  renderer. Replaced the Demo's Sunken Marshes dawn background with a more
+  distant panorama while preserving its palette and atmosphere.
 - Changed the Dashboard language control to show the currently selected flag.
 - Removed the Dashboard Tutorials list and replay control. The configured
   tutorial still starts automatically when its match trigger is met.
 - Set the developer progress preset to campaign level 11 for Chapter II
   verification.
+- Moved the developer progress preset to campaign level 31 for Chapter IV
+  verification.
 - Set the Spanish Dashboard `TEST MODE` label to 9sp; EN and PL remain 14sp
   and 11sp.
+- Renamed Chapter 2's displayed title to Frostbound Vale, with localized Polish
+  and Spanish titles; stable chapter and map identifiers remain unchanged.
 
 ### Fixed
 

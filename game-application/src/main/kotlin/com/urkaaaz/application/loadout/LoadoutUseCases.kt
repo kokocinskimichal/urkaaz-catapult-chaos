@@ -245,7 +245,9 @@ class LoadoutUseCases(
         availability: LoadoutAvailability,
         snapshot: LoadoutProgressionSnapshot,
     ): LoadoutError? {
-        if (loadout.unitTypes.isEmpty()) return LoadoutError.EMPTY_UNIT_SELECTION
+        if (loadout.unitTypes.isEmpty() && availability.unitTypes.isNotEmpty()) {
+            return LoadoutError.EMPTY_UNIT_SELECTION
+        }
         if (loadout.spellTypes.isEmpty()) return LoadoutError.EMPTY_SPELL_SELECTION
         for (unitType in loadout.unitTypes) {
             if (balance.units.find(unitType) == null) return LoadoutError.UNKNOWN_UNIT

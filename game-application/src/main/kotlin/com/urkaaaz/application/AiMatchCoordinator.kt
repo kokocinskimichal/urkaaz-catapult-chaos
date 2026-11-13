@@ -25,9 +25,7 @@ class AiMatchCoordinator(
         ?.playerId
         ?: PlayerId("local-ai")
     private val profile = scenario?.aiProfile ?: AiProfileSelection()
-    private val scenarioUnitIds = scenario?.availableUnits
-        ?.takeIf { it.isNotEmpty() }
-        ?.toSet()
+    private val scenarioUnitIds = scenario?.availableUnits?.toSet()
     private val scenarioAmmunitionIds = scenario?.availableAmmunition
         ?.takeIf { it.isNotEmpty() }
         ?.toSet()

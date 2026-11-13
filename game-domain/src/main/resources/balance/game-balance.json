@@ -1,6 +1,6 @@
 {
   "schemaVersion": 8,
-  "balanceRevision": "game-balance-21",
+  "balanceRevision": "game-balance-25",
   "bosses": [
     {
       "id": "boss.central-ancient-war-oak.level-05",
@@ -611,7 +611,7 @@
         "initialSpeedMultiplier": 8,
         "maximumLifetimeSeconds": 30,
         "apexFragmentation": {
-          "fragmentsPerSide": 3,
+          "fragmentsPerSide": 4,
           "minimumReferenceSpeed": 120,
           "horizontalSpreadPerStep": 0.09,
           "initialDownwardSpeed": 0.1,
@@ -628,10 +628,10 @@
         "friendlyFire": "ENEMY_ONLY"
       },
       "damage": {
-        "unitDamage": 4,
-        "fortressDamage": 4,
-        "unitRadius": 68,
-        "fortressRadius": 68,
+        "unitDamage": 20,
+        "fortressDamage": 10,
+        "unitRadius": 70,
+        "fortressRadius": 70,
         "falloff": "LINEAR",
         "minimumDamage": 0
       },
@@ -645,8 +645,8 @@
         "radius": 68,
         "durationSeconds": 9,
         "tickIntervalSeconds": 0.5,
-        "damagePerTick": 4,
-        "fortressDamagePerTick": 4,
+        "damagePerTick": 30,
+        "fortressDamagePerTick": 10,
         "driftsWithWind": false,
         "windDriftMultiplier": 1,
         "followsTerrain": false,
@@ -1016,31 +1016,94 @@
       ],
       "contentAvailability": {
         "units": [
-          { "unitId": "DEFENDER", "availableFromLevel": 1 },
-          { "unitId": "SAPPER", "availableFromLevel": 5 },
-          { "unitId": "DEMOLISHER", "availableFromLevel": 8 },
-          { "unitId": "RAGING_BOAR", "availableFromLevel": 11 },
-          { "unitId": "SLINGMASTER", "availableFromLevel": 13 }
+          {
+            "unitId": "DEFENDER",
+            "availableFromLevel": 2
+          },
+          {
+            "unitId": "SAPPER",
+            "availableFromLevel": 5
+          },
+          {
+            "unitId": "DEMOLISHER",
+            "availableFromLevel": 8
+          },
+          {
+            "unitId": "RAGING_BOAR",
+            "availableFromLevel": 11
+          },
+          {
+            "unitId": "SLINGMASTER",
+            "availableFromLevel": 13
+          }
         ],
         "ammunition": [
-          { "ammunitionType": "ROCK", "availableFromLevel": 1 },
-          { "ammunitionType": "SIEGE_BOMB", "availableFromLevel": 1 },
-          { "ammunitionType": "POWDER_BARREL", "availableFromLevel": 10 },
-          { "ammunitionType": "FIRE_RAIN", "availableFromLevel": 31 },
-          { "ammunitionType": "PLAGUE_CAULDRON", "availableFromLevel": 41 }
+          {
+            "ammunitionType": "ROCK",
+            "availableFromLevel": 1
+          },
+          {
+            "ammunitionType": "SIEGE_BOMB",
+            "availableFromLevel": 1
+          },
+          {
+            "ammunitionType": "POWDER_BARREL",
+            "availableFromLevel": 10
+          },
+          {
+            "ammunitionType": "FIRE_RAIN",
+            "availableFromLevel": 31
+          },
+          {
+            "ammunitionType": "PLAGUE_CAULDRON",
+            "availableFromLevel": 41
+          }
         ],
         "spells": [
-          { "spellType": "ICE_TRAP", "availableFromLevel": 11 },
-          { "spellType": "RUNIC_BASTION", "availableFromLevel": 21 },
-          { "spellType": "HASTE", "availableFromLevel": 6 },
-          { "spellType": "HEAL", "availableFromLevel": 8 },
-          { "spellType": "FORTRESS_SHIELD", "availableFromLevel": 1 },
-          { "spellType": "CATAPULT_LOCK", "availableFromLevel": null },
-          { "spellType": "SLOWING_FIELD", "availableFromLevel": null },
-          { "spellType": "VAMPIRIC_BANNER", "availableFromLevel": null },
-          { "spellType": "STONE_SKIN", "availableFromLevel": null },
-          { "spellType": "SIEGE_FRENZY", "availableFromLevel": null },
-          { "spellType": "BERSERKER", "availableFromLevel": null }
+          {
+            "spellType": "ICE_TRAP",
+            "availableFromLevel": 11
+          },
+          {
+            "spellType": "RUNIC_BASTION",
+            "availableFromLevel": 21
+          },
+          {
+            "spellType": "HASTE",
+            "availableFromLevel": 6
+          },
+          {
+            "spellType": "HEAL",
+            "availableFromLevel": 8
+          },
+          {
+            "spellType": "FORTRESS_SHIELD",
+            "availableFromLevel": 1
+          },
+          {
+            "spellType": "CATAPULT_LOCK",
+            "availableFromLevel": null
+          },
+          {
+            "spellType": "SLOWING_FIELD",
+            "availableFromLevel": null
+          },
+          {
+            "spellType": "VAMPIRIC_BANNER",
+            "availableFromLevel": null
+          },
+          {
+            "spellType": "STONE_SKIN",
+            "availableFromLevel": null
+          },
+          {
+            "spellType": "SIEGE_FRENZY",
+            "availableFromLevel": null
+          },
+          {
+            "spellType": "BERSERKER",
+            "availableFromLevel": null
+          }
         ]
       }
     }

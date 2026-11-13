@@ -107,7 +107,7 @@ object GameBalanceFixtures {
                         gravityResponse = 1f,
                         drag = 0f,
                         initialSpeedMultiplier = 8f,
-                        apexFragmentation = ApexFragmentationProfile(3, 120f, 0.09f, 0.1f, 0.025f),
+                        apexFragmentation = ApexFragmentationProfile(4, 120f, 0.09f, 0.1f, 0.025f),
                         maximumLifetimeSeconds = 30f,
                     ),
                     CollisionProfile(
@@ -116,10 +116,10 @@ object GameBalanceFixtures {
                         34f,
                         FriendlyFirePolicy.ENEMY_ONLY,
                     ),
-                    DamageProfile(4, 4, 68f, 68f, AmmunitionFalloff.LINEAR, 0),
+                    DamageProfile(20, 10, 70f, 70f, AmmunitionFalloff.LINEAR, 0),
                     TerrainProfile(true, 36f, 10f),
                     AmmunitionImpactBehavior.LingeringArea(
-                        68f, 9f, 0.5f, 4, 4, false, status = UnitStatus.BURNING,
+                        68f, 9f, 0.5f, 30, 10, false, status = UnitStatus.BURNING,
                         windDriftMultiplier = 1f,
                         followsTerrain = false,
                         unitFriendlyFire = FriendlyFirePolicy.ALL_UNITS,
@@ -244,7 +244,7 @@ object GameBalanceFixtures {
                         CampaignUnitAvailability(
                             unitId,
                             when (unitId) {
-                                UnitIds.DEFENDER -> 1
+                                UnitIds.DEFENDER -> 2
                                 UnitIds.SAPPER -> 5
                                 UnitIds.DEMOLISHER -> 8
                                 UnitIds.RAGING_BOAR -> 11

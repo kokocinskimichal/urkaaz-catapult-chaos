@@ -47,7 +47,7 @@ class MatchViewModelCombatTest {
     fun campaignMatchUsesCommittedLoadoutPlayerIdByDefault() {
         val loadout = PlayerLoadoutConfig(
             playerId = PlayerId("player"),
-            unitTypes = listOf("DEFENDER"),
+            unitTypes = emptyList(),
             ammunitionSlots = listOf("ROCK", null, null),
             spellTypes = listOf("FORTRESS_SHIELD"),
         )
@@ -61,7 +61,7 @@ class MatchViewModelCombatTest {
     fun campaignMatchOnlyOffersAmmunitionFromTheCommittedLoadout() {
         val loadout = PlayerLoadoutConfig(
             playerId = PlayerId("player"),
-            unitTypes = listOf("DEFENDER"),
+            unitTypes = emptyList(),
             ammunitionSlots = listOf("ROCK", null, null),
             spellTypes = listOf("FORTRESS_SHIELD"),
         )
@@ -105,7 +105,7 @@ class MatchViewModelCombatTest {
             campaignLevel = 1,
             playerLoadout = PlayerLoadoutConfig(
                 playerId = PlayerId("player"),
-                unitTypes = listOf("DEFENDER"),
+                unitTypes = emptyList(),
                 ammunitionSlots = listOf("ROCK", null, null),
                 spellTypes = listOf("FORTRESS_SHIELD"),
             ),
@@ -166,14 +166,8 @@ class MatchViewModelCombatTest {
     fun campaignMatchOnlyShowsUnitsAvailableAtTheSelectedLevel() {
         val viewModel = MatchViewModel(campaignLevel = 1)
 
-        assertEquals(listOf("DEFENDER"), viewModel.selectableUnitTypes)
-        assertEquals(
-            mapOf(
-                Team.BLUE to setOf("DEFENDER"),
-                Team.RED to setOf("DEFENDER"),
-            ),
-            viewModel.unitAnimationPreloadTypesByTeam,
-        )
+        assertTrue(viewModel.selectableUnitTypes.isEmpty())
+        assertTrue(viewModel.unitAnimationPreloadTypesByTeam.isEmpty())
     }
 
     @Test

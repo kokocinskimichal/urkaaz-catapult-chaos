@@ -22,7 +22,7 @@
         <item quantity="other">Ukończono %1$d poziomów rozdziału z %2$d</item>
     </plurals>
     <string name="chapter_title_green_frontier">Zielone Rubieże</string>
-    <string name="chapter_title_broken_valley">Złamana Dolina</string>
+    <string name="chapter_title_broken_valley">Mroźna Dolina</string>
     <string name="chapter_title_ashen_march">Popielny Marsz</string>
     <string name="chapter_title_whispering_marsh">Szepczące Mokradła</string>
     <string name="chapter_title_ironwood">Żelazny Las</string>
@@ -240,6 +240,7 @@
     <string name="loadout_back">WRÓĆ</string>
     <string name="loadout_gold">ZŁOTO • %1$d</string>
     <string name="loadout_units">JEDNOSTKI</string>
+    <string name="loadout_no_units_available">Na tym poziomie nie ma jednostek. Nadal możesz rozpocząć mecz.</string>
     <string name="loadout_ammunition">AMUNICJA</string>
     <string name="loadout_spells">CZARY</string>
     <string name="loadout_summary_title">ZESTAW</string>

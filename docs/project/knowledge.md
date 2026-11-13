@@ -376,7 +376,9 @@ fortresses and boss markers in Studio.
 Chapter 2 now uses the supplied `campaign_chapter_02_broken_valley_map` image
 (1717x916), with ten site anchors for global levels 11–20 in
 `campaign-map-layouts/broken_valley.json`; the source and Android drawable
-copies are byte-identical.
+copies are byte-identical. Its display title is Frostbound Vale (Mroźna Dolina
+in Polish and Valle Escarchado in Spanish); stable chapter ID and map asset keys
+remain `broken_valley`.
 Chapter 3 is Ironwood/Copperwood and uses the supplied
 `campaign_chapter_03_ironwood_map` image (1672x941), with ten site anchors for
 global levels 21–30 in `campaign-map-layouts/ironwood.json`; boss sites remain
@@ -489,6 +491,9 @@ The Sunken Marshes background is `background_sunken_marshes.png`, an opaque
 `assets_src/user_reference/background_sunken_marshes.png` and mirrored byte for
 byte at Android `drawable-nodpi/background_sunken_marshes.png`. Its brighter
 turquoise/emerald palette and warm misty-morning light are presentation-only.
+The current image uses a more distant, slightly elevated panorama of the same
+marsh basin, with smaller foreground elements and broader visible water and
+islands.
 Frostbound's active repeating soil tile is
 `terrain_frostbound_soil_00.png` (1024×1024 RGBA), mirrored for Android as
 `terrain_frost_soil_fill_00.png`. The separately archived variant `01` is
@@ -1186,12 +1191,14 @@ must go through commands and domain/application boundaries.
 - The ammunition catalog contains Rock, Siege Bomb, Powder Barrel, Fire Rain
   and Plague Cauldron; Cluster Bomb and its fragment-only projectile metadata
   and rendering have been removed. Rock deals 50 damage to units and
-  fortresses, Siege Bomb deals 100 fortress damage and has a 2-second reload,
-  Fire Rain ticks for 4 damage, and Plague Cauldron ticks for 8 unit damage
-  without harming fortresses. Fire Rain splits at its flight apex into its
-  continuing parent projectile and six independently simulated fragments; the
-  split profile is defined in the ammunition flight catalog and published as a
-  `ProjectileSplit` event.
+  fortresses, and Siege Bomb deals 100 fortress damage with a 2-second reload.
+  Fire Rain's direct impact deals 20 unit / 10 fortress damage within a
+  70-world-unit radius; its nine-second field ticks every 0.5 seconds for
+  30 unit / 10 fortress damage. Plague Cauldron ticks for 8 unit damage without
+  harming fortresses. Fire Rain splits at its flight apex into its continuing
+  parent projectile and eight independently simulated fragments (four per
+  side); the profile is defined in the ammunition flight catalog and published
+  as a `ProjectileSplit` event.
 - FIRE_RAIN uses one neutral AnimGen presentation set shared by both teams:
   24 container-flight frames (`anim_ammunition_fire_rain_flight_000`–`23`), 12 split-flash
   frames (`anim_ammunition_fire_rain_split_flash_000`–`11`), 24 fragment-flight frames
@@ -1199,8 +1206,11 @@ must go through commands and domain/application boundaries.
   (`anim_ammunition_fire_rain_field_000`–`23`). All are transparent 512×512 PNGs under
   `android-app/src/main/res/drawable-nodpi/`; each original ZIP and MP4 is
   preserved in its corresponding `assets_src/ammunition/fire-rain/` phase
-  directory. The accepted no-reference fire-field generation used no Powder
-  Barrel image.
+  directory. The latest field refresh uses `field_000` as its only image input;
+  impact style is described in text to avoid mixing the field and explosion
+  compositions. Its source ZIP/MP4 are
+  `animgen-field-loop-24-frames.zip` and
+  `animgen-field-loop-video-preview.mp4`.
 - PLAGUE_CAULDRON uses its approved 24-frame 768×576 impact sequence for
   both the cauldron breakup and lingering poison cloud; no separate cloud
   animation is loaded. The impact grows from the cauldron size to a visible
@@ -1230,9 +1240,8 @@ must go through commands and domain/application boundaries.
   reattachment. The renderer draws all phases through the existing battlefield
   camera; the fire-field canvas is rendered at 4× the gameplay diameter to
   account for transparent padding, with its visible lower alpha bound aligned
-  to terrain. Its loop uses only continuous-burning frames 2–12, excluding
-  the source animation's extinguishing frames so the fire does not visibly
-  die and reignite. Field fade selects its final 500 ms from
+  to terrain. Frames 0–1 ignite, frames 2–17 loop the continuous burn, and
+  frames 18–23 fade during the final 500 ms selected from
   `EffectSnapshot.remainingMilliseconds`. Mapper, clock, and PNG-set tests
   cover these contracts; FIRE_RAIN uses launch speed multiplier 8 and
   horizontal fragment spread per step 0.09, and its ground fire lasts
@@ -1416,8 +1425,14 @@ maximum HP independently by global campaign level; unset sides inherit
 unit, ammunition type and spell. Campaign scenarios and Haste/Heal milestone
 availability project those values; their completion rewards remain at levels 5
 and 7, and campaign thresholds do not gate Shop purchases. Studio's Runtime →
-Campaign editor shows effective HP, marks inherited values, and removes/reset
-overrides without requiring chapter map artwork. `CampaignLevelDefinition`
+Campaign editor exposes those thresholds; bundled unit availability begins at
+DEFENDER level 2, SAPPER 5, DEMOLISHER 8, RAGING_BOAR 11 and SLINGMASTER 13. It
+also shows effective HP, marks inherited values, and removes/reset overrides
+without requiring chapter map artwork. In `MatchScenario`, null unit
+availability means unrestricted; an explicit empty list means no units are
+available to either team. Campaign level 1 uses that empty list, and its loadout
+may commit no unit types while the AI continues catapult decisions only.
+`CampaignLevelDefinition`
 places the selected level's optional overrides in `MatchScenario`;
 `MatchSession` resolves host/demo override first, then scenario override, then
 the global standard, and records effective values in replay configuration.

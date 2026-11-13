@@ -116,6 +116,7 @@ class AiProfileCatalog(definitions: List<AiProfileDefinition>) {
     }
 }
 
+/** Empty allowed units are valid for scenarios where neither team can deploy. */
 data class AiConfiguration(
     val playerId: PlayerId,
     val team: Team,
@@ -125,11 +126,7 @@ data class AiConfiguration(
     val randomSeed: Long = 0L,
     val allowedAmmunition: Set<AmmunitionType> = AmmunitionType.entries.toSet(),
     val allowedSpells: Set<SpellType> = emptySet(),
-) {
-    init {
-        require(allowedUnits.isNotEmpty()) { "AI must have at least one allowed unit" }
-    }
-}
+)
 
 class AiAgent(
     private var configuration: AiConfiguration,
