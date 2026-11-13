@@ -55,7 +55,7 @@ a failed save without replaying the match.
 LifeSystem is implemented in `game-application.application.progression`.
 `runtime.campaign.lives` in `game-balance.json` is the canonical source for
 initial/max lives and the 900,000 ms regeneration interval; the current balance
-revision is `game-balance-18`. New profiles start at 5/5, and non-BLUE_WIN
+revision is `game-balance-20`. New profiles start at 5/5, and non-BLUE_WIN
 campaign results consume one life exactly once by `MatchId`. Offline catch-up,
 local wall-clock high-water handling, finite capped grants, and additive
 time-limited unlimited grants are handled by LifeSystem, not Android UI or
@@ -322,8 +322,15 @@ runtime is implemented.
 Campaign progress is initialized at level 1 in the versioned local campaign
 DataStore namespace. `CampaignScreen` reloads progress asynchronously and
 blocks selection on storage/corruption failures; it no longer exposes all 100
-levels by default. Campaign fortresses use 500 HP each; demo mode preserves its
-existing 5000 HP BLUE fortress and 500 HP RED fortress.
+levels by default. Campaign fortresses use 500 HP each unless the sparse
+`runtime.campaign.fortressHealthOverrides` balance entry sets BLUE and/or RED
+independently for that global level. `MatchScenario` carries the optional team
+overrides, `MatchSession` resolves them before the standard HP and records the
+effective values in replay configuration. Studio Balance → Runtime → Campaign
+shows all levels grouped by the canonical chapter catalog, indicates inherited
+values and can reset each side to the standard. Demo mode preserves its
+existing 5000 HP BLUE fortress and 500 HP RED fortress. The checked-in balance
+currently overrides level 1 to 200 HP for each team.
 
 `game-campaign/src/main/resources/campaign-chapters.json` is the canonical
 ten-chapter catalog read by `CampaignChapterRegistry` and Studio. It defines
@@ -1231,7 +1238,7 @@ must go through commands and domain/application boundaries.
   a shot against a fortress. Entity-impact presentation uses the collision
   coordinates from `ProjectileHitEntity`.
 - Unit balance is centralized in `game-balance.json` revision
-  `game-balance-18`. Current profiles: Sapper 20 HP and 100 siege damage;
+  `game-balance-20`. Current profiles: Sapper 20 HP and 100 siege damage;
   Defender 60 HP, 20 unit damage and 10 fortress damage; Demolisher 25 HP;
   Raging Boar 80 HP and 35 unit/fortress damage; Slingmaster 40 HP, 20 unit
   damage and 10 fortress damage. Stable unit identifiers remain in `UnitIds`.
@@ -1373,11 +1380,20 @@ through a bounded cache and never enter the battlefield renderer. The left
 attack uses the anatomical right branch-arm, visible on screen-left; both
 attacks share the 60-frame 512×384 contract.
 
-The Balance tab edits the single schema 6 source
+The Balance tab edits the single schema 7 source
 `game-domain/src/main/resources/balance/game-balance.json`, which owns boss,
 unit, ammunition, spell and mana profiles plus shared runtime economy, physics,
-combat, AI strategy/profile, reward and campaign values. Limited ammunition
-prices are the nullable `shopCostGold` field. The global
+combat, AI strategy/profile, reward and campaign values. Sparse
+`runtime.campaign.fortressHealthOverrides` entries configure BLUE and RED
+maximum HP independently by global campaign level; unset sides inherit
+`runtime.fortresses.standardMaximumHealth`. Studio's Runtime → Campaign editor
+shows effective HP, marks inherited values, and removes/reset overrides
+without requiring chapter map artwork. `CampaignLevelDefinition` places the
+selected level's optional overrides in `MatchScenario`; `MatchSession` resolves
+host/demo override first, then scenario override, then the global standard, and
+records effective values in replay configuration. Snapshot `maxHealth` drives
+the existing HUD. Demo's 5,000 BLUE / 500 RED values remain independent.
+Limited ammunition prices are the nullable `shopCostGold` field. The global
 `runtime.combat.gameplaySpeedMultiplier` defaults to 1.2 (range 1.0–1.5) and
 scales unit/mobile-boss movement and projectile flight time, including
 fragments, without scaling match clocks, reloads or cooldowns. `GET /api/balance`
@@ -1386,7 +1402,7 @@ strict structural, range and stable-ID coverage validation, and
 `PUT /api/balance` writes atomically only when `expectedHash` is current. A changed
 document must advance `balanceRevision`; the editor automatically bumps a
 trailing revision number.
-The Balance UI presents all existing schema 6 fields through Bosses, Units,
+The Balance UI presents all existing schema 7 fields through Bosses, Units,
 Ammunition, Spells & Mana and Runtime tabs; it does not expose a JSON text
 editor. Profile identifiers and list structure remain fixed. Incomplete
 numeric drafts do not become zero values, validation errors are linked to

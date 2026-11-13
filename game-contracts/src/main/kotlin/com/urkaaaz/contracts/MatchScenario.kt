@@ -21,6 +21,7 @@ data class MatchScenario(
     val mapDefinition: MapDefinition? = null,
     val aiProfile: AiProfileSelection = AiProfileSelection(),
     val bossEncounter: BossEncounterConfig? = null,
+    val fortressHealthOverrides: FortressHealthOverrides? = null,
 ) {
     init {
         require(scenarioId.isNotBlank()) { "scenarioId must not be blank" }
@@ -55,6 +56,23 @@ data class MatchScenario(
             require(playerLoadout?.playerId == inventory.playerId) {
                 "inventory player must match the committed loadout player"
             }
+        }
+    }
+}
+
+data class FortressHealthOverrides(
+    val blueMaximumHealth: Int? = null,
+    val redMaximumHealth: Int? = null,
+) {
+    init {
+        require(blueMaximumHealth != null || redMaximumHealth != null) {
+            "fortress health overrides must set BLUE or RED"
+        }
+        require(blueMaximumHealth == null || blueMaximumHealth > 0) {
+            "BLUE fortress maximum health override must be positive"
+        }
+        require(redMaximumHealth == null || redMaximumHealth > 0) {
+            "RED fortress maximum health override must be positive"
         }
     }
 }

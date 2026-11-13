@@ -79,15 +79,21 @@ kampanię, AI oraz działający match screen. Gałąź robocza: `develop`.
 - Wybór amunicji w popup gridzie; niedostępna/depleted amunicja jest
   przygaszona i zablokowana.
 - Profile jednostek, amunicji, czarów, many, bossów i pozostałe parametry
-  runtime pochodzą ze ścisłego `game-balance.json` schema 6. Aplikacyjny loader
+  runtime pochodzą ze ścisłego `game-balance.json` schema 7. Aplikacyjny loader
   przekazuje jeden typowany `GameBalanceConfig` do symulacji, AI, kampanii,
   nagród, loadoutu i projekcji Androida.
+- Campaign Balance może nadpisywać maksymalne HP fortec BLUE i RED niezależnie
+  per globalny poziom 1–100. Brak nadpisania dziedziczy standardową wartość
+  z balansu; Studio edytuje sparse overrides w Runtime → Campaign. Demo
+  zachowuje osobne 5000 HP BLUE i 500 HP RED. Efektywne wartości trafiają do
+  scenariusza/session, SimulationConfig, snapshotu i konfiguracji replaya.
 - `runtime.combat.gameplaySpeedMultiplier` ma zakres `1.0–1.5` i wartość
   domyślną `1.2`; skaluje ruch jednostek/mobilego bossa oraz czas lotu
   pocisków i odłamków, nie zegary meczu, przeładowania ani cooldowny.
-- Studio Balance edytuje wszystkie istniejące pola schema 6, w tym nullable
-  `shopCostGold` i mnożnik tempa, przez zakładki i typowane kontrolki; surowy
-  JSON nie jest prezentowany, a stabilne ID i struktura profili pozostają stałe. Walidacja i zapis używają istniejącego
+- Studio Balance edytuje wszystkie istniejące pola schema 7, w tym nullable
+  `shopCostGold`, mnożnik tempa i per-level fortress HP, przez zakładki i
+  typowane kontrolki; surowy JSON nie jest prezentowany, a stabilne ID i
+  struktura profili pozostają stałe. Walidacja i zapis używają istniejącego
   API z kontrolą SHA-256 i `expectedHash`.
 - AI RED rozwiązuje strzały do żywych central objectives z trajektorią
   uwzględniającą balistykę, wiatr i teren. AI sytuacyjnie używa HASTE,

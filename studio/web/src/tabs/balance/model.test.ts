@@ -7,16 +7,17 @@ import {
   createAmmunitionBehaviorDraft,
   materializeBalanceDraft,
   parseBalanceDocument,
+  setCampaignFortressHealthOverride,
   serializeBalanceDocument,
   setBalanceDraftValue,
   toBalanceFormDraft,
   withIncrementedBalanceRevision,
 } from "./model";
-import type { GameBalanceDocumentV6 } from "./model";
+import type { GameBalanceDocumentV7 } from "./model";
 import type { BalanceFormDraft } from "./model";
 
 let originalContent: string;
-let original: GameBalanceDocumentV6;
+let original: GameBalanceDocumentV7;
 
 beforeAll(async () => {
   const root = await resolveRepoRoot();
@@ -56,13 +57,78 @@ it("preserves nullable shop prices and materializes an enabled price", () => {
 });
 
 describe("Balance form model", () => {
-  it("round-trips the complete checked-in schema 6 document", () => {
+  it("round-trips the complete checked-in schema 7 document", () => {
     const form = toBalanceFormDraft(original);
     const materialized = materializeBalanceDraft(form);
 
     expect(materialized.valid).toBe(true);
     if (!materialized.valid) return;
     expect(JSON.parse(serializeBalanceDocument(materialized.document))).toEqual(original);
+  });
+
+  it("keeps sparse fortress overrides and removes entries equal to the standard", () => {
+    const form = setBalanceDraftValue(
+      toBalanceFormDraft(original),
+      "runtime.campaign.fortressHealthOverrides",
+      [
+        {
+          level: { __numberInputDraft: true, text: "31" },
+          blueMaximumHealth: { __numberInputDraft: true, text: "700" },
+        },
+        {
+          level: { __numberInputDraft: true, text: "32" },
+          redMaximumHealth: { __numberInputDraft: true, text: "500" },
+        },
+      ],
+    );
+    const result = materializeBalanceDraft(form);
+
+    expect(result.valid).toBe(true);
+    if (!result.valid) return;
+    expect(result.document.runtime.campaign.fortressHealthOverrides).toEqual([
+      { level: 31, blueMaximumHealth: 700 },
+    ]);
+  });
+
+  it("adds and resets BLUE/RED fortress overrides independently", () => {
+    const withBlue = setCampaignFortressHealthOverride(
+      toBalanceFormDraft(original),
+      31,
+      "blue",
+      { __numberInputDraft: true, text: "700" },
+    );
+    const withBoth = setCampaignFortressHealthOverride(
+      withBlue,
+      31,
+      "red",
+      { __numberInputDraft: true, text: "900" },
+    );
+    const withBlueReset = setCampaignFortressHealthOverride(
+      withBoth,
+      31,
+      "blue",
+      null,
+    );
+    const result = materializeBalanceDraft(withBlueReset);
+
+    expect(result.valid).toBe(true);
+    if (!result.valid) return;
+    expect(result.document.runtime.campaign.fortressHealthOverrides).toEqual([
+      ...original.runtime.campaign.fortressHealthOverrides,
+      { level: 31, redMaximumHealth: 900 },
+    ]);
+
+    const fullyReset = setCampaignFortressHealthOverride(
+      withBlueReset,
+      31,
+      "red",
+      null,
+    );
+    const resetResult = materializeBalanceDraft(fullyReset);
+    expect(resetResult.valid).toBe(true);
+    if (!resetResult.valid) return;
+    expect(resetResult.document.runtime.campaign.fortressHealthOverrides)
+      .toEqual(original.runtime.campaign.fortressHealthOverrides);
   });
 
   it("rejects unknown schemas and unsupported root fields", () => {
@@ -136,21 +202,22 @@ describe("Balance form model", () => {
   });
 
   it("increments an unchanged balance revision only for a saved edit", () => {
+    const baseline = { ...original, balanceRevision: "test-balance-7" };
     const edited = {
-      ...original,
-      units: original.units.map((unit, index) =>
+      ...baseline,
+      units: baseline.units.map((unit, index) =>
         index === 0 ? { ...unit, supplyCost: unit.supplyCost + 1 } : unit,
       ),
     };
-    const revised = withIncrementedBalanceRevision(original, edited);
+    const revised = withIncrementedBalanceRevision(baseline, edited);
 
-    expect(revised.balanceRevision).toBe("game-balance-19");
+    expect(revised.balanceRevision).toBe("test-balance-8");
     expect(balanceDocumentMatches(original, original)).toBe(true);
   });
 });
 
 function setBalanceFormNumbers(
-  form: BalanceFormDraft<GameBalanceDocumentV6>,
+  form: BalanceFormDraft<GameBalanceDocumentV7>,
   fields: Record<string, string>,
 ) {
   return Object.entries(fields).reduce(

@@ -13,6 +13,7 @@ import com.urkaaaz.contracts.EntityId
 import com.urkaaaz.contracts.WindSnapshot
 import com.urkaaaz.contracts.BattlefieldConfig
 import com.urkaaaz.contracts.MatchScenario
+import com.urkaaaz.contracts.FortressHealthOverrides
 import com.urkaaaz.contracts.PlayerConfig
 import com.urkaaaz.contracts.PlayerInventoryConfig
 import com.urkaaaz.contracts.PlayerLoadoutConfig
@@ -679,6 +680,118 @@ class MatchSessionTest {
             snapshot.fortresses.first { it.team == com.urkaaaz.contracts.Team.RED }.maxHealth,
         )
         assertEquals(snapshot, MatchReplayPlayer.play(requireNotNull(session.replay())).snapshot)
+    }
+
+    @Test
+    fun demoPlayerFortressOverrideKeepsStandardRedFortressHealth() {
+        val session = MatchSession(blueFortressMaxHealth = 5_000)
+        val snapshot = session.dispatch(
+            MatchCommand.Start(
+                CommandId("demo-default-red-health-start"),
+                MatchId("demo-default-red-health"),
+                PlayerId("demo-default-red-health-player"),
+            ),
+        )
+
+        assertEquals(5_000, snapshot.fortresses.single { it.team == Team.BLUE }.maxHealth)
+        assertEquals(500, snapshot.fortresses.single { it.team == Team.RED }.maxHealth)
+    }
+
+    @Test
+    fun campaignFortressHealthOverridesReachSimulationAndReplayIndependently() {
+        val scenario = MatchScenario(
+            scenarioId = "campaign-fortress-health",
+            battlefield = BattlefieldConfig(1_000, 600),
+            players = listOf(
+                PlayerConfig(PlayerId("campaign-blue"), Team.BLUE),
+                PlayerConfig(PlayerId("campaign-red"), Team.RED),
+            ),
+            fortressHealthOverrides = FortressHealthOverrides(
+                blueMaximumHealth = 700,
+                redMaximumHealth = 900,
+            ),
+        )
+        val session = MatchSession(scenario = scenario)
+        val matchId = MatchId("campaign-fortress-health")
+        val snapshot = session.dispatch(
+            MatchCommand.Start(
+                CommandId("campaign-fortress-health-start"),
+                matchId,
+                PlayerId("campaign-blue"),
+            ),
+        )
+        val replay = requireNotNull(session.replay())
+        val replayResult = MatchReplayPlayer.play(replay)
+
+        assertEquals(
+            700,
+            snapshot.fortresses.single { it.team == Team.BLUE }.maxHealth,
+        )
+        assertEquals(
+            900,
+            snapshot.fortresses.single { it.team == Team.RED }.maxHealth,
+        )
+        assertEquals(700, replay.configuration.blueFortressMaxHealth)
+        assertEquals(900, replay.configuration.redFortressMaxHealth)
+        assertEquals(snapshot, replayResult.snapshot)
+    }
+
+    @Test
+    fun campaignFortressesInheritStandardHealthWhenLevelHasNoOverrides() {
+        val scenario = MatchScenario(
+            scenarioId = "campaign-standard-fortress-health",
+            battlefield = BattlefieldConfig(1_000, 600),
+            players = listOf(
+                PlayerConfig(PlayerId("standard-blue"), Team.BLUE),
+                PlayerConfig(PlayerId("standard-red"), Team.RED),
+            ),
+        )
+        val snapshot = MatchSession(scenario = scenario).dispatch(
+            MatchCommand.Start(
+                CommandId("campaign-standard-fortress-health-start"),
+                MatchId("campaign-standard-fortress-health"),
+                PlayerId("standard-blue"),
+            ),
+        )
+
+        assertEquals(
+            500,
+            snapshot.fortresses.single { it.team == Team.BLUE }.maxHealth,
+        )
+        assertEquals(
+            500,
+            snapshot.fortresses.single { it.team == Team.RED }.maxHealth,
+        )
+    }
+
+    @Test
+    fun explicitHostFortressHealthOverridesCampaignPerLevelOverrides() {
+        val scenario = MatchScenario(
+            scenarioId = "host-fortress-health-priority",
+            battlefield = BattlefieldConfig(1_000, 600),
+            players = listOf(
+                PlayerConfig(PlayerId("host-blue"), Team.BLUE),
+                PlayerConfig(PlayerId("host-red"), Team.RED),
+            ),
+            fortressHealthOverrides = FortressHealthOverrides(
+                blueMaximumHealth = 700,
+                redMaximumHealth = 900,
+            ),
+        )
+        val session = MatchSession(
+            scenario = scenario,
+            blueFortressMaxHealth = 1_200,
+        )
+        val snapshot = session.dispatch(
+            MatchCommand.Start(
+                CommandId("host-fortress-health-start"),
+                MatchId("host-fortress-health-priority"),
+                PlayerId("host-blue"),
+            ),
+        )
+
+        assertEquals(1_200, snapshot.fortresses.single { it.team == Team.BLUE }.maxHealth)
+        assertEquals(900, snapshot.fortresses.single { it.team == Team.RED }.maxHealth)
     }
 
     @Test

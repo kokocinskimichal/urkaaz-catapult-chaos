@@ -81,8 +81,8 @@ export function validateBalanceContent(content: string): BalanceValidationRespon
     ],
     issues,
   );
-  if (root.schemaVersion !== 6) {
-    issues.push(issue("schemaVersion", "must be the supported schema version 6"));
+  if (root.schemaVersion !== 7) {
+    issues.push(issue("schemaVersion", "must be the supported schema version 7"));
   }
   if (typeof root.balanceRevision !== "string" || root.balanceRevision.trim() === "") {
     issues.push(issue("balanceRevision", "must be a non-empty string"));
@@ -1038,7 +1038,7 @@ function validateCampaignBalance(value: unknown, issues: BalanceValidationIssue[
     "runtime.campaign",
     [
       "initialWindStrength", "initialWindStrengthStep", "initialWindStrengthBands",
-      "demoInitialWindStrength", "lives", "aiDifficultyBands",
+      "demoInitialWindStrength", "lives", "aiDifficultyBands", "fortressHealthOverrides",
     ],
     issues,
   );
@@ -1078,6 +1078,49 @@ function validateCampaignBalance(value: unknown, issues: BalanceValidationIssue[
         "must be a positive integer",
       ));
     }
+  }
+  const overrides = campaign.fortressHealthOverrides;
+  if (!Array.isArray(overrides)) {
+    issues.push(issue(
+      "runtime.campaign.fortressHealthOverrides",
+      "must be an array",
+    ));
+  } else {
+    const levels = new Set<number>();
+    overrides.forEach((value, index) => {
+      const path = `runtime.campaign.fortressHealthOverrides[${index}]`;
+      const override = asRecord(value);
+      if (!override) {
+        issues.push(issue(path, "must be an object"));
+        return;
+      }
+      checkKeys(
+        override,
+        path,
+        ["level"],
+        issues,
+        ["blueMaximumHealth", "redMaximumHealth"],
+      );
+      if (!positiveInteger(override.level) || override.level > 100) {
+        issues.push(issue(`${path}.level`, "must be an integer between 1 and 100"));
+      } else if (levels.has(override.level)) {
+        issues.push(issue(`${path}.level`, "must be unique"));
+      } else {
+        levels.add(override.level);
+      }
+      const hasBlue = Object.hasOwn(override, "blueMaximumHealth");
+      const hasRed = Object.hasOwn(override, "redMaximumHealth");
+      if (!hasBlue && !hasRed) {
+        issues.push(issue(path, "must override BLUE or RED fortress health"));
+      }
+      for (const key of ["blueMaximumHealth", "redMaximumHealth"] as const) {
+        if (!Object.hasOwn(override, key)) continue;
+        const health = override[key];
+        if (!positiveInteger(health) || health > 2_147_483_647) {
+          issues.push(issue(`${path}.${key}`, "must be a positive 32-bit integer"));
+        }
+      }
+    });
   }
   if (!Array.isArray(campaign.aiDifficultyBands) || campaign.aiDifficultyBands.length === 0) {
     issues.push(issue("runtime.campaign.aiDifficultyBands", "must contain at least one band"));

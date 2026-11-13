@@ -2,7 +2,7 @@
 
 Status: szkielet, wizualizator animacji, indeks assetów, edytory Map i Campaign
 oraz zakładka Balance z walidacją i zapisem `game-balance.json` są wdrożone w
-`studio/`; patrz `studio/README.md`. Balance używa pełnego formularza schema 6
+`studio/`; patrz `studio/README.md`. Balance używa pełnego formularza schema 7
 z edytowalną ceną stocku amunicji `shopCostGold`. Studio to lokalne narzędzie
 deweloperskie, nie część gry.
 
@@ -18,7 +18,7 @@ rozproszone narzędzia pomocnicze:
 |---|---|---|
 | Mapy | edycja `MapDefinition` JSON (teren, fundamenty, dekoracje, relikty) | edytor przeniesiony do Studio |
 | Kampania / mapy rozdziałów | podgląd mapy z ramką i edycja pozycji markerów poziomów | **wdrożone** (sekcja 10) |
-| Balance | edycja `game-balance.json` schema 6 | pełny formularz, walidacja serwerowa i zapis przez API wdrożone |
+| Balance | edycja `game-balance.json` schema 7 | pełny formularz, walidacja serwerowa i zapis przez API wdrożone |
 | Wizualizator animacji | podgląd istniejących animacji | wdrożony |
 
 Poza zakresem (na teraz): uwierzytelnianie, praca wielu użytkowników, hosting,
@@ -120,7 +120,7 @@ stronie serwera (sekcja 5). Format: JSON, chyba że zaznaczono inaczej.
 | `GET /api/animations` | katalog animacji (sekcja 8) |
 | `GET /api/animations/{id}/frames/{n}` | pojedyncza klatka PNG |
 | `GET /api/balance` | treść `game-balance.json` i SHA-256 |
-| `POST /api/balance/validate` | walidacja schema 6 bez zapisu |
+| `POST /api/balance/validate` | walidacja schema 7 bez zapisu |
 | `PUT /api/balance` | walidacja i atomowy zapis z `expectedHash` |
 
 Odroczony pozostaje endpoint listy poziomów/kamieni milowych
@@ -417,15 +417,21 @@ overlap oraz rejestrację zakładki. Studio dodatkowo przechodzi `npm test`,
 ## 11. Zakładka: Balance
 
 Zakładka Balance edytuje jedyne źródło wartości balansu:
-`game-domain/src/main/resources/balance/game-balance.json`, schema 6.
+`game-domain/src/main/resources/balance/game-balance.json`, schema 7.
 Formularz udostępnia zakładki Bosses, Units, Ammunition, Spells & Mana i
-Runtime. Campaign zawiera również typed pola żyć: initial/maximum lives oraz
-interwał regeneracji z `runtime.campaign.lives`. Profile, stabilne ID,
-liczebność i kolejność rekordów są stałe;
-wszystkie pozostałe pola schema 6, w tym nullable `ammunition[].shopCostGold`
+Runtime. Campaign zawiera typed pola żyć: initial/maximum lives oraz
+interwał regeneracji z `runtime.campaign.lives`, a także tabelę sparse
+nadpisań maksymalnego HP fortec BLUE/RED per globalny poziom. Niewpisane
+wartości dziedziczą standardowe HP; chapter grouping pochodzi z kanonicznego
+catalogu kampanii. Profile, stabilne ID, liczebność i kolejność rekordów są stałe;
+wszystkie pozostałe pola schema 7, w tym nullable `ammunition[].shopCostGold`
 oraz `runtime.combat.gameplaySpeedMultiplier` z zakresem 1.0–1.5, są
 edytowane przez typowane kontrolki. Cena jest nieujemną liczbą całkowitą albo
 `null` dla amunicji niesprzedawanej.
+Sekcja Runtime → Campaign zawiera rzadkie overrides maksymalnego HP fortec
+BLUE i RED per globalny poziom kampanii; brak wpisu lub strony dziedziczy
+`runtime.fortresses.standardMaximumHealth`. Tabela pobiera zakresy poziomów z
+kanonicznego chapter catalogu i nie zależy od dostępności artworku.
 Backend oferuje
 `GET /api/balance` (treść i SHA-256), `POST /api/balance/validate` oraz
 `PUT /api/balance` z `expectedHash`; zapis jest walidowany i atomowy, a zmiana
@@ -472,7 +478,7 @@ wartości balansu, kodu gameplayu ani nie uruchamia symulacji/Gradle.
 6. **Campaign map editor**: wspólny chapter catalog i layout JSON,
    bezpieczne API Studio, framed map preview z markerami, drag + X/Y oraz
    odczyt tych samych layoutów przez Android. **Wdrożone**.
-7. **Balance form**: pełny formularz schema 6 z walidacją i zapisem przez
+7. **Balance form**: pełny formularz schema 7 z walidacją i zapisem przez
    istniejące API. **Wdrożone**.
 
 Każdy krok jest osobno wdrażalny i kończy się działającą aplikacją.
@@ -484,7 +490,7 @@ Każdy krok jest osobno wdrażalny i kończy się działającą aplikacją.
 | 1 | Walidacja map | tylko TypeScript; Kotlin autorytatywny w testach | rozjazd TS ↔ Kotlin; ograniczany wspólnymi mapami referencyjnymi i bramką `./gradlew test` |
 | 2 | Dwie kopie map | Studio zapisuje obie kopie jednym żądaniem; duplikat zostaje | dwufazowy zapis musi być atomowy w parze |
 | 3 | Indeksy assetów | jeden indeks budowany w locie ze źródeł; usunąć `sync-assets.mjs` i kopie | trzeba nadać jawne kategorie i biomy plikom spoza indeksu |
-| 4 | Formularz Balance | wszystkie profile edytowane w kontrolkach; surowy JSON nie jest prezentowany | zachować kontrakt schema 6 i jeden walidator serwera |
+| 4 | Formularz Balance | wszystkie profile edytowane w kontrolkach; surowy JSON nie jest prezentowany | zachować kontrakt schema 7 i jeden walidator serwera |
 | 5 | Równoległe zmiany plików | hash zawartości + `409` | brak blokad plików |
 | 6 | JobRunner/Gradle | poza zakresem formularza Balance | wymaga osobnego zakresu i decyzji o uruchamianiu symulacji |
 | 7 | Hosting zdalny | poza zakresem; Studio działa lokalnie | wymagałby auth i innego modelu undo |

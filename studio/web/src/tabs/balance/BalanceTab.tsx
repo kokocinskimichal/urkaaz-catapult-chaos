@@ -2,10 +2,12 @@ import type {
   BalanceDocumentResponse,
   BalanceValidationResponse,
 } from "@studio/contracts/balance";
+import type { CampaignChapterCatalogEntry } from "@studio/contracts/campaign";
 import { useEffect, useState } from "react";
 import {
   ApiError,
   fetchBalance,
+  fetchCampaignChapters,
   saveBalance,
   validateBalance,
 } from "../../shared/api";
@@ -20,19 +22,21 @@ import {
 } from "./model";
 import type {
   BalanceFormDraft,
-  GameBalanceDocumentV6,
+  GameBalanceDocumentV7,
 } from "./model";
 import "./styles.css";
 
 export function BalanceTab() {
   const [document, setDocument] = useState<BalanceDocumentResponse | null>(null);
-  const [baseline, setBaseline] = useState<GameBalanceDocumentV6 | null>(null);
-  const [draft, setDraft] = useState<BalanceFormDraft<GameBalanceDocumentV6> | null>(null);
+  const [baseline, setBaseline] = useState<GameBalanceDocumentV7 | null>(null);
+  const [draft, setDraft] = useState<BalanceFormDraft<GameBalanceDocumentV7> | null>(null);
   const [validation, setValidation] = useState<BalanceValidationResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [needsReload, setNeedsReload] = useState(false);
+  const [chapters, setChapters] = useState<CampaignChapterCatalogEntry[]>([]);
+  const [chapterCatalogError, setChapterCatalogError] = useState<string | null>(null);
 
   const dirty = draft !== null && baseline !== null && isDraftDirty(draft, baseline);
 
@@ -60,7 +64,7 @@ export function BalanceTab() {
       setBaseline(parsed);
       setDraft(toBalanceFormDraft(parsed));
       setValidation(null);
-      setMessage("Loaded schema 6 balance.");
+      setMessage("Loaded schema 7 balance.");
     } catch (cause) {
       setError(errorMessage(cause));
     } finally {
@@ -70,6 +74,25 @@ export function BalanceTab() {
 
   useEffect(() => {
     void reload(false);
+  }, []);
+
+  useEffect(() => {
+    let cancelled = false;
+    fetchCampaignChapters()
+      .then(result => {
+        if (cancelled) return;
+        setChapters(result.chapters);
+        setChapterCatalogError(null);
+      })
+      .catch(cause => {
+        if (!cancelled) {
+          setChapters([]);
+          setChapterCatalogError(errorMessage(cause));
+        }
+      });
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   const createSaveCandidate = () => {
@@ -144,7 +167,7 @@ export function BalanceTab() {
     }
   };
 
-  const onDraftChange = (next: BalanceFormDraft<GameBalanceDocumentV6>) => {
+  const onDraftChange = (next: BalanceFormDraft<GameBalanceDocumentV7>) => {
     setDraft(next);
     setValidation(null);
     setError(null);
@@ -159,7 +182,7 @@ export function BalanceTab() {
         <div>
           <h2>Game balance</h2>
           <p>
-            Edit schema 6 profiles using the form. Changes apply after rebuilding
+            Edit schema 7 profiles using the form. Changes apply after rebuilding
             and restarting the app.
           </p>
         </div>
@@ -218,6 +241,8 @@ export function BalanceTab() {
             key={document?.hash ?? "balance-form"}
             draft={draft}
             validation={validation}
+            chapters={chapters}
+            chapterCatalogError={chapterCatalogError}
             onChange={onDraftChange}
           />
         </fieldset>
@@ -227,8 +252,8 @@ export function BalanceTab() {
 }
 
 function isDraftDirty(
-  draft: BalanceFormDraft<GameBalanceDocumentV6>,
-  baseline: GameBalanceDocumentV6,
+  draft: BalanceFormDraft<GameBalanceDocumentV7>,
+  baseline: GameBalanceDocumentV7,
 ): boolean {
   const result = materializeBalanceDraft(draft);
   return !result.valid || !balanceDocumentMatches(result.document, baseline);

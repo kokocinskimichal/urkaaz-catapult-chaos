@@ -7,9 +7,12 @@ jednostek, amunicji, czarów i many. Schema 3 przenosi również wspólne parame
 runtime ekonomii, fortec, meczu, fizyki, wiatru, walki, bossów, AI, nagród i
 kampanii. Poniższe etapy schema 2 opisują zakończoną migrację bazową.
 
-Późniejsze rozszerzenia utrzymały bieżący kontrakt na schema 6. Revision
-`game-balance-18` dodaje `runtime.campaign.lives` dla LifeSystemu; bieżący
-Studio Balance nadal używa tego samego strict schema 6.
+Późniejsze rozszerzenia podniosły kontrakt do schema 7. Revision
+`game-balance-18` dodał `runtime.campaign.lives` dla LifeSystemu, a revision
+`game-balance-19` dodał sparse per-level overrides maksymalnego HP fortec BLUE
+i RED. Późniejszy zapis w Studio ustawił poziom 1 na 200 HP dla obu fortec,
+podnosząc bieżącą rewizję do `game-balance-20`. Studio Balance używa strict
+schema 7.
 
 Plan przenosi obecne charakterystyki jednostek, amunicji i czarów do
 `game-domain/src/main/resources/balance/game-balance.json`. Jest to migracja

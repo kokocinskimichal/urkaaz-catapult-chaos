@@ -350,8 +350,11 @@ class MatchSession(
         val bossEncounter = scenario?.bossEncounter
         val bossProfile = bossEncounter?.let { loadedBalance.config.bossProfile(it.profileId) }
         val standardFortressHealth = loadedBalance.config.runtime.fortresses.standardMaximumHealth
-        val resolvedBlueFortressHealth = blueFortressMaxHealth ?: standardFortressHealth
-        val resolvedRedFortressHealth = redFortressMaxHealth ?: standardFortressHealth
+        val scenarioFortressHealth = scenario?.fortressHealthOverrides
+        val resolvedBlueFortressHealth =
+            blueFortressMaxHealth ?: scenarioFortressHealth?.blueMaximumHealth ?: standardFortressHealth
+        val resolvedRedFortressHealth =
+            redFortressMaxHealth ?: scenarioFortressHealth?.redMaximumHealth ?: standardFortressHealth
         val resolvedBossDuration = bossEncounterMatchDurationMilliseconds
             ?: loadedBalance.config.runtime.match.bossEncounterDurationMilliseconds
         replayConfiguration = MatchReplayConfiguration(

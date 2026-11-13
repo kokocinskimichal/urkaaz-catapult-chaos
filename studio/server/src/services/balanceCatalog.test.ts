@@ -24,7 +24,7 @@ afterEach(async () => {
 });
 
 describe("game balance catalog", () => {
-  it("validates the supported schema 6 balance document", () => {
+  it("validates the supported schema 7 balance document", () => {
     expect(validateBalanceContent(validBalance)).toEqual({ valid: true, issues: [] });
   });
 
@@ -123,6 +123,53 @@ describe("game balance catalog", () => {
     delete missingCampaign.lives;
     expect(validateBalanceContent(JSON.stringify(missing)).issues).toContainEqual(
       expect.objectContaining({ path: "runtime.campaign.lives" }),
+    );
+  });
+
+  it("accepts sparse independent campaign fortress health overrides", () => {
+    const document = JSON.parse(validBalance) as Record<string, unknown>;
+    const runtime = document.runtime as Record<string, unknown>;
+    const campaign = runtime.campaign as Record<string, unknown>;
+    campaign.fortressHealthOverrides = [
+      { level: 1, blueMaximumHealth: 700 },
+      { level: 100, redMaximumHealth: 900 },
+    ];
+
+    expect(validateBalanceContent(JSON.stringify(document))).toEqual({
+      valid: true,
+      issues: [],
+    });
+  });
+
+  it("rejects malformed, duplicate, empty, null and non-positive fortress overrides", () => {
+    const invalidOverrides: unknown[][] = [
+      [{ level: 0, blueMaximumHealth: 700 }],
+      [{ level: 101, redMaximumHealth: 900 }],
+      [{ level: 31, blueMaximumHealth: 700 }, { level: 31, redMaximumHealth: 800 }],
+      [{ level: 31 }],
+      [{ level: 31, blueMaximumHealth: null }],
+      [{ level: 31, redMaximumHealth: 0 }],
+      [{ level: 31, blueMaximumHealth: 1.5 }],
+      [{ level: 31, blueMaximumHealth: 2_147_483_648 }],
+      [{ level: "31", blueMaximumHealth: 700 }],
+      [{ level: 31, blueMaximumHealth: 700, extra: true }],
+    ];
+
+    invalidOverrides.forEach(fortressHealthOverrides => {
+      const document = JSON.parse(validBalance) as Record<string, unknown>;
+      const runtime = document.runtime as Record<string, unknown>;
+      const campaign = runtime.campaign as Record<string, unknown>;
+      campaign.fortressHealthOverrides = fortressHealthOverrides;
+
+      expect(validateBalanceContent(JSON.stringify(document)).valid).toBe(false);
+    });
+
+    const missing = JSON.parse(validBalance) as Record<string, unknown>;
+    const runtime = missing.runtime as Record<string, unknown>;
+    const campaign = runtime.campaign as Record<string, unknown>;
+    delete campaign.fortressHealthOverrides;
+    expect(validateBalanceContent(JSON.stringify(missing)).issues).toContainEqual(
+      expect.objectContaining({ path: "runtime.campaign.fortressHealthOverrides" }),
     );
   });
 

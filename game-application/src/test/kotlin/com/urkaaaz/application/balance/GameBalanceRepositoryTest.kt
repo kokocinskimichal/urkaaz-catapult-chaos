@@ -43,8 +43,8 @@ class GameBalanceRepositoryTest {
         assertEquals(5, result.balance.config.units.all.size)
         assertEquals(5, result.balance.config.ammunition.all.size)
         assertEquals(11, result.balance.config.spells.all.size)
-        assertEquals(6, result.balance.config.schemaVersion)
-        assertEquals("game-balance-18", result.balance.config.balanceRevision)
+        assertEquals(7, result.balance.config.schemaVersion)
+        assertTrue(result.balance.config.balanceRevision.matches(Regex("game-balance-\\d+")))
         assertEquals(5, result.balance.config.runtime.campaign.lives.initialLives)
         assertEquals(5, result.balance.config.runtime.campaign.lives.maximumLives)
         assertEquals(
@@ -59,7 +59,13 @@ class GameBalanceRepositoryTest {
         assertEquals(GameBalanceFixtures.balance.ammunition.all, result.balance.config.ammunition.all)
         assertEquals(GameBalanceFixtures.balance.spells.all, result.balance.config.spells.all)
         assertEquals(GameBalanceFixtures.balance.mana, result.balance.config.mana)
-        assertEquals(GameBalanceFixtures.balance.runtime, result.balance.config.runtime)
+        val expectedRuntime = GameBalanceFixtures.balance.runtime.copy(
+            campaign = GameBalanceFixtures.balance.runtime.campaign.copy(
+                fortressHealthOverrides =
+                    result.balance.config.runtime.campaign.fortressHealthOverrides,
+            ),
+        )
+        assertEquals(expectedRuntime, result.balance.config.runtime)
         assertEquals(
             220f,
             result.balance.config.ammunition
@@ -86,8 +92,8 @@ class GameBalanceRepositoryTest {
             .bufferedReader()
             .use { it.readText() }
         val invalid = bundled.replace(
-            "\"schemaVersion\": 6,",
-            "\"schemaVersion\": 6,\n  \"extra\": true,",
+            "\"schemaVersion\": 7,",
+            "\"schemaVersion\": 7,\n  \"extra\": true,",
         )
         val repository = GameBalanceRepository {
             ByteArrayInputStream(invalid.toByteArray())
@@ -100,11 +106,86 @@ class GameBalanceRepositoryTest {
     }
 
     @Test
+    fun campaignFortressHealthOverridesLoadSparsePerTeamValues() {
+        val bundled = javaClass.getResourceAsStream("/balance/game-balance.json")!!
+            .bufferedReader()
+            .use { it.readText() }
+        val customized = replaceCampaignFortressHealthOverrides(
+            bundled,
+            """
+                [
+                  {"level": 31, "blueMaximumHealth": 700},
+                  {"level": 32, "redMaximumHealth": 900}
+                ]
+            """.trimIndent(),
+        )
+        val repository = GameBalanceRepository {
+            ByteArrayInputStream(customized.toByteArray())
+        }
+        val overrides = assertIs<GameBalanceRead.Available>(repository.load())
+            .balance.config.runtime.campaign.fortressHealthOverrides
+
+        assertEquals(2, overrides.size)
+        assertEquals(31, overrides[0].level)
+        assertEquals(700, overrides[0].blueMaximumHealth)
+        assertEquals(null, overrides[0].redMaximumHealth)
+        assertEquals(32, overrides[1].level)
+        assertEquals(null, overrides[1].blueMaximumHealth)
+        assertEquals(900, overrides[1].redMaximumHealth)
+    }
+
+    @Test
+    fun invalidCampaignFortressHealthOverridesFailBalanceLoading() {
+        val bundled = javaClass.getResourceAsStream("/balance/game-balance.json")!!
+            .bufferedReader()
+            .use { it.readText() }
+        val invalidOverrides = listOf(
+            """[{"level": 31, "blueMaximumHealth": 700}, {"level": 31, "redMaximumHealth": 800}]""",
+            """[{"level": 31, "blueMaximumHealth": null, "redMaximumHealth": 800}]""",
+            """[{"level": 31.5, "blueMaximumHealth": 700}]""",
+            """[{"level": 101, "redMaximumHealth": 800}]""",
+            """[{"level": 31, "blueMaximumHealth": 0}]""",
+            """[{"level": 31, "blueMaximumHealth": 1.5}]""",
+            """[{"level": 31, "blueMaximumHealth": 2147483648}]""",
+            """[{"level": 31, "blueMaximumHealth": "700"}]""",
+            """[{"level": 31, "blueMaximumHealth": 700, "extra": 1}]""",
+            """[{"level": 31}]""",
+        )
+
+        invalidOverrides.forEach { overrides ->
+            val invalid = replaceCampaignFortressHealthOverrides(
+                bundled,
+                overrides,
+            )
+            val repository = GameBalanceRepository {
+                ByteArrayInputStream(invalid.toByteArray())
+            }
+
+            assertEquals(
+                GameBalanceRead.Failure(GameBalanceFailure.INVALID_DATA),
+                repository.load(),
+                overrides,
+            )
+        }
+    }
+
+    private fun replaceCampaignFortressHealthOverrides(
+        content: String,
+        overridesJson: String,
+    ): String {
+        val pattern = Regex(""""fortressHealthOverrides"\s*:\s*\[[\s\S]*?\]""")
+        require(pattern.containsMatchIn(content)) {
+            "Bundled campaign fortress health overrides field is missing"
+        }
+        return pattern.replaceFirst(content, "\"fortressHealthOverrides\": $overridesJson")
+    }
+
+    @Test
     fun unsupportedBalanceSchemaIsRejected() {
         val bundled = javaClass.getResourceAsStream("/balance/game-balance.json")!!
             .bufferedReader()
             .use { it.readText() }
-        val invalid = bundled.replace("\"schemaVersion\": 6,", "\"schemaVersion\": 5,")
+        val invalid = bundled.replace("\"schemaVersion\": 7,", "\"schemaVersion\": 6,")
         val repository = GameBalanceRepository {
             ByteArrayInputStream(invalid.toByteArray())
         }

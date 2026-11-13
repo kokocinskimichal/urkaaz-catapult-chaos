@@ -1,5 +1,6 @@
 import { useState } from "react";
 import type * as React from "react";
+import type { CampaignChapterCatalogEntry } from "@studio/contracts/campaign";
 import type { BalanceValidationIssue } from "@studio/contracts/balance";
 import {
   BooleanField,
@@ -12,6 +13,7 @@ import {
 import {
   createApexFragmentationDraft,
   createAmmunitionBehaviorDraft,
+  setCampaignFortressHealthOverride,
   setBalanceDraftValue,
 } from "./model";
 import type {
@@ -26,7 +28,7 @@ import type {
   BossArchetype,
   BossMovementKind,
   FriendlyFirePolicy,
-  GameBalanceDocumentV6,
+  GameBalanceDocumentV7,
   NumericInputDraft,
   SpellCategory,
   SpellDefinition,
@@ -53,10 +55,16 @@ type RuntimeSection =
   | "rewards"
   | "campaign";
 
+function numberDraft(text: string): NumericInputDraft {
+  return { __numberInputDraft: true, text };
+}
+
 interface BalanceFormProps {
-  draft: BalanceFormDraft<GameBalanceDocumentV6>;
+  draft: BalanceFormDraft<GameBalanceDocumentV7>;
   validation: { valid: boolean; issues: BalanceValidationIssue[] } | null;
-  onChange: (draft: BalanceFormDraft<GameBalanceDocumentV6>) => void;
+  chapters: CampaignChapterCatalogEntry[];
+  chapterCatalogError: string | null;
+  onChange: (draft: BalanceFormDraft<GameBalanceDocumentV7>) => void;
 }
 
 const SECTIONS: Array<{ id: BalanceSection; label: string }> = [
@@ -165,7 +173,13 @@ const RUNTIME_SUBSECTION_BY_PATH: Record<string, RuntimeSection> = {
   campaign: "campaign",
 };
 
-export function BalanceForm({ draft, validation, onChange }: BalanceFormProps) {
+export function BalanceForm({
+  draft,
+  validation,
+  chapters,
+  chapterCatalogError,
+  onChange,
+}: BalanceFormProps) {
   const [section, setSection] = useState<BalanceSection>("bosses");
   const [runtimeSection, setRuntimeSection] = useState<RuntimeSection>("economy");
   const [bossId, setBossId] = useState(draft.bosses[0]?.id ?? "");
@@ -195,6 +209,11 @@ export function BalanceForm({ draft, validation, onChange }: BalanceFormProps) {
     validation?.issues.find(issue => issue.path === path)?.message;
   const update = (path: string, value: unknown) =>
     onChange(setBalanceDraftValue(draft, path, value));
+  const updateFortressHealthOverride = (
+    level: number,
+    team: "blue" | "red",
+    value: NumericInputDraft | null,
+  ) => onChange(setCampaignFortressHealthOverride(draft, level, team, value));
 
   const numberField = (
     path: string,
@@ -809,6 +828,10 @@ export function BalanceForm({ draft, validation, onChange }: BalanceFormProps) {
               profileIndex={aiProfileIndex}
               aiProfile={aiProfile}
               setAiProfileId={setAiProfileId}
+              chapters={chapters}
+              chapterCatalogError={chapterCatalogError}
+              fortressHealthOverrideError={errorFor}
+              onFortressHealthOverrideChange={updateFortressHealthOverride}
               numberField={numberField}
               selectField={selectField}
             />
@@ -1166,7 +1189,7 @@ function ManaFields({
   draft,
   numberField,
 }: {
-  draft: BalanceFormDraft<GameBalanceDocumentV6>;
+  draft: BalanceFormDraft<GameBalanceDocumentV7>;
   numberField: (
     path: string,
     label: string,
@@ -1204,14 +1227,26 @@ function RuntimeFields({
   profileIndex,
   aiProfile,
   setAiProfileId,
+  chapters,
+  chapterCatalogError,
+  fortressHealthOverrideError,
+  onFortressHealthOverrideChange,
   numberField,
   selectField,
 }: {
-  draft: BalanceFormDraft<GameBalanceDocumentV6>;
+  draft: BalanceFormDraft<GameBalanceDocumentV7>;
   section: RuntimeSection;
   profileIndex: number;
-  aiProfile: BalanceFormDraft<GameBalanceDocumentV6["runtime"]["aiProfiles"][number]> | undefined;
+  aiProfile: BalanceFormDraft<GameBalanceDocumentV7["runtime"]["aiProfiles"][number]> | undefined;
   setAiProfileId: (id: AiProfileId) => void;
+  chapters: CampaignChapterCatalogEntry[];
+  chapterCatalogError: string | null;
+  fortressHealthOverrideError: (path: string) => string | undefined;
+  onFortressHealthOverrideChange: (
+    level: number,
+    team: "blue" | "red",
+    value: NumericInputDraft | null,
+  ) => void;
   numberField: (
     path: string,
     label: string,
@@ -1541,16 +1576,110 @@ function RuntimeFields({
               );
             })}
           </FieldGroup>
+          <FieldGroup
+            title="Fortress HP per campaign level"
+            description="BLUE and RED can be overridden independently. An unset value inherits the standard fortress HP."
+          >
+            {chapterCatalogError && (
+              <p className="balance-field-error" role="alert">
+                Campaign chapters could not be loaded: {chapterCatalogError}
+              </p>
+            )}
+            {chapters.length === 0 && !chapterCatalogError && (
+              <p className="balance-field-hint">Loading campaign chapters…</p>
+            )}
+            {chapters.map(chapter => (
+              <details className="balance-fortress-health-chapter" key={chapter.id}>
+                <summary>
+                  {chapter.id} — levels {chapter.firstLevel}–{chapter.lastLevel}
+                </summary>
+                <div className="balance-fortress-health-levels">
+                  {Array.from(
+                    { length: chapter.lastLevel - chapter.firstLevel + 1 },
+                    (_, offset) => chapter.firstLevel + offset,
+                  ).map(level => {
+                    const overrideIndex =
+                      draft.runtime.campaign.fortressHealthOverrides.findIndex(
+                        entry => Number(entry.level.text) === level,
+                      );
+                    const override = overrideIndex >= 0
+                      ? draft.runtime.campaign.fortressHealthOverrides[overrideIndex]
+                      : undefined;
+                    const base = draft.runtime.fortresses.standardMaximumHealth;
+                    const path = overrideIndex >= 0
+                      ? `runtime.campaign.fortressHealthOverrides[${overrideIndex}]`
+                      : `runtime.campaign.fortressHealthOverrides.level-${level}`;
+                    const blueInherited = override?.blueMaximumHealth === undefined;
+                    const redInherited = override?.redMaximumHealth === undefined;
+                    return (
+                      <div className="balance-fortress-health-row" key={level}>
+                        <strong>Level {level}</strong>
+                        <div>
+                          <NumberField
+                            path={`${path}.blueMaximumHealth`}
+                            label={`Level ${level} BLUE max HP`}
+                            value={override?.blueMaximumHealth ?? base}
+                            error={fortressHealthOverrideError(`${path}.blueMaximumHealth`)}
+                            hint={blueInherited ? `Inherited: ${base.text} HP` : undefined}
+                            min={1}
+                            step={1}
+                            unit="HP"
+                            onChange={value =>
+                              onFortressHealthOverrideChange(level, "blue", value)}
+                          />
+                          {override && !blueInherited && (
+                            <button
+                              type="button"
+                              className="balance-reset-override"
+                              aria-label={`Reset level ${level} BLUE fortress HP to standard`}
+                              onClick={() => onFortressHealthOverrideChange(level, "blue", null)}
+                            >
+                              Use standard
+                            </button>
+                          )}
+                        </div>
+                        <div>
+                          <NumberField
+                            path={`${path}.redMaximumHealth`}
+                            label={`Level ${level} RED max HP`}
+                            value={override?.redMaximumHealth ?? base}
+                            error={fortressHealthOverrideError(`${path}.redMaximumHealth`)}
+                            hint={redInherited ? `Inherited: ${base.text} HP` : undefined}
+                            min={1}
+                            step={1}
+                            unit="HP"
+                            onChange={value =>
+                              onFortressHealthOverrideChange(level, "red", value)}
+                          />
+                          {override && !redInherited && (
+                            <button
+                              type="button"
+                              className="balance-reset-override"
+                              aria-label={`Reset level ${level} RED fortress HP to standard`}
+                              onClick={() => onFortressHealthOverrideChange(level, "red", null)}
+                            >
+                              Use standard
+                            </button>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </details>
+            ))}
+          </FieldGroup>
         </>
       );
   }
+
 }
 
 function CombatFields({
   runtime,
   numberField,
 }: {
-  runtime: BalanceFormDraft<GameBalanceDocumentV6["runtime"]>;
+  runtime: BalanceFormDraft<GameBalanceDocumentV7["runtime"]>;
   numberField: (
     path: string,
     label: string,
@@ -1665,7 +1794,7 @@ function AiStrategyFields({
   runtime,
   numberField,
 }: {
-  runtime: BalanceFormDraft<GameBalanceDocumentV6["runtime"]>;
+  runtime: BalanceFormDraft<GameBalanceDocumentV7["runtime"]>;
   numberField: (
     path: string,
     label: string,

@@ -256,6 +256,11 @@ export interface RuntimeBalance {
     initialWindStrengthStep: number;
     initialWindStrengthBands: number;
     demoInitialWindStrength: number;
+    fortressHealthOverrides: Array<{
+      level: number;
+      blueMaximumHealth?: number;
+      redMaximumHealth?: number;
+    }>;
     lives: {
       initialLives: number;
       maximumLives: number;
@@ -271,8 +276,8 @@ export interface RuntimeBalance {
   };
 }
 
-export interface GameBalanceDocumentV6 {
-  schemaVersion: 6;
+export interface GameBalanceDocumentV7 {
+  schemaVersion: 7;
   balanceRevision: string;
   bosses: BossProfile[];
   units: UnitConfiguration[];
@@ -307,7 +312,7 @@ export interface FormIssue {
 }
 
 export type MaterializedDraft =
-  | { valid: true; document: GameBalanceDocumentV6 }
+  | { valid: true; document: GameBalanceDocumentV7 }
   | { valid: false; issues: FormIssue[] };
 
 const ROOT_KEYS = [
@@ -345,7 +350,7 @@ export class BalanceDocumentError extends Error {
   }
 }
 
-export function parseBalanceDocument(content: string): GameBalanceDocumentV6 {
+export function parseBalanceDocument(content: string): GameBalanceDocumentV7 {
   let value: unknown;
   try {
     value = JSON.parse(content) as unknown;
@@ -359,7 +364,7 @@ export function parseBalanceDocument(content: string): GameBalanceDocumentV6 {
   if (!isRecord(value)) {
     throw new BalanceDocumentError("The balance document must be a JSON object.");
   }
-  if (value.schemaVersion !== 6) {
+  if (value.schemaVersion !== 7) {
     throw new BalanceDocumentError(
       `Unsupported balance schema version: ${String(value.schemaVersion)}.`,
     );
@@ -383,10 +388,10 @@ export function parseBalanceDocument(content: string): GameBalanceDocumentV6 {
     !isRecord(value.mana) ||
     !isRecord(value.runtime)
   ) {
-    throw new BalanceDocumentError("The balance document does not match schema 6.");
+    throw new BalanceDocumentError("The balance document does not match schema 7.");
   }
 
-  return value as unknown as GameBalanceDocumentV6;
+  return value as unknown as GameBalanceDocumentV7;
 }
 
 export function toBalanceFormDraft<T>(value: T): BalanceFormDraft<T> {
@@ -405,25 +410,26 @@ export function toBalanceFormDraft<T>(value: T): BalanceFormDraft<T> {
 }
 
 export function materializeBalanceDraft(
-  draft: BalanceFormDraft<GameBalanceDocumentV6>,
+  draft: BalanceFormDraft<GameBalanceDocumentV7>,
 ): MaterializedDraft {
   const issues: FormIssue[] = [];
   const document = materializeValue(draft, "", issues);
   if (issues.length > 0 || !isRecord(document)) {
     return { valid: false, issues };
   }
-  return { valid: true, document: document as unknown as GameBalanceDocumentV6 };
+  normalizeFortressHealthOverrides(document);
+  return { valid: true, document: document as unknown as GameBalanceDocumentV7 };
 }
 
-export function serializeBalanceDocument(document: GameBalanceDocumentV6): string {
+export function serializeBalanceDocument(document: GameBalanceDocumentV7): string {
   return `${JSON.stringify(document, null, 2)}\n`;
 }
 
 export function setBalanceDraftValue(
-  draft: BalanceFormDraft<GameBalanceDocumentV6>,
+  draft: BalanceFormDraft<GameBalanceDocumentV7>,
   path: string,
   value: unknown,
-): BalanceFormDraft<GameBalanceDocumentV6> {
+): BalanceFormDraft<GameBalanceDocumentV7> {
   const segments = parsePath(path);
   if (segments.length === 0) throw new RangeError("Balance draft path must not be empty.");
 
@@ -436,6 +442,7 @@ export function setBalanceDraftValue(
       if (!Number.isInteger(arrayIndex) || arrayIndex < 0 || arrayIndex >= current.length) {
         throw new RangeError(`Balance draft array index is out of range: ${segment}.`);
       }
+
       if (isLast) {
         current[arrayIndex] = value;
       } else {
@@ -457,6 +464,74 @@ export function setBalanceDraftValue(
     }
   });
   return next;
+}
+
+export function setCampaignFortressHealthOverride(
+  draft: BalanceFormDraft<GameBalanceDocumentV7>,
+  level: number,
+  team: "blue" | "red",
+  value: NumericInputDraft | null,
+): BalanceFormDraft<GameBalanceDocumentV7> {
+  const overrides = [...draft.runtime.campaign.fortressHealthOverrides];
+  const index = overrides.findIndex(entry => Number(entry.level.text) === level);
+  const field = team === "blue" ? "blueMaximumHealth" : "redMaximumHealth";
+  if (value === null) {
+    if (index < 0) return draft;
+    const remaining = { ...overrides[index] };
+    if (field === "blueMaximumHealth") delete remaining.blueMaximumHealth;
+    else delete remaining.redMaximumHealth;
+    overrides.splice(index, 1);
+    if ("blueMaximumHealth" in remaining || "redMaximumHealth" in remaining) {
+      overrides.push(remaining);
+    }
+  } else if (index < 0) {
+    overrides.push(field === "blueMaximumHealth"
+      ? {
+        level: numberInput(String(level)),
+        blueMaximumHealth: value,
+      }
+      : {
+        level: numberInput(String(level)),
+        redMaximumHealth: value,
+      });
+  } else {
+    overrides[index] = { ...overrides[index], [field]: value };
+  }
+  overrides.sort((left, right) => Number(left.level.text) - Number(right.level.text));
+  return setBalanceDraftValue(
+    draft,
+    "runtime.campaign.fortressHealthOverrides",
+    overrides,
+  );
+}
+
+function normalizeFortressHealthOverrides(document: Record<string, unknown>): void {
+  const runtime = document.runtime;
+  if (!isRecord(runtime)) return;
+  const fortresses = runtime.fortresses;
+  const campaign = runtime.campaign;
+  if (!isRecord(fortresses) || !isRecord(campaign) ||
+    !Array.isArray(campaign.fortressHealthOverrides) ||
+    typeof fortresses.standardMaximumHealth !== "number"
+  ) return;
+
+  const standardMaximumHealth = fortresses.standardMaximumHealth;
+  campaign.fortressHealthOverrides = campaign.fortressHealthOverrides.flatMap(value => {
+    if (!isRecord(value)) return [value];
+    const normalized = { ...value };
+    const hadHealthOverride =
+      "blueMaximumHealth" in value || "redMaximumHealth" in value;
+    if (normalized.blueMaximumHealth === standardMaximumHealth) {
+      delete normalized.blueMaximumHealth;
+    }
+    if (normalized.redMaximumHealth === standardMaximumHealth) {
+      delete normalized.redMaximumHealth;
+    }
+    if (!hadHealthOverride) return [normalized];
+    return "blueMaximumHealth" in normalized || "redMaximumHealth" in normalized
+      ? [normalized]
+      : [];
+  });
 }
 
 export function createAmmunitionBehaviorDraft(
@@ -499,9 +574,9 @@ export function createApexFragmentationDraft(): BalanceFormDraft<ApexFragmentati
 }
 
 export function withIncrementedBalanceRevision(
-  current: GameBalanceDocumentV6,
-  next: GameBalanceDocumentV6,
-): GameBalanceDocumentV6 {
+  current: GameBalanceDocumentV7,
+  next: GameBalanceDocumentV7,
+): GameBalanceDocumentV7 {
   if (current.balanceRevision !== next.balanceRevision) return next;
   const match = /^(.*?)([-.])(\d+)$/.exec(next.balanceRevision);
   const balanceRevision = match
@@ -511,8 +586,8 @@ export function withIncrementedBalanceRevision(
 }
 
 export function balanceDocumentMatches(
-  document: GameBalanceDocumentV6,
-  baseline: GameBalanceDocumentV6,
+  document: GameBalanceDocumentV7,
+  baseline: GameBalanceDocumentV7,
 ): boolean {
   return JSON.stringify(document) === JSON.stringify(baseline);
 }

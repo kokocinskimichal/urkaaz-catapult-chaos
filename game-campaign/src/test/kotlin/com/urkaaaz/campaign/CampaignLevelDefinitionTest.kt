@@ -8,10 +8,12 @@ import com.urkaaaz.contracts.AiProfileId
 import com.urkaaaz.domain.AmmunitionType
 import com.urkaaaz.domain.SpellType
 import com.urkaaaz.domain.UnitFactory
+import com.urkaaaz.domain.CampaignFortressHealthOverride
 import java.io.ByteArrayInputStream
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
+import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
 class CampaignLevelDefinitionTest {
@@ -52,6 +54,30 @@ class CampaignLevelDefinitionTest {
         assertEquals(AiProfileId.VETERAN, CampaignLevelDefinition.forLevel(30).enemy.aiProfile.profileId)
         assertEquals(AiProfileId.ELITE, CampaignLevelDefinition.forLevel(31).enemy.aiProfile.profileId)
         assertEquals(AiProfileId.ELITE, CampaignLevelDefinition.forLevel(100).enemy.aiProfile.profileId)
+    }
+
+    @Test
+    fun campaignFortressHealthOverridesAreProjectedByGlobalLevelIntoScenario() {
+        val campaignBalance = com.urkaaaz.domain.GameBalanceFixtures.balance.runtime.campaign.copy(
+            fortressHealthOverrides = listOf(
+                CampaignFortressHealthOverride(level = 31, blueMaximumHealth = 700),
+                CampaignFortressHealthOverride(level = 32, redMaximumHealth = 900),
+            ),
+        )
+
+        val blueOverride = CampaignLevelDefinition.forLevel(31, campaignBalance)
+            .toMatchScenario()
+            .fortressHealthOverrides
+        val redOverride = CampaignLevelDefinition.forLevel(32, campaignBalance)
+            .toMatchScenario()
+            .fortressHealthOverrides
+
+        assertEquals(700, blueOverride?.blueMaximumHealth)
+        assertNull(blueOverride?.redMaximumHealth)
+        assertNull(redOverride?.blueMaximumHealth)
+        assertEquals(900, redOverride?.redMaximumHealth)
+        assertNull(CampaignLevelDefinition.forLevel(33, campaignBalance)
+            .toMatchScenario().fortressHealthOverrides)
     }
 
     @Test

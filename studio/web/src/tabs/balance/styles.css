@@ -216,6 +216,58 @@
   font-size: 12px;
 }
 
+.balance-fortress-health-chapter {
+  padding: 12px;
+  border: 1px solid #34495f;
+  border-radius: 5px;
+  background: #172536;
+}
+
+.balance-fortress-health-chapter > summary {
+  color: #c8d6e3;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.balance-fortress-health-levels {
+  display: grid;
+  gap: 10px;
+  margin-top: 12px;
+}
+
+.balance-fortress-health-row {
+  display: grid;
+  grid-template-columns: minmax(72px, 0.45fr) repeat(2, minmax(0, 1fr));
+  align-items: start;
+  gap: 12px;
+  padding: 10px;
+  border: 1px solid #314358;
+  border-radius: 6px;
+  background: #172433;
+}
+
+.balance-fortress-health-row > strong {
+  padding-top: 25px;
+  color: #dce7ef;
+  font-size: 12px;
+}
+
+.balance-reset-override {
+  margin-top: 6px;
+  padding: 4px 8px;
+  border: 1px solid #52677b;
+  border-radius: 4px;
+  background: #24364a;
+  color: #dce7ef;
+  font-size: 11px;
+  cursor: pointer;
+}
+
+.balance-reset-override:hover {
+  background: #30465d;
+}
+
 .balance-empty-note {
   margin: 0;
   color: #9ab1c5;

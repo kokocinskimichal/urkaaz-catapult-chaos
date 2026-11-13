@@ -1,6 +1,6 @@
 {
-  "schemaVersion": 6,
-  "balanceRevision": "game-balance-18",
+  "schemaVersion": 7,
+  "balanceRevision": "game-balance-20",
   "bosses": [
     {
       "id": "boss.central-ancient-war-oak.level-05",
@@ -1005,6 +1005,13 @@
           "profileId": "ELITE",
           "progressionStartPercent": 0,
           "progressionEndPercent": 100
+        }
+      ],
+      "fortressHealthOverrides": [
+        {
+          "level": 1,
+          "blueMaximumHealth": 200,
+          "redMaximumHealth": 200
         }
       ]
     }

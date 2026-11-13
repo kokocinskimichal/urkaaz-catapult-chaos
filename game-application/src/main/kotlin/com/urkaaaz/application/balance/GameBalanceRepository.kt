@@ -41,6 +41,7 @@ import com.urkaaaz.domain.BossCombatBalance
 import com.urkaaaz.domain.RewardBalance
 import com.urkaaaz.domain.CampaignBalance
 import com.urkaaaz.domain.CampaignAiDifficultyBand
+import com.urkaaaz.domain.CampaignFortressHealthOverride
 import com.urkaaaz.domain.LifeBalance
 import com.urkaaaz.contracts.AiProfileId
 import com.urkaaaz.domain.InventoryProfile
@@ -60,6 +61,11 @@ import kotlinx.serialization.Serializable
 import kotlinx.serialization.SerializationException
 import kotlinx.serialization.decodeFromString
 import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.JsonArray
+import kotlinx.serialization.json.JsonElement
+import kotlinx.serialization.json.JsonNull
+import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.JsonPrimitive
 import java.io.IOException
 import java.security.MessageDigest
 
@@ -109,6 +115,7 @@ class GameBalanceRepository(
         val input = openResource(GAME_BALANCE_RESOURCE)
             ?: return GameBalanceRead.Failure(GameBalanceFailure.MISSING_RESOURCE)
         val content = input.bufferedReader().use { it.readText() }
+        rejectNullCampaignFortressHealthOverrides(content)
         val dto = json.decodeFromString<GameBalanceDocumentDto>(content)
         val balance = dto.toDomain()
         CampaignMilestoneRegistry.default().validate(balance.spells)
@@ -130,6 +137,23 @@ class GameBalanceRepository(
         MessageDigest.getInstance("SHA-256")
             .digest(content.toByteArray(Charsets.UTF_8))
             .joinToString("") { byte -> "%02x".format(byte) }
+
+    private fun rejectNullCampaignFortressHealthOverrides(content: String) {
+        val root = json.parseToJsonElement(content) as? JsonObject ?: return
+        val runtime = root["runtime"] as? JsonObject ?: return
+        val campaign = runtime["campaign"] as? JsonObject ?: return
+        val overrides = campaign["fortressHealthOverrides"] as? JsonArray ?: return
+        overrides.forEachIndexed { index, value ->
+            val override = value as? JsonObject ?: return@forEachIndexed
+            listOf("blueMaximumHealth", "redMaximumHealth").forEach { field ->
+                if (override[field] == JsonNull) {
+                    throw SerializationException(
+                        "runtime.campaign.fortressHealthOverrides[$index].$field must be omitted, not null",
+                    )
+                }
+            }
+        }
+    }
 
     companion object {
         const val GAME_BALANCE_RESOURCE = "balance/game-balance.json"
@@ -815,6 +839,7 @@ private data class CampaignBalanceDto(
     val demoInitialWindStrength: Float,
     val lives: LifeBalanceDto,
     val aiDifficultyBands: List<CampaignAiDifficultyBandDto>,
+    val fortressHealthOverrides: List<CampaignFortressHealthOverrideDto>,
 ) {
     fun toDomain() = CampaignBalance(
         initialWindStrength = initialWindStrength,
@@ -823,7 +848,32 @@ private data class CampaignBalanceDto(
         demoInitialWindStrength = demoInitialWindStrength,
         lives = lives.toDomain(),
         aiDifficultyBands = aiDifficultyBands.map(CampaignAiDifficultyBandDto::toDomain),
+        fortressHealthOverrides = fortressHealthOverrides.map(
+            CampaignFortressHealthOverrideDto::toDomain,
+        ),
     )
+}
+
+@Serializable
+private data class CampaignFortressHealthOverrideDto(
+    val level: Int,
+    val blueMaximumHealth: JsonElement? = null,
+    val redMaximumHealth: JsonElement? = null,
+) {
+    fun toDomain() = CampaignFortressHealthOverride(
+        level = level,
+        blueMaximumHealth = blueMaximumHealth.toOptionalPositiveInt("blueMaximumHealth"),
+        redMaximumHealth = redMaximumHealth.toOptionalPositiveInt("redMaximumHealth"),
+    )
+}
+
+private fun JsonElement?.toOptionalPositiveInt(fieldName: String): Int? {
+    if (this == null) return null
+    val primitive = this as? JsonPrimitive
+        ?: throw IllegalArgumentException("$fieldName must be a positive integer")
+    val value = if (primitive.isString) null else primitive.content.toIntOrNull()
+    require(value != null && value > 0) { "$fieldName must be a positive integer" }
+    return value
 }
 
 @Serializable

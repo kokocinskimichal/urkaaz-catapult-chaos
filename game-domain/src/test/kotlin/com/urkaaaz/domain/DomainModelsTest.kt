@@ -15,6 +15,28 @@ import kotlin.test.assertTrue
 
 class DomainModelsTest {
     @Test
+    fun campaignFortressHealthOverridesRequireValidUniqueLevelsAndPositiveValues() {
+        assertFailsWith<IllegalArgumentException> {
+            CampaignFortressHealthOverride(level = 31)
+        }
+        assertFailsWith<IllegalArgumentException> {
+            CampaignFortressHealthOverride(level = 0, blueMaximumHealth = 100)
+        }
+        assertFailsWith<IllegalArgumentException> {
+            CampaignFortressHealthOverride(level = 100, redMaximumHealth = 0)
+        }
+
+        assertFailsWith<IllegalArgumentException> {
+            GameBalanceFixtures.balance.runtime.campaign.copy(
+                fortressHealthOverrides = listOf(
+                    CampaignFortressHealthOverride(level = 31, blueMaximumHealth = 700),
+                    CampaignFortressHealthOverride(level = 31, redMaximumHealth = 800),
+                ),
+            )
+        }
+    }
+
+    @Test
     fun healthCannotExceedItsMaximum() {
         val health = Health(maximum = 100, current = 20)
 

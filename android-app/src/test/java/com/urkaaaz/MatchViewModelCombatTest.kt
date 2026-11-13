@@ -4,6 +4,7 @@ import com.urkaaaz.android.R
 import com.urkaaaz.contracts.PlayerId
 import com.urkaaaz.contracts.PlayerLoadoutConfig
 import com.urkaaaz.contracts.Team
+import com.urkaaaz.application.balance.GameBalanceRepository
 import com.urkaaaz.application.loadout.LoadoutCatalog
 import com.urkaaaz.ui.MatchUiAction
 import com.urkaaaz.ui.MatchViewModel
@@ -291,18 +292,34 @@ class MatchViewModelCombatTest {
     }
 
     @Test
-    fun campaignLevelsUseStandardFortressHealthAndDemoKeepsItsBlueBonus() {
+    fun campaignLevelsUseConfiguredFortressHealthAndDemoKeepsItsBlueBonus() {
+        val balance = GameBalanceRepository.bundled.requireConfig()
+        val standardHealth = balance.runtime.fortresses.standardMaximumHealth
         val levelOne = MatchViewModel(campaignLevel = 1)
         levelOne.dispatch(MatchUiAction.StartMatch)
+        val levelOneOverride = balance.runtime.campaign.fortressHealthOverrideFor(1)
 
-        assertEquals(500, levelOne.renderState.blueFortressMaxHealth)
-        assertEquals(500, levelOne.renderState.redFortressMaxHealth)
+        assertEquals(
+            levelOneOverride?.blueMaximumHealth ?: standardHealth,
+            levelOne.renderState.blueFortressMaxHealth,
+        )
+        assertEquals(
+            levelOneOverride?.redMaximumHealth ?: standardHealth,
+            levelOne.renderState.redFortressMaxHealth,
+        )
 
         val levelTwo = MatchViewModel(campaignLevel = 2)
         levelTwo.dispatch(MatchUiAction.StartMatch)
+        val levelTwoOverride = balance.runtime.campaign.fortressHealthOverrideFor(2)
 
-        assertEquals(500, levelTwo.renderState.blueFortressMaxHealth)
-        assertEquals(500, levelTwo.renderState.redFortressMaxHealth)
+        assertEquals(
+            levelTwoOverride?.blueMaximumHealth ?: standardHealth,
+            levelTwo.renderState.blueFortressMaxHealth,
+        )
+        assertEquals(
+            levelTwoOverride?.redMaximumHealth ?: standardHealth,
+            levelTwo.renderState.redFortressMaxHealth,
+        )
 
         val demo = MatchViewModel(demoMode = true)
         demo.dispatch(MatchUiAction.StartMatch)

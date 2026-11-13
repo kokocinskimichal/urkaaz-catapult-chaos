@@ -1,5 +1,18 @@
 # Changelog
 
+## 2026-11-13
+
+### Added
+
+- Added sparse per-level BLUE/RED fortress maximum-HP overrides to Balance and
+  an editor table in Studio Balance → Runtime → Campaign. Unset teams inherit
+  standard fortress HP; Demo keeps its separate BLUE maximum.
+- Preserved the Studio-saved level 1 override of 200 HP for each fortress.
+
+### Changed
+
+- Advanced `game-balance.json` to schema 7 and revision `game-balance-20`.
+
 ## 2026-11-12
 
 ### Added

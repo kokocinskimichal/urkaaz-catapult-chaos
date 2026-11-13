@@ -2,6 +2,7 @@ package com.urkaaaz.application
 
 import com.urkaaaz.campaign.CampaignLevelDefinition
 import com.urkaaaz.domain.GameBalanceFixtures
+import com.urkaaaz.application.balance.GameBalanceRepository
 import com.urkaaaz.contracts.CommandId
 import com.urkaaaz.contracts.MatchCommand
 import com.urkaaaz.contracts.MatchEvent
@@ -35,7 +36,7 @@ class BossMatchSessionTest {
         )
         assertEquals("ancient_war_oak", snapshot.boss?.presentationKey)
         assertEquals(scenario.mapDefinition, snapshot.mapDefinition)
-        assertEquals("game-balance-18", snapshot.balanceRevision)
+        assertEquals(GameBalanceRepository.bundled.requireConfig().balanceRevision, snapshot.balanceRevision)
         assertEquals(1.2f, snapshot.gameplaySpeedMultiplier)
         assertTrue(snapshot.balanceContentHash?.matches(Regex("[a-f0-9]{64}")) == true)
         assertTrue(session.consumeEvents().any { it is MatchEvent.BossSpawned })

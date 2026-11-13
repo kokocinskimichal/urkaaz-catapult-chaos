@@ -1,6 +1,7 @@
 package com.urkaaaz.domain
 
 import com.urkaaaz.contracts.AiProfileId
+import com.urkaaaz.contracts.FortressHealthOverrides
 
 data class RuntimeBalance(
     val economy: EconomyBalance,
@@ -390,6 +391,7 @@ data class CampaignBalance(
     val demoInitialWindStrength: Float,
     val lives: LifeBalance,
     val aiDifficultyBands: List<CampaignAiDifficultyBand>,
+    val fortressHealthOverrides: List<CampaignFortressHealthOverride> = emptyList(),
 ) {
     init {
         require(initialWindStrength.isFinite() && initialWindStrength >= 0f) {
@@ -412,6 +414,12 @@ data class CampaignBalance(
         }) {
             "campaign AI difficulty bands must be contiguous and non-overlapping"
         }
+        require(
+            fortressHealthOverrides.map(CampaignFortressHealthOverride::level).distinct().size ==
+                fortressHealthOverrides.size,
+        ) {
+            "campaign fortress health override levels must be unique"
+        }
     }
 
     fun initialWindStrength(level: Int): Float =
@@ -421,6 +429,33 @@ data class CampaignBalance(
     fun aiDifficultyFor(level: Int): CampaignAiDifficultyBand =
         aiDifficultyBands.firstOrNull { level in it.firstLevel..it.lastLevel }
             ?: error("campaign AI difficulty is not configured for level $level")
+
+    fun fortressHealthOverrideFor(level: Int): CampaignFortressHealthOverride? =
+        fortressHealthOverrides.firstOrNull { it.level == level }
+}
+
+data class CampaignFortressHealthOverride(
+    val level: Int,
+    val blueMaximumHealth: Int? = null,
+    val redMaximumHealth: Int? = null,
+) {
+    init {
+        require(level in 1..100) { "campaign fortress health override level must be in 1..100" }
+        require(blueMaximumHealth != null || redMaximumHealth != null) {
+            "campaign fortress health override must set BLUE or RED"
+        }
+        require(blueMaximumHealth == null || blueMaximumHealth > 0) {
+            "BLUE fortress maximum health override must be positive"
+        }
+        require(redMaximumHealth == null || redMaximumHealth > 0) {
+            "RED fortress maximum health override must be positive"
+        }
+    }
+
+    fun toMatchOverride() = FortressHealthOverrides(
+        blueMaximumHealth = blueMaximumHealth,
+        redMaximumHealth = redMaximumHealth,
+    )
 }
 
 data class LifeBalance(

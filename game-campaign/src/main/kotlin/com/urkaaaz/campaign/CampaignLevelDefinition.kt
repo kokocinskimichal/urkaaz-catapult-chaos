@@ -4,6 +4,7 @@ import com.urkaaaz.contracts.BattlefieldConfig
 import com.urkaaaz.contracts.BossEncounterConfig
 import com.urkaaaz.contracts.BossVictoryRule
 import com.urkaaaz.contracts.AiProfileSelection
+import com.urkaaaz.contracts.FortressHealthOverrides
 import com.urkaaaz.contracts.MatchScenario
 import com.urkaaaz.contracts.MapDefinition
 import com.urkaaaz.contracts.PlayerConfig
@@ -37,6 +38,7 @@ data class CampaignLevelDefinition(
     val availableSpells: Set<SpellType>,
     val initialWind: WindSnapshot = WindSnapshot(),
     val mapDefinition: MapDefinition,
+    val fortressHealthOverrides: FortressHealthOverrides? = null,
 ) {
     init {
         require(level in 1..MAX_LEVELS) { "level must be between 1 and $MAX_LEVELS" }
@@ -67,6 +69,7 @@ data class CampaignLevelDefinition(
         mapDefinition = mapDefinition,
         aiProfile = enemy.aiProfile,
         bossEncounter = bossEncounterForLevel(level),
+        fortressHealthOverrides = fortressHealthOverrides,
     )
 
     companion object {
@@ -150,6 +153,9 @@ data class CampaignLevelDefinition(
                     strength = campaignBalance.initialWindStrength(safeLevel),
                 ),
                 mapDefinition = mapDefinition,
+                fortressHealthOverrides = campaignBalance
+                    .fortressHealthOverrideFor(safeLevel)
+                    ?.toMatchOverride(),
             )
         }
 

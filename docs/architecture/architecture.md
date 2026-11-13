@@ -379,7 +379,11 @@ jednostki gracza i poziomową dostępność jednostek obu drużyn przed przekaza
 komend do symulacji. Dostępność amunicji poziomu ogranicza wybory obu drużyn
 oraz początkowe zapasy amunicji limitowanej. Lista `availableSpells` jest
 poziomowa i wspólna dla obu drużyn; `AiMatchCoordinator` przekazuje dostępne
-czary RED do polityk agenta.
+czary RED do polityk agenta. Scenariusz może również zawierać niezależne,
+opcjonalne maksymalne HP fortec BLUE/RED z per-level balance. Sesja rozwiązuje
+HP w kolejności: jawne nadpisanie hosta/Demo, override scenariusza, następnie
+standard z balansu. Efektywne wartości trafiają do symulacji, snapshotu i
+konfiguracji replaya.
 `SimulationConfig` przenosi zatwierdzony loadout gracza, dostępność amunicji i
 czarów poziomu oraz balance-driven stock specjalnych czarów RED.
 
@@ -1563,16 +1567,20 @@ Poziom kampanii tworzy konfigurację meczu:
 
 ```text
 MatchScenario
-├── biome
-├── terrainVariant
-├── enemyHealthMultiplier
+├── battlefield
+├── players
 ├── availableUnits
 ├── availableAmmo
 ├── availableSpells
 ├── playerLoadout
 ├── playerInventory (stock BLUE dla tej generacji)
 ├── startingResources
-└── victoryCondition
+├── wind
+├── victoryRules
+├── mapDefinition
+├── aiProfile
+├── bossEncounter
+└── fortressHealthOverrides? (BLUE/RED; kampanijne, niezależne)
 ```
 
 `PlayerInventoryConfig` jest niemutowalnym wejściem pojedynczej generacji,
