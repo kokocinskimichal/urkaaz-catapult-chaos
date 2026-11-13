@@ -20,12 +20,16 @@ translucent dark fill. Its 72 dp avatar image extends beyond a 64 dp portrait
 frame and is centered vertically over the panel; level, lives, gold and
 regeneration occupy four equal-width sections.
 The Dashboard's Campaign button opens `CampaignScreen`, and selecting a level
-opens the loadout screen. A globe button opens a compact PL/UK/ES selector that
-changes the Android UI language and persists it in a separate `language_settings`
-DataStore; profile reset does not clear it. Campaign chapter titles are
+opens the loadout screen. A button showing the currently selected language's
+flag opens a compact PL/UK/ES selector that changes the Android UI language
+and persists it in a separate `language_settings` DataStore; profile reset
+does not clear it. Campaign chapter titles are
 presentation resources, while Studio displays stable chapter IDs. The PL/ES
 translation list has been approved by the user. Fixed-size UI panels were
 visually reviewed on the Pixel 8 emulator in EN/PL/ES.
+Per-locale button text sizing has not been implemented; the current behavior
+and proposed resource/Studio contract are documented in
+`docs/systems/localized-button-typography-plan.md`.
 The dashboard keeps `AD REWARD` visible but inert. Two hidden side anchors are
 reserved for future game-event icons; there is no Dashboard event feed yet.
 `TEST MODE` opens a chapter-grouped picker for campaign levels 1–54 without
@@ -378,7 +382,10 @@ levels 25 and 30. Chapter 4 is Ashen March/Ashen March and reuses the original
 `campaign_chapter_04_ashen_march_map` image (1672x941), with its original
 normalized positions remapped to global levels 31–40 in
 `campaign-map-layouts/ashen_march.json`; boss sites remain levels 35 and 40.
-Chapter 5 is Whispering Marsh/Sunken Marshes and has no authored map yet.
+Chapter 5 is Whispering Marsh/Sunken Marshes and has no authored campaign map
+yet. Demo now uses the Sunken Marshes biome with the dedicated
+`background_sunken_marshes.png` battlefield background; its authored `demo-map`
+geometry and shared Green Frontier decoration aliases remain unchanged.
 Source and Android drawable copies for Chapters 3 and 4 are byte-identical.
 Transparent 256x256 left/right navigation arrows are stored in
 `assets_src/campaign/ui/campaign_map_nav_arrow_{left,right}.png` and mirrored
@@ -451,9 +458,12 @@ decorations are recorded in the paired JSON files and `generationMetadata`.
 This is a transition mapping, not yet a complete one-map-per-level campaign.
 The former Kotlin campaign map
 definitions and map authoring builder have been removed.
-Chapter II levels 11–20 currently keep the `demo-map` geometry but override
-its biome to Frostbound for visual theme only; no additional gameplay
-modifiers are applied.
+Chapter II uses a level-specific battlefield map whenever
+`chapter<chapterNumber>-level<globalLevel>.json` exists. Level 11 has the
+authored `chapter2-level11.json` Frostbound map in both the campaign resource
+and Android asset locations; levels 12–20 still fall back to `demo-map`
+geometry with the chapter's Frostbound biome. These maps add no gameplay
+modifiers.
 
 Catapult positions are derived from fortress positions by
 `CatapultPresentationContract`, and simulation dimensions always come from
@@ -472,11 +482,20 @@ validation, and keeps those editor-only catapults out of exported JSON. The
 Android camera consumes authored framing data without changing simulation
 state. Both campaign and editor maps are available offline.
 
+The Sunken Marshes background is `background_sunken_marshes.png`, an opaque
+1536×1024 RGB dawn panorama stored in
+`assets_src/user_reference/background_sunken_marshes.png` and mirrored byte for
+byte at Android `drawable-nodpi/background_sunken_marshes.png`. Its brighter
+turquoise/emerald palette and warm misty-morning light are presentation-only.
+Frostbound's active repeating soil tile is
+`terrain_frostbound_soil_00.png` (1024×1024 RGBA), mirrored for Android as
+`terrain_frost_soil_fill_00.png`. The separately archived variant `01` is
+available for comparison but is not selected by the renderer.
 The shared terrain catalog now indexes the complete legacy decoration sets:
 Green Frontier (6 trees, 6 rocks, 6 props), Frostbound (6, 6, 12), Copperwood
 (8, 6, 6), and Ashen March (6, 6, 8). Sunken Marshes intentionally shares the
-Green Frontier assets; that alias is recognized by both the editor and
-`AssetCatalog`, so its palette choices also pass campaign map validation.
+Green Frontier grounded assets; that alias is recognized by both the editor
+and `AssetCatalog`, so its palette choices also pass campaign map validation.
 The editor can change either foundation height at any time. The associated
 fortress and catapult move together, the protected samples remain flat at the
 new height, and adjacent samples use the same smooth falloff as a manually
@@ -1036,7 +1055,7 @@ must go through commands and domain/application boundaries.
 | `android-app/.../navigation/AppNavigator.kt` | Navigation and back stack |
 | `android-app/.../navigation/ScreenHost.kt` | Active screen container |
 | `android-app/.../screens/splash/SplashScreen.kt` | Startup splash with the game logo and AFACODE company logo |
-| `android-app/.../screens/dashboard/DashboardScreen.kt` | Dashboard layout, profile summary, navigation, reset and static language icons |
+| `android-app/.../screens/dashboard/DashboardScreen.kt` | Dashboard layout, profile summary, navigation, reset and selected-language flag control |
 | `docs/systems/dashboard-screen.md` and `docs/systems/dashboard-screen-implementation-prompt.md` | Dashboard presentation boundaries, approved assets and implementation requirements |
 | `android-app/.../screens/campaign/CampaignScreen.kt` | Full-screen chapter-map carousel, progression HUD, markers, and Start Level flow |
 | `android-app/.../screens/campaign/CampaignChapterProgressMapper.kt` | Campaign progress to visible chapter and marker states |
@@ -1380,19 +1399,24 @@ through a bounded cache and never enter the battlefield renderer. The left
 attack uses the anatomical right branch-arm, visible on screen-left; both
 attacks share the 60-frame 512×384 contract.
 
-The Balance tab edits the single schema 7 source
+The Balance tab edits the single schema 8 source
 `game-domain/src/main/resources/balance/game-balance.json`, which owns boss,
 unit, ammunition, spell and mana profiles plus shared runtime economy, physics,
 combat, AI strategy/profile, reward and campaign values. Sparse
 `runtime.campaign.fortressHealthOverrides` entries configure BLUE and RED
 maximum HP independently by global campaign level; unset sides inherit
-`runtime.fortresses.standardMaximumHealth`. Studio's Runtime → Campaign editor
-shows effective HP, marks inherited values, and removes/reset overrides
-without requiring chapter map artwork. `CampaignLevelDefinition` places the
-selected level's optional overrides in `MatchScenario`; `MatchSession` resolves
-host/demo override first, then scenario override, then the global standard, and
-records effective values in replay configuration. Snapshot `maxHealth` drives
-the existing HUD. Demo's 5,000 BLUE / 500 RED values remain independent.
+`runtime.fortresses.standardMaximumHealth`. The same campaign section owns
+`contentAvailability`, with one nullable first-unlock level for every canonical
+unit, ammunition type and spell. Campaign scenarios and Haste/Heal milestone
+availability project those values; their completion rewards remain at levels 5
+and 7, and campaign thresholds do not gate Shop purchases. Studio's Runtime →
+Campaign editor shows effective HP, marks inherited values, and removes/reset
+overrides without requiring chapter map artwork. `CampaignLevelDefinition`
+places the selected level's optional overrides in `MatchScenario`;
+`MatchSession` resolves host/demo override first, then scenario override, then
+the global standard, and records effective values in replay configuration.
+Snapshot `maxHealth` drives the existing HUD. Demo's 5,000 BLUE / 500 RED
+values remain independent.
 Limited ammunition prices are the nullable `shopCostGold` field. The global
 `runtime.combat.gameplaySpeedMultiplier` defaults to 1.2 (range 1.0–1.5) and
 scales unit/mobile-boss movement and projectile flight time, including
@@ -1402,7 +1426,7 @@ strict structural, range and stable-ID coverage validation, and
 `PUT /api/balance` writes atomically only when `expectedHash` is current. A changed
 document must advance `balanceRevision`; the editor automatically bumps a
 trailing revision number.
-The Balance UI presents all existing schema 7 fields through Bosses, Units,
+The Balance UI presents all existing schema 8 fields through Bosses, Units,
 Ammunition, Spells & Mana and Runtime tabs; it does not expose a JSON text
 editor. Profile identifiers and list structure remain fixed. Incomplete
 numeric drafts do not become zero values, validation errors are linked to

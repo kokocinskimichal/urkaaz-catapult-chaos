@@ -1,6 +1,6 @@
 {
-  "schemaVersion": 7,
-  "balanceRevision": "game-balance-20",
+  "schemaVersion": 8,
+  "balanceRevision": "game-balance-21",
   "bosses": [
     {
       "id": "boss.central-ancient-war-oak.level-05",
@@ -1013,7 +1013,36 @@
           "blueMaximumHealth": 200,
           "redMaximumHealth": 200
         }
-      ]
+      ],
+      "contentAvailability": {
+        "units": [
+          { "unitId": "DEFENDER", "availableFromLevel": 1 },
+          { "unitId": "SAPPER", "availableFromLevel": 5 },
+          { "unitId": "DEMOLISHER", "availableFromLevel": 8 },
+          { "unitId": "RAGING_BOAR", "availableFromLevel": 11 },
+          { "unitId": "SLINGMASTER", "availableFromLevel": 13 }
+        ],
+        "ammunition": [
+          { "ammunitionType": "ROCK", "availableFromLevel": 1 },
+          { "ammunitionType": "SIEGE_BOMB", "availableFromLevel": 1 },
+          { "ammunitionType": "POWDER_BARREL", "availableFromLevel": 10 },
+          { "ammunitionType": "FIRE_RAIN", "availableFromLevel": 31 },
+          { "ammunitionType": "PLAGUE_CAULDRON", "availableFromLevel": 41 }
+        ],
+        "spells": [
+          { "spellType": "ICE_TRAP", "availableFromLevel": 11 },
+          { "spellType": "RUNIC_BASTION", "availableFromLevel": 21 },
+          { "spellType": "HASTE", "availableFromLevel": 6 },
+          { "spellType": "HEAL", "availableFromLevel": 8 },
+          { "spellType": "FORTRESS_SHIELD", "availableFromLevel": 1 },
+          { "spellType": "CATAPULT_LOCK", "availableFromLevel": null },
+          { "spellType": "SLOWING_FIELD", "availableFromLevel": null },
+          { "spellType": "VAMPIRIC_BANNER", "availableFromLevel": null },
+          { "spellType": "STONE_SKIN", "availableFromLevel": null },
+          { "spellType": "SIEGE_FRENZY", "availableFromLevel": null },
+          { "spellType": "BERSERKER", "availableFromLevel": null }
+        ]
+      }
     }
   }
 }

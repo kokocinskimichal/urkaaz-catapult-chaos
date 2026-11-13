@@ -23,7 +23,6 @@ import com.urkaaaz.application.tutorial.TutorialEngine
 import com.urkaaaz.application.tutorial.TutorialEngineUpdate
 import com.urkaaaz.application.tutorial.TutorialEvent
 import com.urkaaaz.application.tutorial.TutorialPlayerActionKind
-import com.urkaaaz.application.tutorial.TutorialProgressFailure
 import com.urkaaaz.application.tutorial.TutorialProgressRead
 import com.urkaaaz.application.tutorial.TutorialProgressRepository
 import com.urkaaaz.application.tutorial.TutorialProgressWrite
@@ -33,7 +32,6 @@ import com.urkaaaz.application.tutorial.TutorialScreen
 import com.urkaaaz.application.tutorial.TutorialMatchEventMapper
 import com.urkaaaz.application.tutorial.TutorialTargetKind
 import com.urkaaaz.application.tutorial.TutorialSignal
-import com.urkaaaz.application.tutorial.TutorialStatus
 import com.urkaaaz.application.tutorial.TutorialScope
 import com.urkaaaz.application.tutorial.TutorialUiState
 import com.urkaaaz.application.tutorial.TutorialUserAction
@@ -46,13 +44,6 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.launch
-
-data class TutorialDashboardItem(
-    val tutorialId: String,
-    val status: TutorialStatus?,
-    val isMatchTutorial: Boolean,
-    val enabled: Boolean,
-)
 
 interface TutorialSignalSink {
     fun onMatchEvents(
@@ -170,36 +161,6 @@ class TutorialHost(
 
     fun onPlayerProgressReset() {
         engine?.resetProgress()
-    }
-
-    fun dashboardItems(): List<TutorialDashboardItem> {
-        val currentCatalog = catalog ?: return emptyList()
-        val currentEngine = engine ?: return emptyList()
-        val statuses = currentEngine.terminalStatuses()
-        return currentCatalog.tutorials.map { definition ->
-            TutorialDashboardItem(
-                tutorialId = definition.tutorialId,
-                status = statuses[definition.tutorialId],
-                isMatchTutorial = definition.scope == TutorialScope.MATCH,
-                enabled = definition.enabled,
-            )
-        }
-    }
-
-    suspend fun requestRepeat(tutorialId: String): TutorialProgressWrite {
-        val currentCatalog = catalog
-            ?: return TutorialProgressWrite.Failure(TutorialProgressFailure.STORAGE_UNAVAILABLE)
-        val currentEngine = engine
-            ?: return TutorialProgressWrite.Failure(TutorialProgressFailure.STORAGE_UNAVAILABLE)
-        if (currentCatalog.tutorial(tutorialId) == null) {
-            return TutorialProgressWrite.Failure(TutorialProgressFailure.INVALID_DATA)
-        }
-        val result = progressRepository.reset(tutorialId)
-        if (result == TutorialProgressWrite.Saved) {
-            currentEngine.forgetTerminalStatus(tutorialId)
-            currentContent?.let(::dispatchScreenEntered)
-        }
-        return result
     }
 
     override fun onMatchEvents(

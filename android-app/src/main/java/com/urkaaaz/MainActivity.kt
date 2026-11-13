@@ -318,8 +318,6 @@ class MainActivity : ComponentActivity() {
                 initialLanguage = startupLanguage,
                 setLanguage = setLanguage,
                 onLanguageSaved = { recreate() },
-                loadTutorials = { tutorialHost.dashboardItems() },
-                repeatTutorial = tutorialHost::requestRepeat,
             )
             AppScreen.Campaign -> CampaignScreen(
                 context = this,

@@ -204,8 +204,8 @@ Pakiet `com.urkaaaz.application.tutorial`:
   prostokątowi celu bez marginesu i feather poza celem, dotyk przepuszczany
   tylko przez cel kroku akcji, `48 dp` minimum, `contentDescription`,
   wskaźnik `n/m`, `Skip` na każdym kroku;
-- Dashboard: sekcja **Tutorials** (lista, status, powtórka z informacją
-  dla tutoriali meczu) i rejestracja celów; Campaign, Loadout, Match —
+- Dashboard: rejestracja celów Kampanii, Sklepu, języka i RESET; nie dodawać
+  listy tutoriali ani ręcznej kontrolki powtórki. Campaign, Loadout, Match —
   rejestracja celów; Sklep nie rejestruje;
 - język zmienia się wyłącznie przez `recreate()` na Dashboardzie, więc engine
   nie obserwuje zmian języka; po `recreate()` aktywny tutorial startuje od

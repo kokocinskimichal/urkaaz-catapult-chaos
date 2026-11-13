@@ -33,13 +33,13 @@ wymagający decyzji użytkownika.
 - Języki: polski (`pl`), angielski (`en`) i hiszpański (`es`, wariant
   neutralny, jeden katalog `values-es`; bez `es-ES`/`es-419`). Domyślny przy
   braku zapisu: **angielski**; język systemu nie jest brany pod uwagę.
-- Język zmienia się **tylko na Dashboardzie**: przycisk z neutralną ikoną
-  globusa w nagłówku otwiera kompaktowy panel HUD (`HudPanelStyle`,
-  `UiTypography`) z flagami Polski (`PL`), Wielkiej Brytanii (`EN`) i
-  Hiszpanii (`ES`). Aktywna flaga jest podświetlona; dotknięcie innej zmienia
-  język od razu. Każda flaga ma cel dotyku co najmniej `48 dp` i
-  `contentDescription` z nazwą języka. Panel zamyka się po wyborze,
-  dotknięciu poza nim lub systemowym Back.
+- Język zmienia się **tylko na Dashboardzie**: przycisk pokazujący flagę
+  aktualnie wybranego języka w nagłówku otwiera kompaktowy panel HUD
+  (`HudPanelStyle`, `UiTypography`) z flagami Polski (`PL`), Wielkiej
+  Brytanii (`EN`) i Hiszpanii (`ES`). Aktywna flaga jest podświetlona;
+  dotknięcie innej zmienia język od razu. Każda flaga ma cel dotyku co
+  najmniej `48 dp` i `contentDescription` z nazwą języka. Panel zamyka się po
+  wyborze, dotknięciu poza nim lub systemowym Back.
 - Dashboard RESET **nie** czyści języka. Język jest w osobnym pliku DataStore
   (nazwa `language_settings`, klucze `language.code`, `language.schema_version`),
   nie w głównym Preferences DataStore czyszczonym przez
@@ -139,14 +139,14 @@ Pakiet `com.urkaaaz.application.language`:
 
 - `DashboardUiAction.SelectLanguage`, stan UI z aktywnym językiem, wywołanie
   `SetLanguage` w `DashboardViewModel`;
-- przycisk globusa w nagłówku otwiera osobny, kompaktowy panel z trzema
-  flagowymi przyciskami: Polska (`PL`), Wielka Brytania (`EN`) i Hiszpania
-  (`ES`); aktywna flaga jest podświetlona, a każdy cel dotyku ma co najmniej
-  `48 dp` i poprawny `contentDescription`;
+- przycisk z flagą aktualnego języka w nagłówku otwiera osobny, kompaktowy
+  panel z trzema flagowymi przyciskami: Polska (`PL`), Wielka Brytania (`EN`)
+  i Hiszpania (`ES`); aktywna flaga jest podświetlona, a każdy cel dotyku ma
+  co najmniej `48 dp` i poprawny `contentDescription`;
 - panel nie zasłania głównych przycisków i zamyka się po wyborze, dotknięciu
   poza nim lub systemowym Back;
-- dodaj małe drawable dla ikony globusa i trzech flag; w obecnych zasobach nie
-  ma dedykowanych ikon języka ani flag;
+- dodaj małe drawable dla trzech flag, jeśli nie istnieją; przycisk języka
+  i panel wyboru używają tych samych ikon;
 - `Saved` → `recreate()` z odtworzeniem Dashboardu; `Unchanged` i `Failure` →
   bez `recreate()`, błąd jawnie widoczny;
 - testy `DashboardViewModel` dla trzech wyników i odtworzenia Dashboardu oraz

@@ -12,6 +12,7 @@ import com.urkaaaz.application.progression.DeveloperProgressPresetPort
 import com.urkaaaz.application.progression.DeveloperProgressSummary
 import com.urkaaaz.application.progression.LifeStateFactory
 import com.urkaaaz.application.progression.PlayerProgressionUseCases
+import com.urkaaaz.application.campaign.BundledCampaignBalance
 import com.urkaaaz.campaign.CampaignLevelDefinition
 import com.urkaaaz.campaign.CampaignMilestoneRegistry
 import java.io.IOException
@@ -19,7 +20,7 @@ import kotlinx.coroutines.flow.first
 
 class DataStoreDeveloperProgressPresetAdapter(
     private val dataStore: DataStore<Preferences>,
-    private val milestones: CampaignMilestoneRegistry = CampaignMilestoneRegistry.default(),
+    private val milestones: CampaignMilestoneRegistry = BundledCampaignBalance.milestoneRegistry(),
     private val nowEpochMilliseconds: () -> Long = System::currentTimeMillis,
 ) : DeveloperProgressPresetPort {
     override suspend fun apply(

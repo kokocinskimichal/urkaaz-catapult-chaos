@@ -167,6 +167,27 @@ export interface AiProfileBalance {
   progressionReactionReduction: number;
 }
 
+export interface CampaignUnitAvailability {
+  unitId: UnitId;
+  availableFromLevel: number | null;
+}
+
+export interface CampaignAmmunitionAvailability {
+  ammunitionType: AmmunitionType;
+  availableFromLevel: number | null;
+}
+
+export interface CampaignSpellAvailability {
+  spellType: SpellType;
+  availableFromLevel: number | null;
+}
+
+export interface CampaignContentAvailability {
+  units: CampaignUnitAvailability[];
+  ammunition: CampaignAmmunitionAvailability[];
+  spells: CampaignSpellAvailability[];
+}
+
 export interface RuntimeBalance {
   economy: {
     startingGold: number;
@@ -261,6 +282,7 @@ export interface RuntimeBalance {
       blueMaximumHealth?: number;
       redMaximumHealth?: number;
     }>;
+    contentAvailability: CampaignContentAvailability;
     lives: {
       initialLives: number;
       maximumLives: number;
@@ -276,8 +298,8 @@ export interface RuntimeBalance {
   };
 }
 
-export interface GameBalanceDocumentV7 {
-  schemaVersion: 7;
+export interface GameBalanceDocumentV8 {
+  schemaVersion: 8;
   balanceRevision: string;
   bosses: BossProfile[];
   units: UnitConfiguration[];
@@ -312,7 +334,7 @@ export interface FormIssue {
 }
 
 export type MaterializedDraft =
-  | { valid: true; document: GameBalanceDocumentV7 }
+  | { valid: true; document: GameBalanceDocumentV8 }
   | { valid: false; issues: FormIssue[] };
 
 const ROOT_KEYS = [
@@ -340,6 +362,7 @@ const NULLABLE_VALUE_FIELDS = new Set([
   "apexFragmentation",
   "status",
   "shopCostGold",
+  "availableFromLevel",
 ]);
 const OPTIONAL_DRAFT_PATH = /^ammunition\[\d+\]\.behavior\.status$/;
 
@@ -350,7 +373,7 @@ export class BalanceDocumentError extends Error {
   }
 }
 
-export function parseBalanceDocument(content: string): GameBalanceDocumentV7 {
+export function parseBalanceDocument(content: string): GameBalanceDocumentV8 {
   let value: unknown;
   try {
     value = JSON.parse(content) as unknown;
@@ -364,7 +387,7 @@ export function parseBalanceDocument(content: string): GameBalanceDocumentV7 {
   if (!isRecord(value)) {
     throw new BalanceDocumentError("The balance document must be a JSON object.");
   }
-  if (value.schemaVersion !== 7) {
+  if (value.schemaVersion !== 8) {
     throw new BalanceDocumentError(
       `Unsupported balance schema version: ${String(value.schemaVersion)}.`,
     );
@@ -388,10 +411,10 @@ export function parseBalanceDocument(content: string): GameBalanceDocumentV7 {
     !isRecord(value.mana) ||
     !isRecord(value.runtime)
   ) {
-    throw new BalanceDocumentError("The balance document does not match schema 7.");
+    throw new BalanceDocumentError("The balance document does not match schema 8.");
   }
 
-  return value as unknown as GameBalanceDocumentV7;
+  return value as unknown as GameBalanceDocumentV8;
 }
 
 export function toBalanceFormDraft<T>(value: T): BalanceFormDraft<T> {
@@ -410,7 +433,7 @@ export function toBalanceFormDraft<T>(value: T): BalanceFormDraft<T> {
 }
 
 export function materializeBalanceDraft(
-  draft: BalanceFormDraft<GameBalanceDocumentV7>,
+  draft: BalanceFormDraft<GameBalanceDocumentV8>,
 ): MaterializedDraft {
   const issues: FormIssue[] = [];
   const document = materializeValue(draft, "", issues);
@@ -418,18 +441,18 @@ export function materializeBalanceDraft(
     return { valid: false, issues };
   }
   normalizeFortressHealthOverrides(document);
-  return { valid: true, document: document as unknown as GameBalanceDocumentV7 };
+  return { valid: true, document: document as unknown as GameBalanceDocumentV8 };
 }
 
-export function serializeBalanceDocument(document: GameBalanceDocumentV7): string {
+export function serializeBalanceDocument(document: GameBalanceDocumentV8): string {
   return `${JSON.stringify(document, null, 2)}\n`;
 }
 
 export function setBalanceDraftValue(
-  draft: BalanceFormDraft<GameBalanceDocumentV7>,
+  draft: BalanceFormDraft<GameBalanceDocumentV8>,
   path: string,
   value: unknown,
-): BalanceFormDraft<GameBalanceDocumentV7> {
+): BalanceFormDraft<GameBalanceDocumentV8> {
   const segments = parsePath(path);
   if (segments.length === 0) throw new RangeError("Balance draft path must not be empty.");
 
@@ -467,11 +490,11 @@ export function setBalanceDraftValue(
 }
 
 export function setCampaignFortressHealthOverride(
-  draft: BalanceFormDraft<GameBalanceDocumentV7>,
+  draft: BalanceFormDraft<GameBalanceDocumentV8>,
   level: number,
   team: "blue" | "red",
   value: NumericInputDraft | null,
-): BalanceFormDraft<GameBalanceDocumentV7> {
+): BalanceFormDraft<GameBalanceDocumentV8> {
   const overrides = [...draft.runtime.campaign.fortressHealthOverrides];
   const index = overrides.findIndex(entry => Number(entry.level.text) === level);
   const field = team === "blue" ? "blueMaximumHealth" : "redMaximumHealth";
@@ -502,6 +525,40 @@ export function setCampaignFortressHealthOverride(
     draft,
     "runtime.campaign.fortressHealthOverrides",
     overrides,
+  );
+}
+
+export type CampaignContentAvailabilityCategory =
+  | "units"
+  | "ammunition"
+  | "spells";
+
+export function setCampaignContentAvailability(
+  draft: BalanceFormDraft<GameBalanceDocumentV8>,
+  category: CampaignContentAvailabilityCategory,
+  contentId: string,
+  availableFromLevel: NumericInputDraft | null,
+): BalanceFormDraft<GameBalanceDocumentV8> {
+  const availability = draft.runtime.campaign.contentAvailability;
+  let index: number;
+  switch (category) {
+    case "units":
+      index = availability.units.findIndex(entry => entry.unitId === contentId);
+      break;
+    case "ammunition":
+      index = availability.ammunition.findIndex(entry => entry.ammunitionType === contentId);
+      break;
+    case "spells":
+      index = availability.spells.findIndex(entry => entry.spellType === contentId);
+      break;
+  }
+  if (index < 0) {
+    throw new RangeError(`Unknown campaign ${category} availability ID: ${contentId}.`);
+  }
+  return setBalanceDraftValue(
+    draft,
+    `runtime.campaign.contentAvailability.${category}[${index}].availableFromLevel`,
+    availableFromLevel,
   );
 }
 
@@ -574,9 +631,9 @@ export function createApexFragmentationDraft(): BalanceFormDraft<ApexFragmentati
 }
 
 export function withIncrementedBalanceRevision(
-  current: GameBalanceDocumentV7,
-  next: GameBalanceDocumentV7,
-): GameBalanceDocumentV7 {
+  current: GameBalanceDocumentV8,
+  next: GameBalanceDocumentV8,
+): GameBalanceDocumentV8 {
   if (current.balanceRevision !== next.balanceRevision) return next;
   const match = /^(.*?)([-.])(\d+)$/.exec(next.balanceRevision);
   const balanceRevision = match
@@ -586,8 +643,8 @@ export function withIncrementedBalanceRevision(
 }
 
 export function balanceDocumentMatches(
-  document: GameBalanceDocumentV7,
-  baseline: GameBalanceDocumentV7,
+  document: GameBalanceDocumentV8,
+  baseline: GameBalanceDocumentV8,
 ): boolean {
   return JSON.stringify(document) === JSON.stringify(baseline);
 }

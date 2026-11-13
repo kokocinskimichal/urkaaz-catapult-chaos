@@ -36,11 +36,13 @@ od razu, ale pozostają oznaczone jako bez runtime loadera, dopóki Android nie
 zacznie ich odtwarzać.
 
 Balance używa pełnego formularza dla kanonicznego
-`game-domain/src/main/resources/balance/game-balance.json` schema 7. Zakładki
+`game-domain/src/main/resources/balance/game-balance.json` schema 8. Zakładki
 Bosses, Units, Ammunition, Spells & Mana i Runtime udostępniają wszystkie
 istniejące pola przez typowane inputy i selektory, w tym nullable cenę
 `shopCostGold` dla amunicji, globalny mnożnik tempa oraz
-`runtime.campaign.lives` (initial/max/regeneration interval) oraz rzadkie,
+`runtime.campaign.lives` (initial/max/regeneration interval),
+`runtime.campaign.contentAvailability` (progi kampanijne wszystkich
+kanonicznych jednostek, typów amunicji i czarów) oraz rzadkie,
 niezależne overrides HP fortec BLUE/RED per poziom kampanii; stabilne ID,
 rozmiary i kolejność list pozostają stałe. Raw JSON nie jest wyświetlany ani
 edytowalny.

@@ -9,7 +9,9 @@ import kotlin.test.assertFailsWith
 class CampaignMilestoneDefinitionTest {
     @Test
     fun defaultRegistryContainsConfiguredHasteAndHealMilestones() {
-        val registry = CampaignMilestoneRegistry.default()
+        val registry = CampaignMilestoneRegistry.default(
+            GameBalanceFixtures.balance.runtime.campaign,
+        )
 
         assertEquals(
             CampaignMilestoneDefinition(
@@ -31,6 +33,28 @@ class CampaignMilestoneDefinitionTest {
             ),
             registry.milestone("campaign_spell_heal"),
         )
+    }
+
+    @Test
+    fun milestoneAvailabilityUsesCampaignBalanceWithoutChangingRewardLevels() {
+        val campaignBalance = GameBalanceFixtures.balance.runtime.campaign
+        val availability = campaignBalance.contentAvailability.copy(
+            spells = campaignBalance.contentAvailability.spells.map { entry ->
+                when (entry.spellType) {
+                    SpellType.HASTE -> entry.copy(availableFromLevel = 9)
+                    SpellType.HEAL -> entry.copy(availableFromLevel = 12)
+                    else -> entry
+                }
+            },
+        )
+        val registry = CampaignMilestoneRegistry.default(
+            campaignBalance.copy(contentAvailability = availability),
+        )
+
+        assertEquals(5, registry.milestone("campaign_spell_haste")?.completedLevel)
+        assertEquals(9, registry.milestone("campaign_spell_haste")?.availableFromLevel)
+        assertEquals(7, registry.milestone("campaign_spell_heal")?.completedLevel)
+        assertEquals(12, registry.milestone("campaign_spell_heal")?.availableFromLevel)
     }
 
     @Test

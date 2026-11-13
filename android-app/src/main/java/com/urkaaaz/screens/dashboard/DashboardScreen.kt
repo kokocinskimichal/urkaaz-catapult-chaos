@@ -9,6 +9,7 @@ import android.graphics.drawable.GradientDrawable
 import android.util.Log
 import android.view.Gravity
 import android.view.View
+import android.view.ViewGroup
 import android.widget.Button
 import android.widget.FrameLayout
 import android.widget.ImageButton
@@ -26,9 +27,6 @@ import com.urkaaaz.application.progression.DashboardProgressRead
 import com.urkaaaz.application.progression.LifeSnapshot
 import com.urkaaaz.application.progression.PlayerProgressResetResult
 import com.urkaaaz.application.tutorial.TutorialScreen
-import com.urkaaaz.application.tutorial.TutorialProgressFailure
-import com.urkaaaz.application.tutorial.TutorialProgressWrite
-import com.urkaaaz.tutorial.TutorialDashboardItem
 import com.urkaaaz.tutorial.TutorialTargetRegistration
 import com.urkaaaz.tutorial.TutorialScreenContent
 import com.urkaaaz.tutorial.visibleBoundsIn
@@ -55,10 +53,6 @@ class DashboardScreen(
     initialLanguage: AppLanguage,
     setLanguage: SetLanguage,
     private val onLanguageSaved: () -> Unit,
-    private val loadTutorials: () -> List<TutorialDashboardItem> = { emptyList() },
-    private val repeatTutorial: suspend (String) -> TutorialProgressWrite = {
-        TutorialProgressWrite.Failure(TutorialProgressFailure.STORAGE_UNAVAILABLE)
-    },
 ) : TutorialScreenContent {
     private val viewModel = DashboardViewModel(initialLanguage, setLanguage)
     private var screenScope: CoroutineScope? = null
@@ -93,7 +87,6 @@ class DashboardScreen(
             "dashboard.shop" -> shopActionButton
             "dashboard.language" -> languageButton
             "dashboard.reset" -> resetProgressButton
-            "dashboard.tutorials" -> tutorialsButton
             else -> null
         } ?: return null
         return target.visibleBoundsIn(view)
@@ -122,19 +115,13 @@ class DashboardScreen(
         background = context.getDrawable(R.drawable.ui_button_dark_m)
         setOnClickListener { showResetConfirmation() }
     }
-    private val tutorialsButton = darkActionButton(
-        labelResource = R.string.dashboard_tutorials,
-        iconResource = null,
-        descriptionResource = R.string.dashboard_tutorials_accessibility,
-        action = ::showTutorials,
-    )
     private val livesIcon = image(R.drawable.icon_lives_heart, 20, 20)
     private val goldIcon = image(R.drawable.icon_orcoins, 20, 20)
     private val regenerationIcon = image(R.drawable.ic_dashboard_life_regeneration, 20, 20)
     private val avatarFrame = avatarFrame()
     private val profilePanel = profilePanel()
     private var languagePopup: PopupWindow? = null
-    private val languageButton = languageButton()
+    internal val languageButton = languageButton()
     private val campaignButtonView = campaignButton()
     private val shopActionButton = darkActionButton(
         labelResource = R.string.dashboard_shop_action,
@@ -174,12 +161,6 @@ class DashboardScreen(
             gravity = Gravity.BOTTOM or Gravity.END
             marginEnd = dp(12)
             bottomMargin = dp(70)
-        })
-
-        addView(tutorialsButton, FrameLayout.LayoutParams(dp(148), dp(48)).apply {
-            gravity = Gravity.BOTTOM or Gravity.START
-            marginStart = dp(12)
-            bottomMargin = dp(14)
         })
 
         addView(resetProgressButton, FrameLayout.LayoutParams(dp(126), dp(48)).apply {
@@ -239,92 +220,6 @@ class DashboardScreen(
         return true
     }
 
-    private fun showTutorials() {
-        val items = loadTutorials().filter { it.enabled }
-        if (items.isEmpty()) {
-            Toast.makeText(context, R.string.dashboard_tutorials_unavailable, Toast.LENGTH_LONG).show()
-            return
-        }
-        lateinit var dialog: AlertDialog
-        val dialogContent = LinearLayout(context).apply {
-            orientation = LinearLayout.VERTICAL
-            setPadding(dp(18), dp(8), dp(18), dp(8))
-            items.forEach { item ->
-                addView(LinearLayout(context).apply {
-                    orientation = LinearLayout.VERTICAL
-                    setPadding(0, dp(8), 0, dp(8))
-                    addView(label(tutorialTitle(item), 16f), LinearLayout.LayoutParams(-1, -2))
-                    val statusResource = when (item.status) {
-                        null -> R.string.dashboard_tutorial_not_started
-                        com.urkaaaz.application.tutorial.TutorialStatus.COMPLETED ->
-                            R.string.dashboard_tutorial_completed
-                        com.urkaaaz.application.tutorial.TutorialStatus.SKIPPED ->
-                            R.string.dashboard_tutorial_skipped
-                    }
-                    addView(
-                        label(context.getString(statusResource), 12f),
-                        LinearLayout.LayoutParams(-1, -2),
-                    )
-                    if (item.isMatchTutorial) {
-                        addView(
-                            label(context.getString(R.string.dashboard_tutorial_next_match), 12f),
-                            LinearLayout.LayoutParams(-1, -2),
-                        )
-                    }
-                    val repeatButton = Button(context)
-                    repeatButton.apply {
-                        text = context.getString(R.string.dashboard_tutorial_repeat)
-                        UiTypography.applyButtonTypeface(this)
-                        isEnabled = true
-                        setOnClickListener {
-                            val scope = screenScope ?: return@setOnClickListener
-                            repeatButton.isEnabled = false
-                            scope.launch {
-                                when (val result = repeatTutorial(item.tutorialId)) {
-                                    TutorialProgressWrite.Saved -> {
-                                        Toast.makeText(
-                                            context,
-                                            if (item.isMatchTutorial) {
-                                                R.string.dashboard_tutorial_queued
-                                            } else {
-                                                R.string.dashboard_tutorial_restarted
-                                            },
-                                            Toast.LENGTH_LONG,
-                                        ).show()
-                                        dialog.dismiss()
-                                    }
-                                    is TutorialProgressWrite.Failure -> {
-                                        repeatButton.isEnabled = true
-                                        Toast.makeText(
-                                            context,
-                                            R.string.dashboard_tutorial_repeat_failed,
-                                            Toast.LENGTH_LONG,
-                                        ).show()
-                                    }
-                                }
-                            }
-                        }
-                    }
-                    addView(repeatButton, LinearLayout.LayoutParams(-1, dp(44)).apply {
-                        topMargin = dp(6)
-                    })
-                }, LinearLayout.LayoutParams(-1, -2))
-            }
-        }
-        dialog = AlertDialog.Builder(context)
-            .setTitle(R.string.dashboard_tutorials)
-            .setView(dialogContent)
-            .setNegativeButton(android.R.string.cancel, null)
-            .create()
-        dialog.show()
-    }
-
-    private fun tutorialTitle(item: TutorialDashboardItem): String =
-        when (item.tutorialId) {
-            "match.basics" -> context.getString(R.string.dashboard_tutorial_match_basics)
-            else -> item.tutorialId.replace('.', ' ').replaceFirstChar(Char::uppercase)
-        }
-
     private fun topHeader(): View = LinearLayout(context).apply {
         orientation = LinearLayout.HORIZONTAL
         gravity = Gravity.CENTER_VERTICAL
@@ -346,7 +241,7 @@ class DashboardScreen(
 
         addView(profilePanel, LinearLayout.LayoutParams(0, dp(40), 1.9f))
         addView(Space(context), LinearLayout.LayoutParams(0, 1, 0.1f))
-        addView(languageButton, LinearLayout.LayoutParams(dp(44), dp(44)).apply {
+        addView(languageButton, LinearLayout.LayoutParams(dp(48), dp(48)).apply {
             marginStart = dp(4)
         })
     }
@@ -451,13 +346,20 @@ class DashboardScreen(
     }
 
     private fun languageButton(): ImageButton = ImageButton(context).apply {
-        background = context.getDrawable(R.drawable.ui_button_dark_xs_normal)
-        contentDescription =
-            context.getString(R.string.dashboard_open_language_icons_accessibility)
+        background = ColorDrawable(Color.TRANSPARENT)
         scaleType = ImageView.ScaleType.CENTER_INSIDE
         setPadding(dp(5), dp(5), dp(5), dp(5))
-        setImageResource(R.drawable.ic_dashboard_language_globe)
+        applySelectedLanguage(this)
         setOnClickListener { showLanguageIcons(this) }
+    }
+
+    private fun applySelectedLanguage(button: ImageButton) {
+        val flag = DashboardLanguageFlag.forLanguage(viewModel.state.selectedLanguage)
+        button.contentDescription = context.getString(
+            R.string.dashboard_change_language_accessibility,
+            context.getString(flag.languageNameResource),
+        )
+        button.setImageResource(flag.drawableResource)
     }
 
     internal fun showLanguageIcons(anchor: View) {
@@ -484,8 +386,8 @@ class DashboardScreen(
         }
         val popup = PopupWindow(
             content,
-            dp(166),
-            -2,
+            ViewGroup.LayoutParams.WRAP_CONTENT,
+            ViewGroup.LayoutParams.WRAP_CONTENT,
             true,
         ).apply {
             setBackgroundDrawable(ColorDrawable(Color.TRANSPARENT))
@@ -544,6 +446,7 @@ class DashboardScreen(
                 is LanguageSaveResult.Saved -> {
                     languagePopup?.dismiss()
                     languagePopup = null
+                    applySelectedLanguage(languageButton)
                     onLanguageSaved()
                 }
                 is LanguageSaveResult.Unchanged -> {

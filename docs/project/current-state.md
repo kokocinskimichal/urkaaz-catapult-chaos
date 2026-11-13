@@ -40,16 +40,19 @@ kampanię, AI oraz działający match screen. Gałąź robocza: `develop`.
   Używa dwóch kategorii `SPELLS`/`AMMUNITION`, kupuje pojedynczy stock za
   OrCoins i wraca do wybranego przedmiotu bez autoekwipowania.
 - Dashboard używa zaakceptowanego układu, osobnego tła i istniejących assetów
-  przycisków/ramki. Globus otwiera selektor PL/UK/ES; wybór zmienia cały język
-  UI, zapisuje się w osobnym DataStore i przetrwa reset profilu. Tytuły
-  rozdziałów są mapowane z lokalizowanych zasobów, a Studio pokazuje stabilne
-  ID. Tłumaczenia PL/ES zostały zaakceptowane, a stałe panele zweryfikowano
-  wizualnie na emulatorze w trzech językach. `AD REWARD` pozostaje nieaktywny, a dwa boczne
-  sloty eventów są ukryte i nie mają jeszcze źródła danych. `TEST MODE` otwiera
+  przycisków/ramki. Przycisk z flagą aktualnie wybranego języka otwiera
+  selektor PL/UK/ES; wybór zmienia cały język UI, zapisuje się w osobnym
+  DataStore i przetrwa reset profilu. Tytuły rozdziałów są mapowane z
+  lokalizowanych zasobów, a Studio pokazuje stabilne ID. Tłumaczenia PL/ES
+  zostały zaakceptowane, a stałe panele zweryfikowano wizualnie na emulatorze
+  w trzech językach. `AD REWARD` pozostaje nieaktywny, a dwa boczne sloty
+  eventów są ukryte i nie mają jeszcze źródła danych. `TEST MODE` otwiera
   picker grywalnych poziomów 1–54 pogrupowanych po rozdziałach, bez względu na
   postęp gracza. Loadout używa dostępności wybranego poziomu i przechowuje
   wybory tylko w pamięci; mecz używa rzeczywistego scenariusza, ma dostępne
   Debug Tools i nie zapisuje postępu, nagród ani użycia stocku.
+- Rozmiary tekstu przycisków per język nie są jeszcze zaimplementowane;
+  propozycję opisuje `docs/systems/localized-button-typography-plan.md`.
 - Lokalny przepływ:
   `MatchUiAction → MatchViewModel → LocalMatchGateway → MatchSession →
   simulation → MatchSnapshot`.
@@ -57,8 +60,9 @@ kampanię, AI oraz działający match screen. Gałąź robocza: `develop`.
   restartu i replay regression.
 - TutorialSystem v1 ma deterministyczny engine i JSON `match.basics`, trwałe
   terminal statuses w `tutorial.*`, Android Hint/Spotlight z target registry,
-  pauzę ticków bez zmiany replayu, AI suspension, Dashboardową listę/powtórkę
-  oraz Studio Tutorials editor. Dynamiczne targety przenoszą konkretny
+  pauzę ticków bez zmiany replayu, AI suspension oraz Studio Tutorials editor.
+  Tutorial uruchamia się automatycznie zgodnie z triggerem; Dashboard nie ma
+  listy ani kontrolki powtórki. Dynamiczne targety przenoszą konkretny
   `targetInstanceId`; teksty `match.basics` PL/EN/ES są do akceptacji. Pozostałe
   tutorial content definitions pozostają poza v1 do czasu akceptacji. Hint ma
   maksymalnie 280 dp szerokości, korzysta z `match_hud_universal_frame` i
@@ -79,7 +83,7 @@ kampanię, AI oraz działający match screen. Gałąź robocza: `develop`.
 - Wybór amunicji w popup gridzie; niedostępna/depleted amunicja jest
   przygaszona i zablokowana.
 - Profile jednostek, amunicji, czarów, many, bossów i pozostałe parametry
-  runtime pochodzą ze ścisłego `game-balance.json` schema 7. Aplikacyjny loader
+  runtime pochodzą ze ścisłego `game-balance.json` schema 8. Aplikacyjny loader
   przekazuje jeden typowany `GameBalanceConfig` do symulacji, AI, kampanii,
   nagród, loadoutu i projekcji Androida.
 - Campaign Balance może nadpisywać maksymalne HP fortec BLUE i RED niezależnie
@@ -87,14 +91,20 @@ kampanię, AI oraz działający match screen. Gałąź robocza: `develop`.
   z balansu; Studio edytuje sparse overrides w Runtime → Campaign. Demo
   zachowuje osobne 5000 HP BLUE i 500 HP RED. Efektywne wartości trafiają do
   scenariusza/session, SimulationConfig, snapshotu i konfiguracji replaya.
+- `runtime.campaign.contentAvailability` konfiguruje pierwsze poziomy
+  dostępności wszystkich kanonicznych jednostek, typów amunicji i czarów.
+  `CampaignLevelDefinition` oraz dostępność Haste/Heal w milestone registry
+  korzystają z tych samych progów; nagrody pozostają za poziomy 5 i 7.
+  Progi nie zmieniają entitlementów, efektów czarów ani zakupów w Shop.
 - `runtime.combat.gameplaySpeedMultiplier` ma zakres `1.0–1.5` i wartość
   domyślną `1.2`; skaluje ruch jednostek/mobilego bossa oraz czas lotu
   pocisków i odłamków, nie zegary meczu, przeładowania ani cooldowny.
-- Studio Balance edytuje wszystkie istniejące pola schema 7, w tym nullable
-  `shopCostGold`, mnożnik tempa i per-level fortress HP, przez zakładki i
-  typowane kontrolki; surowy JSON nie jest prezentowany, a stabilne ID i
-  struktura profili pozostają stałe. Walidacja i zapis używają istniejącego
-  API z kontrolą SHA-256 i `expectedHash`.
+- Studio Balance edytuje wszystkie istniejące pola schema 8, w tym nullable
+  `shopCostGold`, mnożnik tempa, per-level fortress HP i progi dostępności
+  jednostek, amunicji oraz czarów, przez zakładki i typowane kontrolki; surowy
+  JSON nie jest prezentowany, a stabilne ID i struktura profili pozostają
+  stałe. Walidacja i zapis używają istniejącego API z kontrolą SHA-256 i
+  `expectedHash`.
 - AI RED rozwiązuje strzały do żywych central objectives z trajektorią
   uwzględniającą balistykę, wiatr i teren. AI sytuacyjnie używa HASTE,
   FORTRESS_SHIELD i RUNIC_BASTION; stock specjalnych czarów RED jest

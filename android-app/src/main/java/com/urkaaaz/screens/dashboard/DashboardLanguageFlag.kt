@@ -26,4 +26,13 @@ internal enum class DashboardLanguageFlag(
     ;
 
     fun isActive(language: AppLanguage): Boolean = this.language == language
+
+    companion object {
+        fun forLanguage(language: AppLanguage): DashboardLanguageFlag =
+            when (language) {
+                AppLanguage.PL -> POLISH
+                AppLanguage.EN -> ENGLISH
+                AppLanguage.ES -> SPANISH
+            }
+    }
 }

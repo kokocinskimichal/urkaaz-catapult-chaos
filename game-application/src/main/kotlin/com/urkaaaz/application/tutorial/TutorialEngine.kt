@@ -93,13 +93,6 @@ class TutorialEngine(
 
     fun currentState(): TutorialUiState? = currentUiState()
 
-    fun forgetTerminalStatus(tutorialId: String): Boolean {
-        if (catalog.tutorial(tutorialId) == null) return false
-        terminalStatuses.remove(tutorialId)
-        pending.removeAll { it.definition.tutorialId == tutorialId }
-        return true
-    }
-
     fun resetProgress() {
         terminalStatuses.clear()
         pending.clear()

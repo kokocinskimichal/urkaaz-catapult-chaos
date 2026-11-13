@@ -3,6 +3,7 @@ package com.urkaaaz.application.campaign
 import com.urkaaaz.application.balance.GameBalanceRepository
 import com.urkaaaz.campaign.CampaignLevelDefinition
 import com.urkaaaz.campaign.CampaignLevelRegistry
+import com.urkaaaz.campaign.CampaignMilestoneRegistry
 import com.urkaaaz.campaign.CampaignRewardRegistry
 import com.urkaaaz.campaign.DemoLevelDefinition
 import com.urkaaaz.campaign.DemoLevelDefinitions
@@ -42,8 +43,16 @@ object BundledCampaignBalance {
             GameBalanceRepository.bundled.requireConfig().runtime.campaign,
         )
 
-    fun rewardRegistry(): CampaignRewardRegistry =
-        CampaignRewardRegistry.default(
-            GameBalanceRepository.bundled.requireConfig().runtime.rewards,
+    fun milestoneRegistry(): CampaignMilestoneRegistry =
+        CampaignMilestoneRegistry.default(
+            GameBalanceRepository.bundled.requireConfig().runtime.campaign,
         )
+
+    fun rewardRegistry(): CampaignRewardRegistry {
+        val balance = GameBalanceRepository.bundled.requireConfig()
+        return CampaignRewardRegistry.default(
+            balance.runtime.rewards,
+            balance.runtime.campaign,
+        )
+    }
 }

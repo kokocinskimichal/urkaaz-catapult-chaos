@@ -9,6 +9,14 @@ pełną listę tłumaczeń PL/ES. Ręczny przegląd wizualny Dashboardu, kampani
 Loadoutu i HUD-u w EN/PL/ES został wykonany na emulatorze Pixel 8; w razie
 zmian tekstów należy go powtórzyć.
 
+Plan przyszłego, ograniczonego rozszerzenia typografii przycisków per język i
+jej edycji w Studio znajduje się w
+[`localized-button-typography-plan.md`](localized-button-typography-plan.md),
+a instrukcje implementacji w
+[`localized-button-typography-implementation-prompt.md`](localized-button-typography-implementation-prompt.md).
+Nie zmienia on zakresu LocalizationSystem ani nie dodaje edycji tłumaczeń w
+Studio.
+
 Automatyczny `./gradlew test assembleDebug --quiet`, testy i lint Studio oraz
 `git diff --check` przechodzą. `:android-app:lintDebug` nie kończy się
 powodzeniem z powodu dwóch istniejących błędów `AppCompatCustomView`
@@ -34,7 +42,7 @@ Legacy zachowuje język przy resecie postępu. Kodu legacy nie kopiuję.
 | Zakres v1 | UI Androida plus teksty z danych kampanii (tytuły rozdziałów). Studio nie dostaje edytorów tłumaczeń. |
 | Języki | Polski (`pl`), angielski (`en`) i hiszpański (`es`, wariant neutralny, jeden katalog `values-es`; bez `es-ES`/`es-419`). |
 | Język domyślny | **Angielski**, gdy brak zapisanego wyboru. Język systemu nie jest brany pod uwagę. |
-| Miejsce zmiany | Tylko Dashboard: przycisk z neutralną ikoną globusa w nagłówku otwiera kompaktowy panel HUD z flagami Polski (`pl`), Wielkiej Brytanii (`en`) i Hiszpanii (`es`). Aktywna flaga jest podświetlona; dotknięcie innej natychmiast wybiera język. Każda opcja ma `contentDescription` i cel dotyku co najmniej 48 dp. |
+| Miejsce zmiany | Tylko Dashboard: przycisk z flagą aktualnie wybranego języka w nagłówku otwiera kompaktowy panel HUD z flagami Polski (`pl`), Wielkiej Brytanii (`en`) i Hiszpanii (`es`). Aktywna flaga jest podświetlona; dotknięcie innej natychmiast wybiera język. Każda opcja ma `contentDescription` i cel dotyku co najmniej 48 dp. |
 | RESET | Dashboard RESET **nie** czyści języka. |
 | Zastosowanie języka | Własny wrapper `Context` w `attachBaseContext` (`Configuration.setLocale`) plus `recreate()`. Działa od API 24 bez zmiany `Activity` i motywu. |
 | Właściciel języka | Osobny DataStore, odczytany raz synchronicznie przy starcie. Własny wpis w systemowych ustawieniach języka aplikacji nie jest deklarowany, więc nie ma drugiego źródła prawdy. |
@@ -203,8 +211,9 @@ synergii). Logi i współrzędne developerskie pozostają przy `Locale.US`.
 
 ### Dashboard
 
-Dodaje przycisk globusa w nagłówku, który otwiera kompaktowy panel w stylu HUD
-(`HudPanelStyle`, `UiTypography`) z trzema flagowymi przyciskami: Polska =
+Dodaje przycisk z flagą aktualnie wybranego języka w nagłówku, który otwiera
+kompaktowy panel w stylu HUD (`HudPanelStyle`, `UiTypography`) z trzema
+flagowymi przyciskami: Polska =
 `PL`, Wielka Brytania = `EN`, Hiszpania = `ES`. Panel pokazuje aktywny język
 przez podświetlenie flagi; dotknięcie innej flagi wysyła `SelectLanguage` i
 natychmiast stosuje zmianę zgodnie z kontraktem poniżej. Widoczne są flagi bez
@@ -273,9 +282,10 @@ Błędy są jawne i typowane; brak szerokich `catch` i cichych fallbacków.
 - Odczyt startowy w `MainActivity.attachBaseContext`; `MainActivity` nie
   dostaje innej logiki języka (tylko wywołanie wrappera i `recreate()` na
   żądanie hosta).
-- Przycisk globusa w nagłówku Dashboardu otwiera osobny, kompaktowy widok z
-  flagami Polski, Wielkiej Brytanii i Hiszpanii. Każda flaga ma opis
-  dostępności, stan aktywny jest widoczny, a cel dotyku ma co najmniej 48 dp.
+- Przycisk z flagą aktualnego języka w nagłówku Dashboardu otwiera osobny,
+  kompaktowy widok z flagami Polski, Wielkiej Brytanii i Hiszpanii. Każda
+  flaga ma opis dostępności, stan aktywny jest widoczny, a cel dotyku ma co
+  najmniej 48 dp.
 - Katalog prezentacji rozdziałów.
 - Konfiguracja `Locale` jest ustawiana wyłącznie przez wrapper; kod UI nie
   wywołuje `Locale.setDefault`.
@@ -298,15 +308,17 @@ Błędy są jawne i typowane; brak szerokich `catch` i cichych fallbacków.
 4. Polskie i hiszpańskie teksty są zwykle dłuższe niż angielskie. Panele o stałym rozmiarze
    (kafle Loadoutu, HUD, przyciski) muszą zawijać lub obcinać tekst bez
    zmiany wymiarów; wymaga to przeglądu wizualnego wszystkich trzech języków.
-5. Przycisk globusa jest widoczny w nagłówku Dashboardu; otwiera panel flag
+5. Przycisk z flagą aktualnego języka jest widoczny w nagłówku Dashboardu;
+   otwiera panel flag
    położony przy nim, który nie zasłania głównych przycisków. Każda flaga ma
    cel dotyku co najmniej 48 dp; panel zamyka się po wyborze, dotknięciu poza
    nim lub systemowym Back.
 
 ### Assety
 
-Dashboard używa istniejących drawable globusa oraz flag Polski, Wielkiej
-Brytanii i Hiszpanii. Nie dodano nowych assetów graficznych ani tekstowych
+Dashboard używa istniejących drawable flag Polski, Wielkiej Brytanii i
+Hiszpanii zarówno na przycisku języka, jak i w selektorze. Nie dodano nowych
+assetów graficznych ani tekstowych
 skrótów w obrazach.
 
 ### Tłumaczenia

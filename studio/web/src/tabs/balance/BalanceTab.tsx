@@ -22,14 +22,14 @@ import {
 } from "./model";
 import type {
   BalanceFormDraft,
-  GameBalanceDocumentV7,
+  GameBalanceDocumentV8,
 } from "./model";
 import "./styles.css";
 
 export function BalanceTab() {
   const [document, setDocument] = useState<BalanceDocumentResponse | null>(null);
-  const [baseline, setBaseline] = useState<GameBalanceDocumentV7 | null>(null);
-  const [draft, setDraft] = useState<BalanceFormDraft<GameBalanceDocumentV7> | null>(null);
+  const [baseline, setBaseline] = useState<GameBalanceDocumentV8 | null>(null);
+  const [draft, setDraft] = useState<BalanceFormDraft<GameBalanceDocumentV8> | null>(null);
   const [validation, setValidation] = useState<BalanceValidationResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
@@ -64,7 +64,7 @@ export function BalanceTab() {
       setBaseline(parsed);
       setDraft(toBalanceFormDraft(parsed));
       setValidation(null);
-      setMessage("Loaded schema 7 balance.");
+      setMessage("Loaded schema 8 balance.");
     } catch (cause) {
       setError(errorMessage(cause));
     } finally {
@@ -167,7 +167,7 @@ export function BalanceTab() {
     }
   };
 
-  const onDraftChange = (next: BalanceFormDraft<GameBalanceDocumentV7>) => {
+  const onDraftChange = (next: BalanceFormDraft<GameBalanceDocumentV8>) => {
     setDraft(next);
     setValidation(null);
     setError(null);
@@ -182,7 +182,7 @@ export function BalanceTab() {
         <div>
           <h2>Game balance</h2>
           <p>
-            Edit schema 7 profiles using the form. Changes apply after rebuilding
+            Edit schema 8 profiles using the form. Changes apply after rebuilding
             and restarting the app.
           </p>
         </div>
@@ -235,11 +235,12 @@ export function BalanceTab() {
           ))}
         </ul>
       )}
-      {draft && (
+      {draft && baseline && (
         <fieldset className="balance-form-lock" disabled={busy || needsReload}>
           <BalanceForm
             key={document?.hash ?? "balance-form"}
             draft={draft}
+            baseline={baseline}
             validation={validation}
             chapters={chapters}
             chapterCatalogError={chapterCatalogError}
@@ -252,8 +253,8 @@ export function BalanceTab() {
 }
 
 function isDraftDirty(
-  draft: BalanceFormDraft<GameBalanceDocumentV7>,
-  baseline: GameBalanceDocumentV7,
+  draft: BalanceFormDraft<GameBalanceDocumentV8>,
+  baseline: GameBalanceDocumentV8,
 ): boolean {
   const result = materializeBalanceDraft(draft);
   return !result.valid || !balanceDocumentMatches(result.document, baseline);

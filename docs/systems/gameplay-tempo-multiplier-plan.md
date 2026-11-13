@@ -1,7 +1,7 @@
 # Plan: globalny mnożnik tempa rozgrywki
 
 **Status: zaimplementowano.** Mnożnik dodano w balance schema 5; bieżący
-kontrakt używa schema 7, `gameplaySpeedMultiplier: 1.2` i znormalizowanych
+kontrakt używa schema 8, `gameplaySpeedMultiplier: 1.2` i znormalizowanych
 skal ruchu.
 
 Prompt implementacyjny:

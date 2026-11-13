@@ -24,8 +24,108 @@ afterEach(async () => {
 });
 
 describe("game balance catalog", () => {
-  it("validates the supported schema 7 balance document", () => {
+  it("validates the supported schema 8 balance document", () => {
     expect(validateBalanceContent(validBalance)).toEqual({ valid: true, issues: [] });
+  });
+
+  it("validates complete campaign content availability and editable thresholds", () => {
+    const document = JSON.parse(validBalance) as Record<string, unknown>;
+    const runtime = document.runtime as Record<string, unknown>;
+    const campaign = runtime.campaign as Record<string, unknown>;
+    const availability = campaign.contentAvailability as Record<string, unknown>;
+    const units = availability.units as Record<string, unknown>[];
+    const sapper = units.find(entry => entry.unitId === "SAPPER");
+    expect(sapper).toBeDefined();
+    sapper!.availableFromLevel = 6;
+
+    expect(validateBalanceContent(JSON.stringify(document))).toEqual({
+      valid: true,
+      issues: [],
+    });
+  });
+
+  it("rejects incomplete or invalid campaign content availability", () => {
+    const invalidDocuments = [
+      (availability: Record<string, unknown>) => {
+        (availability.units as unknown[]).pop();
+      },
+      (availability: Record<string, unknown>) => {
+        const units = availability.units as unknown[];
+        units.push(units[0]!);
+      },
+      (availability: Record<string, unknown>) => {
+        const units = availability.units as Record<string, unknown>[];
+        units[0]!.unitId = "UNKNOWN";
+      },
+      (availability: Record<string, unknown>) => {
+        const units = availability.units as Record<string, unknown>[];
+        const sapper = units.find(entry => entry.unitId === "SAPPER");
+        expect(sapper).toBeDefined();
+        sapper!.availableFromLevel = 101;
+      },
+      (availability: Record<string, unknown>) => {
+        const units = availability.units as Record<string, unknown>[];
+        const sapper = units.find(entry => entry.unitId === "SAPPER");
+        expect(sapper).toBeDefined();
+        sapper!.availableFromLevel = 1.5;
+      },
+      (availability: Record<string, unknown>) => {
+        const spells = availability.spells as Record<string, unknown>[];
+        const haste = spells.find(entry => entry.spellType === "HASTE");
+        expect(haste).toBeDefined();
+        haste!.availableFromLevel = 5;
+      },
+      (availability: Record<string, unknown>) => {
+        const spells = availability.spells as Record<string, unknown>[];
+        const heal = spells.find(entry => entry.spellType === "HEAL");
+        expect(heal).toBeDefined();
+        heal!.availableFromLevel = 7;
+      },
+      (availability: Record<string, unknown>) => {
+        const spells = availability.spells as Record<string, unknown>[];
+        const berserker = spells.find(entry => entry.spellType === "BERSERKER");
+        expect(berserker).toBeDefined();
+        delete berserker!.availableFromLevel;
+      },
+      (availability: Record<string, unknown>) => {
+        const spells = availability.spells as Record<string, unknown>[];
+        spells[0]!.unexpected = true;
+      },
+    ];
+
+    invalidDocuments.forEach(mutate => {
+      const document = JSON.parse(validBalance) as Record<string, unknown>;
+      const runtime = document.runtime as Record<string, unknown>;
+      const campaign = runtime.campaign as Record<string, unknown>;
+      const availability = campaign.contentAvailability as Record<string, unknown>;
+      mutate(availability);
+
+      expect(validateBalanceContent(JSON.stringify(document)).valid).toBe(false);
+    });
+
+    const earlyMilestoneSpell = JSON.parse(validBalance) as Record<string, unknown>;
+    const earlyRuntime = earlyMilestoneSpell.runtime as Record<string, unknown>;
+    const earlyCampaign = earlyRuntime.campaign as Record<string, unknown>;
+    const earlyAvailability = earlyCampaign.contentAvailability as Record<string, unknown>;
+    const spells = earlyAvailability.spells as Record<string, unknown>[];
+    const hasteIndex = spells.findIndex(entry => entry.spellType === "HASTE");
+    const haste = spells[hasteIndex];
+    expect(haste).toBeDefined();
+    haste!.availableFromLevel = 5;
+    expect(validateBalanceContent(JSON.stringify(earlyMilestoneSpell)).issues)
+      .toContainEqual(expect.objectContaining({
+        path: `runtime.campaign.contentAvailability.spells[${hasteIndex}].availableFromLevel`,
+      }));
+
+    const missing = JSON.parse(validBalance) as Record<string, unknown>;
+    const runtime = missing.runtime as Record<string, unknown>;
+    const campaign = runtime.campaign as Record<string, unknown>;
+    delete campaign.contentAvailability;
+    expect(validateBalanceContent(JSON.stringify(missing)).issues).toContainEqual(
+      expect.objectContaining({
+        path: "runtime.campaign.contentAvailability",
+      }),
+    );
   });
 
   it("rejects schema 4 instead of applying an implicit migration", () => {

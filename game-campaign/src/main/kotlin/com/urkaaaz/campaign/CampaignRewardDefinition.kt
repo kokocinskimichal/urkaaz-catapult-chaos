@@ -1,6 +1,7 @@
 package com.urkaaaz.campaign
 
 import com.urkaaaz.domain.RewardBalance
+import com.urkaaaz.domain.CampaignBalance
 
 sealed interface RewardCondition {
     data object DirectEnemyUnitHit : RewardCondition
@@ -50,7 +51,7 @@ data class LevelRewardDefinition(
 
 class CampaignRewardRegistry(
     definitions: List<LevelRewardDefinition>,
-    val milestones: CampaignMilestoneRegistry = CampaignMilestoneRegistry.default(),
+    val milestones: CampaignMilestoneRegistry,
 ) {
     private val byLevel = definitions.associateBy { it.level }
 
@@ -61,7 +62,10 @@ class CampaignRewardRegistry(
     fun forLevel(level: Int): LevelRewardDefinition? = byLevel[level]
 
     companion object {
-        fun default(balance: RewardBalance): CampaignRewardRegistry =
+        fun default(
+            balance: RewardBalance,
+            campaignBalance: CampaignBalance,
+        ): CampaignRewardRegistry =
             CampaignRewardRegistry(
                 definitions = (1..CampaignLevelDefinition.MAX_LEVELS).map { level ->
                     LevelRewardDefinition(
@@ -95,6 +99,7 @@ class CampaignRewardRegistry(
                         ),
                     )
                 },
+                milestones = CampaignMilestoneRegistry.default(campaignBalance),
             )
     }
 }

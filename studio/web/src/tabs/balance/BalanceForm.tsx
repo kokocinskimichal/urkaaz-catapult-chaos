@@ -13,6 +13,7 @@ import {
 import {
   createApexFragmentationDraft,
   createAmmunitionBehaviorDraft,
+  setCampaignContentAvailability,
   setCampaignFortressHealthOverride,
   setBalanceDraftValue,
 } from "./model";
@@ -27,8 +28,9 @@ import type {
   BossAttackTarget,
   BossArchetype,
   BossMovementKind,
+  CampaignContentAvailabilityCategory,
   FriendlyFirePolicy,
-  GameBalanceDocumentV7,
+  GameBalanceDocumentV8,
   NumericInputDraft,
   SpellCategory,
   SpellDefinition,
@@ -60,11 +62,12 @@ function numberDraft(text: string): NumericInputDraft {
 }
 
 interface BalanceFormProps {
-  draft: BalanceFormDraft<GameBalanceDocumentV7>;
+  draft: BalanceFormDraft<GameBalanceDocumentV8>;
+  baseline: GameBalanceDocumentV8;
   validation: { valid: boolean; issues: BalanceValidationIssue[] } | null;
   chapters: CampaignChapterCatalogEntry[];
   chapterCatalogError: string | null;
-  onChange: (draft: BalanceFormDraft<GameBalanceDocumentV7>) => void;
+  onChange: (draft: BalanceFormDraft<GameBalanceDocumentV8>) => void;
 }
 
 const SECTIONS: Array<{ id: BalanceSection; label: string }> = [
@@ -175,6 +178,7 @@ const RUNTIME_SUBSECTION_BY_PATH: Record<string, RuntimeSection> = {
 
 export function BalanceForm({
   draft,
+  baseline,
   validation,
   chapters,
   chapterCatalogError,
@@ -214,6 +218,11 @@ export function BalanceForm({
     team: "blue" | "red",
     value: NumericInputDraft | null,
   ) => onChange(setCampaignFortressHealthOverride(draft, level, team, value));
+  const updateCampaignContentAvailability = (
+    category: CampaignContentAvailabilityCategory,
+    contentId: string,
+    value: NumericInputDraft | null,
+  ) => onChange(setCampaignContentAvailability(draft, category, contentId, value));
 
   const numberField = (
     path: string,
@@ -824,6 +833,7 @@ export function BalanceForm({
             </div>
             <RuntimeFields
               draft={draft}
+              baseline={baseline}
               section={runtimeSection}
               profileIndex={aiProfileIndex}
               aiProfile={aiProfile}
@@ -832,6 +842,7 @@ export function BalanceForm({
               chapterCatalogError={chapterCatalogError}
               fortressHealthOverrideError={errorFor}
               onFortressHealthOverrideChange={updateFortressHealthOverride}
+              onCampaignContentAvailabilityChange={updateCampaignContentAvailability}
               numberField={numberField}
               selectField={selectField}
             />
@@ -1189,7 +1200,7 @@ function ManaFields({
   draft,
   numberField,
 }: {
-  draft: BalanceFormDraft<GameBalanceDocumentV7>;
+  draft: BalanceFormDraft<GameBalanceDocumentV8>;
   numberField: (
     path: string,
     label: string,
@@ -1223,6 +1234,7 @@ function ManaFields({
 
 function RuntimeFields({
   draft,
+  baseline,
   section,
   profileIndex,
   aiProfile,
@@ -1231,13 +1243,15 @@ function RuntimeFields({
   chapterCatalogError,
   fortressHealthOverrideError,
   onFortressHealthOverrideChange,
+  onCampaignContentAvailabilityChange,
   numberField,
   selectField,
 }: {
-  draft: BalanceFormDraft<GameBalanceDocumentV7>;
+  draft: BalanceFormDraft<GameBalanceDocumentV8>;
+  baseline: GameBalanceDocumentV8;
   section: RuntimeSection;
   profileIndex: number;
-  aiProfile: BalanceFormDraft<GameBalanceDocumentV7["runtime"]["aiProfiles"][number]> | undefined;
+  aiProfile: BalanceFormDraft<GameBalanceDocumentV8["runtime"]["aiProfiles"][number]> | undefined;
   setAiProfileId: (id: AiProfileId) => void;
   chapters: CampaignChapterCatalogEntry[];
   chapterCatalogError: string | null;
@@ -1245,6 +1259,11 @@ function RuntimeFields({
   onFortressHealthOverrideChange: (
     level: number,
     team: "blue" | "red",
+    value: NumericInputDraft | null,
+  ) => void;
+  onCampaignContentAvailabilityChange: (
+    category: CampaignContentAvailabilityCategory,
+    contentId: string,
     value: NumericInputDraft | null,
   ) => void;
   numberField: (
@@ -1262,6 +1281,46 @@ function RuntimeFields({
   ) => React.ReactNode;
 }) {
   const runtime = draft.runtime;
+  const campaignAvailability = runtime.campaign.contentAvailability;
+  const baselineAvailability = baseline.runtime.campaign.contentAvailability;
+  const campaignAvailabilityRows: Record<
+    CampaignContentAvailabilityCategory,
+    CampaignAvailabilityRow[]
+  > = {
+    units: campaignAvailability.units.map((entry, index) => ({
+      id: entry.unitId,
+      path: `runtime.campaign.contentAvailability.units[${index}].availableFromLevel`,
+      availableFromLevel: entry.availableFromLevel,
+      baselineAvailableFromLevel: baselineAvailability.units
+        .find(baselineEntry => baselineEntry.unitId === entry.unitId)
+        ?.availableFromLevel ?? null,
+    })),
+    ammunition: campaignAvailability.ammunition.map((entry, index) => ({
+      id: entry.ammunitionType,
+      path: `runtime.campaign.contentAvailability.ammunition[${index}].availableFromLevel`,
+      availableFromLevel: entry.availableFromLevel,
+      baselineAvailableFromLevel: baselineAvailability.ammunition
+        .find(baselineEntry => baselineEntry.ammunitionType === entry.ammunitionType)
+        ?.availableFromLevel ?? null,
+    })),
+    spells: campaignAvailability.spells.map((entry, index) => {
+      const spell = draft.spells.find(profile => profile.type === entry.spellType);
+      return {
+        id: entry.spellType,
+        path: `runtime.campaign.contentAvailability.spells[${index}].availableFromLevel`,
+        availableFromLevel: entry.availableFromLevel,
+        baselineAvailableFromLevel: baselineAvailability.spells
+          .find(baselineEntry => baselineEntry.spellType === entry.spellType)
+          ?.availableFromLevel ?? null,
+        implementationStatus: spell?.effect == null ? "Not implemented" : "Implemented",
+        milestoneRewardLevel: entry.spellType === "HASTE"
+          ? 5
+          : entry.spellType === "HEAL"
+            ? 7
+            : undefined,
+      };
+    }),
+  };
   switch (section) {
     case "economy":
       return (
@@ -1576,6 +1635,27 @@ function RuntimeFields({
               );
             })}
           </FieldGroup>
+          <CampaignAvailabilityGroup
+            title="Campaign content availability — units"
+            category="units"
+            rows={campaignAvailabilityRows.units}
+            errorFor={fortressHealthOverrideError}
+            onChange={onCampaignContentAvailabilityChange}
+          />
+          <CampaignAvailabilityGroup
+            title="Campaign content availability — ammunition"
+            category="ammunition"
+            rows={campaignAvailabilityRows.ammunition}
+            errorFor={fortressHealthOverrideError}
+            onChange={onCampaignContentAvailabilityChange}
+          />
+          <CampaignAvailabilityGroup
+            title="Campaign content availability — spells"
+            category="spells"
+            rows={campaignAvailabilityRows.spells}
+            errorFor={fortressHealthOverrideError}
+            onChange={onCampaignContentAvailabilityChange}
+          />
           <FieldGroup
             title="Fortress HP per campaign level"
             description="BLUE and RED can be overridden independently. An unset value inherits the standard fortress HP."
@@ -1675,11 +1755,118 @@ function RuntimeFields({
 
 }
 
+interface CampaignAvailabilityRow {
+  id: string;
+  path: string;
+  availableFromLevel: NumericInputDraft | null;
+  baselineAvailableFromLevel: number | null;
+  implementationStatus?: string;
+  milestoneRewardLevel?: number;
+}
+
+function CampaignAvailabilityGroup({
+  title,
+  category,
+  rows,
+  errorFor,
+  onChange,
+}: {
+  title: string;
+  category: CampaignContentAvailabilityCategory;
+  rows: CampaignAvailabilityRow[];
+  errorFor: (path: string) => string | undefined;
+  onChange: (
+    category: CampaignContentAvailabilityCategory,
+    contentId: string,
+    value: NumericInputDraft | null,
+  ) => void;
+}) {
+  return (
+    <FieldGroup
+      title={title}
+      description="Thresholds apply to campaign availability only; Never keeps the item unavailable."
+    >
+      <div className="balance-availability-list">
+        {rows.map(row => {
+          const error = errorFor(row.path);
+          const resetRequired = row.availableFromLevel === null
+            ? row.baselineAvailableFromLevel !== null
+            : row.baselineAvailableFromLevel === null ||
+              row.availableFromLevel.text !== String(row.baselineAvailableFromLevel);
+          const modeId = `campaign-availability-${category}-${row.id}`;
+
+          return (
+            <div className="balance-availability-row" key={row.id}>
+              <div className="balance-availability-label">
+                <code>{row.id}</code>
+                {row.implementationStatus && (
+                  <small>Spell effect: {row.implementationStatus}</small>
+                )}
+                {row.milestoneRewardLevel !== undefined && (
+                  <small>Milestone reward after level {row.milestoneRewardLevel}</small>
+                )}
+              </div>
+              <label className="balance-field" htmlFor={modeId}>
+                <span className="balance-field-label">Availability</span>
+                <select
+                  id={modeId}
+                  value={row.availableFromLevel === null ? "never" : "available"}
+                  onChange={event => onChange(
+                    category,
+                    row.id,
+                    event.currentTarget.value === "never"
+                      ? null
+                      : numberDraft(String(row.baselineAvailableFromLevel ?? 1)),
+                  )}
+                >
+                  <option value="available">Available from level</option>
+                  <option value="never">Never</option>
+                </select>
+                {error && row.availableFromLevel === null && (
+                  <small className="balance-field-error" role="alert">{error}</small>
+                )}
+              </label>
+              {row.availableFromLevel !== null && (
+                <NumberField
+                  path={row.path}
+                  label="Available from level"
+                  value={row.availableFromLevel}
+                  error={error}
+                  min={1}
+                  max={100}
+                  step={1}
+                  onChange={value => onChange(category, row.id, value)}
+                />
+              )}
+              {resetRequired && (
+                <button
+                  type="button"
+                  className="balance-reset-override"
+                  aria-label={`Reset ${row.id} campaign availability to baseline`}
+                  onClick={() => onChange(
+                    category,
+                    row.id,
+                    row.baselineAvailableFromLevel === null
+                      ? null
+                      : numberDraft(String(row.baselineAvailableFromLevel)),
+                  )}
+                >
+                  Use baseline
+                </button>
+              )}
+            </div>
+          );
+        })}
+      </div>
+    </FieldGroup>
+  );
+}
+
 function CombatFields({
   runtime,
   numberField,
 }: {
-  runtime: BalanceFormDraft<GameBalanceDocumentV7["runtime"]>;
+  runtime: BalanceFormDraft<GameBalanceDocumentV8["runtime"]>;
   numberField: (
     path: string,
     label: string,
@@ -1794,7 +1981,7 @@ function AiStrategyFields({
   runtime,
   numberField,
 }: {
-  runtime: BalanceFormDraft<GameBalanceDocumentV7["runtime"]>;
+  runtime: BalanceFormDraft<GameBalanceDocumentV8["runtime"]>;
   numberField: (
     path: string,
     label: string,

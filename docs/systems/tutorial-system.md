@@ -55,13 +55,13 @@ wyzwala tutoriale kontekstowo.
 |---|---|
 | Treść | JSON w `game-application/src/main/resources/tutorial/` plus zakładka Studio **Tutorial**. |
 | Wyzwalanie | Kontekstowe: pierwsze wejście na ekran, pierwsza dostępność mechaniki, poziom kampanii lub zdarzenie; każdy tutorial pokazuje się raz. |
-| Pomijanie i powtarzanie | `Skip` na każdym kroku oznacza tutorial jako widziany. Powtórka jest dostępna z Dashboardu. |
+| Pomijanie i powtarzanie | `Skip` na każdym kroku oznacza tutorial jako widziany. Dedykowana lista i kontrolka powtórki z Dashboardu nie są częścią bieżącego UI. |
 | Symulacja meczu | Hint z `NEXT` pauzuje symulację. Kroki wymagające akcji gracza działają na żywym meczu z wstrzymanym AI. Po tutorialu AI wraca. |
 | Persystencja | Osobny, wersjonowany namespace DataStore; wliczony w Dashboard RESET. |
 | Demo (`TEST`, poziom 0) | Odizolowane: bez tutoriali, bez zapisu postępu tutoriala. |
 | Teksty | Polski, angielski i hiszpański w JSON. |
 | Język | `LanguageSettings` i osobny DataStore są zaimplementowane; TutorialSystem pobiera `AppLanguage` przez port. UI PL/EN/ES działa, a akceptacja tłumaczeń pozostaje poza zakresem TutS. |
-| Powtórka meczu | Przy najbliższym meczu spełniającym wyzwalacz; Dashboard pokazuje informację. |
+| Ponowne uruchomienie | Tutoriale uruchamiają się tylko zgodnie z triggerami i zapisanym postępem; Dashboard RESET czyści statusy razem z pozostałym postępem. |
 | Back | Podczas tutoriala wykonuje `Skip`. |
 | Zastępowany stub | `TutorialParameters` w `game-campaign` jest usunięty. |
 | Zakres katalogu v1 | Lista tematów zatwierdzona; teksty i kroki w fazie treści z akceptacją. |
@@ -82,7 +82,7 @@ W zakresie:
   wprowadzenia mechaniki;
 - port i adapter persystencji postępu oraz reset;
 - overlay Android: Tutorial Hint, Tutorial Spotlight, rejestr celów;
-- powtórka tutoriali z Dashboardu;
+- automatyczny wybór tutoriala na podstawie triggerów i zapisanego postępu;
 - zakładka Studio do edycji treści i walidacji.
 
 ## Poza zakresem
@@ -157,7 +157,7 @@ dotychczasowych tematów i prezentacji, ale jego kod, identyfikatory
 | Level-1 wind toggle w `MainActivity` | Nie przenosić. `CampaignLevelDefinition` przekazuje niezerowy `initialWind` w `MatchScenario`; tutorial zachowuje tę konfigurację i wyjaśnia wiatr przed pierwszą akcją celowania/strzału. Nie dodawać efektu TutorialSystemu, który mutuje wind state. |
 | `setPanelEnabled`, `setAmmoSelectorHidden`, suppression AI i ręczne flagi calloutu w `MainActivity` | Zastąpić regułami `TutorialRuleSet`, target locks i efektami przez `MatchTutorialPort`. Dostępność bazowa nadal pochodzi z `MatchScenario`. |
 | Loadout hinty z resource IDs i targetem całego kontenera | Zastąpić tutorialami wyzwalanymi przy pierwszej dostępności mechaniki/milestone oraz stabilnymi target IDs. Unit/spell card target rejestrować precyzyjnie; nie kopiować funkcji, które ignorują `unit`/`spell`. |
-| Powtarzanie sekwencji przy każdym wejściu i brak Skip | Odrzucić. Urkaaaz używa zatwierdzonej persystencji `COMPLETED`/`SKIPPED`, `Skip` na każdym kroku i jawnej powtórki z Dashboardu. |
+| Powtarzanie sekwencji przy każdym wejściu i brak Skip | Odrzucić. Urkaaaz używa zatwierdzonej persystencji `COMPLETED`/`SKIPPED` i `Skip` na każdym kroku. Nie ma osobnej listy tutoriali ani kontrolki ręcznej powtórki na Dashboardzie. |
 | Tutorialowe teksty i ikony legacy | Ręcznie przeredagować do JSON PL/EN/ES i istniejącego UI Urkaaaz. Nie kopiować `R.string` ID, starego niebieskiego callout skinu ani złotego Gust icon. |
 
 Wind jest skonfigurowany przez scenariusz i może zmieniać się niezależnie od
@@ -376,7 +376,7 @@ Zasady:
 | `onPause` ekranu / Android w tle | Overlay jest ukryty, stan engine zachowany, powrót odtwarza ten sam krok. |
 | Restart meczu | Aktywny tutorial przerwany bez statusu terminalnego; nieukończone wracają przy następnym starcie. |
 | Koniec meczu w trakcie tutoriala | Tutorial przerwany bez statusu; `Resume*` nie jest potrzebne, bo mecz skończony. |
-| Powtórka z Dashboardu | `reset(tutorialId)` usuwa status. Tutoriale ekranów startują od razu po `ScreenEntered`; tutoriale meczu uruchomią się przy najbliższym meczu spełniającym wyzwalacz, a Dashboard pokazuje przy nich informację „uruchomi się w następnym meczu”. |
+| Brak statusu terminalnego | Engine może uruchomić tutorial, gdy nadejdzie pasujący trigger. Zakończone lub pominięte tutoriale nie mają osobnej kontrolki powtórki; Dashboard RESET usuwa ich statusy razem z resztą postępu. |
 | Dashboard RESET | Wszystkie statusy usunięte razem z resztą DataStore. |
 
 ## Przepływ komend, snapshotów i eventów
@@ -418,9 +418,9 @@ komend; kroki kończą się obserwacją zwykłych eventów.
 
 ### Dashboard
 
-Zarejestrowane cele: karta Kampanii, Sklep, język, RESET i sekcja
-**Tutorials** z listą, statusem oraz powtórką. Dashboard informuje, że meczowy
-tutorial uruchomi się w najbliższym pasującym meczu.
+Zarejestrowane cele: karta Kampanii, Sklep, język i RESET. Nie ma listy
+tutoriali ani ręcznej kontrolki powtórki; tutoriale meczowe uruchamiają się
+automatycznie przy spełnieniu triggera.
 
 ### Campaign
 
@@ -717,8 +717,9 @@ atomowy z `expectedHash`.
 6. `./gradlew test assembleDebug --quiet` oraz `npm test && npm run lint` w
    `studio/` przechodzą.
 
-W v1 Dashboard pokazuje listę/powtórkę, ale nie ma własnego `dashboard.welcome`
-tekstu ani innych screen tutorial definitions; zatwierdzony katalog treści
+W v1 Dashboard nie ma listy ani kontrolki powtórki tutoriali i nie ma własnego
+`dashboard.welcome` tekstu ani innych screen tutorial definitions;
+zatwierdzony katalog treści
 zawiera wyłącznie `match.basics`. Pozostałe propozycje nie są kryterium
 wdrożenia tej zawartości do czasu akceptacji ich tekstów.
 
@@ -732,8 +733,7 @@ wdrożenia tej zawartości do czasu akceptacji ich tekstów.
    adaptera resetu.
 3. **Android** — host/overlay, Hint placer, dokładny Spotlight, screen target
    providers, dynamiczne entity resolution, kamera, match event adapter,
-   pause reasons, AI suspension/restrictions, panel locks i Dashboard replay
-   wiring wdrożone.
+   pause reasons, AI suspension/restrictions i panel locks wdrożone.
 4. **Studio** — `/api/tutorials`, walidacja Kotlin/TS, expected-hash save z
    atomic replacement i registry IDs tylko do odczytu wdrożone.
 5. **Treść** — zaakceptowany zakres v1 obejmuje wyłącznie `match.basics`;

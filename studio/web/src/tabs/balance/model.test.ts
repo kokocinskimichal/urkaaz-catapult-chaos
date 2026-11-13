@@ -7,17 +7,18 @@ import {
   createAmmunitionBehaviorDraft,
   materializeBalanceDraft,
   parseBalanceDocument,
+  setCampaignContentAvailability,
   setCampaignFortressHealthOverride,
   serializeBalanceDocument,
   setBalanceDraftValue,
   toBalanceFormDraft,
   withIncrementedBalanceRevision,
 } from "./model";
-import type { GameBalanceDocumentV7 } from "./model";
+import type { GameBalanceDocumentV8 } from "./model";
 import type { BalanceFormDraft } from "./model";
 
 let originalContent: string;
-let original: GameBalanceDocumentV7;
+let original: GameBalanceDocumentV8;
 
 beforeAll(async () => {
   const root = await resolveRepoRoot();
@@ -57,13 +58,73 @@ it("preserves nullable shop prices and materializes an enabled price", () => {
 });
 
 describe("Balance form model", () => {
-  it("round-trips the complete checked-in schema 7 document", () => {
+  it("round-trips the complete checked-in schema 8 document", () => {
     const form = toBalanceFormDraft(original);
     const materialized = materializeBalanceDraft(form);
 
     expect(materialized.valid).toBe(true);
     if (!materialized.valid) return;
     expect(JSON.parse(serializeBalanceDocument(materialized.document))).toEqual(original);
+  });
+
+  it("edits and restores campaign content availability, including Never", () => {
+    const originalDraft = toBalanceFormDraft(original);
+    const edited = setCampaignContentAvailability(
+      originalDraft,
+      "units",
+      "SAPPER",
+      { __numberInputDraft: true, text: "6" },
+    );
+    const editedWithNever = setCampaignContentAvailability(
+      edited,
+      "ammunition",
+      "FIRE_RAIN",
+      null,
+    );
+    const materialized = materializeBalanceDraft(editedWithNever);
+
+    expect(materialized.valid).toBe(true);
+    if (!materialized.valid) return;
+    expect(
+      materialized.document.runtime.campaign.contentAvailability.units
+        .find(entry => entry.unitId === "SAPPER")?.availableFromLevel,
+    ).toBe(6);
+    expect(
+      materialized.document.runtime.campaign.contentAvailability.ammunition
+        .find(entry => entry.ammunitionType === "FIRE_RAIN")?.availableFromLevel,
+    ).toBe(null);
+    expect(
+      materialized.document.runtime.campaign.contentAvailability.units
+        .filter(entry => entry.unitId !== "SAPPER"),
+    ).toEqual(
+      original.runtime.campaign.contentAvailability.units
+        .filter(entry => entry.unitId !== "SAPPER"),
+    );
+    expect(materialized.document.runtime.campaign.contentAvailability.spells)
+      .toEqual(original.runtime.campaign.contentAvailability.spells);
+    expect(
+      materialized.document.runtime.campaign.contentAvailability.ammunition
+        .filter(entry => entry.ammunitionType !== "FIRE_RAIN"),
+    ).toEqual(
+      original.runtime.campaign.contentAvailability.ammunition
+        .filter(entry => entry.ammunitionType !== "FIRE_RAIN"),
+    );
+
+    const restored = setCampaignContentAvailability(
+      toBalanceFormDraft(materialized.document),
+      "units",
+      "SAPPER",
+      {
+        __numberInputDraft: true,
+        text: String(original.runtime.campaign.contentAvailability.units
+          .find(entry => entry.unitId === "SAPPER")?.availableFromLevel),
+      },
+    );
+    const restoredDocument = materializeBalanceDraft(restored);
+    expect(restoredDocument.valid).toBe(true);
+    if (!restoredDocument.valid) return;
+    expect(restoredDocument.document.runtime.campaign.contentAvailability.units)
+      .toEqual(original.runtime.campaign.contentAvailability.units);
   });
 
   it("keeps sparse fortress overrides and removes entries equal to the standard", () => {
@@ -217,7 +278,7 @@ describe("Balance form model", () => {
 });
 
 function setBalanceFormNumbers(
-  form: BalanceFormDraft<GameBalanceDocumentV7>,
+  form: BalanceFormDraft<GameBalanceDocumentV8>,
   fields: Record<string, string>,
 ) {
   return Object.entries(fields).reduce(

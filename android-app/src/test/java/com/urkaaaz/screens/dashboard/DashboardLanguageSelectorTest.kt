@@ -1,6 +1,7 @@
 package com.urkaaaz.screens.dashboard
 
 import androidx.activity.ComponentActivity
+import com.urkaaaz.android.R
 import com.urkaaaz.application.language.AppLanguage
 import com.urkaaaz.application.language.LanguageLoadResult
 import com.urkaaaz.application.language.LanguageLoadSource
@@ -11,6 +12,7 @@ import com.urkaaaz.application.progression.DashboardProgressRead
 import com.urkaaaz.application.progression.DashboardProgressSummary
 import com.urkaaaz.application.progression.LifeSnapshot
 import com.urkaaaz.application.progression.PlayerProgressResetResult
+import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -47,6 +49,13 @@ class DashboardLanguageSelectorTest {
         shadowOf(activity.mainLooper).idle()
 
         assertTrue(savedLanguage)
+        assertEquals(
+            activity.getString(
+                R.string.dashboard_change_language_accessibility,
+                activity.getString(R.string.language_name_polish),
+            ),
+            screen.languageButton.contentDescription,
+        )
         assertFalse(screen.onBackPressed())
         screen.onPause()
     }

@@ -1,14 +1,14 @@
 package com.urkaaaz.campaign
 
-import com.urkaaaz.domain.UnitIds
-
+import com.urkaaaz.contracts.AiProfileId
 import com.urkaaaz.contracts.PlayerId
 import com.urkaaaz.contracts.PlayerLoadoutConfig
-import com.urkaaaz.contracts.AiProfileId
 import com.urkaaaz.domain.AmmunitionType
+import com.urkaaaz.domain.CampaignFortressHealthOverride
+import com.urkaaaz.domain.GameBalanceFixtures
 import com.urkaaaz.domain.SpellType
 import com.urkaaaz.domain.UnitFactory
-import com.urkaaaz.domain.CampaignFortressHealthOverride
+import com.urkaaaz.domain.UnitIds
 import java.io.ByteArrayInputStream
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -43,6 +43,58 @@ class CampaignLevelDefinitionTest {
         assertTrue(
             AmmunitionType.POWDER_BARREL in
                 CampaignLevelDefinition.forLevel(10).availableAmmunition,
+        )
+    }
+
+    @Test
+    fun configuredAvailabilityThresholdsDriveOnlyTheirScenarioEntries() {
+        val campaignBalance = GameBalanceFixtures.balance.runtime.campaign
+        val availability = campaignBalance.contentAvailability.copy(
+            units = campaignBalance.contentAvailability.units.map { entry ->
+                if (entry.unitId == UnitIds.SAPPER) entry.copy(availableFromLevel = 6) else entry
+            },
+            ammunition = campaignBalance.contentAvailability.ammunition.map { entry ->
+                if (entry.ammunitionType == AmmunitionType.FIRE_RAIN) {
+                    entry.copy(availableFromLevel = 32)
+                } else {
+                    entry
+                }
+            },
+            spells = campaignBalance.contentAvailability.spells.map { entry ->
+                if (entry.spellType == SpellType.ICE_TRAP) {
+                    entry.copy(availableFromLevel = 12)
+                } else {
+                    entry
+                }
+            },
+        )
+        val updatedBalance = campaignBalance.copy(contentAvailability = availability)
+
+        assertFalse(
+            UnitIds.SAPPER in CampaignLevelDefinition.forLevel(5, updatedBalance).availableUnits,
+        )
+        assertTrue(
+            UnitIds.SAPPER in CampaignLevelDefinition.forLevel(6, updatedBalance).availableUnits,
+        )
+        assertFalse(
+            AmmunitionType.FIRE_RAIN in
+                CampaignLevelDefinition.forLevel(31, updatedBalance).availableAmmunition,
+        )
+        assertTrue(
+            AmmunitionType.FIRE_RAIN in
+                CampaignLevelDefinition.forLevel(32, updatedBalance).availableAmmunition,
+        )
+        assertFalse(
+            SpellType.ICE_TRAP in
+                CampaignLevelDefinition.forLevel(11, updatedBalance).availableSpells,
+        )
+        assertTrue(
+            SpellType.ICE_TRAP in
+                CampaignLevelDefinition.forLevel(12, updatedBalance).availableSpells,
+        )
+        assertFalse(
+            SpellType.BERSERKER.name in
+                CampaignLevelDefinition.forLevel(100, updatedBalance).toMatchScenario().availableSpells,
         )
     }
 

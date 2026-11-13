@@ -25,7 +25,7 @@
    cel misji, ograniczenie, zachowanie przeciwnika albo inny modyfikator rozgrywki.
 8. **Interfejs obsługuje polski, angielski i hiszpański.** Angielski jest
    językiem domyślnym niezależnie od języka systemu. Zmiana języka odbywa się
-   przez neutralną ikonę globusa w prawym górnym rogu Dashboardu.
+   przez flagę aktualnie wybranego języka w prawym górnym rogu Dashboardu.
 9. **Demo jest izolowane.** Przycisk `TEST` uruchamia obecnie Demo na poziomie 21 z pełną
    zawartością testową; demo nie może
    zmieniać kampanii, własności czarów, waluty ani postępu gracza.
@@ -111,7 +111,7 @@ kontrakty są wyraźnie oddzielone.
 | **Tutorial Context** | Dane potrzebne do oceny sygnału: m.in. tryb Demo, język, identyfikator meczu i jego generacja. Pozwalają nie mieszać sygnałów z różnych sesji. |
 | **Tutorial Rule Set** | Zasady aktywnego tutoriala: czy Hint pauzuje symulację, czy AI jest wstrzymane i czy decyzje AI są ograniczone do wprowadzonych mechanik. |
 | **Target Lock** | Czasowa blokada wskazanych celów lub kontrolek, używana do ograniczenia interakcji do mechanik, które zostały już wyjaśnione. |
-| **Tutorial Status** | Zapisany status terminalny tutoriala: `COMPLETED` (ukończony) lub `SKIPPED` (pominięty). Status odblokowuje wymagające go tutoriale i jest uwzględniany przy powtórce z Dashboardu. |
+| **Tutorial Status** | Zapisany status terminalny tutoriala: `COMPLETED` (ukończony) lub `SKIPPED` (pominięty). Engine używa go do pomijania zakończonych tutoriali i oceny zależności. |
 | **Tutorial Mechanic ID** | Kanoniczny identyfikator mechaniki, której dotyczy wyzwalacz lub którą tutorial wprowadza. Jego właścicielem pozostaje system gry; katalog tutoriala jedynie odwołuje się do zarejestrowanego ID. |
 | **Fortress Hitbox Preview (FHP)** | Półprzezroczysty podgląd uproszczonego kształtu trafienia fortecy. Po ustaleniu kotwic maga i katapulty FHP, grafika, mag i katapulta mają wspólną transformację: pozycję, skalę, przesunięcie i kotwicę. Wszystkie korekty pozycji maga są globalne dla wszystkich biomów, chapterów i poziomów. |
 | **Fortress Presentation Template** | Kontrakt poziomu testowego Demo i źródło prawdy dla wszystkich biomów, chapterów i poziomów. Środki fortec w świecie szerokości 7200 to `x=600` i `x=6600`; geometria fortecy to `672 × 504` jednostek świata z przesunięciem Y `+35`. Katapulta ma szerokość `182.4`, leży `110` jednostek na zewnątrz (środki `x=490` i `x=6710`) i `200` jednostek wyżej od prezentowanego fundamentu. FHP i grafika fortecy dzielą transformację, a katapulta pozostaje pod fortecą w kolejności renderowania. Launch/aim anchor ma stałe położenie względem fortecy, niezależne od sprite'u katapulty. Grafika może być właściwa dla chapteru, ale nie może zmieniać tej geometrii template'u. |
@@ -181,7 +181,7 @@ kontrakty są wyraźnie oddzielone.
 | **Booster** | Tymczasowy bonus meta-gry. Nie zmienia na stałe odblokowania ani klasy czaru, amunicji lub jednostki. |
 | **Battlefield** | Ekran aktywnej bitwy. Zawiera teren, fortece, katapulty, jednostki, pociski, efekty, HUD i interakcje gracza. |
 | **Game Over / Result Screen** | Ekran wyniku po zakończeniu bitwy. Pokazuje zwycięzcę lub rezultat oraz umożliwia restart, powrót do Campaign Map albo przejście do następnego poziomu. |
-| **Language Button** | Ikona globusa w prawym górnym rogu Dashboardu. Otwiera selektor języka PL/EN/ES; wybrana flaga jest podświetlona. |
+| **Language Button** | Flaga aktualnie wybranego języka w prawym górnym rogu Dashboardu. Otwiera selektor języka PL/EN/ES; wybrana flaga jest podświetlona. |
 | **Selected Language Flag** | Flaga Polski, Wielkiej Brytanii lub Hiszpanii wskazująca aktywny język interfejsu. |
 
 ## Meta-game resources / Zasoby meta-gry
@@ -273,9 +273,11 @@ no hazard, collision rule, movement modifier, damage rule, or projectile rule.
 Frostbound terrain theme without adding gameplay hazards or modifiers.
 
 **Sunken Marshes** is assigned to Chapter V (levels 41–50). Its first
-implemented layer is a visual-only background of dark turquoise-green wetlands,
-crooked cypresses, reeds, rotten piers, fallen logs and purple mist. It adds no
-hazard, collision rule, movement modifier, damage rule, or projectile rule.
+implemented layer is a visual-only background of turquoise and emerald wetlands,
+crooked cypresses, reeds, rotten piers, fallen logs and pale dawn mist, lit by
+warm morning light. The Demo level uses this biome and background. Sunken Marshes
+adds no hazard, collision rule, movement modifier, damage rule, or projectile
+rule.
 
 | Term | Meaning |
 | --- | --- |

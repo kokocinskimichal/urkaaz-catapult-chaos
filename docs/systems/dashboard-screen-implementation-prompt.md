@@ -15,11 +15,12 @@ modułu Gradle ani systemu gameplayowego.
 
 ### Ikony języka
 
-Selektor globusa jest już częścią LocalizationSystem. Zachowuj istniejące
-klikalne flagi PL/UK/ES, aktywny stan, zapis języka, komunikat błędu i zamykanie
-popupu po wyborze, dotknięciu poza panelem, systemowym Back lub opuszczeniu
-Dashboardu. Zobacz `docs/systems/localization-system.md`; nie dodawaj drugiego
-mechanizmu języka ani nie cofaj istniejącej integracji.
+Selektor języka jest już częścią LocalizationSystem. Przycisk w nagłówku
+pokazuje flagę aktualnie wybranego języka i otwiera istniejący wybór PL/UK/ES.
+Zachowuj aktywny stan, zapis języka, komunikat błędu i zamykanie popupu po
+wyborze, dotknięciu poza panelem, systemowym Back lub opuszczeniu Dashboardu.
+Zobacz `docs/systems/localization-system.md`; nie dodawaj drugiego mechanizmu
+języka ani nie cofaj istniejącej integracji.
 
 ### Kontekst i źródła prawdy
 
@@ -64,8 +65,8 @@ mechanizmu języka ani nie cofaj istniejącej integracji.
 ### Layout i assety
 
 - Odtwórz zaakceptowaną kompozycję: pełne tło, Back i logo w górnym nagłówku,
-  profil i zasoby, globus w nagłówku z listą flag pokazywaną po dotknięciu,
-  wyraźny przycisk Campaign w centrum,
+  profil i zasoby, flagę aktualnego języka w nagłówku z listą flag pokazywaną
+  po dotknięciu, wyraźny przycisk Campaign w centrum,
   przyciski Shop, Test Mode i Ad Reward niżej oraz mały RESET w prawym dolnym
   rejonie.
 - Użyj wspólnego `shared_header_frame_low_profile.png` dla panelu tytułowego
@@ -95,8 +96,9 @@ mechanizmu języka ani nie cofaj istniejącej integracji.
   `res/drawable/`.
 - Dla powtarzalnych marginesów i Back użyj `ScreenChromeMetrics`, a żywy tekst
   przycisków renderuj z `UiTypography`/Cinzel SemiBold.
-- Dodaj tylko brakujące małe ikony wymagane przez specyfikację: globus, flagi
-  PL/UK/ES, reset, clapperboard Ad Reward i serce regeneracji z plusem.
+- Użyj istniejących flag PL/UK/ES zarówno dla aktualnego języka w nagłówku,
+  jak i w selektorze. Dodaj tylko brakujące małe ikony resetu, clapperboard
+  Ad Reward i serca regeneracji z plusem.
   Preferuj proste, oddzielne drawable Androida; nie generuj nowych ramek ani
   bitmap przycisków.
 - Zachowaj immersive landscape i bezpieczne marginesy kontrolek. Tło ma
@@ -134,16 +136,19 @@ mechanizmu języka ani nie cofaj istniejącej integracji.
 
 ### Selektor języka
 
-- Umieść sam globus w prawym obszarze nagłówka. Po dotknięciu otwórz przy nim
-  krótki, poziomy popup z flagami Polski (`PL`), Wielkiej Brytanii (`EN`) i
-  Hiszpanii (`ES`).
+- Umieść flagę aktualnie wybranego języka w prawym obszarze nagłówka. Jej opis
+  dostępności podaje bieżący język i informuje o możliwości zmiany. Po
+  dotknięciu otwórz przy niej krótki, poziomy popup z flagami Polski (`PL`),
+  Wielkiej Brytanii (`EN`) i Hiszpanii (`ES`). Główna flaga ma cel dotyku co
+  najmniej `48 dp` i nie używa ciężkiej ramki; panel dopasowuje szerokość do
+  wszystkich obramowanych opcji bez ich przycinania.
 - Każda flaga jest klikalnym celem co najmniej `48 dp`, ma opis dostępności z
   nazwą języka, a aktywna flaga jest widocznie zaznaczona.
 - Wybór wysyła `DashboardUiAction.SelectLanguage` przez
   `DashboardViewModel`, który wywołuje `SetLanguage`. `Saved` odtwarza
   Dashboard w nowym języku; `Unchanged` nie odtwarza; `Failure` pokazuje
   jawny błąd bez nadpisywania zapisu.
-- Zamykaj popup po ponownym dotknięciu globusa, dotknięciu poza nim, systemowym
+- Zamykaj popup po ponownym dotknięciu flagi, dotknięciu poza nim, systemowym
   Back, wyborze języka lub opuszczeniu Dashboardu. Korzystaj z istniejącego
   LocalizationSystem; nie twórz drugiego magazynu języka ani Locale managera.
 

@@ -11,8 +11,9 @@ Późniejsze rozszerzenia podniosły kontrakt do schema 7. Revision
 `game-balance-18` dodał `runtime.campaign.lives` dla LifeSystemu, a revision
 `game-balance-19` dodał sparse per-level overrides maksymalnego HP fortec BLUE
 i RED. Późniejszy zapis w Studio ustawił poziom 1 na 200 HP dla obu fortec,
-podnosząc bieżącą rewizję do `game-balance-20`. Studio Balance używa strict
-schema 7.
+podnosząc rewizję do `game-balance-20`. Campaign content availability
+podniosło bieżący kontrakt do schema 8 / `game-balance-21`; Studio Balance
+używa ścisłej walidacji schema 8.
 
 Plan przenosi obecne charakterystyki jednostek, amunicji i czarów do
 `game-domain/src/main/resources/balance/game-balance.json`. Jest to migracja

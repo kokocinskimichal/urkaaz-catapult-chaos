@@ -27,6 +27,10 @@ const SPELL_TYPES = new Set([
   "CATAPULT_LOCK", "SLOWING_FIELD", "VAMPIRIC_BANNER", "STONE_SKIN",
   "SIEGE_FRENZY", "BERSERKER",
 ]);
+const SPELL_MILESTONE_REWARD_LEVELS = new Map([
+  ["HASTE", 5],
+  ["HEAL", 7],
+]);
 const AI_PROFILE_IDS = new Set(["CADET", "VETERAN", "ELITE"]);
 let writeQueue: Promise<void> = Promise.resolve();
 
@@ -81,8 +85,8 @@ export function validateBalanceContent(content: string): BalanceValidationRespon
     ],
     issues,
   );
-  if (root.schemaVersion !== 7) {
-    issues.push(issue("schemaVersion", "must be the supported schema version 7"));
+  if (root.schemaVersion !== 8) {
+    issues.push(issue("schemaVersion", "must be the supported schema version 8"));
   }
   if (typeof root.balanceRevision !== "string" || root.balanceRevision.trim() === "") {
     issues.push(issue("balanceRevision", "must be a non-empty string"));
@@ -1039,10 +1043,12 @@ function validateCampaignBalance(value: unknown, issues: BalanceValidationIssue[
     [
       "initialWindStrength", "initialWindStrengthStep", "initialWindStrengthBands",
       "demoInitialWindStrength", "lives", "aiDifficultyBands", "fortressHealthOverrides",
+      "contentAvailability",
     ],
     issues,
   );
   if (!campaign) return;
+  validateCampaignContentAvailability(campaign.contentAvailability, issues);
   for (const key of ["initialWindStrength", "initialWindStrengthStep", "demoInitialWindStrength"]) {
     if (!nonNegativeNumber(campaign[key])) {
       issues.push(issue(`runtime.campaign.${key}`, "must be non-negative"));
@@ -1183,6 +1189,102 @@ function validateCampaignBalance(value: unknown, issues: BalanceValidationIssue[
         "must cover the final campaign level 100",
       ));
     }
+  }
+}
+
+function validateCampaignContentAvailability(
+  value: unknown,
+  issues: BalanceValidationIssue[],
+): void {
+  const path = "runtime.campaign.contentAvailability";
+  const availability = requiredRecord(
+    value,
+    path,
+    ["units", "ammunition", "spells"],
+    issues,
+  );
+  if (!availability) return;
+
+  validateCampaignAvailabilityEntries(
+    availability.units,
+    `${path}.units`,
+    "unitId",
+    UNIT_IDS,
+    issues,
+  );
+  validateCampaignAvailabilityEntries(
+    availability.ammunition,
+    `${path}.ammunition`,
+    "ammunitionType",
+    AMMUNITION_TYPES,
+    issues,
+  );
+  validateCampaignAvailabilityEntries(
+    availability.spells,
+    `${path}.spells`,
+    "spellType",
+    SPELL_TYPES,
+    issues,
+    SPELL_MILESTONE_REWARD_LEVELS,
+  );
+}
+
+function validateCampaignAvailabilityEntries(
+  value: unknown,
+  path: string,
+  idKey: "unitId" | "ammunitionType" | "spellType",
+  canonicalIds: ReadonlySet<string>,
+  issues: BalanceValidationIssue[],
+  milestoneRewardLevels: ReadonlyMap<string, number> = new Map(),
+): void {
+  if (!Array.isArray(value)) {
+    issues.push(issue(path, "must be an array"));
+    return;
+  }
+  if (value.length !== canonicalIds.size) {
+    issues.push(issue(path, "must define every canonical ID exactly once"));
+  }
+
+  const ids = new Set<string>();
+  value.forEach((value, index) => {
+    const itemPath = `${path}[${index}]`;
+    const entry = requiredRecord(value, itemPath, [idKey, "availableFromLevel"], issues);
+    if (!entry) return;
+
+    const id = entry[idKey];
+    if (typeof id !== "string" || !canonicalIds.has(id)) {
+      issues.push(issue(`${itemPath}.${idKey}`, "must be a canonical ID for this category"));
+    } else if (ids.has(id)) {
+      issues.push(issue(`${itemPath}.${idKey}`, "must be unique"));
+    } else {
+      ids.add(id);
+    }
+
+    const availableFromLevel = entry.availableFromLevel;
+    if (
+      availableFromLevel !== null &&
+      (!positiveInteger(availableFromLevel) || availableFromLevel > 100)
+    ) {
+      issues.push(issue(
+        `${itemPath}.availableFromLevel`,
+        "must be null or an integer between 1 and 100",
+      ));
+      return;
+    }
+
+    if (typeof id === "string" && milestoneRewardLevels.has(id)) {
+      const completedLevel = milestoneRewardLevels.get(id)!;
+      if (availableFromLevel === null || availableFromLevel <= completedLevel) {
+        issues.push(issue(
+          `${itemPath}.availableFromLevel`,
+          `must be later than the level ${completedLevel} milestone reward`,
+        ));
+      }
+    }
+  });
+
+  if (ids.size !== canonicalIds.size) {
+    issues.push(issue(path, "must define every canonical ID exactly once"));
   }
 }
 

@@ -384,6 +384,91 @@ data class RewardBalance(
     }
 }
 
+data class CampaignUnitAvailability(
+    val unitId: String,
+    val availableFromLevel: Int?,
+) {
+    init {
+        require(unitId in UnitIds.all) { "unknown campaign unit ID: $unitId" }
+        require(availableFromLevel == null || availableFromLevel in 1..100) {
+            "campaign unit availability level must be null or in 1..100"
+        }
+    }
+}
+
+data class CampaignAmmunitionAvailability(
+    val ammunitionType: AmmunitionType,
+    val availableFromLevel: Int?,
+) {
+    init {
+        require(availableFromLevel == null || availableFromLevel in 1..100) {
+            "campaign ammunition availability level must be null or in 1..100"
+        }
+    }
+}
+
+data class CampaignSpellAvailability(
+    val spellType: SpellType,
+    val availableFromLevel: Int?,
+) {
+    init {
+        require(availableFromLevel == null || availableFromLevel in 1..100) {
+            "campaign spell availability level must be null or in 1..100"
+        }
+    }
+}
+
+data class CampaignContentAvailability(
+    val units: List<CampaignUnitAvailability>,
+    val ammunition: List<CampaignAmmunitionAvailability>,
+    val spells: List<CampaignSpellAvailability>,
+) {
+    init {
+        val unitIds = units.map(CampaignUnitAvailability::unitId)
+        require(unitIds.size == unitIds.toSet().size && unitIds.toSet() == UnitIds.all) {
+            "campaign content availability must define every unit ID exactly once"
+        }
+        val ammunitionTypes = ammunition.map(CampaignAmmunitionAvailability::ammunitionType)
+        require(
+            ammunitionTypes.size == ammunitionTypes.toSet().size &&
+                ammunitionTypes.toSet() == AmmunitionType.entries.toSet(),
+        ) {
+            "campaign content availability must define every ammunition type exactly once"
+        }
+        val spellTypes = spells.map(CampaignSpellAvailability::spellType)
+        require(
+            spellTypes.size == spellTypes.toSet().size &&
+                spellTypes.toSet() == SpellType.entries.toSet(),
+        ) {
+            "campaign content availability must define every spell type exactly once"
+        }
+    }
+
+    fun availableUnitsAt(level: Int): Set<String> {
+        require(level in 1..100) { "campaign availability level must be in 1..100" }
+        return units.asSequence()
+            .filter { it.availableFromLevel?.let { availableFrom -> level >= availableFrom } == true }
+            .mapTo(linkedSetOf(), CampaignUnitAvailability::unitId)
+    }
+
+    fun availableAmmunitionAt(level: Int): Set<AmmunitionType> {
+        require(level in 1..100) { "campaign availability level must be in 1..100" }
+        return ammunition.asSequence()
+            .filter { it.availableFromLevel?.let { availableFrom -> level >= availableFrom } == true }
+            .mapTo(linkedSetOf(), CampaignAmmunitionAvailability::ammunitionType)
+    }
+
+    fun availableSpellsAt(level: Int): Set<SpellType> {
+        require(level in 1..100) { "campaign availability level must be in 1..100" }
+        return spells.asSequence()
+            .filter { it.availableFromLevel?.let { availableFrom -> level >= availableFrom } == true }
+            .mapTo(linkedSetOf(), CampaignSpellAvailability::spellType)
+    }
+
+    fun availableFromLevel(spellType: SpellType): Int? =
+        spells.single { it.spellType == spellType }.availableFromLevel
+}
+
 data class CampaignBalance(
     val initialWindStrength: Float,
     val initialWindStrengthStep: Float,
@@ -391,6 +476,7 @@ data class CampaignBalance(
     val demoInitialWindStrength: Float,
     val lives: LifeBalance,
     val aiDifficultyBands: List<CampaignAiDifficultyBand>,
+    val contentAvailability: CampaignContentAvailability,
     val fortressHealthOverrides: List<CampaignFortressHealthOverride> = emptyList(),
 ) {
     init {

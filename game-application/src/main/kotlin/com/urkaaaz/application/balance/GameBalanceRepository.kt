@@ -40,8 +40,12 @@ import com.urkaaaz.domain.DemolisherBalance
 import com.urkaaaz.domain.BossCombatBalance
 import com.urkaaaz.domain.RewardBalance
 import com.urkaaaz.domain.CampaignBalance
+import com.urkaaaz.domain.CampaignAmmunitionAvailability
 import com.urkaaaz.domain.CampaignAiDifficultyBand
+import com.urkaaaz.domain.CampaignContentAvailability
 import com.urkaaaz.domain.CampaignFortressHealthOverride
+import com.urkaaaz.domain.CampaignSpellAvailability
+import com.urkaaaz.domain.CampaignUnitAvailability
 import com.urkaaaz.domain.LifeBalance
 import com.urkaaaz.contracts.AiProfileId
 import com.urkaaaz.domain.InventoryProfile
@@ -116,9 +120,10 @@ class GameBalanceRepository(
             ?: return GameBalanceRead.Failure(GameBalanceFailure.MISSING_RESOURCE)
         val content = input.bufferedReader().use { it.readText() }
         rejectNullCampaignFortressHealthOverrides(content)
+        rejectMissingCampaignContentAvailabilityLevels(content)
         val dto = json.decodeFromString<GameBalanceDocumentDto>(content)
         val balance = dto.toDomain()
-        CampaignMilestoneRegistry.default().validate(balance.spells)
+        CampaignMilestoneRegistry.default(balance.runtime.campaign).validate(balance.spells)
         GameBalanceRead.Available(
             LoadedGameBalance(
                 config = balance,
@@ -149,6 +154,24 @@ class GameBalanceRepository(
                 if (override[field] == JsonNull) {
                     throw SerializationException(
                         "runtime.campaign.fortressHealthOverrides[$index].$field must be omitted, not null",
+                    )
+                }
+            }
+        }
+    }
+
+    private fun rejectMissingCampaignContentAvailabilityLevels(content: String) {
+        val root = json.parseToJsonElement(content) as? JsonObject ?: return
+        val runtime = root["runtime"] as? JsonObject ?: return
+        val campaign = runtime["campaign"] as? JsonObject ?: return
+        val availability = campaign["contentAvailability"] as? JsonObject ?: return
+        listOf("units", "ammunition", "spells").forEach { category ->
+            val entries = availability[category] as? JsonArray ?: return@forEach
+            entries.forEachIndexed { index, value ->
+                val entry = value as? JsonObject ?: return@forEachIndexed
+                if ("availableFromLevel" !in entry) {
+                    throw SerializationException(
+                        "runtime.campaign.contentAvailability.$category[$index].availableFromLevel is required",
                     )
                 }
             }
@@ -839,6 +862,7 @@ private data class CampaignBalanceDto(
     val demoInitialWindStrength: Float,
     val lives: LifeBalanceDto,
     val aiDifficultyBands: List<CampaignAiDifficultyBandDto>,
+    val contentAvailability: CampaignContentAvailabilityDto,
     val fortressHealthOverrides: List<CampaignFortressHealthOverrideDto>,
 ) {
     fun toDomain() = CampaignBalance(
@@ -848,9 +872,53 @@ private data class CampaignBalanceDto(
         demoInitialWindStrength = demoInitialWindStrength,
         lives = lives.toDomain(),
         aiDifficultyBands = aiDifficultyBands.map(CampaignAiDifficultyBandDto::toDomain),
+        contentAvailability = contentAvailability.toDomain(),
         fortressHealthOverrides = fortressHealthOverrides.map(
             CampaignFortressHealthOverrideDto::toDomain,
         ),
+    )
+}
+
+@Serializable
+private data class CampaignContentAvailabilityDto(
+    val units: List<CampaignUnitAvailabilityDto>,
+    val ammunition: List<CampaignAmmunitionAvailabilityDto>,
+    val spells: List<CampaignSpellAvailabilityDto>,
+) {
+    fun toDomain() = CampaignContentAvailability(
+        units = units.map(CampaignUnitAvailabilityDto::toDomain),
+        ammunition = ammunition.map(CampaignAmmunitionAvailabilityDto::toDomain),
+        spells = spells.map(CampaignSpellAvailabilityDto::toDomain),
+    )
+}
+
+@Serializable
+private data class CampaignUnitAvailabilityDto(
+    val unitId: String,
+    val availableFromLevel: Int?,
+) {
+    fun toDomain() = CampaignUnitAvailability(unitId, availableFromLevel)
+}
+
+@Serializable
+private data class CampaignAmmunitionAvailabilityDto(
+    val ammunitionType: String,
+    val availableFromLevel: Int?,
+) {
+    fun toDomain() = CampaignAmmunitionAvailability(
+        AmmunitionType.valueOf(ammunitionType),
+        availableFromLevel,
+    )
+}
+
+@Serializable
+private data class CampaignSpellAvailabilityDto(
+    val spellType: String,
+    val availableFromLevel: Int?,
+) {
+    fun toDomain() = CampaignSpellAvailability(
+        SpellType.valueOf(spellType),
+        availableFromLevel,
     )
 }
 

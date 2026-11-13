@@ -87,7 +87,7 @@
     <string name="dashboard_shop_accessibility">Abrir la tienda</string>
     <string name="dashboard_ad_reward_accessibility">La recompensa por anuncio aún no está disponible</string>
     <string name="dashboard_avatar_accessibility">Avatar del jugador</string>
-    <string name="dashboard_open_language_icons_accessibility">Elegir el idioma de la aplicación</string>
+    <string name="dashboard_change_language_accessibility">Cambiar el idioma de la aplicación. Idioma actual: %1$s</string>
     <string name="language_name_polish">polaco</string>
     <string name="language_name_english">inglés</string>
     <string name="language_name_spanish">español</string>
@@ -425,16 +425,4 @@
     <string name="tutorial_target_not_registered">El objetivo del tutorial no está registrado en esta pantalla.</string>
     <string name="tutorial_target_not_visible">El objetivo del tutorial no está visible en la vista actual.</string>
     <string name="tutorial_hint_placement_impossible">No hay espacio seguro para mostrar esta sugerencia.</string>
-    <string name="dashboard_tutorials">TUTORIALES</string>
-    <string name="dashboard_tutorials_accessibility">Ver y repetir tutoriales</string>
-    <string name="dashboard_tutorials_unavailable">La lista de tutoriales aún no está disponible.</string>
-    <string name="dashboard_tutorial_match_basics">Fundamentos del combate</string>
-    <string name="dashboard_tutorial_not_started">Sin completar</string>
-    <string name="dashboard_tutorial_completed">Completado</string>
-    <string name="dashboard_tutorial_skipped">Omitido</string>
-    <string name="dashboard_tutorial_next_match">Se iniciará en la próxima batalla compatible.</string>
-    <string name="dashboard_tutorial_repeat">REPETIR</string>
-    <string name="dashboard_tutorial_queued">El tutorial se iniciará en la próxima batalla compatible.</string>
-    <string name="dashboard_tutorial_restarted">El tutorial está listo para repetirse.</string>
-    <string name="dashboard_tutorial_repeat_failed">No se pudo restablecer el progreso del tutorial.</string>
 </resources>

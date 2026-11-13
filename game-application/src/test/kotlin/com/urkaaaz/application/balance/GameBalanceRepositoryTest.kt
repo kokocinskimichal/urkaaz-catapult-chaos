@@ -4,13 +4,25 @@ import com.urkaaaz.campaign.CampaignLevelDefinition
 import com.urkaaaz.contracts.BossArchetype
 import com.urkaaaz.contracts.BossAttackAnimationTiming
 import com.urkaaaz.contracts.BossVictoryRule
+import com.urkaaaz.domain.AmmunitionType
 import com.urkaaaz.domain.GameBalanceFixtures
+import com.urkaaaz.domain.SpellType
+import com.urkaaaz.domain.UnitIds
 import java.io.ByteArrayInputStream
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertIs
 import kotlin.test.assertNotEquals
 import kotlin.test.assertTrue
+import kotlinx.serialization.encodeToString
+import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.JsonArray
+import kotlinx.serialization.json.JsonNull
+import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.JsonPrimitive
+import kotlinx.serialization.json.jsonArray
+import kotlinx.serialization.json.jsonObject
+import kotlinx.serialization.json.jsonPrimitive
 
 class GameBalanceRepositoryTest {
     @Test
@@ -43,7 +55,7 @@ class GameBalanceRepositoryTest {
         assertEquals(5, result.balance.config.units.all.size)
         assertEquals(5, result.balance.config.ammunition.all.size)
         assertEquals(11, result.balance.config.spells.all.size)
-        assertEquals(7, result.balance.config.schemaVersion)
+        assertEquals(8, result.balance.config.schemaVersion)
         assertTrue(result.balance.config.balanceRevision.matches(Regex("game-balance-\\d+")))
         assertEquals(5, result.balance.config.runtime.campaign.lives.initialLives)
         assertEquals(5, result.balance.config.runtime.campaign.lives.maximumLives)
@@ -61,6 +73,8 @@ class GameBalanceRepositoryTest {
         assertEquals(GameBalanceFixtures.balance.mana, result.balance.config.mana)
         val expectedRuntime = GameBalanceFixtures.balance.runtime.copy(
             campaign = GameBalanceFixtures.balance.runtime.campaign.copy(
+                contentAvailability =
+                    result.balance.config.runtime.campaign.contentAvailability,
                 fortressHealthOverrides =
                     result.balance.config.runtime.campaign.fortressHealthOverrides,
             ),
@@ -87,13 +101,223 @@ class GameBalanceRepositoryTest {
     }
 
     @Test
+    fun campaignContentAvailabilityLoadsCanonicalDefaultsAndNeverEntries() {
+        val result = assertIs<GameBalanceRead.Available>(GameBalanceRepository.bundled.load())
+        val availability = result.balance.config.runtime.campaign.contentAvailability
+
+        assertEquals(UnitIds.all, availability.units.mapTo(mutableSetOf()) { it.unitId })
+        assertEquals(
+            AmmunitionType.entries.toSet(),
+            availability.ammunition.mapTo(mutableSetOf()) { it.ammunitionType },
+        )
+        assertEquals(
+            SpellType.entries.toSet(),
+            availability.spells.mapTo(mutableSetOf()) { it.spellType },
+        )
+        assertEquals(
+            mapOf(
+                UnitIds.DEFENDER to 1,
+                UnitIds.SAPPER to 5,
+                UnitIds.DEMOLISHER to 8,
+                UnitIds.RAGING_BOAR to 11,
+                UnitIds.SLINGMASTER to 13,
+            ),
+            availability.units.associate { it.unitId to it.availableFromLevel },
+        )
+        assertEquals(
+            mapOf(
+                AmmunitionType.ROCK to 1,
+                AmmunitionType.SIEGE_BOMB to 1,
+                AmmunitionType.POWDER_BARREL to 10,
+                AmmunitionType.FIRE_RAIN to 31,
+                AmmunitionType.PLAGUE_CAULDRON to 41,
+            ),
+            availability.ammunition.associate { it.ammunitionType to it.availableFromLevel },
+        )
+        assertEquals(
+            mapOf(
+                SpellType.FORTRESS_SHIELD to 1,
+                SpellType.HASTE to 6,
+                SpellType.HEAL to 8,
+                SpellType.ICE_TRAP to 11,
+                SpellType.RUNIC_BASTION to 21,
+                SpellType.CATAPULT_LOCK to null,
+                SpellType.SLOWING_FIELD to null,
+                SpellType.VAMPIRIC_BANNER to null,
+                SpellType.STONE_SKIN to null,
+                SpellType.SIEGE_FRENZY to null,
+                SpellType.BERSERKER to null,
+            ),
+            availability.spells.associate { it.spellType to it.availableFromLevel },
+        )
+        assertEquals(null, availability.availableFromLevel(SpellType.BERSERKER))
+        assertEquals(setOf(UnitIds.DEFENDER), availability.availableUnitsAt(1))
+        assertEquals(
+            setOf(SpellType.FORTRESS_SHIELD),
+            availability.availableSpellsAt(1),
+        )
+    }
+
+    @Test
+    fun campaignContentAvailabilityLoadsEditedUnlockLevels() {
+        val bundled = javaClass.getResourceAsStream("/balance/game-balance.json")!!
+            .bufferedReader()
+            .use { it.readText() }
+        val customized = updateCampaignContentAvailability(bundled) { availability ->
+            val units = availability.getValue("units").jsonArray.map { it.jsonObject }
+                .map { entry ->
+                    if (entry.getValue("unitId").jsonPrimitive.content == UnitIds.SAPPER) {
+                        JsonObject(entry + ("availableFromLevel" to JsonPrimitive(6)))
+                    } else {
+                        entry
+                    }
+                }
+            val spells = availability.getValue("spells").jsonArray.map { it.jsonObject }
+                .map { entry ->
+                    if (entry.getValue("spellType").jsonPrimitive.content == SpellType.HASTE.name) {
+                        JsonObject(entry + ("availableFromLevel" to JsonPrimitive(9)))
+                    } else {
+                        entry
+                    }
+                }
+            JsonObject(
+                availability +
+                    ("units" to JsonArray(units)) +
+                    ("spells" to JsonArray(spells)),
+            )
+        }
+        val availability = assertIs<GameBalanceRead.Available>(
+            GameBalanceRepository { ByteArrayInputStream(customized.toByteArray()) }.load(),
+        ).balance.config.runtime.campaign.contentAvailability
+
+        assertEquals(
+            6,
+            availability.units.single { it.unitId == UnitIds.SAPPER }.availableFromLevel,
+        )
+        assertEquals(9, availability.availableFromLevel(SpellType.HASTE))
+        assertEquals(setOf(UnitIds.DEFENDER), availability.availableUnitsAt(5))
+        assertEquals(
+            setOf(UnitIds.DEFENDER, UnitIds.SAPPER),
+            availability.availableUnitsAt(6),
+        )
+    }
+
+    @Test
+    fun invalidCampaignContentAvailabilityFailsBalanceLoading() {
+        val bundled = javaClass.getResourceAsStream("/balance/game-balance.json")!!
+            .bufferedReader()
+            .use { it.readText() }
+        val invalidDocuments = listOf(
+            updateCampaignContentAvailability(bundled) { availability ->
+                JsonObject(
+                    availability + (
+                        "units" to JsonArray(
+                            availability.getValue("units").jsonArray.dropLast(1),
+                        )
+                    ),
+                )
+            },
+            updateCampaignContentAvailability(bundled) { availability ->
+                val units = availability.getValue("units").jsonArray
+                JsonObject(availability + ("units" to JsonArray(units + units.first())))
+            },
+            updateCampaignContentAvailability(bundled) { availability ->
+                val ammunition = availability.getValue("ammunition").jsonArray.map { it.jsonObject }
+                    .map { entry ->
+                        if (entry.getValue("ammunitionType").jsonPrimitive.content == "ROCK") {
+                            JsonObject(entry + ("ammunitionType" to JsonPrimitive("UNKNOWN_AMMO")))
+                        } else {
+                            entry
+                        }
+                    }
+                JsonObject(availability + ("ammunition" to JsonArray(ammunition)))
+            },
+            updateCampaignContentAvailability(bundled) { availability ->
+                val units = availability.getValue("units").jsonArray.map { it.jsonObject }
+                    .map { entry ->
+                        if (entry.getValue("unitId").jsonPrimitive.content == UnitIds.SAPPER) {
+                            JsonObject(entry + ("availableFromLevel" to JsonPrimitive(101)))
+                        } else {
+                            entry
+                        }
+                    }
+                JsonObject(availability + ("units" to JsonArray(units)))
+            },
+            updateCampaignContentAvailability(bundled) { availability ->
+                val units = availability.getValue("units").jsonArray.map { it.jsonObject }
+                    .map { entry ->
+                        if (entry.getValue("unitId").jsonPrimitive.content == UnitIds.SAPPER) {
+                            JsonObject(entry + ("availableFromLevel" to JsonPrimitive(1.5)))
+                        } else {
+                            entry
+                        }
+                    }
+                JsonObject(availability + ("units" to JsonArray(units)))
+            },
+            updateCampaignContentAvailability(bundled) { availability ->
+                    val units = availability.getValue("units").jsonArray.map { it.jsonObject }
+                        .map { entry ->
+                            if (entry.getValue("unitId").jsonPrimitive.content == UnitIds.SAPPER) {
+                                JsonObject(entry - "availableFromLevel")
+                            } else {
+                                entry
+                            }
+                        }
+                    JsonObject(availability + ("units" to JsonArray(units)))
+            },
+            updateCampaignContentAvailability(bundled) { availability ->
+                val spells = availability.getValue("spells").jsonArray.map { it.jsonObject }
+                    .map { entry ->
+                        if (entry.getValue("spellType").jsonPrimitive.content == SpellType.HASTE.name) {
+                            JsonObject(entry + ("availableFromLevel" to JsonPrimitive(5)))
+                        } else {
+                            entry
+                        }
+                    }
+                JsonObject(availability + ("spells" to JsonArray(spells)))
+            },
+            updateCampaignContentAvailability(bundled) { availability ->
+                    val spells = availability.getValue("spells").jsonArray.map { it.jsonObject }
+                        .map { entry ->
+                            if (entry.getValue("spellType").jsonPrimitive.content == SpellType.HASTE.name) {
+                                JsonObject(entry + ("availableFromLevel" to JsonNull))
+                            } else {
+                                entry
+                            }
+                        }
+                    JsonObject(availability + ("spells" to JsonArray(spells)))
+            },
+            updateCampaignContentAvailability(bundled) { availability ->
+                val spells = availability.getValue("spells").jsonArray.map { it.jsonObject }
+                    .map { entry ->
+                        if (entry.getValue("spellType").jsonPrimitive.content == SpellType.BERSERKER.name) {
+                            JsonObject(entry - "availableFromLevel")
+                        } else {
+                            entry
+                        }
+                    }
+                JsonObject(availability + ("spells" to JsonArray(spells)))
+            },
+        )
+
+        invalidDocuments.forEach { content ->
+            assertEquals(
+                GameBalanceRead.Failure(GameBalanceFailure.INVALID_DATA),
+                GameBalanceRepository {
+                    ByteArrayInputStream(content.toByteArray())
+                }.load(),
+            )
+        }
+    }
+
+    @Test
     fun unknownFieldsAreRejected() {
         val bundled = javaClass.getResourceAsStream("/balance/game-balance.json")!!
             .bufferedReader()
             .use { it.readText() }
         val invalid = bundled.replace(
-            "\"schemaVersion\": 7,",
-            "\"schemaVersion\": 7,\n  \"extra\": true,",
+            "\"schemaVersion\": 8,",
+            "\"schemaVersion\": 8,\n  \"extra\": true,",
         )
         val repository = GameBalanceRepository {
             ByteArrayInputStream(invalid.toByteArray())
@@ -180,12 +404,27 @@ class GameBalanceRepositoryTest {
         return pattern.replaceFirst(content, "\"fortressHealthOverrides\": $overridesJson")
     }
 
+    private fun updateCampaignContentAvailability(
+        content: String,
+        transform: (JsonObject) -> JsonObject,
+    ): String {
+        val root = Json.parseToJsonElement(content).jsonObject
+        val runtime = root.getValue("runtime").jsonObject
+        val campaign = runtime.getValue("campaign").jsonObject
+        val availability = campaign.getValue("contentAvailability").jsonObject
+        val updatedCampaign = JsonObject(
+            campaign + ("contentAvailability" to transform(availability)),
+        )
+        val updatedRuntime = JsonObject(runtime + ("campaign" to updatedCampaign))
+        return Json.encodeToString(JsonObject.serializer(), JsonObject(root + ("runtime" to updatedRuntime)))
+    }
+
     @Test
     fun unsupportedBalanceSchemaIsRejected() {
         val bundled = javaClass.getResourceAsStream("/balance/game-balance.json")!!
             .bufferedReader()
             .use { it.readText() }
-        val invalid = bundled.replace("\"schemaVersion\": 7,", "\"schemaVersion\": 6,")
+        val invalid = bundled.replace("\"schemaVersion\": 8,", "\"schemaVersion\": 7,")
         val repository = GameBalanceRepository {
             ByteArrayInputStream(invalid.toByteArray())
         }

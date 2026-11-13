@@ -42,7 +42,6 @@ object TutorialTargetRegistration {
             "dashboard.shop",
             "dashboard.language",
             "dashboard.reset",
-            "dashboard.tutorials",
         ),
         TutorialScreen.CAMPAIGN to setOf(
             "campaign.map",

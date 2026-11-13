@@ -16,9 +16,8 @@ import com.urkaaaz.contracts.VictoryRulesConfig
 import com.urkaaaz.contracts.WindSnapshot
 import com.urkaaaz.contracts.WorldDimensions
 import com.urkaaaz.domain.AmmunitionType
-import com.urkaaaz.domain.SpellType
-import com.urkaaaz.domain.UnitIds
 import com.urkaaaz.domain.CampaignBalance
+import com.urkaaaz.domain.SpellType
 
 data class EnemyConfiguration(
     val aiProfile: AiProfileSelection = AiProfileSelection(),
@@ -126,28 +125,10 @@ data class CampaignLevelDefinition(
             return CampaignLevelDefinition(
                 level = safeLevel,
                 enemy = EnemyConfiguration(aiProfile = aiProfileFor(safeLevel, campaignBalance)),
-                availableUnits = buildSet {
-                    add(UnitIds.DEFENDER)
-                    if (safeLevel >= 5) add(UnitIds.SAPPER)
-                    if (safeLevel >= 8) add(UnitIds.DEMOLISHER)
-                    if (safeLevel >= 11) add(UnitIds.RAGING_BOAR)
-                    if (safeLevel >= 13) add(UnitIds.SLINGMASTER)
-                },
-                availableAmmunition = buildSet {
-                    add(AmmunitionType.ROCK)
-                    add(AmmunitionType.SIEGE_BOMB)
-                    if (safeLevel >= 10) add(AmmunitionType.POWDER_BARREL)
-                    if (safeLevel >= 31) add(AmmunitionType.FIRE_RAIN)
-                    if (safeLevel >= 41) add(AmmunitionType.PLAGUE_CAULDRON)
-                },
-                availableSpells = buildSet {
-                    add(SpellType.FORTRESS_SHIELD)
-                    CampaignMilestoneRegistry.default()
-                        .milestonesAvailableAt(safeLevel)
-                        .forEach { add(it.spellType) }
-                    if (safeLevel >= 11) add(SpellType.ICE_TRAP)
-                    if (safeLevel >= 21) add(SpellType.RUNIC_BASTION)
-                },
+                availableUnits = campaignBalance.contentAvailability.availableUnitsAt(safeLevel),
+                availableAmmunition =
+                    campaignBalance.contentAvailability.availableAmmunitionAt(safeLevel),
+                availableSpells = campaignBalance.contentAvailability.availableSpellsAt(safeLevel),
                 initialWind = WindSnapshot(
                     direction = if (safeLevel % 2 == 0) -1f else 1f,
                     strength = campaignBalance.initialWindStrength(safeLevel),

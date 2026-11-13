@@ -88,6 +88,8 @@ do bieżącego zadania według [indeksu dokumentów kontekstu](docs/agent-contex
 - [Plan poprawy AI: bossy i czary](docs/systems/ai-boss-spell-improvement-plan.md) ·
   [prompt implementacyjny](docs/systems/ai-boss-spell-improvement-implementation-prompt.md)
 - [System kampanii](docs/systems/campaign-system.md)
+- [Plan dostępności zawartości kampanii w Studio](docs/systems/campaign-content-availability-plan.md)
+- [Prompt implementacyjny dostępności zawartości](docs/systems/campaign-content-availability-implementation-prompt.md)
 - [Plan kamieni milowych kampanii](docs/systems/campaign-milestones-plan.md)
 - [Prompt kamieni milowych kampanii](docs/systems/campaign-milestones-implementation-prompt.md)
 - [Projekt systemu nagród (propozycja)](docs/systems/reward-system.md)
@@ -105,6 +107,8 @@ do bieżącego zadania według [indeksu dokumentów kontekstu](docs/agent-contex
 - [Prompt systemu tutoriala](docs/systems/tutorial-system-implementation-prompt.md)
 - [LocalizationSystem PL/EN/ES](docs/systems/localization-system.md)
 - [Prompt implementacji LocalizationSystem](docs/systems/localization-system-implementation-prompt.md)
+- [Plan rozmiarów tekstu przycisków per język i edycji w Studio](docs/systems/localized-button-typography-plan.md)
+- [Prompt implementacji typografii przycisków per język](docs/systems/localized-button-typography-implementation-prompt.md)
 - [System czarów](docs/systems/spell-system.md)
 - [Plan globalnego mnożnika tempa rozgrywki](docs/systems/gameplay-tempo-multiplier-plan.md) ·
   [prompt implementacyjny](docs/systems/gameplay-tempo-multiplier-implementation-prompt.md)
@@ -124,6 +128,8 @@ do bieżącego zadania według [indeksu dokumentów kontekstu](docs/agent-contex
 - [Analiza brakujących mechanik UI](docs/ui/mechanics-gap-analysis.md)
 - [Architektura Dashboardu](docs/systems/dashboard-screen.md) ·
   [prompt implementacyjny](docs/systems/dashboard-screen-implementation-prompt.md)
+- [Plan typografii przycisków per język](docs/systems/localized-button-typography-plan.md) ·
+  [prompt implementacyjny](docs/systems/localized-button-typography-implementation-prompt.md)
 - [AGP koncepcji ekranu Ad Reward](docs/systems/ad-reward-screen-mockup.agp)
 - [AGP kompaktowego Tutorial Hintu](docs/systems/tutorial-hint-compact-redesign.agp)
 - [AGP niskiej ramki Dashboardu, Shopu i przyszłych ekranów](docs/systems/dashboard-low-profile-header-frame.agp)

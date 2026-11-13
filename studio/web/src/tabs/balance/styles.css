@@ -236,6 +236,40 @@
   margin-top: 12px;
 }
 
+.balance-availability-list {
+  display: grid;
+  gap: 10px;
+}
+
+.balance-availability-row {
+  display: grid;
+  grid-template-columns: minmax(120px, 0.8fr) repeat(2, minmax(150px, 1fr)) auto;
+  align-items: start;
+  gap: 12px;
+  padding: 10px;
+  border: 1px solid #314358;
+  border-radius: 6px;
+  background: #172433;
+}
+
+.balance-availability-label {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  padding-top: 8px;
+  color: #dce7ef;
+  font-size: 12px;
+}
+
+.balance-availability-label code {
+  color: #f0ca78;
+}
+
+.balance-availability-label small {
+  color: #9ab1c5;
+  font-size: 11px;
+}
+
 .balance-fortress-health-row {
   display: grid;
   grid-template-columns: minmax(72px, 0.45fr) repeat(2, minmax(0, 1fr));
@@ -312,7 +346,8 @@
 
 @media (max-width: 720px) {
   .balance-field-grid,
-  .balance-nested-record {
+  .balance-nested-record,
+  .balance-availability-row {
     grid-template-columns: 1fr;
   }
 }

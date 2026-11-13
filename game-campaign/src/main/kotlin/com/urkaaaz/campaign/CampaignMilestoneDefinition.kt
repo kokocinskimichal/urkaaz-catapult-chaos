@@ -1,5 +1,6 @@
 package com.urkaaaz.campaign
 
+import com.urkaaaz.domain.CampaignBalance
 import com.urkaaaz.domain.SpellType
 import com.urkaaaz.domain.SpellCatalog
 
@@ -24,7 +25,7 @@ data class CampaignMilestoneDefinition(
 }
 
 class CampaignMilestoneRegistry(
-    definitions: List<CampaignMilestoneDefinition> = DEFAULT_DEFINITIONS,
+    definitions: List<CampaignMilestoneDefinition>,
 ) {
     private val definitionsById = definitions.associateBy { it.id }
 
@@ -53,23 +54,43 @@ class CampaignMilestoneRegistry(
     }
 
     companion object {
-        private val DEFAULT_DEFINITIONS = listOf(
-            CampaignMilestoneDefinition(
+        private data class MilestoneTemplate(
+            val id: String,
+            val completedLevel: Int,
+            val spellType: SpellType,
+            val preferInNewDefaultLoadout: Boolean,
+        )
+
+        private val MILESTONE_TEMPLATES = listOf(
+            MilestoneTemplate(
                 id = "campaign_spell_haste",
                 completedLevel = 5,
-                availableFromLevel = 6,
                 spellType = SpellType.HASTE,
                 preferInNewDefaultLoadout = true,
             ),
-            CampaignMilestoneDefinition(
+            MilestoneTemplate(
                 id = "campaign_spell_heal",
                 completedLevel = 7,
-                availableFromLevel = 8,
                 spellType = SpellType.HEAL,
                 preferInNewDefaultLoadout = true,
             ),
         )
 
-        fun default(): CampaignMilestoneRegistry = CampaignMilestoneRegistry()
+        fun default(campaignBalance: CampaignBalance): CampaignMilestoneRegistry =
+            CampaignMilestoneRegistry(
+                MILESTONE_TEMPLATES.map { milestone ->
+                    CampaignMilestoneDefinition(
+                        id = milestone.id,
+                        completedLevel = milestone.completedLevel,
+                        availableFromLevel = campaignBalance.contentAvailability
+                            .availableFromLevel(milestone.spellType)
+                            ?: throw IllegalArgumentException(
+                                "campaign milestone spell ${milestone.spellType} must be available",
+                            ),
+                        spellType = milestone.spellType,
+                        preferInNewDefaultLoadout = milestone.preferInNewDefaultLoadout,
+                    )
+                },
+            )
     }
 }

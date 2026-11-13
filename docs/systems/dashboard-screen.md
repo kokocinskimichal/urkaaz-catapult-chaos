@@ -3,7 +3,8 @@
 ## Status i cel
 
 Przebudowa istniejącego ekranu według zaakceptowanego przez użytkownika
-screenshotu jest zaimplementowana. Globus otwiera działający selektor PL/EN/ES,
+screenshotu jest zaimplementowana. Przycisk z flagą aktualnie wybranego
+języka otwiera działający selektor PL/EN/ES,
 którego właścicielem jest LocalizationSystem; lista tłumaczeń została
 zaakceptowana. Eventy gry pozostają odłożone. Ten dokument opisuje granice
 istniejącego ekranu, a nie drugi Dashboard, nowy moduł Gradle ani system
@@ -29,8 +30,9 @@ balans.
   od postępu gracza wybór poziomów kampanii 1–54.
 - Zachowanie widocznego przycisku `AD REWARD` wyłącznie jako elementu
   prezentacji; nie dodawać integracji reklam ani nagród.
-- Użycie istniejącego selektora globusa LocalizationSystem w nagłówku. Ekran
-  nie tworzy własnej persystencji ani drugiego mechanizmu wyboru języka.
+- Użycie istniejącego selektora LocalizationSystem w nagłówku, pokazywanego
+  przez flagę aktualnie wybranego języka. Ekran nie tworzy własnej
+  persystencji ani drugiego mechanizmu wyboru języka.
 - Utworzenie dwóch pustych, ukrytych anchorów na przyszłe ikony eventów:
   symetrycznie po lewej i prawej stronie głównego przycisku Campaign.
 - Użycie istniejących assetów Dashboardu i wspólnych helperów Android UI.
@@ -58,7 +60,8 @@ zastępować nową grafiką.
 Hierarchia ekranu:
 
 1. Nagłówek: Back, branding Urkaaaz, portret gracza, poziom/życia/złoto/status
-   regeneracji i globus; po jego dotknięciu pojawia się krótka lista trzech flag.
+   regeneracji i flaga aktualnego języka; po jej dotknięciu pojawia się krótka
+   lista trzech flag.
 2. Główny, centralny przycisk Campaign.
 3. Bezpośrednio pod Campaign: tylko drugorzędne przyciski Shop i Ad Reward;
    razem zajmują tę samą szerokość co przycisk Campaign.
@@ -139,9 +142,9 @@ Widoczność popupu i ukryte sloty nie konsumują danych eventowych.
   Akcja powrotu z wyniku meczu prowadzi do selektora Test Mode.
 - RESET → dialog potwierdzenia, a dopiero po akceptacji wywołanie istniejącego
   resetu postępu.
-- Globus → otwarcie lub zamknięcie selektora; wybór flagi wysyła
-  `DashboardUiAction.SelectLanguage`, a zapisany wybór odtwarza Dashboard w
-  nowym języku.
+- Flaga aktualnego języka → otwarcie lub zamknięcie selektora; wybór flagi
+  wysyła `DashboardUiAction.SelectLanguage`, a zapisany wybór odtwarza
+  Dashboard w nowym języku.
 - `AD REWARD` pozostaje widoczny, ale nie uruchamia reklamy, nagrody ani nowego
   use case'u.
 
@@ -167,14 +170,20 @@ pozostaje bez zmian.
 
 ### Popup flag
 
-- Globus w nagłówku przełącza widoczność krótkiego popupu z trzema flagami:
+- Flaga aktualnego języka w nagłówku przełącza widoczność krótkiego popupu
+  z trzema flagami:
   Polski (`PL`), Wielkiej Brytanii (`EN`) i Hiszpanii (`ES`).
 - Flagi są klikalnymi celami co najmniej `48 dp`; aktywna flaga jest
   podświetlona i ma opis dostępności z nazwą języka.
+- Przycisk z aktualną flagą ma opis dostępności informujący o bieżącym języku
+  i możliwości jego zmiany, zachowuje cel dotyku `48 dp` i nie ma ciężkiej
+  ramki przycisku.
+- Szerokość popupu dopasowuje się do trzech obramowanych opcji i ich odstępów,
+  tak aby żadna ramka nie była przycięta przez panel.
 - `Saved` zamyka popup i wywołuje `Activity.recreate()`. `Unchanged` zamyka
   popup bez odtworzenia; `Failure` pokazuje komunikat na Dashboardzie i
   pozostawia popup dostępny do ponowienia.
-- Popup zamyka się po ponownym dotknięciu globusa, dotknięciu poza panelem,
+- Popup zamyka się po ponownym dotknięciu flagi, dotknięciu poza panelem,
   systemowym Back lub opuszczeniu Dashboardu.
 
 ## Ukryte sloty przyszłych eventów
@@ -243,7 +252,7 @@ Wspólne helpery:
   wypełniać short-edge display cutouts; kontrolki pozostają odsunięte od
   wycięć ekranu.
 
-Katalog drawable zawiera wektorowe ikony globusa, flag PL/UK/ES, resetu,
+Katalog drawable zawiera wektorowe ikony flag PL/UK/ES, resetu,
 clapperboardu i regeneracji. Dashboard używa istniejących assetów; nie dodawać
 duplikatów ani nowych bitmap przycisków i ramek.
 
@@ -270,8 +279,9 @@ duplikatów ani nowych bitmap przycisków i ramek.
 - RESET wymaga potwierdzenia, blokuje duplikat podczas operacji, pokazuje
   wynik i odświeża summary po sukcesie.
 - `AD REWARD` pozostaje widoczny i nie uruchamia ad callbacku ani nagrody.
-- Globus otwiera selektor PL/UK/ES; wybór zmienia UI, zapisuje preferencję i
-  wraca na Dashboard. Nieobsługiwany zapis nie jest nadpisywany.
+- Flaga aktualnego języka otwiera selektor PL/UK/ES; wybór zmienia UI,
+  zapisuje preferencję i wraca na Dashboard. Nieobsługiwany zapis nie jest
+  nadpisywany.
 - Dwa sloty eventów są niewidoczne/puste, bez kliknięć i bez przesunięcia
   istniejącej kompozycji.
 - Ekran respektuje lifecycle `ScreenContent`; nie dodaje nawigacji ani
@@ -290,8 +300,9 @@ pozostają kryteriami przeglądu UI; nie dodano osobnego testu instrumentation.
 3. Campaign, Shop, Back i RESET zachowują opisane przepływy; reset jest
    potwierdzany i nie zmienia ustawień języka.
 4. `AD REWARD` jest widoczny, ale nie implementuje reklam ani nagród.
-5. Globus otwiera krótki selektor flag Polski, Wielkiej Brytanii i Hiszpanii;
-   wybór zmienia UI, zapisuje język i po `recreate()` pozostaje na Dashboardzie.
+5. Flaga aktualnego języka otwiera krótki selektor flag Polski, Wielkiej
+   Brytanii i Hiszpanii; wybór zmienia UI, zapisuje język i po `recreate()`
+   pozostaje na Dashboardzie.
 6. Oba punkty eventowe są całkowicie niewidoczne i nie zmieniają layoutu.
 7. Nie powstaje drugi ekran, nowy moduł, źródło prawdy dla języka ani system
    eventów.
@@ -305,7 +316,6 @@ pozostają kryteriami przeglądu UI; nie dodano osobnego testu instrumentation.
 - `android-app/src/main/res/drawable-nodpi/dashboard_background_approved.png`
 - `assets_src/dashboard/dashboard_background_approved.png`
 - `assets_src/dashboard/screen-concepts/dashboard_screen_approved_reference.png`
-- `android-app/src/main/res/drawable/ic_dashboard_language_globe.xml`
 - `android-app/src/main/res/drawable/ic_dashboard_language_flag_poland.xml`
 - `android-app/src/main/res/drawable/ic_dashboard_language_flag_uk.xml`
 - `android-app/src/main/res/drawable/ic_dashboard_language_flag_spain.xml`

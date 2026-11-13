@@ -1,5 +1,6 @@
 package com.urkaaaz.campaign
 
+import com.urkaaaz.contracts.TerrainBiome
 import com.urkaaaz.domain.GameBalanceFixtures
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -34,7 +35,9 @@ class AddLevelSkillCompatibilityTest {
         val demo = DemoLevelDefinitions.default(campaignBalance)
 
         assertEquals("demo-map", demo.mapDefinition.mapId)
-        assertEquals("green_frontier", demo.mapDefinition.biome)
+        assertEquals(TerrainBiome.SUNKEN_MARSHES, DemoLevelDefinitions.terrainBiome)
+        assertEquals(TerrainBiome.SUNKEN_MARSHES, demo.biome)
+        assertEquals(TerrainBiome.SUNKEN_MARSHES.mapId, demo.mapDefinition.biome)
         assertEquals(1f, demo.initialWind.direction)
         assertEquals(0.25f, demo.initialWind.strength)
         assertTrue(MapDefinitionValidator.validate(demo.mapDefinition).isValid)

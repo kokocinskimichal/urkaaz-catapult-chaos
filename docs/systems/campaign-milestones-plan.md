@@ -9,11 +9,9 @@ profile, or the separately implemented TutorialSystem.
 
 ## Problem
 
-`CampaignLevelDefinition` currently makes Haste available from level 6 and
-Heal from level 8, but the app has no authoritative campaign completion
-contract or persistent unlock state. The campaign selector currently exposes
-all levels, and the player profile cannot distinguish a spell unlocked by a
-campaign reward from one unlocked by another progression system.
+`CampaignLevelDefinition` defaults to making Haste available from level 6 and
+Heal from level 8. Scenario availability alone does not grant spell ownership;
+CampaignSystem persists completion and milestone entitlements separately.
 
 `MatchEvent.MatchFinished` and `MatchOutcome` already provide the canonical
 match completion signal. The match screen consumes those events, but no
@@ -31,7 +29,7 @@ placeholder UI.
 | Atomicity and retries | Completion, next-level unlock, and rewards are one atomic repository update. Repeated delivery is idempotent; storage errors are typed failures and can be retried. |
 | Reward projection | Campaign rewards remain in CampaignProgress. The loadout read model unions campaign spell grants with profile unlocks; it does not create a second persisted spell-unlock record. |
 | New loadouts | A milestone may request its spell be preferred in the default loadout from its availability level. This preference applies only when no saved loadout exists for that level. Existing saved loadouts are preserved. |
-| Availability | Milestone definitions specify the completion level and the first campaign level where the spell is available. Haste is available from 6 and Heal from 8. Level scenario availability remains distinct from the player's actual unlock entitlement. |
+| Availability | `CampaignBalance.contentAvailability` is the single source for first-available levels used by both level scenarios and Haste/Heal milestone definitions. Defaults are Haste from 6 and Heal from 8; reward completion remains levels 5 and 7. Scenario availability remains distinct from the player's actual unlock entitlement. |
 | Tutorials | Campaign milestones store no tutorial flags or UI. Implemented TutorialSystem consumes newly applied milestone IDs through `CampaignMilestoneApplied` and owns all tutorial progress. |
 | Result presentation | Persist completion from the canonical match-finished event. Do not implement a new result screen or replace the existing match result presentation in this scope. |
 | Persistence | Local AndroidX Preferences DataStore adapter, sharing the existing DataStore backend while retaining a separate, versioned campaign namespace. No cloud sync or legacy-install migration. |
@@ -93,8 +91,9 @@ non-winning outcome returns an explicit non-progress result. Invalid or locked
 levels are rejected before looking up a clamped level definition.
 
 Milestone IDs are stable persistence identifiers. Each definition includes
-the completed level, first available level, spell reward, and whether the
-rewarded spell should be preferred in a newly generated default loadout.
+the completed level, the first available level projected from
+`CampaignBalance.contentAvailability`, spell reward, and whether the rewarded
+spell should be preferred in a newly generated default loadout.
 Haste and Heal milestone values are:
 
 | Milestone | Complete level | First available level | Spell | Prefer in a new default loadout |
@@ -131,8 +130,8 @@ Haste and Heal milestone values are:
   stock consumption, cloud sync, or importing legacy app data.
 - Gameplay spell casting or spell-effect implementation.
 - Replacing or duplicating campaign level definitions and registries.
-- Changing the existing level balance except to make Haste/Heal availability
-  derive consistently from the campaign milestone definitions.
+- Changing reward completion levels or entitlement rules. Haste/Heal
+  availability is projected from the shared campaign balance.
 
 ## Implementation and verification
 

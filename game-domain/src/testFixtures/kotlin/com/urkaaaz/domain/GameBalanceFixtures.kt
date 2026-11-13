@@ -239,6 +239,45 @@ object GameBalanceFixtures {
                     CampaignAiDifficultyBand(11, 30, AiProfileId.VETERAN, 0, 0),
                     CampaignAiDifficultyBand(31, 100, AiProfileId.ELITE, 0, 100),
                 ),
+                contentAvailability = CampaignContentAvailability(
+                    units = UnitIds.all.sorted().map { unitId ->
+                        CampaignUnitAvailability(
+                            unitId,
+                            when (unitId) {
+                                UnitIds.DEFENDER -> 1
+                                UnitIds.SAPPER -> 5
+                                UnitIds.DEMOLISHER -> 8
+                                UnitIds.RAGING_BOAR -> 11
+                                UnitIds.SLINGMASTER -> 13
+                                else -> error("unknown unit ID: $unitId")
+                            },
+                        )
+                    },
+                    ammunition = AmmunitionType.entries.map { ammunitionType ->
+                        CampaignAmmunitionAvailability(
+                            ammunitionType,
+                            when (ammunitionType) {
+                                AmmunitionType.ROCK, AmmunitionType.SIEGE_BOMB -> 1
+                                AmmunitionType.POWDER_BARREL -> 10
+                                AmmunitionType.FIRE_RAIN -> 31
+                                AmmunitionType.PLAGUE_CAULDRON -> 41
+                            },
+                        )
+                    },
+                    spells = SpellType.entries.map { spellType ->
+                        CampaignSpellAvailability(
+                            spellType,
+                            when (spellType) {
+                                SpellType.FORTRESS_SHIELD -> 1
+                                SpellType.HASTE -> 6
+                                SpellType.HEAL -> 8
+                                SpellType.ICE_TRAP -> 11
+                                SpellType.RUNIC_BASTION -> 21
+                                else -> null
+                            },
+                        )
+                    },
+                ),
             ),
         ),
     )

@@ -4,6 +4,14 @@
 
 ### Added
 
+- Added Studio Balance controls for campaign availability thresholds for every
+  canonical unit, ammunition type and spell. Haste and Heal availability uses
+  the same thresholds as campaign scenarios while rewards remain at levels 5
+  and 7; these thresholds do not gate Shop purchases.
+- Added an authored Frostbound battlefield map for campaign level 11 and a
+  separately named soil variant for visual comparison.
+- Documented a proposed per-language button typography editor for Android and
+  Studio; it remains unimplemented.
 - Added sparse per-level BLUE/RED fortress maximum-HP overrides to Balance and
   an editor table in Studio Balance → Runtime → Campaign. Unset teams inherit
   standard fortress HP; Demo keeps its separate BLUE maximum.
@@ -11,7 +19,16 @@
 
 ### Changed
 
-- Advanced `game-balance.json` to schema 7 and revision `game-balance-20`.
+- Advanced `game-balance.json` to schema 8 and revision `game-balance-21`;
+  campaign scenario availability is now balance-driven.
+- Brightened the active Frostbound soil tile to a seamless snow-covered
+  surface; the alternate variant remains available but is not selected by the
+  renderer. Demo now uses the Sunken Marshes dawn background.
+- Changed the Dashboard language control to show the currently selected flag.
+- Removed the Dashboard Tutorials list and replay control. The configured
+  tutorial still starts automatically when its match trigger is met.
+- Set the developer progress preset to campaign level 11 for Chapter II
+  verification.
 
 ## 2026-11-12
 

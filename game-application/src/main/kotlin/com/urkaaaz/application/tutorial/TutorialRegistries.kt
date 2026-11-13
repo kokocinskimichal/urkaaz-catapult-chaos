@@ -1,7 +1,7 @@
 package com.urkaaaz.application.tutorial
 
+import com.urkaaaz.application.campaign.BundledCampaignBalance
 import com.urkaaaz.campaign.CampaignLevelDefinition
-import com.urkaaaz.campaign.CampaignMilestoneRegistry
 import com.urkaaaz.contracts.MatchEvent
 import com.urkaaaz.domain.AmmunitionType
 import com.urkaaaz.domain.SpellType
@@ -26,7 +26,7 @@ object TutorialMechanicRegistry {
 
     fun campaignMilestoneIds(): Set<String> =
         (1..CampaignLevelDefinition.MAX_LEVELS)
-            .flatMap(CampaignMilestoneRegistry.default()::milestonesForCompletedLevel)
+            .flatMap(BundledCampaignBalance.milestoneRegistry()::milestonesForCompletedLevel)
             .mapTo(mutableSetOf()) { it.id }
 }
 

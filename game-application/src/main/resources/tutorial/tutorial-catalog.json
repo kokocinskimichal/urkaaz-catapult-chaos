@@ -51,7 +51,6 @@
     { "targetId": "dashboard.shop", "screen": "DASHBOARD", "kind": "VIEW" },
     { "targetId": "dashboard.language", "screen": "DASHBOARD", "kind": "VIEW" },
     { "targetId": "dashboard.reset", "screen": "DASHBOARD", "kind": "VIEW" },
-    { "targetId": "dashboard.tutorials", "screen": "DASHBOARD", "kind": "VIEW" },
     { "targetId": "campaign.map", "screen": "CAMPAIGN", "kind": "VIEW" },
     { "targetId": "campaign.level_marker", "screen": "CAMPAIGN", "kind": "VIEW" },
     { "targetId": "campaign.start", "screen": "CAMPAIGN", "kind": "VIEW" },

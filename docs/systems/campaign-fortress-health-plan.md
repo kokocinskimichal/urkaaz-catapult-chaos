@@ -2,7 +2,8 @@
 
 ## Status
 
-**Implemented** in `game-balance.json` schema 7 / `game-balance-20`.
+**Implemented** in `game-balance.json` schema 7 / `game-balance-20`;
+the current shared balance contract is schema 8 / `game-balance-21`.
 Per-level overrides are available in Studio Balance → Runtime → Campaign.
 The checked-in configuration currently sets level 1 to 200 HP for BLUE and RED.
 The implementation prompt is retained as a trace of requirements and
