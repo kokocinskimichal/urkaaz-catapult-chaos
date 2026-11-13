@@ -9,13 +9,14 @@ pełną listę tłumaczeń PL/ES. Ręczny przegląd wizualny Dashboardu, kampani
 Loadoutu i HUD-u w EN/PL/ES został wykonany na emulatorze Pixel 8; w razie
 zmian tekstów należy go powtórzyć.
 
-Plan przyszłego, ograniczonego rozszerzenia typografii przycisków per język i
-jej edycji w Studio znajduje się w
-[`localized-button-typography-plan.md`](localized-button-typography-plan.md),
-a instrukcje implementacji w
-[`localized-button-typography-implementation-prompt.md`](localized-button-typography-implementation-prompt.md).
-Nie zmienia on zakresu LocalizationSystem ani nie dodaje edycji tłumaczeń w
-Studio.
+Typografia widocznych etykiet interaktywnych kontrolek jest zarządzana przez
+osobne locale-specific Android `dimen` zasoby i Studio → Typography. Katalog
+106 kontrolek jest podzielony na Common oraz ekrany; `controlId` rozdziela
+różne użycia tego samego string resource. Edytor nie zmienia tłumaczeń.
+Dashboardowy `test_mode` ma EN `14sp`, PL `11sp`, ES `9sp`.
+Zakres i kontrakty są opisane w
+[`localized-button-typography-plan.md`](localized-button-typography-plan.md)
+i [`localized-button-typography-implementation-prompt.md`](localized-button-typography-implementation-prompt.md).
 
 Automatyczny `./gradlew test assembleDebug --quiet`, testy i lint Studio oraz
 `git diff --check` przechodzą. `:android-app:lintDebug` nie kończy się

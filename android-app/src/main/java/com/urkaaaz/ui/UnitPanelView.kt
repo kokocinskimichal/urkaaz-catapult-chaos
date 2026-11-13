@@ -183,11 +183,14 @@ class UnitPanelView(
             addView(
                 TextView(context).apply {
                     text = context.getString(option.shortNameResource)
-                    textSize = 8f
                     gravity = Gravity.CENTER
                     maxLines = 1
                     setTextColor(Color.rgb(239, 220, 179))
                     UiTypography.applyButtonTypeface(this)
+                    UiTypography.applyTextSize(
+                        this,
+                        ButtonTypographyControl.matchUnit(option.type),
+                    )
                 },
                 LayoutParams(-1, dp(14)),
             )

@@ -27,6 +27,11 @@ import type {
   TutorialSaveRequest,
   TutorialValidationResponse,
 } from "@studio/contracts/tutorials";
+import type {
+  TypographyDocumentResponse,
+  TypographySaveRequest,
+  TypographyValidationResponse,
+} from "@studio/contracts/typography";
 
 export class ApiError extends Error {
   readonly status: number;
@@ -96,6 +101,22 @@ export const validateTutorialCatalog = (content: string, fetcher?: Fetcher) =>
     headers: { "content-type": "application/json" },
     body: JSON.stringify({ content }),
   });
+export const fetchButtonTypography = (fetcher?: Fetcher) =>
+  requestJson<TypographyDocumentResponse>("/api/typography", fetcher);
+export const saveButtonTypography = (request: TypographySaveRequest, fetcher?: Fetcher) =>
+  requestJson<TypographyDocumentResponse>("/api/typography", fetcher, {
+    method: "PUT",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify(request),
+  });
+export const validateButtonTypography = (
+  entries: TypographySaveRequest["entries"],
+  fetcher?: Fetcher,
+) => requestJson<TypographyValidationResponse>("/api/typography/validate", fetcher, {
+  method: "POST",
+  headers: { "content-type": "application/json" },
+  body: JSON.stringify({ entries }),
+});
 export const fetchMaps = (fetcher?: Fetcher) => requestJson<MapCatalogResponse>("/api/maps", fetcher);
 export const fetchMap = (id: string, fetcher?: Fetcher) =>
   requestJson<MapDocumentResponse>(`/api/maps/${encodeURIComponent(id)}`, fetcher);

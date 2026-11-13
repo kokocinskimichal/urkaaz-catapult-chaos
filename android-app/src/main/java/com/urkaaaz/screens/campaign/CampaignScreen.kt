@@ -31,6 +31,7 @@ import com.urkaaaz.tutorial.TutorialTargetRegistration
 import com.urkaaaz.tutorial.TutorialScreenContent
 import com.urkaaaz.tutorial.visibleBoundsIn
 import com.urkaaaz.ui.ScreenChromeMetrics
+import com.urkaaaz.ui.ButtonTypographyControl
 import com.urkaaaz.ui.UiTypography
 import com.urkaaaz.screens.life.LifeCountdownFormatter
 import kotlinx.coroutines.CoroutineScope
@@ -169,7 +170,7 @@ class CampaignScreen(
     )
     private val startLevelButton = Button(context).apply {
         text = context.getString(R.string.campaign_start_level)
-        textSize = 17f
+        UiTypography.applyTextSize(this, ButtonTypographyControl.CAMPAIGN_START_LEVEL)
         UiTypography.applyButtonTypeface(this)
         setTextColor(Color.rgb(64, 38, 20))
         setBackgroundResource(R.drawable.loadout_start_match_button)
@@ -312,7 +313,7 @@ class CampaignScreen(
 
         addView(TextView(context).apply {
             text = context.getString(R.string.loadout_back)
-            textSize = 13f
+            UiTypography.applyTextSize(this, ButtonTypographyControl.COMMON_LOADOUT_BACK)
             UiTypography.applyButtonTypeface(this)
             setTextColor(Color.rgb(64, 38, 20))
             gravity = Gravity.CENTER
@@ -548,7 +549,7 @@ class CampaignScreen(
         pageContent.addView(TextView(context).apply {
             text = context.getString(R.string.campaign_retry)
             UiTypography.applyButtonTypeface(this)
-            textSize = 14f
+            UiTypography.applyTextSize(this, ButtonTypographyControl.CAMPAIGN_RETRY)
             setTextColor(Color.rgb(255, 211, 106))
             gravity = Gravity.CENTER
             setPadding(dp(16), dp(14), dp(16), dp(14))

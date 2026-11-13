@@ -12,6 +12,7 @@ import com.urkaaaz.android.R
 import com.urkaaaz.application.tutorial.TutorialActionLabel
 import com.urkaaaz.application.tutorial.TutorialSupplementalContent
 import com.urkaaaz.application.tutorial.TutorialUiState
+import com.urkaaaz.ui.ButtonTypographyControl
 import com.urkaaaz.ui.HudPanelStyle
 import com.urkaaaz.ui.UiTypography
 
@@ -57,6 +58,7 @@ class TutorialHintView(
     }
     private val skipButton = actionButton(
         textResource = R.string.tutorial_skip,
+        typographyControl = ButtonTypographyControl.TUTORIAL_SKIP,
         contentDescriptionResource = R.string.tutorial_skip_accessibility,
         backgroundResource = R.drawable.ui_button_dark_xs_short,
         textColor = Color.rgb(245, 229, 199),
@@ -64,6 +66,7 @@ class TutorialHintView(
     )
     private val nextButton = actionButton(
         textResource = R.string.tutorial_next,
+        typographyControl = ButtonTypographyControl.TUTORIAL_NEXT,
         contentDescriptionResource = R.string.tutorial_next_accessibility,
         backgroundResource = R.drawable.loadout_start_match_button_xs_short,
         textColor = Color.rgb(57, 34, 20),
@@ -108,6 +111,14 @@ class TutorialHintView(
             R.string.tutorial_next
         }
         nextButton.text = context.getString(nextLabel)
+        UiTypography.applyTextSize(
+            nextButton,
+            if (state.actionLabel == TutorialActionLabel.START_BATTLE) {
+                ButtonTypographyControl.TUTORIAL_START
+            } else {
+                ButtonTypographyControl.TUTORIAL_NEXT
+            },
+        )
         nextButton.contentDescription = context.getString(
             if (state.actionLabel == TutorialActionLabel.START_BATTLE) {
                 R.string.tutorial_start_accessibility
@@ -143,6 +154,7 @@ class TutorialHintView(
 
     private fun actionButton(
         textResource: Int,
+        typographyControl: ButtonTypographyControl,
         contentDescriptionResource: Int,
         backgroundResource: Int,
         textColor: Int,
@@ -154,7 +166,7 @@ class TutorialHintView(
         maxLines = 1
         ellipsize = TextUtils.TruncateAt.END
         setPadding(dp(6), 0, dp(6), 0)
-        textSize = 12f
+        UiTypography.applyTextSize(this, typographyControl)
         minHeight = dp(48)
         setTextColor(textColor)
         UiTypography.applyButtonTypeface(this)

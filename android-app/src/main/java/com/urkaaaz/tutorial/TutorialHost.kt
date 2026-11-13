@@ -39,6 +39,8 @@ import com.urkaaaz.application.tutorial.TutorialTrigger
 import com.urkaaaz.contracts.MatchEvent
 import com.urkaaaz.navigation.ScreenContent
 import com.urkaaaz.navigation.ScreenHost
+import com.urkaaaz.ui.ButtonTypographyControl
+import com.urkaaaz.ui.UiTypography
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -86,6 +88,7 @@ class TutorialHost(
     }
     private val errorRetry = Button(context).apply {
         text = context.getString(R.string.tutorial_retry)
+        UiTypography.applyTextSize(this, ButtonTypographyControl.TUTORIAL_RETRY)
         setOnClickListener { initialize() }
         visibility = View.GONE
     }

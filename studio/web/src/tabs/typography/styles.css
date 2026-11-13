@@ -1,0 +1,209 @@
+.typography-editor {
+  display: grid;
+  gap: 14px;
+}
+
+.typography-editor-header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: end;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.typography-editor-header h2 {
+  margin: 0;
+  color: #f0ca78;
+  font-size: 17px;
+}
+
+.typography-editor-header p {
+  max-width: 720px;
+  margin: 5px 0 0;
+  color: #9ab1c5;
+  font-size: 12px;
+}
+
+.typography-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.typography-hash,
+.typography-preview-note {
+  margin: 0;
+  color: #9ab1c5;
+  font-size: 11px;
+}
+
+.typography-form {
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.typography-category {
+  border: 1px solid #314358;
+  border-radius: 6px;
+  background: #141f2b;
+}
+
+.typography-category > summary {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 12px;
+  color: #f0ca78;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  list-style-position: inside;
+}
+
+.typography-category > summary small {
+  color: #9ab1c5;
+  font-size: 11px;
+  font-weight: 400;
+}
+
+.typography-category[open] > summary {
+  border-bottom: 1px solid #314358;
+}
+
+.typography-table {
+  display: grid;
+  gap: 8px;
+  padding: 10px;
+}
+
+.typography-table-header,
+.typography-row {
+  display: grid;
+  grid-template-columns: minmax(170px, 0.8fr) repeat(3, minmax(160px, 1fr));
+  align-items: start;
+  gap: 12px;
+}
+
+.typography-table-header {
+  padding: 0 12px 4px;
+  color: #f0ca78;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.typography-row {
+  padding: 12px;
+  border: 1px solid #314358;
+  border-radius: 6px;
+  background: #1b2939;
+}
+
+.typography-control-id {
+  display: grid;
+  gap: 4px;
+  padding-top: 6px;
+  min-width: 0;
+}
+
+.typography-control-id > code {
+  color: #dce7ef;
+  overflow-wrap: anywhere;
+}
+
+.typography-control-id > small {
+  color: #8299ae;
+  font-size: 10px;
+  overflow-wrap: anywhere;
+}
+
+.typography-locale-cell {
+  display: grid;
+  align-content: start;
+  gap: 8px;
+  min-width: 0;
+}
+
+.typography-preview-button {
+  box-sizing: border-box;
+  width: 126px;
+  max-width: 100%;
+  min-height: 44px;
+  padding: 4px 10px;
+  overflow: hidden;
+  border: 1px solid #b98f42;
+  border-radius: 6px;
+  background: linear-gradient(#77500f, #d8ad4c 45%, #a8791e);
+  color: #2a1b0d;
+  font-family: Georgia, serif;
+  font-weight: 600;
+  line-height: 1.05;
+  text-align: center;
+  text-overflow: clip;
+  white-space: nowrap;
+}
+
+.typography-locale-cell > label {
+  display: grid;
+  gap: 5px;
+  color: #dce7ef;
+  font-size: 11px;
+}
+
+.typography-locale-cell input {
+  box-sizing: border-box;
+  width: 100%;
+  min-width: 0;
+  padding: 7px 8px;
+  border: 1px solid #455b70;
+  border-radius: 4px;
+  background: #111b26;
+  color: #f5f8fa;
+}
+
+.typography-locale-cell input[aria-invalid="true"] {
+  border-color: #ff8992;
+}
+
+.typography-error {
+  color: #ff9ca2;
+  font-size: 11px;
+}
+
+.typography-reset {
+  justify-self: start;
+  padding: 4px 8px;
+  border: 1px solid #52677b;
+  border-radius: 4px;
+  background: #24364a;
+  color: #dce7ef;
+  font-size: 11px;
+  cursor: pointer;
+}
+
+.typography-reset:hover {
+  background: #30465d;
+}
+
+.typography-success {
+  margin: 0;
+  color: #9be0ad;
+}
+
+.typography-issues {
+  margin: 0;
+  padding: 10px 12px 10px 30px;
+  border: 1px solid #79434a;
+  border-radius: 6px;
+  background: #351f29;
+  color: #ffd2d4;
+  font-size: 12px;
+}
+
+@media (max-width: 760px) {
+  .typography-table-header,
+  .typography-row {
+    grid-template-columns: 1fr;
+  }
+}

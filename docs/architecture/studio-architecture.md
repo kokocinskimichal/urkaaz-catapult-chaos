@@ -1,13 +1,14 @@
 # Urkaaaz Studio — architektura
 
-Status: szkielet, wizualizator animacji, indeks assetów, edytory Map i Campaign
-oraz zakładka Balance z walidacją i zapisem `game-balance.json` są wdrożone w
-`studio/`; patrz `studio/README.md`. Balance używa pełnego formularza schema 7
-z edytowalną ceną stocku amunicji `shopCostGold`. Studio to lokalne narzędzie
-deweloperskie, nie część gry.
+Status: wizualizator animacji, indeks assetów, edytory Map i Campaign, Balance,
+Progress oraz Typography są wdrożone w `studio/`; patrz `studio/README.md`.
+Balance używa pełnego formularza schema 8 z edytowalną ceną stocku amunicji
+`shopCostGold`. Studio to lokalne narzędzie deweloperskie, nie część gry.
 
-Wdrożone zakładki: **Animacje**, **Mapy**, **Campaign**, **Balance** i
-**Progress**. Formularz Balance nie pokazuje ani nie edytuje tekstu JSON.
+Wdrożone zakładki: **Animacje**, **Mapy**, **Campaign**, **Balance**,
+**Progress**, **Tutorials** i **Typography**. Formularz Balance nie pokazuje
+ani nie edytuje tekstu JSON; Typography edytuje locale-specific rozmiary
+106 interaktywnych etykiet w grupach Common i per ekran, nie treść tłumaczeń.
 
 ## 1. Cel i zakres
 
@@ -18,7 +19,8 @@ rozproszone narzędzia pomocnicze:
 |---|---|---|
 | Mapy | edycja `MapDefinition` JSON (teren, fundamenty, dekoracje, relikty) | edytor przeniesiony do Studio |
 | Kampania / mapy rozdziałów | podgląd mapy z ramką i edycja pozycji markerów poziomów | **wdrożone** (sekcja 10) |
-| Balance | edycja `game-balance.json` schema 7 | pełny formularz, walidacja serwerowa i zapis przez API wdrożone |
+| Balance | edycja `game-balance.json` schema 8 | pełny formularz, walidacja serwerowa i zapis przez API wdrożone |
+| Typography | locale-specific rozmiary 106 interaktywnych etykiet Androida, grupowanych przez Common i ekran | formularz i walidacja/zapis przez API wdrożone |
 | Wizualizator animacji | podgląd istniejących animacji | wdrożony |
 
 Poza zakresem (na teraz): uwierzytelnianie, praca wielu użytkowników, hosting,
@@ -45,16 +47,18 @@ flowchart LR
     Campaign["Tab: Campaign"]
     Viz["Tab: Animacje"]
     Balance["Tab: Balance"]
-    Shell --> Maps & Campaign & Viz & Balance
+    Typography["Tab: Typography"]
+    Shell --> Maps & Campaign & Viz & Balance & Typography
   end
   subgraph Local["Lokalny backend (studio-server, Node)"]
     Api["HTTP API /api/*"]
     Maps["mapCatalog (zapis map)"]
     CampaignCatalog["campaignMapCatalog (rozdziały i układy map)"]
     BalanceCatalog["balanceCatalog (walidacja i zapis balansu)"]
+    TypographyCatalog["typographyCatalog (categorized control dimensions)"]
     Assets["terrainAssets (indeks i PNG)"]
     Anim["animationCatalog"]
-    Api --> Maps & CampaignCatalog & BalanceCatalog & Assets & Anim
+    Api --> Maps & CampaignCatalog & BalanceCatalog & TypographyCatalog & Assets & Anim
   end
   Browser -- "fetch /api" --> Api
   Fs --> Repo[("Repozytorium\nmapy, assety")]
@@ -86,11 +90,12 @@ studio/
         animations/
         campaign/            # wdrożony edytor rozmieszczenia markerów map kampanii
         balance/             # typowany formularz game-balance.json
+        typography/          # per-locale rozmiary etykiet przycisków Androida
       shared/               # klient API, komponenty, typy kontraktów
   server/                   # lokalny backend
     src/
       api/                  # routery per zasób
-      services/             # mapCatalog, campaignMapCatalog, balanceCatalog, terrainAssets, animationCatalog
+      services/             # mapCatalog, campaignMapCatalog, balanceCatalog, typographyCatalog, terrainAssets, animationCatalog
       contracts/            # schematy żądań/odpowiedzi (współdzielone z web)
   README.md
 ```
@@ -120,8 +125,11 @@ stronie serwera (sekcja 5). Format: JSON, chyba że zaznaczono inaczej.
 | `GET /api/animations` | katalog animacji (sekcja 8) |
 | `GET /api/animations/{id}/frames/{n}` | pojedyncza klatka PNG |
 | `GET /api/balance` | treść `game-balance.json` i SHA-256 |
-| `POST /api/balance/validate` | walidacja schema 7 bez zapisu |
+| `POST /api/balance/validate` | walidacja schema 8 bez zapisu |
 | `PUT /api/balance` | walidacja i atomowy zapis z `expectedHash` |
+| `GET /api/typography` | teksty EN/PL/ES i locale-specific rozmiary zarządzanych buttonów |
+| `POST /api/typography/validate` | walidacja rozmiarów i trzech plików locale bez zapisu |
+| `PUT /api/typography` | atomowy zapis trzech `button_typography.xml` z `expectedHash` |
 
 Odroczony pozostaje endpoint listy poziomów/kamieni milowych
 `GET /api/campaign/levels`. Form-based UI korzysta z istniejących endpointów
@@ -417,14 +425,14 @@ overlap oraz rejestrację zakładki. Studio dodatkowo przechodzi `npm test`,
 ## 11. Zakładka: Balance
 
 Zakładka Balance edytuje jedyne źródło wartości balansu:
-`game-domain/src/main/resources/balance/game-balance.json`, schema 7.
+`game-domain/src/main/resources/balance/game-balance.json`, schema 8.
 Formularz udostępnia zakładki Bosses, Units, Ammunition, Spells & Mana i
 Runtime. Campaign zawiera typed pola żyć: initial/maximum lives oraz
 interwał regeneracji z `runtime.campaign.lives`, a także tabelę sparse
 nadpisań maksymalnego HP fortec BLUE/RED per globalny poziom. Niewpisane
 wartości dziedziczą standardowe HP; chapter grouping pochodzi z kanonicznego
 catalogu kampanii. Profile, stabilne ID, liczebność i kolejność rekordów są stałe;
-wszystkie pozostałe pola schema 7, w tym nullable `ammunition[].shopCostGold`
+wszystkie pozostałe pola schema 8, w tym nullable `ammunition[].shopCostGold`
 oraz `runtime.combat.gameplaySpeedMultiplier` z zakresem 1.0–1.5, są
 edytowane przez typowane kontrolki. Cena jest nieujemną liczbą całkowitą albo
 `null` dla amunicji niesprzedawanej.
@@ -447,6 +455,20 @@ Szczegóły zakresu oraz implementacji opisują
 i [`studio-balance-form-implementation-prompt.md`](studio-balance-form-implementation-prompt.md).
 Formularz używa tych samych endpointów i walidatora serwera; nie zmienia
 wartości balansu, kodu gameplayu ani nie uruchamia symulacji/Gradle.
+
+### Typography
+
+Zakładka Typography edytuje wyłącznie per-locale Android `dimen` zasoby
+widocznych etykiet interaktywnych kontrolek z
+`android-app/src/main/res/values*/button_typography.xml`. Wspólny katalog Studio
+i typowany Android `ButtonTypographyControl` wiążą `controlId`, kategorię,
+string resource i `dimen`; ten sam string resource może mieć różne control IDs
+oraz rozmiary w różnych kontekstach. Grupy to Common, Dashboard, Campaign,
+Loadout, Shop, Match, Tutorial i Test mode. Tłumaczenia pozostają w
+`strings.xml` i są podglądem tylko do odczytu. Server waliduje wszystkie
+kontrolki i trzy locale oraz zapisuje je atomowo przez `/api/typography*` z
+kontrolą wspólnego `expectedHash`. Android rozwiązuje rozmiar przez jawne
+`R.dimen` w aktywnym `LocalizedContext`.
 
 ## 12. Uruchamianie i testy
 
@@ -478,8 +500,10 @@ wartości balansu, kodu gameplayu ani nie uruchamia symulacji/Gradle.
 6. **Campaign map editor**: wspólny chapter catalog i layout JSON,
    bezpieczne API Studio, framed map preview z markerami, drag + X/Y oraz
    odczyt tych samych layoutów przez Android. **Wdrożone**.
-7. **Balance form**: pełny formularz schema 7 z walidacją i zapisem przez
+7. **Balance form**: pełny formularz schema 8 z walidacją i zapisem przez
    istniejące API. **Wdrożone**.
+8. **Typography**: locale-specific button `dimen`, podgląd string resources,
+   walidacja i atomowy zapis przez API. **Wdrożone**.
 
 Każdy krok jest osobno wdrażalny i kończy się działającą aplikacją.
 
@@ -490,7 +514,7 @@ Każdy krok jest osobno wdrażalny i kończy się działającą aplikacją.
 | 1 | Walidacja map | tylko TypeScript; Kotlin autorytatywny w testach | rozjazd TS ↔ Kotlin; ograniczany wspólnymi mapami referencyjnymi i bramką `./gradlew test` |
 | 2 | Dwie kopie map | Studio zapisuje obie kopie jednym żądaniem; duplikat zostaje | dwufazowy zapis musi być atomowy w parze |
 | 3 | Indeksy assetów | jeden indeks budowany w locie ze źródeł; usunąć `sync-assets.mjs` i kopie | trzeba nadać jawne kategorie i biomy plikom spoza indeksu |
-| 4 | Formularz Balance | wszystkie profile edytowane w kontrolkach; surowy JSON nie jest prezentowany | zachować kontrakt schema 7 i jeden walidator serwera |
+| 4 | Formularz Balance | wszystkie profile edytowane w kontrolkach; surowy JSON nie jest prezentowany | zachować kontrakt schema 8 i jeden walidator serwera |
 | 5 | Równoległe zmiany plików | hash zawartości + `409` | brak blokad plików |
 | 6 | JobRunner/Gradle | poza zakresem formularza Balance | wymaga osobnego zakresu i decyzji o uruchamianiu symulacji |
 | 7 | Hosting zdalny | poza zakresem; Studio działa lokalnie | wymagałby auth i innego modelu undo |

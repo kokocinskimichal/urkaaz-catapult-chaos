@@ -10,8 +10,8 @@
   and 7; these thresholds do not gate Shop purchases.
 - Added an authored Frostbound battlefield map for campaign level 11 and a
   separately named soil variant for visual comparison.
-- Documented a proposed per-language button typography editor for Android and
-  Studio; it remains unimplemented.
+- Expanded Studio Typography to 106 locale-specific interactive control labels
+  grouped under Common and by screen; translations remain read-only.
 - Added sparse per-level BLUE/RED fortress maximum-HP overrides to Balance and
   an editor table in Studio Balance → Runtime → Campaign. Unset teams inherit
   standard fortress HP; Demo keeps its separate BLUE maximum.
@@ -29,6 +29,13 @@
   tutorial still starts automatically when its match trigger is met.
 - Set the developer progress preset to campaign level 11 for Chapter II
   verification.
+- Set the Spanish Dashboard `TEST MODE` label to 9sp; EN and PL remain 14sp
+  and 11sp.
+
+### Fixed
+
+- Added consistent transparent safety margins to the 32 Siege Bomb impact
+  frames so no visible pixels touch the runtime canvas edge.
 
 ## 2026-11-12
 

@@ -14,8 +14,10 @@ describe("tabIdFromHash", () => {
     expect(TABS.map(tab => tab.id)).toContain("balance");
     expect(TABS.map(tab => tab.id)).toContain("progress");
     expect(TABS.map(tab => tab.id)).toContain("tutorials");
+    expect(TABS.map(tab => tab.id)).toContain("typography");
     expect(tabIdFromHash("#/campaign")).toBe("campaign");
     expect(tabIdFromHash("#/tutorials")).toBe("tutorials");
+    expect(tabIdFromHash("#/typography")).toBe("typography");
   });
 
   it("falls back to the first tab for empty or unknown hashes", () => {

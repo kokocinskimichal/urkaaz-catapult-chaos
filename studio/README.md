@@ -3,8 +3,9 @@
 Lokalne narzędzie deweloperskie (nie część gry). Architektura i decyzje:
 [`docs/architecture/studio-architecture.md`](../docs/architecture/studio-architecture.md).
 
-Stan: szkielet, wizualizator animacji, edytory Map/Campaign oraz zakładki
-Balance i Progress. Zakładka Animations wyświetla drzewo kategoria → cel → typ,
+Stan: wizualizator animacji, edytory Map/Campaign oraz zakładki Balance,
+Progress, Tutorials i Typography. Zakładka Animations wyświetla drzewo
+kategoria → cel → typ,
 odtwarza klatki oraz dla sekwencji oznaczonych w `teamTextureTargets` przełącza
 teksturę BLUE/RED i nakładkę masek. Dla Slingmastera obsługuje maski idle,
 move, attack i death. Zakładka Maps to edytor
@@ -22,7 +23,8 @@ wyłączają edycję do czasu dodania artworku.
 Assety są indeksowane i serwowane bezpośrednio ze źródeł przez `/api/assets`.
 Serwer udostępnia też `POST /api/maps/validate`, `GET /api/health`,
 `GET /api/animations`, `GET /api/animations/{id}/frames/{n}`, team masks i
-team textures, `/api/campaign/*`, `/api/balance*` oraz `/api/progress*`. Znane
+team textures, `/api/campaign/*`, `/api/balance*`, `/api/progress*` oraz
+`/api/typography*`. Znane
 cele i sekwencje bez loadera w grze opisuje ręcznie utrzymywany
 `config/animations.json`; palety wskazują
 `android-app/src/main/assets/animations/<unit>/palettes.json`. Maski są
@@ -54,6 +56,12 @@ Zmienione dane wymagają nowej rewizji balansu, którą edytor automatycznie
 podbija, jeśli użytkownik jej nie zmienił. Zastosowanie balansu wymaga rebuilda
 i restartu aplikacji; Studio nie ma hot reloadu.
 
+Typography edytuje rozmiary `sp` 106 widocznych etykiet interaktywnych
+kontrolek w `android-app/src/main/res/values*/button_typography.xml`, grupując
+je w Common i według ekranu. Teksty EN/PL/ES są podglądem tylko do odczytu z
+istniejących `strings.xml`; API waliduje i atomowo zapisuje wszystkie locale
+z kontrolą SHA-256.
+
 Progress edytuje
 `game-application/src/main/resources/progression/developer-progress.json`:
 bieżący poziom kampanii, życia i złoto. Pola **Apply this value** wybierają,
@@ -83,13 +91,16 @@ npm run build    # build frontendu (studio/web/dist, ignorowany przez git)
   alias `@studio/contracts` (tylko typy). Zakładki rejestruje `src/shell/tabs.ts`;
   edytory map gameplayowych i map kampanii znajdują się odpowiednio w
   `src/tabs/maps/` i `src/tabs/campaign/`; edytor balansu jest w
-  `src/tabs/balance/`.
+  `src/tabs/balance/`; per-locale typography edytuje
+  `src/tabs/typography/`.
 - `server/src/services/balanceCatalog.ts` — ścisła walidacja, SHA-256 i
   atomowy zapis `game-balance.json` z kontrolą rewizji i konfliktów.
 - `server/src/services/mapCatalog.ts` — bezpieczny odczyt i zapis obu kopii
   definicji map z kontrolą sumy pary plików oraz wycofaniem częściowego zapisu.
 - `server/src/services/campaignMapCatalog.ts` — wspólny chapter catalog,
   bezpieczny odczyt/zapis layoutów campaign i allowlistowane podglądy assetów.
+- `server/src/services/typographyCatalog.ts` — ścisła walidacja i atomowy,
+  chroniony hashem zapis locale-specific button dimension resources.
 - `server/src/api/campaign.ts` — API listy chapterów, layoutów, walidacji i art assetów.
 - `server/src/services/availablePort.ts` — wybór wolnego portu startowego dla
   lokalnego procesu Studio.

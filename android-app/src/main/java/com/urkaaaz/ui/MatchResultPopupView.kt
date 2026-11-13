@@ -207,6 +207,19 @@ internal class MatchResultPopupView(
 
     private fun createActionButton(action: MatchResultPopupAction): TextView =
         TextView(context).apply {
+            val typographyControl = when (action.type) {
+                MatchResultActionType.NEXT_LEVEL -> ButtonTypographyControl.MATCH_RESULT_NEXT_LEVEL
+                MatchResultActionType.EXIT_TO_CAMPAIGN ->
+                    ButtonTypographyControl.MATCH_RESULT_EXIT_CAMPAIGN
+                MatchResultActionType.RETRY -> ButtonTypographyControl.MATCH_RESULT_RETRY
+                MatchResultActionType.RETRY_SAVE -> ButtonTypographyControl.MATCH_RESULT_RETRY_SAVE
+                MatchResultActionType.RETRY_STOCK_SETTLEMENT ->
+                    ButtonTypographyControl.MATCH_RESULT_RETRY_STOCK
+                MatchResultActionType.BACK_TO_DASHBOARD ->
+                    ButtonTypographyControl.MATCH_RESULT_BACK_DASHBOARD
+                MatchResultActionType.BACK_TO_TEST_LEVELS ->
+                    ButtonTypographyControl.MATCH_RESULT_BACK_TEST_LEVELS
+            }
             gravity = Gravity.CENTER
             maxLines = 1
             setPadding(dp(6f), 0, dp(6f), 0)
@@ -218,6 +231,7 @@ internal class MatchResultPopupView(
                 },
             )
             UiTypography.applyButtonTypeface(this)
+            UiTypography.applyTextSize(this, typographyControl)
             setBackgroundResource(
                 when (action.style) {
                     MatchResultButtonStyle.GOLD -> R.drawable.loadout_start_match_button
@@ -225,21 +239,7 @@ internal class MatchResultPopupView(
                     MatchResultButtonStyle.DARK -> R.drawable.ui_button_dark_m
                 },
             )
-            text = context.getString(
-                when (action.type) {
-                    MatchResultActionType.NEXT_LEVEL -> R.string.match_next_level
-                    MatchResultActionType.EXIT_TO_CAMPAIGN ->
-                        R.string.match_result_exit_campaign
-                    MatchResultActionType.RETRY -> R.string.match_result_retry
-                    MatchResultActionType.RETRY_SAVE -> R.string.match_result_retry_save
-                    MatchResultActionType.RETRY_STOCK_SETTLEMENT ->
-                        R.string.match_result_retry_stock
-                    MatchResultActionType.BACK_TO_DASHBOARD ->
-                        R.string.match_result_back_dashboard
-                    MatchResultActionType.BACK_TO_TEST_LEVELS ->
-                        R.string.match_result_back_test_levels
-                },
-            )
+            text = context.getString(typographyControl.stringResource)
             isEnabled = action.enabled
             isClickable = action.enabled
             visibility = View.VISIBLE

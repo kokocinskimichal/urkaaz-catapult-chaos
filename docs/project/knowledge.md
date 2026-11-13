@@ -27,9 +27,11 @@ does not clear it. Campaign chapter titles are
 presentation resources, while Studio displays stable chapter IDs. The PL/ES
 translation list has been approved by the user. Fixed-size UI panels were
 visually reviewed on the Pixel 8 emulator in EN/PL/ES.
-Per-locale button text sizing has not been implemented; the current behavior
-and proposed resource/Studio contract are documented in
-`docs/systems/localized-button-typography-plan.md`.
+Interactive Android control labels read locale-specific sizes from
+`button_typography.xml`. Studio's Typography tab edits 106 control-specific
+entries grouped under Common and by screen; a control ID separates repeated
+uses of the same string resource. Dashboard `TEST MODE` is EN 14sp, PL 11sp
+and ES 9sp. Locale resolution uses the existing `LocalizedContext`.
 The dashboard keeps `AD REWARD` visible but inert. Two hidden side anchors are
 reserved for future game-event icons; there is no Dashboard event feed yet.
 `TEST MODE` opens a chapter-grouped picker for campaign levels 1–54 without
@@ -1249,10 +1251,13 @@ must go through commands and domain/application boundaries.
   downsampled to the previous 138×158 dimensions with premultiplied alpha; the
   renderer remains at 18 world units. The original source frames and ZIP/MP4
   remain in `assets_src/ammunition/siege-bomb/flight/`, while old runtime
-  frame copies were removed at the user's request. The impact animation remains
-  unchanged and is a separate pending refresh.
-  `SiegeBombAnimationAssetsTest` enforces its flight sequence count, dimensions,
-  alpha channel, and transparent edge margin.
+  frame copies were removed at the user's request. The approved 32-frame
+  impact sequence remains at 54 world units; its 256×192 source frames are
+  fitted to the 248×181 runtime canvas, then uniformly scaled to a centered
+  245×179 content area for transparent edge margins. Source ZIP/MP4 remain in
+  `assets_src/ammunition/siege-bomb/impact/`.
+  `SiegeBombAnimationAssetsTest` enforces both sequence counts, dimensions,
+  alpha channels, and transparent edge margins.
 - The AI only considers ammunition with positive fortress damage when choosing
   a shot against a fortress. Entity-impact presentation uses the collision
   coordinates from `ProjectileHitEntity`.
@@ -1343,13 +1348,14 @@ The repository's intended development branch is `develop`.
 
 `studio/` is a local developer tool (npm workspaces `server` + `web`), separate
 from the game modules; the plan lives in
-`docs/architecture/studio-architecture.md`. The skeleton, animation
-visualizer, asset index, Map/Campaign editors and Balance editor are
-implemented: a dependency-free Node server (`node src/main.ts`, loopback-only, rejects
-non-loopback `Host` headers) exposing `GET /api/health` (version, repo root, git
-branch, working-tree state), and a React/Vite shell with Maps/Campaign/Balance/
-Animations tabs. Maps hosts the migrated profile editor; its local API lists, validates,
-reads and saves campaign maps. API contracts live in
+`docs/architecture/studio-architecture.md`. The animation visualizer, asset
+index and Map/Campaign, Balance, Progress, Tutorials and Typography tabs are
+implemented. Studio uses a dependency-free Node server (`node src/main.ts`,
+loopback-only, rejects non-loopback `Host` headers) exposing `GET /api/health`
+(version, repo root, git branch, working-tree state), and a React/Vite shell
+with Maps/Campaign/Balance/Progress/Tutorials/Typography/Animations tabs. Maps
+hosts the migrated profile editor; its local API lists, validates, reads and
+saves campaign maps. API contracts live in
 `studio/server/src/contracts` and are imported by the web app as types via
 `@studio/contracts`. Studio reports git state but never commits or switches
 branches. Run it with
@@ -1426,6 +1432,12 @@ strict structural, range and stable-ID coverage validation, and
 `PUT /api/balance` writes atomically only when `expectedHash` is current. A changed
 document must advance `balanceRevision`; the editor automatically bumps a
 trailing revision number.
+The Typography tab edits locale-specific Android `dimen` resources for 106
+interactive labels. Entries are grouped by Common and screen, and repeated
+string resources use distinct control IDs when their contexts need independent
+sizes. The server validates XML and writes all three locales atomically behind
+one SHA-256 hash without changing localized string text.
+
 The Balance UI presents all existing schema 8 fields through Bosses, Units,
 Ammunition, Spells & Mana and Runtime tabs; it does not expose a JSON text
 editor. Profile identifiers and list structure remain fixed. Incomplete

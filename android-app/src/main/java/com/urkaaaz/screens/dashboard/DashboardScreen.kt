@@ -31,6 +31,7 @@ import com.urkaaaz.tutorial.TutorialTargetRegistration
 import com.urkaaaz.tutorial.TutorialScreenContent
 import com.urkaaaz.tutorial.visibleBoundsIn
 import com.urkaaaz.ui.ScreenChromeMetrics
+import com.urkaaaz.ui.ButtonTypographyControl
 import com.urkaaaz.ui.UiTypography
 import com.urkaaaz.screens.life.LifeCountdownFormatter
 import java.io.IOException
@@ -68,7 +69,7 @@ class DashboardScreen(
     private val progressRetryButton = Button(context).apply {
         text = context.getString(R.string.dashboard_progress_retry)
         UiTypography.applyButtonTypeface(this)
-        textSize = 10f
+        UiTypography.applyTextSize(this, ButtonTypographyControl.DASHBOARD_PROGRESS_RETRY)
         setTextColor(Color.WHITE)
         setPadding(dp(8), dp(3), dp(8), dp(3))
         minHeight = 0
@@ -105,7 +106,7 @@ class DashboardScreen(
     private val resetProgressButton = Button(context).apply {
         text = context.getString(R.string.dashboard_reset_progress)
         UiTypography.applyButtonTypeface(this)
-        textSize = 11f
+        UiTypography.applyTextSize(this, ButtonTypographyControl.DASHBOARD_RESET_PROGRESS)
         setTextColor(Color.WHITE)
         setPadding(dp(8), dp(4), dp(8), dp(4))
         minHeight = 0
@@ -125,12 +126,14 @@ class DashboardScreen(
     private val campaignButtonView = campaignButton()
     private val shopActionButton = darkActionButton(
         labelResource = R.string.dashboard_shop_action,
+        typographyControl = ButtonTypographyControl.DASHBOARD_SHOP,
         iconResource = R.drawable.icon_orcoins,
         descriptionResource = R.string.dashboard_shop_accessibility,
         action = onShop,
     )
     private val adRewardButton = darkActionButton(
         labelResource = R.string.dashboard_ad_reward_action,
+        typographyControl = ButtonTypographyControl.DASHBOARD_AD_REWARD,
         iconResource = R.drawable.ic_dashboard_ad_reward,
         descriptionResource = R.string.dashboard_ad_reward_accessibility,
         action = null,
@@ -250,7 +253,7 @@ class DashboardScreen(
         text = context.getString(R.string.dashboard_back_action)
         contentDescription = context.getString(R.string.dashboard_back_accessibility)
         UiTypography.applyButtonTypeface(this)
-        textSize = 14f
+        UiTypography.applyTextSize(this, ButtonTypographyControl.DASHBOARD_BACK)
         setTextColor(Color.rgb(57, 34, 20))
         setPadding(dp(5), 0, dp(5), 0)
         minHeight = 0
@@ -508,6 +511,7 @@ class DashboardScreen(
     private fun testModeButton(): View =
         darkActionButton(
             labelResource = R.string.test_mode,
+            typographyControl = ButtonTypographyControl.DASHBOARD_TEST_MODE,
             iconResource = null,
             descriptionResource = R.string.test_mode,
             action = onDemoMode,
@@ -517,7 +521,7 @@ class DashboardScreen(
         text = context.getString(R.string.dashboard_campaign_action)
         contentDescription = context.getString(R.string.dashboard_campaign_accessibility)
         UiTypography.applyButtonTypeface(this)
-        textSize = 30f
+        UiTypography.applyTextSize(this, ButtonTypographyControl.DASHBOARD_CAMPAIGN)
         setTextColor(Color.rgb(59, 35, 18))
         setPadding(dp(12), 0, dp(12), 0)
         minHeight = 0
@@ -528,6 +532,7 @@ class DashboardScreen(
 
     private fun darkActionButton(
         labelResource: Int,
+        typographyControl: ButtonTypographyControl,
         iconResource: Int?,
         descriptionResource: Int,
         action: (() -> Unit)?,
@@ -544,7 +549,12 @@ class DashboardScreen(
             setOnClickListener { action() }
         }
         iconResource?.let { addView(image(it, 28, 26)) }
-        addView(label(context.getString(labelResource), 14f), LinearLayout.LayoutParams(-2, -2).apply {
+        val label = label(context.getString(labelResource), 14f).apply {
+            UiTypography.applyTextSize(this, typographyControl)
+            maxLines = 1
+            includeFontPadding = false
+        }
+        addView(label, LinearLayout.LayoutParams(-2, -2).apply {
             if (iconResource != null) marginStart = dp(7)
         })
     }
@@ -630,14 +640,23 @@ class DashboardScreen(
     }
 
     private fun showResetConfirmation() {
-        AlertDialog.Builder(context)
+        val dialog = AlertDialog.Builder(context)
             .setTitle(R.string.dashboard_reset_progress_title)
             .setMessage(R.string.dashboard_reset_progress_message)
             .setNegativeButton(R.string.dashboard_reset_cancel, null)
             .setPositiveButton(R.string.dashboard_reset_progress_confirm) { _, _ ->
                 resetPlayerProgress()
             }
-            .show()
+            .create()
+        dialog.setOnShowListener {
+            dialog.getButton(AlertDialog.BUTTON_NEGATIVE)?.let {
+                UiTypography.applyTextSize(it, ButtonTypographyControl.DASHBOARD_RESET_CANCEL)
+            }
+            dialog.getButton(AlertDialog.BUTTON_POSITIVE)?.let {
+                UiTypography.applyTextSize(it, ButtonTypographyControl.DASHBOARD_RESET_CONFIRM)
+            }
+        }
+        dialog.show()
     }
 
     private fun resetPlayerProgress() {

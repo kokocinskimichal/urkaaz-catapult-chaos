@@ -193,6 +193,7 @@ class SpellPanelView(
             maxLines = 1
             setTextColor(Color.rgb(239, 220, 179))
             UiTypography.applyButtonTypeface(this)
+            UiTypography.applyTextSize(this, ButtonTypographyControl.matchSpell(type))
         }
         val costBadge = TextView(context).apply {
             text = spell.manaCost.toString()

@@ -8,12 +8,13 @@ import android.graphics.ColorMatrixColorFilter
 import android.graphics.Typeface
 import android.graphics.drawable.GradientDrawable
 import android.text.SpannableString
+import android.text.SpannableStringBuilder
 import android.text.Spanned
 import android.text.TextUtils
+import android.text.style.AbsoluteSizeSpan
 import android.text.style.ForegroundColorSpan
 import android.text.style.RelativeSizeSpan
 import android.text.style.StyleSpan
-import android.util.TypedValue
 import android.view.Gravity
 import android.view.View
 import android.widget.Button
@@ -26,7 +27,6 @@ import android.widget.TextView
 import androidx.core.content.res.ResourcesCompat
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
-import androidx.core.widget.TextViewCompat
 import com.urkaaaz.android.R
 import com.urkaaaz.application.loadout.LoadoutCategory
 import com.urkaaaz.application.loadout.LoadoutAmmunitionEffect
@@ -45,8 +45,9 @@ import com.urkaaaz.application.tutorial.TutorialScreen
 import com.urkaaaz.tutorial.TutorialTargetRegistration
 import com.urkaaaz.tutorial.TutorialScreenContent
 import com.urkaaaz.tutorial.visibleBoundsIn
-import com.urkaaaz.ui.UiTypography
+import com.urkaaaz.ui.ButtonTypographyControl
 import com.urkaaaz.ui.ScreenChromeMetrics
+import com.urkaaaz.ui.UiTypography
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -106,6 +107,11 @@ class LoadoutScreen(
     private data class MetadataIcon(
         val drawableId: Int,
         val contentDescription: String,
+    )
+
+    private data class ButtonTypographyText(
+        val control: ButtonTypographyControl,
+        val arguments: List<Any> = emptyList(),
     )
 
     override val view: View = createView(context)
@@ -300,7 +306,7 @@ class LoadoutScreen(
                     })
                     startButton = Button(context).apply {
                         text = context.getString(R.string.loadout_start_match)
-                        textSize = 17f
+                        UiTypography.applyTextSize(this, ButtonTypographyControl.LOADOUT_START_MATCH)
                         UiTypography.applyButtonTypeface(this)
                         setTextColor(Color.rgb(64, 38, 20))
                         setBackgroundResource(LoadoutAssetCatalog.startMatchButtonBackground())
@@ -406,7 +412,7 @@ class LoadoutScreen(
             if (showBack) {
                 addView(TextView(context).apply {
                     text = context.getString(R.string.loadout_back)
-                    textSize = 13f
+                    UiTypography.applyTextSize(this, ButtonTypographyControl.COMMON_LOADOUT_BACK)
                     UiTypography.applyButtonTypeface(this)
                     setTextColor(Color.rgb(64, 38, 20))
                     gravity = Gravity.CENTER
@@ -554,8 +560,8 @@ class LoadoutScreen(
                             null
                         },
                     ),
-                    trailingText = if (ammunition.unlimited) null
-                    else ammunitionStockLabel(reference),
+                    trailingLabel = if (ammunition.unlimited) null
+                    else ammunitionStockTypographyLabel(reference),
                 ) {
                     val selected =
                         ammunition.id in viewModel.state.draft?.ammunitionSlots.orEmpty()
@@ -580,9 +586,9 @@ class LoadoutScreen(
                     context = mainContent.context,
                     item = reference,
                     status = viewModel.optionStatus(reference),
-                    trailingText = mainContent.context.getString(
-                        R.string.loadout_prop_gold_cost,
-                        spell.goldCost,
+                    trailingLabel = ButtonTypographyText(
+                        ButtonTypographyControl.LOADOUT_CARD_GOLD_COST,
+                        listOf(spell.goldCost),
                     ),
                 ) {
                     val selected = spell.id in viewModel.state.draft?.spellTypes.orEmpty()
@@ -737,7 +743,7 @@ class LoadoutScreen(
         status: LoadoutOptionStatus,
         isFixed: Boolean = false,
         trailingIcons: List<MetadataIcon> = emptyList(),
-        trailingText: String? = null,
+        trailingLabel: ButtonTypographyText? = null,
         onSelect: () -> Unit,
     ): View {
         val isSelected = status == LoadoutOptionStatus.SELECTED
@@ -770,6 +776,7 @@ class LoadoutScreen(
         val canOpenShop = !viewModel.state.testMode &&
             viewModel.state.draft != null &&
             isShopOfferOutOfStock(item, status)
+        val itemNameTypography = ButtonTypographyControl.commonItemName(item.identifier)
 
         val textColumn = LinearLayout(context).apply {
             orientation = LinearLayout.VERTICAL
@@ -777,39 +784,31 @@ class LoadoutScreen(
             setPadding(dp(context, 2), dp(context, 2), dp(context, 2), dp(context, 2))
             addView(TextView(context).apply {
                 text = context.getString(itemNameResource(item))
-                textSize = 10f
                 typeface = unitNameTypeface
                 gravity = Gravity.CENTER
                 setTextColor(Color.rgb(255, 242, 218))
                 maxLines = 1
                 ellipsize = TextUtils.TruncateAt.END
                 setShadowLayer(2f, 0f, 1f, Color.BLACK)
-                TextViewCompat.setAutoSizeTextTypeUniformWithConfiguration(
-                    this,
-                    7,
-                    10,
-                    1,
-                    TypedValue.COMPLEX_UNIT_SP,
-                )
+                UiTypography.applyAutoSizeTextSize(this, itemNameTypography)
             }, matchWrap())
-            val statusText = if (
-                status == LoadoutOptionStatus.OUT_OF_STOCK ||
-                status == LoadoutOptionStatus.UNIMPLEMENTED
-            ) {
-                statusLabel(context, status)
-            } else {
-                ""
+            val statusTypography = when (status) {
+                LoadoutOptionStatus.OUT_OF_STOCK -> ButtonTypographyControl.LOADOUT_CARD_OUT_OF_STOCK
+                LoadoutOptionStatus.UNIMPLEMENTED -> ButtonTypographyControl.LOADOUT_CARD_UNIMPLEMENTED
+                else -> null
             }
-            val metadataText = listOf(statusText, trailingText.orEmpty())
-                .filter(String::isNotBlank)
-                .joinToString(" \u2022 ")
+            val metadataLabels = listOfNotNull(
+                statusTypography?.let(::ButtonTypographyText),
+                trailingLabel,
+            )
+            val hasMetadata = metadataLabels.isNotEmpty()
             val metadataRow = LinearLayout(context).apply {
                 orientation = LinearLayout.HORIZONTAL
                 gravity = Gravity.CENTER
                 minimumHeight = dp(context, 10)
                 if (status == LoadoutOptionStatus.SELECTED &&
                     trailingIcons.isEmpty() &&
-                    metadataText.isBlank()
+                    !hasMetadata
                 ) {
                     contentDescription =
                         context.getString(R.string.loadout_card_selected_accessibility)
@@ -830,10 +829,31 @@ class LoadoutScreen(
                         if (index > 0) marginStart = dp(context, 2)
                     })
                 }
-                if (metadataText.isNotBlank()) {
+                if (hasMetadata) {
                     addView(TextView(context).apply {
-                        text = metadataText
+                        text = SpannableStringBuilder().apply {
+                            metadataLabels.forEachIndexed { index, label ->
+                                if (index > 0) append(" \u2022 ")
+                                val start = length
+                                append(
+                                    context.getString(
+                                        label.control.stringResource,
+                                        *label.arguments.toTypedArray(),
+                                    ),
+                                )
+                                setSpan(
+                                    AbsoluteSizeSpan(
+                                        UiTypography.textSizeInPixels(context, label.control),
+                                        false,
+                                    ),
+                                    start,
+                                    length,
+                                    Spanned.SPAN_EXCLUSIVE_EXCLUSIVE,
+                                )
+                            }
+                        }
                         textSize = 7f
+                        includeFontPadding = false
                         setTypeface(typeface, Typeface.BOLD)
                         gravity = Gravity.CENTER
                         setTextColor(statusColor(status))
@@ -1035,16 +1055,18 @@ class LoadoutScreen(
             val isFixedRock = item is LoadoutItemReference.Ammunition &&
                 item.identifier == MatchLoadout.ROCK
             val opensShop = isShopOfferOutOfStock(item, status)
-            text = if (isFixedRock) {
-                context.getString(R.string.loadout_state_fixed)
+            val typographyControl = if (isFixedRock) {
+                ButtonTypographyControl.LOADOUT_DETAIL_FIXED
             } else if (opensShop) {
-                context.getString(R.string.loadout_open_shop)
+                ButtonTypographyControl.LOADOUT_DETAIL_OPEN_SHOP
             } else if (isSelected) {
-                context.getString(R.string.loadout_remove_item)
+                ButtonTypographyControl.LOADOUT_DETAIL_REMOVE_ITEM
             } else {
-                context.getString(R.string.loadout_select_item)
+                ButtonTypographyControl.LOADOUT_DETAIL_SELECT_ITEM
             }
+            text = context.getString(typographyControl.stringResource)
             UiTypography.applyButtonTypeface(this)
+            UiTypography.applyTextSize(this, typographyControl)
             isEnabled = opensShop || (!isFixedRock && (
                 isSelected || (
                     status == LoadoutOptionStatus.AVAILABLE &&
@@ -1203,6 +1225,11 @@ class LoadoutScreen(
             state.draft == null -> context.getString(R.string.loadout_status_empty)
             else -> context.getString(R.string.loadout_status_ready)
         }
+    }
+
+    private fun ammunitionStockTypographyLabel(item: LoadoutItemReference): ButtonTypographyText {
+        val count = viewModel.state.progression?.ammunitionStock(item.identifier) ?: 0
+        return ButtonTypographyText(ButtonTypographyControl.LOADOUT_CARD_STOCK, listOf(count))
     }
 
     private fun ammunitionStockLabel(item: LoadoutItemReference): String {

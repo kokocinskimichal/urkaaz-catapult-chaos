@@ -8,6 +8,7 @@ import com.urkaaaz.application.language.LanguageSettingsFailure
 import com.urkaaaz.application.language.LanguageSaveResult
 import com.urkaaaz.campaign.CampaignChapterRegistry
 import com.urkaaaz.screens.campaign.CampaignChapterTitleResources
+import com.urkaaaz.ui.ButtonTypographyControl
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotEquals
 import org.junit.Assert.assertTrue
@@ -43,6 +44,54 @@ class LocalizedContextTest {
         assertEquals("1.5 s", english.getString(R.string.match_hud_reload_seconds, 1.5f))
         assertEquals("1,5 s", polish.getString(R.string.match_hud_reload_seconds, 1.5f))
         assertEquals("1,5 s", spanish.getString(R.string.match_hud_reload_seconds, 1.5f))
+    }
+
+    @Test
+    fun localizedContextResolvesButtonTypographyForEachLanguage() {
+        val base = RuntimeEnvironment.getApplication()
+        val expectedSizes = mapOf(
+            AppLanguage.EN to 14f,
+            AppLanguage.PL to 11f,
+            AppLanguage.ES to 9f,
+        )
+
+        expectedSizes.forEach { (language, expectedSp) ->
+            val localized = LocalizedContext(base, language)
+            val actualSp = localized.resources
+                .getDimension(ButtonTypographyControl.DASHBOARD_TEST_MODE.dimensionResource) /
+                localized.resources.displayMetrics.scaledDensity
+
+            assertEquals(expectedSp, actualSp, 0.01f)
+        }
+    }
+
+    @Test
+    fun everyInteractiveTypographyControlHasLocalizedStringsAndDimensions() {
+        val base = RuntimeEnvironment.getApplication()
+        val languages = listOf(AppLanguage.EN, AppLanguage.PL, AppLanguage.ES)
+
+        ButtonTypographyControl.values().forEach { control ->
+            assertEquals(
+                "button_text_size_${control.controlId}",
+                base.resources.getResourceEntryName(control.dimensionResource),
+            )
+            assertEquals(
+                control.stringKey,
+                base.resources.getResourceEntryName(control.stringResource),
+            )
+            languages.forEach { language ->
+                val localized = LocalizedContext(base, language)
+                val label = localized.getString(control.stringResource)
+                val sizeSp = localized.resources.getDimension(control.dimensionResource) /
+                    localized.resources.displayMetrics.scaledDensity
+
+                assertTrue("${control.controlId} has an empty $language label", label.isNotBlank())
+                assertTrue(
+                    "${control.controlId} has invalid $language size: $sizeSp",
+                    sizeSp in 8f..32f,
+                )
+            }
+        }
     }
 
     @Test

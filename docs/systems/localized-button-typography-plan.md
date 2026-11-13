@@ -1,40 +1,36 @@
-# Plan: rozmiary tekstu przycisków zależne od języka
+# Plan: rozmiary tekstu kontrolek zależne od języka
 
 > Prompt implementacyjny: [`localized-button-typography-implementation-prompt.md`](localized-button-typography-implementation-prompt.md).
 
 ## Status
 
-**Plan — niezaimplementowany.** Zakres obejmuje Android UI i możliwość
-ustawiania rozmiarów w Urkaaaz Studio. Nie edytuje tłumaczeń ani nie zmienia
-obecnych wymiarów przycisków.
+**Wdrożono pełny katalog 106 etykiet interaktywnych kontrolek** dla EN, PL i
+ES. Studio grupuje je według ekranu oraz w kategorii Common. Teksty pozostają
+w `strings.xml`; Studio edytuje wyłącznie locale-specific `dimen`.
 
-## Cel
+## Zakres
 
-Zapewnić, że etykiety przycisków mieszczą się w istniejących kontrolkach w
-językach EN, PL i ES, bez skracania tłumaczeń i bez zmiany układu ekranu.
-Rozmiar ma być konfigurowalny oddzielnie dla każdego zarządzanego przycisku i
-języka, a ustawienie ma respektować systemową skalę tekstu przez jednostkę
-Android `sp`.
+Typografią zarządza każdy lokalizowany tekst widoczny jako etykieta lub wartość
+w interaktywnym elemencie Android UI: przyciski i CTA, klikalne zakładki i
+karty, nazwy w kaflach wyboru jednostek/amunicji/czarów, etykiety checkboxów,
+akcje dialogów, overlayów, wyniku meczu, tutoriala i ekranu testowego.
 
-## Obecny stan
+Poza zakresem są teksty wyłącznie w `contentDescription`, nieinteraktywne
+nagłówki i opisy, samodzielne komunikaty statusu oraz czysto liczbowe badge'e
+i kontrolki ikonowe bez widocznego tekstu. Układ kontrolek, treść tłumaczeń,
+nawigacja i mechanika gry nie zmieniają się.
 
-- Teksty Android UI są w `strings.xml`, `values-pl/strings.xml` i
-  `values-es/strings.xml`; LocalizationSystem nie udostępnia edytora tłumaczeń
-  w Studio.
-- Rozmiary tekstu części kontrolek są ustawiane programowo w Android UI.
-  `DashboardScreen.darkActionButton` na przykład używa jednego rozmiaru dla
-  różnych tłumaczeń.
-- `LocalizedContext` już wybiera locale zasobów i ekran odtwarza się po zmianie
-  języka. Android potrafi w tym samym cyklu wybrać locale-specific `dimen`.
-- Studio jest lokalnym narzędziem czytającym i zapisującym pliki repozytorium;
-  nie jest częścią APK i nie edytuje obecnie zasobów lokalizacyjnych.
+Kategorie Studio:
 
-## Proponowany kontrakt zasobów
+- **Common** — etykiety współdzielone przez ekrany, w tym Wstecz i nazwy
+  jednostek, amunicji oraz czarów w kartach;
+- **Dashboard**, **Campaign**, **Loadout**, **Shop**, **Match**, **Tutorial**
+  i **Test mode** — pozostałe etykiety przypisane do ekranu lub obszaru.
 
-Nie dodawać metadanych do wartości `<string>` — format Android `strings.xml`
-nie zapewnia przenośnego pola na rozmiar tekstu. Zachować teksty jako jedyne
-źródło tłumaczeń, a rozmiary przechowywać w osobnych plikach wymiarów w tych
-samych katalogach locale:
+## Kontrakt Androida i katalog kontrolek
+
+Teksty pozostają w `strings.xml`, `values-pl/strings.xml` i
+`values-es/strings.xml`. Rozmiary są osobnymi zasobami w:
 
 ```text
 android-app/src/main/res/values/button_typography.xml
@@ -42,136 +38,81 @@ android-app/src/main/res/values-pl/button_typography.xml
 android-app/src/main/res/values-es/button_typography.xml
 ```
 
-Wielkość jest zasobem `dimen` z wartością w `sp`, np.:
+Każda wizualna kontrolka ma stabilny `controlId`, kategorię i `stringKey`.
+`controlId` jest osobny od klucza tłumaczenia, bo ten sam string może być
+wyświetlany w różnych kontrolkach i wymagać innego rozmiaru. Przykładowy
+zasób:
 
 ```xml
-<dimen name="button_text_size_dashboard_campaign_action">28sp</dimen>
+<dimen name="button_text_size_dashboard_test_mode">14sp</dimen>
 ```
 
-Nazwa wiąże wpis z istniejącym kluczem tekstu, np.
-`dashboard_campaign_action`. Android UI odwołuje się do wygenerowanego
-`R.dimen` jawnie; nie używa `Resources.getIdentifier`. Rozmiary są ustawiane
-per etykieta, nie jako globalny mnożnik języka. Dla każdej zarządzanej etykiety
-wszystkie trzy locale mają jawny wpis; `values/` pozostaje bazą EN, a
-`values-pl/` i `values-es/` nie polegają na przypadkowym fallbacku do
-angielskiego rozmiaru.
+Wspólny katalog `BUTTON_TYPOGRAPHY_CONTROLS` w kontrakcie Studio definiuje
+identyfikator, kategorię i klucz tłumaczenia; Android ma odpowiadający mu
+typowany `ButtonTypographyControl` z jawnymi referencjami `R.string` i
+`R.dimen`. Nie używać `Resources.getIdentifier`. Wszystkie trzy locale muszą
+zawierać identyczny zestaw control IDs i jawne wartości. Walidowany zakres to
+`8–32sp`; `sp` zachowuje systemową skalę tekstu. Karty z istniejącym
+autosize używają ustawionej wartości jako maksimum i zachowują dotychczasowe
+zmniejszanie do rozmiaru, który mieści się w karcie.
 
-W v1 jeden klucz string resource oznacza jeden rozmiar typograficzny we
-wszystkich miejscach jego użycia. Audyt musi potwierdzić, że współdzielone
-etykiety nie występują w przyciskach o niezgodnych ograniczeniach. Jeśli
-występują, należy przed implementacją rozszerzyć kontrakt o jawny stable
-control ID → string resource mapping; nie wyprowadzać identyfikatora zasobu
-dynamicznie.
+Początkowe rozmiary zachowują dotychczasową typografię kontrolek; pierwszy
+potwierdzony problem Dashboardu ma wartości `TEST MODE`: EN `14sp`, PL `11sp`,
+ES `9sp`. Pozostałe wartości można dostroić osobno w każdym locale.
 
-Pierwszy zakres obejmuje wyłącznie etykiety przycisków, które audyt wizualny
-wskaże jako przepełnione. Nie obejmuje nazw ekranów, HUD-u, opisów
-dostępności ani tekstów tutoriala. Napisy i `contentDescription` pozostają
-niezmienione.
+## Studio Typography
 
-## Edycja w Studio
+Zakładka **Typography** pokazuje kontrolki w zwijanych grupach **Common** i
+ekranowych. Każdy wpis pokazuje `controlId`, klucz string resource oraz
+podgląd tłumaczenia EN/PL/ES tylko do odczytu. Formatowane przykłady, takie jak
+poziom, koszt lub czas, otrzymują przykładowe argumenty w podglądzie.
 
-Dodać osobną zakładkę **Typography** — nie zakładkę edycji tłumaczeń.
-Formularz:
+Użytkownik może zmieniać `font size (sp)` niezależnie dla każdego locale,
+walidować draft oraz przywracać pojedynczą wartość do wczytanej baseline.
+Studio nie edytuje tłumaczeń, wymiarów kontrolek ani assetów. Zapis obowiązuje
+po przebudowaniu i ponownym uruchomieniu APK.
 
-- pokazuje stabilny klucz etykiety oraz jej tłumaczenie EN/PL/ES jako podgląd
-  tylko do odczytu;
-- pozwala ustawić `font size (sp)` niezależnie dla każdego locale;
-- pokazuje porównawczy podgląd etykiety w przycisku, bez edycji tekstu,
-  szerokości kontrolki ani assetu tła;
-- pozwala przywrócić pojedynczą wartość lub cały wiersz do wczytanej baseline;
-- wyświetla błędy walidacji przy odpowiedniej etykiecie i języku.
+Server `typographyCatalog` zapewnia:
 
-Studio i Android edytują/czytają te same trzy pliki `button_typography.xml`.
-Server `typographyCatalog` zapewnia odczyt, walidację i zapis; nowe trasy
-powinny odpowiadać istniejącemu wzorcowi edytorów:
-
-- `GET /api/typography` — wpisy i wspólny hash trzech plików locale;
-- `POST /api/typography/validate` — walidacja bez zapisu;
+- `GET /api/typography` — katalog, podglądy i wspólny hash plików locale;
+- `POST /api/typography/validate` — walidację bez zapisu;
 - `PUT /api/typography` — zapis tylko przy zgodnym `expectedHash`.
 
-Zapis trzech plików jest jedną transakcją: najpierw walidacja, następnie
-atomowa podmiana z rollbackiem przy błędzie. Server ogranicza ścieżki do
-trzech zatwierdzonych katalogów zasobów Androida; nie pozwala edytować
-`strings.xml` ani innych plików. Podgląd tekstów pochodzi z istniejących
-zasobów EN/PL/ES.
-
-Studio nie uruchamia Gradle ani nie zmienia działającej aplikacji. Zapisane
-wartości obowiązują po przebudowaniu i ponownym uruchomieniu APK.
-
-## Walidacja i właściciele
-
-- `strings.xml` pozostaje właścicielem tekstu; per-locale `dimen` jest
-  właścicielem wartości typograficznej.
-- `android-app` stosuje rozmiar dla jawnie wskazanego zasobu w komponencie
-  przycisku. Nie wprowadzać rozmiaru do `game-domain`, balansu gry ani
-  `game-application`.
-- XML musi zawierać tylko obsługiwane wpisy `<dimen>`; duplikaty, nieznane
-  klucze i nieznane elementy są odrzucane.
-- Wszystkie trzy pliki muszą zawierać ten sam zestaw zarządzanych kluczy.
-  Każdy klucz musi mieć odpowiadający mu string resource we wszystkich trzech
-  katalogach locale.
-- Wartość musi być skończona, dodatnia i zapisana wyłącznie w `sp`.
-  Proponowany zakres walidacji to `8–32sp`; należy go potwierdzić na podstawie
-  audytu istniejących kontrolek przed implementacją.
-- Nie używać automatycznego skracania tłumaczeń jako substytutu właściwego
-  rozmiaru. Zachować co najmniej 48 dp celu dotykowego oraz pełne opisy
-  dostępności.
-- Zmiana języka nadal korzysta z istniejącego `LocalizedContext` i
-  `recreate()`; nie dodawać drugiego źródła języka ani nie zmieniać
-  `LanguageSettings`.
+Server waliduje wszystkie control IDs wobec wspólnego katalogu, obecność
+tłumaczeń w trzech locale, strukturę XML i zakres wartości. Trzy pliki są
+zapisywane jako jedna transakcja z rollbackiem przy błędzie; ścieżki są
+ograniczone do zatwierdzonych plików `button_typography.xml`.
 
 ## Testy i kryteria akceptacji
 
 ### Android
 
-- Każdy zarządzany przycisk wskazuje właściwy `R.dimen`; rozmiar pobierany jest
-  z aktywnego locale.
-- Testy sprawdzają kompletność kluczy, poprawne jednostki i odczyt rozmiarów
-  EN/PL/ES przy istniejącym `LocalizedContext`.
-- Testy lub screenshot review potwierdzają, że etykiety mieszczą się w
-  niezmienionych wymiarach przycisków, nie są ucinane i pozostają czytelne.
-- Zmiana rozmiarów nie zmienia tekstów, nawigacji, komend ani symulacji.
+- każdy wpis katalogu ma odpowiadający `R.string` i `R.dimen` w EN/PL/ES;
+- test sprawdza poprawne locale rozmiaru i dostępność tłumaczenia dla
+  wszystkich control IDs;
+- etykiety zachowują pełny tekst, `contentDescription`, cele dotykowe,
+  zachowanie nawigacji i istniejące autosize;
+- zmiana języka nie wpływa na stan, komendy ani symulację.
 
 ### Studio
 
-- Model formularza zachowuje wartości dziesiętne w `sp`, zmienia wyłącznie
-  wskazaną komórkę i resetuje ją do baseline.
-- Validator odrzuca brakujące i zduplikowane klucze, błędne locale, brak
-  odpowiadającego string resource, nieobsługiwane tagi/jednostki, wartości
-  poza zakresem oraz nieznane pola.
-- Zmiana pliku poza Studio powoduje jawny konflikt `409`; zapis trzech locale
-  nie może zakończyć się częściowo.
-- Podgląd prezentuje oryginalny tekst z zasobów, bez możliwości edycji
-  tłumaczeń.
+- grupowanie zachowuje kolejność kategorii i wszystkie wpisy katalogu;
+- model zachowuje niezależne wartości locale, liczby dziesiętne i reset do
+  baseline;
+- podgląd nie zmienia tłumaczeń i formatuje argumenty przykładowe;
+- API odrzuca brakujące, zduplikowane i nieznane kontrolki, brak tłumaczeń,
+  nieobsługiwane XML/jednostki, wartości poza zakresem i nieznane pola;
+- zmiana pliku poza Studio powoduje jawny konflikt `409`; zapis locale nie może
+  zakończyć się częściowo.
 
-### Odbiór wizualny
+## Dokumentacja i odbiór
 
-Przed implementacją zinwentaryzować konkretne przepełnione przyciski i
-zarejestrować ich aktualny układ. Po edycji zweryfikować EN/PL/ES na tych
-samych ekranach i rozdzielczościach oraz przy standardowej skali systemowej.
-Wartości początkowe powinny odpowiadać obecnemu rozmiarowi bazowemu, a
-zmniejszać należy wyłącznie etykiety, które tego wymagają.
+Utrzymuj zgodność z `docs/systems/localization-system.md`,
+`docs/architecture/studio-architecture.md`, `studio/README.md`,
+`docs/project/current-state.md` i `docs/project/knowledge.md`. Rozszerzenie
+katalogu wymaga równoczesnej zmiany kontraktu Studio, `ButtonTypographyControl`,
+trzech plików `button_typography.xml` i testu kompletności.
 
-## Kolejność implementacji
-
-1. Audyt przycisków, ich string resource IDs, stałych szerokości i językowych
-   zrzutów; ustalić pierwszą listę zarządzanych etykiet oraz zatwierdzić
-   zakres `sp`.
-2. Dodać locale-specific `button_typography.xml` z kompletnym zestawem
-   wartości początkowych.
-3. Przepiąć tylko wskazane button labels z hard-coded `textSize` na jawne
-   `R.dimen`; dodać testy locale i kontraktu.
-4. Dodać typowany parser/walidator i atomowe API Studio z `expectedHash`.
-5. Dodać zakładkę Typography z podglądem EN/PL/ES i niezależną edycją,
-   przetestować zapis/konflikt i wykonać odbiór wizualny.
-6. Zaktualizować dokumentację LocalizationSystem, Studio, bieżącego stanu i
-   wiedzy projektu.
-
-## Poza zakresem
-
-- Edycja tekstów tłumaczeń, nowych locale lub tytułów rozdziałów.
-- Automatyczne generowanie lokalizacji, hot reload albo zapis do APK w czasie
-  działania.
-- Globalna zmiana czcionki, koloru, odstępów, paddingu lub wymiaru przycisków.
-- Edytor typografii dla wszystkich `TextView`, HUD-u i treści tutoriali.
-- Zmiany w balansie, domenie, scenariuszach, replayu lub symulacji.
+Po zmianie rozmiarów sprawdź w Studio podgląd EN/PL/ES, a w Androidzie
+potwierdź dopasowanie etykiet w kontrolkach o ograniczonej szerokości. Studio
+nie uruchamia Gradle ani nie zmienia działającej aplikacji.

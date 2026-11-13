@@ -12,6 +12,7 @@ import android.widget.LinearLayout
 import android.widget.ScrollView
 import android.widget.TextView
 import com.urkaaaz.android.R
+import com.urkaaaz.ui.ButtonTypographyControl
 import com.urkaaaz.navigation.ScreenContent
 import com.urkaaaz.ui.ScreenChromeMetrics
 import com.urkaaaz.ui.UiTypography
@@ -54,7 +55,7 @@ class TestLevelPickerScreen(
     private fun createHeader(): View = FrameLayout(context).apply {
         addView(TextView(context).apply {
             text = context.getString(R.string.loadout_back)
-            textSize = 13f
+            UiTypography.applyTextSize(this, ButtonTypographyControl.COMMON_LOADOUT_BACK)
             UiTypography.applyButtonTypeface(this)
             setTextColor(Color.rgb(64, 38, 20))
             gravity = Gravity.CENTER
@@ -145,15 +146,13 @@ class TestLevelPickerScreen(
 
     private fun levelButton(option: TestLevelOption): View =
         TextView(context).apply {
-            text = context.getString(
-                if (option.isBoss) {
-                    R.string.test_level_picker_boss_level
-                } else {
-                    R.string.test_level_picker_level
-                },
-                option.level,
-            )
-            textSize = if (option.isBoss) 12f else 14f
+            val typographyControl = if (option.isBoss) {
+                ButtonTypographyControl.TEST_BOSS_LEVEL
+            } else {
+                ButtonTypographyControl.TEST_LEVEL
+            }
+            text = context.getString(typographyControl.stringResource, option.level)
+            UiTypography.applyTextSize(this, typographyControl)
             UiTypography.applyButtonTypeface(this)
             gravity = Gravity.CENTER
             maxLines = 1

@@ -93,6 +93,10 @@ class AmmunitionPanelView(
             slot.stockCountText.text = count?.let {
                 context.getString(R.string.match_hud_stock, it)
             }
+            UiTypography.applyTextSize(
+                slot.stockCountText,
+                ButtonTypographyControl.MATCH_AMMO_STOCK,
+            )
             slot.stockCountText.visibility =
                 if (count == null) View.GONE else View.VISIBLE
             slot.unlimitedStockIcon.visibility =
@@ -105,6 +109,14 @@ class AmmunitionPanelView(
                 context.getString(R.string.match_hud_ready)
             }
             slot.reloadText.text = if (reloading) reloadDescription else ""
+            UiTypography.applyTextSize(
+                slot.reloadText,
+                if (reloading) {
+                    ButtonTypographyControl.MATCH_AMMO_RELOAD_SECONDS
+                } else {
+                    ButtonTypographyControl.MATCH_AMMO_READY
+                },
+            )
             slot.reloadText.visibility = if (reloading) View.VISIBLE else View.GONE
             val stockDescription = when {
                 !available -> context.getString(R.string.match_hud_out_of_stock)
@@ -136,6 +148,10 @@ class AmmunitionPanelView(
         val reloadShade = VerticalProgressShade(context, dp(9).toFloat())
         val nameText = slotText().apply {
             text = context.getString(ammunitionShortNameResource(type) ?: nameResource)
+            UiTypography.applyTextSize(
+                this,
+                ButtonTypographyControl.matchAmmunition(type),
+            )
         }
         val stockCountText = TextView(context).apply {
             gravity = Gravity.CENTER

@@ -21,6 +21,8 @@ import com.urkaaaz.screens.loadout.LoadoutAssetCatalog
 import com.urkaaaz.screens.loadout.LoadoutAssetLookup
 import com.urkaaaz.screens.loadout.LoadoutItemReference
 import com.urkaaaz.screens.loadout.LoadoutItemResources
+import com.urkaaaz.ui.ButtonTypographyControl
+import com.urkaaaz.ui.UiTypography
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -118,7 +120,7 @@ class ShopScreen(
             addView(TextView(context).apply {
                 text = context.getString(R.string.shop_back)
                 gravity = Gravity.CENTER
-                textSize = 14f
+                UiTypography.applyTextSize(this, ButtonTypographyControl.SHOP_BACK)
                 setTextColor(Color.rgb(72, 43, 20))
                 typeface = headingTypeface
                 contentDescription = context.getString(R.string.shop_back)
@@ -241,7 +243,14 @@ class ShopScreen(
                     R.string.shop_tab_ammunition
                 },
             )
-            textSize = 15f
+            UiTypography.applyTextSize(
+                this,
+                if (category == ShopCategory.SPELLS) {
+                    ButtonTypographyControl.SHOP_TAB_SPELLS
+                } else {
+                    ButtonTypographyControl.SHOP_TAB_AMMUNITION
+                },
+            )
             typeface = headingTypeface
             setTextColor(Color.rgb(255, 239, 205))
             setOnClickListener {
@@ -331,11 +340,22 @@ class ShopScreen(
                 }
             }, LinearLayout.LayoutParams(-1, 0, 1f))
             if (itemArtwork(offer.item) == LoadoutAssetLookup.Missing) {
-                addView(messageText(context, R.string.shop_art_unavailable), wrap())
+                addView(messageText(
+                    context,
+                    R.string.shop_art_unavailable,
+                ).apply {
+                    UiTypography.applyTextSize(
+                        this,
+                        ButtonTypographyControl.SHOP_OFFER_ART_UNAVAILABLE,
+                    )
+                }, wrap())
             }
             addView(TextView(context).apply {
                 text = context.getString(LoadoutItemResources.name(offer.item.identifier))
-                textSize = 10f
+                UiTypography.applyTextSize(
+                    this,
+                    ButtonTypographyControl.commonItemName(offer.item.identifier),
+                )
                 typeface = headingTypeface
                 gravity = Gravity.CENTER
                 maxLines = 2
@@ -344,14 +364,14 @@ class ShopScreen(
             }, LinearLayout.LayoutParams(-1, dp(31)))
             addView(TextView(context).apply {
                 text = context.getString(R.string.shop_price, offer.priceGold)
-                textSize = 9f
+                UiTypography.applyTextSize(this, ButtonTypographyControl.SHOP_OFFER_PRICE)
                 gravity = Gravity.CENTER
                 setTextColor(Color.rgb(255, 207, 100))
                 maxLines = 1
             }, LinearLayout.LayoutParams(-1, dp(17)))
             addView(TextView(context).apply {
                 text = context.getString(R.string.shop_stock, offer.stock)
-                textSize = 9f
+                UiTypography.applyTextSize(this, ButtonTypographyControl.SHOP_OFFER_STOCK)
                 gravity = Gravity.CENTER
                 setTextColor(Color.rgb(218, 210, 192))
                 maxLines = 1
@@ -447,7 +467,7 @@ class ShopScreen(
         detailPanel.addView(TextView(context).apply {
             text = context.getString(R.string.shop_buy)
             gravity = Gravity.CENTER
-            textSize = 19f
+            UiTypography.applyTextSize(this, ButtonTypographyControl.SHOP_BUY)
             typeface = headingTypeface
             setTextColor(Color.rgb(73, 42, 18))
             setBackgroundResource(R.drawable.loadout_start_match_button)

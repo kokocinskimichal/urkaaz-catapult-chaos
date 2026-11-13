@@ -10,9 +10,16 @@ world-space render sizes as part of frame generation.
 The flight animation has been generated with AnimGen, approved, and integrated
 as the new 32-frame runtime sequence. The original AnimGen ZIP/MP4 remain
 under `assets_src/ammunition/siege-bomb/flight/`; archived copies of the old
-runtime frames were removed at the user's request. The impact animation still
-needs generation and separate user approval; do not replace its current
-runtime frames without that approval.
+runtime frames were removed at the user's request. The impact animation has
+also been generated with AnimGen, reviewed, and approved for the existing
+54-world-unit render size. Its source ZIP/MP4 are under
+`assets_src/ammunition/siege-bomb/impact/`; the 32 runtime frames replace the
+previous sequence. The 256 × 192 source frames were fitted to the 248 × 181
+runtime canvas with premultiplied-alpha downsampling and transparent padding.
+The source archive has edge-touching debris in frames 006–024; all runtime
+frames are uniformly scaled to a centered 245 × 179 content area so each
+248 × 181 canvas has a transparent safety margin. Keep the approved source
+archive unchanged and preserve the runtime frame dimensions and names.
 
 The current renderer consumes 32 flight frames and 32 impact frames by the
 existing stable names. Keep the frame count and naming so the replacement can
@@ -31,6 +38,9 @@ Attach these repository assets as references:
 - Representative current impact frames:
   `anim_ammunition_siege_bomb_impact_000.png`,
   `_008.png`, `_016.png`, `_024.png`, `_031.png`.
+- `anim_ammunition_powder_barrel_impact_009.png` — style reference for the
+  explosion's color, lighting, and energetic shape only. Keep the Siege Bomb
+  blast visibly more compact.
 
 The runtime frames are visual references only. Preserve the recognizable bomb
 from the icon; improve the motion and impact readability rather than copying
@@ -73,15 +83,20 @@ Create one readable Siege Bomb impact animation, beginning at the instant the
 flight animation reaches its target. Frame 000 should show the same intact
 iron bomb at the point of contact, matching the flight sprite's scale and
 appearance. Quickly transition through a bright, compact white-gold ignition
-flash into a forceful amber-orange blast, a few clearly identifiable dark
-iron fragments, and a short brown-black smoke puff with glowing embers.
-Expand the blast rapidly, then let the fragments and smoke disperse and fade
-cleanly to full transparency by the final frame.
+flash into an amber-orange blast, a few clearly identifiable dark iron
+fragments, and a short brown-black smoke puff with glowing embers. Use
+`anim_ammunition_powder_barrel_impact_009.png` only as a reference for the
+explosion's color, lighting, and energetic shape; do not copy its scale,
+composition, or timing. At the peak, keep the visible blast diameter about
+70% of the Powder Barrel blast's diameter when both are shown at the same
+world-space size. The Siege Bomb effect should feel like a smaller, tighter
+detonation, not a weaker or smoke-only one.
 
-Keep the effect centered on the bomb impact. Make its brightest core readable
-at small battlefield scale; avoid a muddy smoke-only opening, a persistent
-fire field, a long opaque cloud, or debris leaving the canvas. This is a
-single short-lived explosion, not a lingering-area effect.
+Expand the blast quickly, then let the fragments and smoke disperse and fade
+cleanly to full transparency by the final frame. Keep the effect centered on
+the bomb impact and its brightest core readable at small battlefield scale.
+Avoid a persistent fire field, a long opaque cloud, or debris leaving the
+canvas. This is a single short-lived explosion, not a lingering-area effect.
 ```
 
 ## Output contract

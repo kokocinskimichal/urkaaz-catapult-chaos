@@ -260,7 +260,7 @@ class MatchScreenController(
         debugButton = TextView(activity).apply {
                 text = activity.getString(R.string.match_debug_button)
                 setTextColor(Color.WHITE)
-                textSize = 11f
+                UiTypography.applyTextSize(this, ButtonTypographyControl.MATCH_DEBUG_BUTTON)
                 UiTypography.applyButtonTypeface(this)
                 setPadding(dp(8), dp(3), dp(8), dp(3))
                 setBackgroundResource(com.urkaaaz.android.R.drawable.bg_hud_panel)
@@ -269,7 +269,7 @@ class MatchScreenController(
         hitboxToggle = CheckBox(activity).apply {
             text = activity.getString(R.string.match_debug_hitboxes)
             setTextColor(Color.WHITE)
-            textSize = 12f
+            UiTypography.applyTextSize(this, ButtonTypographyControl.MATCH_DEBUG_HITBOXES)
             buttonTintList = ColorStateList.valueOf(Color.rgb(243, 210, 138))
             setPadding(dp(8), dp(2), dp(8), dp(2))
             setBackgroundResource(com.urkaaaz.android.R.drawable.bg_hud_panel)
@@ -281,7 +281,10 @@ class MatchScreenController(
         snapshotCloseButton = TextView(activity).apply {
                 text = activity.getString(R.string.match_debug_close_snapshot)
                 setTextColor(Color.WHITE)
-                textSize = 12f
+                UiTypography.applyTextSize(
+                    this,
+                    ButtonTypographyControl.MATCH_DEBUG_CLOSE_SNAPSHOT,
+                )
                 UiTypography.applyButtonTypeface(this)
                 setPadding(dp(14), dp(7), dp(14), dp(7))
                 setBackgroundResource(com.urkaaaz.android.R.drawable.bg_hud_panel)
@@ -558,6 +561,7 @@ class MatchScreenController(
             setTextColor(Color.WHITE)
             gravity = Gravity.CENTER
             UiTypography.applyButtonTypeface(this)
+            UiTypography.applyTextSize(this, ButtonTypographyControl.MATCH_LOADING_RETRY)
             setPadding(dp(16), dp(10), dp(16), dp(10))
             setBackgroundResource(com.urkaaaz.android.R.drawable.bg_hud_panel)
             visibility = View.GONE
@@ -575,6 +579,7 @@ class MatchScreenController(
             setTextColor(Color.WHITE)
             gravity = Gravity.CENTER
             UiTypography.applyButtonTypeface(this)
+            UiTypography.applyTextSize(this, ButtonTypographyControl.MATCH_LOADING_BACK)
             setPadding(dp(16), dp(10), dp(16), dp(10))
             setBackgroundResource(com.urkaaaz.android.R.drawable.bg_hud_panel)
             setOnClickListener {
@@ -868,9 +873,9 @@ class MatchScreenController(
                 addView(TextView(activity).apply {
                     text = activity.getString(R.string.match_result_retry_stock)
                     gravity = Gravity.CENTER
-                    textSize = 14f
                     setTextColor(Color.rgb(72, 43, 20))
                     UiTypography.applyButtonTypeface(this)
+                    UiTypography.applyTextSize(this, ButtonTypographyControl.MATCH_STOCK_RETRY)
                     setBackgroundResource(R.drawable.loadout_start_match_button)
                     setPadding(dp(18), dp(8), dp(18), dp(8))
                     visibility = View.GONE
@@ -928,7 +933,7 @@ class MatchScreenController(
             render(viewModel.dispatch(MatchUiAction.TogglePause))
         }
         var retreatConfirmed = false
-        AlertDialog.Builder(activity)
+        val dialog = AlertDialog.Builder(activity)
             .setTitle(R.string.match_retreat_confirmation_title)
             .setMessage(R.string.match_retreat_confirmation_message)
             .setNegativeButton(R.string.match_retreat_cancel, null)
@@ -938,18 +943,24 @@ class MatchScreenController(
                 render(viewModel.dispatch(MatchUiAction.Retreat))
             }
             .create()
-            .apply {
-                setOnDismissListener {
-                    if (
-                        !retreatConfirmed &&
-                        wasRunning &&
-                        viewModel.renderState.statusLabel == "PAUSED"
-                    ) {
-                        render(viewModel.dispatch(MatchUiAction.TogglePause))
-                    }
-                }
+        dialog.setOnShowListener {
+            dialog.getButton(AlertDialog.BUTTON_NEGATIVE)?.let {
+                UiTypography.applyTextSize(it, ButtonTypographyControl.MATCH_RETREAT_CANCEL)
             }
-            .show()
+            dialog.getButton(AlertDialog.BUTTON_POSITIVE)?.let {
+                UiTypography.applyTextSize(it, ButtonTypographyControl.MATCH_RETREAT_CONFIRM)
+            }
+        }
+        dialog.setOnDismissListener {
+            if (
+                !retreatConfirmed &&
+                wasRunning &&
+                viewModel.renderState.statusLabel == "PAUSED"
+            ) {
+                render(viewModel.dispatch(MatchUiAction.TogglePause))
+            }
+        }
+        dialog.show()
     }
 
     private fun showDebugToolsDialog() {
@@ -973,6 +984,10 @@ class MatchScreenController(
             root.addView(CheckBox(activity).apply {
                 text = activity.getString(R.string.match_debug_coordinates)
                 setTextColor(Color.WHITE)
+                UiTypography.applyTextSize(
+                    this,
+                    ButtonTypographyControl.MATCH_DEBUG_COORDINATES,
+                )
                 buttonTintList = ColorStateList.valueOf(Color.rgb(243, 210, 138))
                 isChecked = battlefieldView.debugCoordinatesVisible
                 setOnCheckedChangeListener { _, checked ->
@@ -983,8 +998,8 @@ class MatchScreenController(
         root.addView(TextView(activity).apply {
             text = activity.getString(R.string.match_debug_snapshot)
             setTextColor(Color.WHITE)
-            textSize = 14f
             UiTypography.applyButtonTypeface(this)
+            UiTypography.applyTextSize(this, ButtonTypographyControl.MATCH_DEBUG_SNAPSHOT)
             setPadding(dp(12), dp(10), dp(12), dp(10))
             setBackgroundResource(com.urkaaaz.android.R.drawable.bg_hud_panel)
             setOnClickListener {
@@ -1000,6 +1015,10 @@ class MatchScreenController(
         root.addView(CheckBox(activity).apply {
             text = activity.getString(R.string.match_debug_ai_unit_automation)
             setTextColor(Color.WHITE)
+            UiTypography.applyTextSize(
+                this,
+                ButtonTypographyControl.MATCH_DEBUG_AI_UNIT_AUTOMATION,
+            )
             buttonTintList = ColorStateList.valueOf(Color.rgb(243, 210, 138))
             isChecked = aiUnitAutomationEnabled
             setOnCheckedChangeListener { _, enabled ->
@@ -1020,6 +1039,10 @@ class MatchScreenController(
             val checkBox = CheckBox(activity).apply {
                 text = debugUnitLabel(unitId)
                 setTextColor(Color.WHITE)
+                UiTypography.applyTextSize(
+                    this,
+                    ButtonTypographyControl.matchDebugUnitName(unitId),
+                )
                 buttonTintList = ColorStateList.valueOf(Color.rgb(243, 210, 138))
                 isChecked = unitId in viewModel.aiAllowedUnitIds()
             }
@@ -1046,8 +1069,11 @@ class MatchScreenController(
                     debugUnitLabel(unitId),
                 )
                 setTextColor(Color.WHITE)
-                textSize = 13f
                 UiTypography.applyButtonTypeface(this)
+                UiTypography.applyTextSize(
+                    this,
+                    ButtonTypographyControl.MATCH_DEBUG_RECRUIT_ENEMY,
+                )
                 setPadding(dp(12), dp(8), dp(12), dp(8))
                 setBackgroundResource(com.urkaaaz.android.R.drawable.bg_hud_panel)
                 isEnabled = unitId in viewModel.aiAllowedUnitIds()
@@ -1069,8 +1095,11 @@ class MatchScreenController(
         root.addView(TextView(activity).apply {
             text = activity.getString(R.string.match_debug_send_enemy_wave)
             setTextColor(Color.WHITE)
-            textSize = 14f
             UiTypography.applyButtonTypeface(this)
+            UiTypography.applyTextSize(
+                this,
+                ButtonTypographyControl.MATCH_DEBUG_SEND_ENEMY_WAVE,
+            )
             setPadding(dp(12), dp(10), dp(12), dp(10))
             setBackgroundResource(com.urkaaaz.android.R.drawable.bg_hud_panel)
             setOnClickListener {
@@ -1085,8 +1114,8 @@ class MatchScreenController(
         root.addView(TextView(activity).apply {
             text = activity.getString(R.string.match_debug_close)
             setTextColor(Color.WHITE)
-            textSize = 14f
             UiTypography.applyButtonTypeface(this)
+            UiTypography.applyTextSize(this, ButtonTypographyControl.MATCH_DEBUG_CLOSE)
             setPadding(dp(12), dp(10), dp(12), dp(10))
             setBackgroundResource(com.urkaaaz.android.R.drawable.bg_hud_panel)
             setOnClickListener { dialog.dismiss() }

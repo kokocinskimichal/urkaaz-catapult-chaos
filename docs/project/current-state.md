@@ -51,8 +51,10 @@ kampanię, AI oraz działający match screen. Gałąź robocza: `develop`.
   postęp gracza. Loadout używa dostępności wybranego poziomu i przechowuje
   wybory tylko w pamięci; mecz używa rzeczywistego scenariusza, ma dostępne
   Debug Tools i nie zapisuje postępu, nagród ani użycia stocku.
-- Rozmiary tekstu przycisków per język nie są jeszcze zaimplementowane;
-  propozycję opisuje `docs/systems/localized-button-typography-plan.md`.
+- Interaktywne etykiety Androida mają osobne locale-specific rozmiary `sp`;
+  Studio → Typography udostępnia 106 kontrolek w grupach Common i per ekran.
+  Dashboardowy `TEST MODE` ma `14sp` EN, `11sp` PL i `9sp` ES; tłumaczenia
+  ani wymiary kontrolek nie są edytowane.
 - Lokalny przepływ:
   `MatchUiAction → MatchViewModel → LocalMatchGateway → MatchSession →
   simulation → MatchSnapshot`.
